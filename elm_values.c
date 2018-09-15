@@ -106,40 +106,73 @@ ElmFloat* __ElmFloat(double value) {
 };
 
 
+// Char
+
+typedef ElmInt ElmChar;
+ElmChar* __ElmChar(unsigned int value) {
+    ElmChar *p = malloc(sizeof(ElmInt));
+    p->ctor = Ctor_Char;
+    p->value = value;
+    return p;
+};
+
+// String
+
+typedef struct elm_string {
+    Ctor_Comp ctor;
+    unsigned int len_unicode;
+    unsigned int len_bytes;
+    char bytes[];
+} ElmString;
+
+// string constructor function?
+
+
 
 int main(int argc, char ** argv) {
     printf("sizeof(int) = %d\n", (int)sizeof(int));
+    printf("sizeof(double) = %d\n", (int)sizeof(double));
     printf("sizeof(Ctor_Comp) = %d\n", (int)sizeof(Ctor_Comp));
     printf("\n");
 
-    printf("False %d %d\n", (int)(&False), False);
-    printf("True %d %d\n", (int)(&True), True);
-    printf("Unit %d %d\n", (int)(&Unit), Unit);
+    printf("False size=%ld %d %d\n", sizeof(False), (int)(&False), False);
+    printf("True size=%ld %d %d\n", sizeof(True), (int)(&True), True);
+    printf("Unit size=%ld %d %d\n", sizeof(Unit), (int)(&Unit), Unit);
     printf("\n");
 
-    printf("Nil addr=%d ctor=%d\n", (int)(&Nil), (int)Nil.ctor);
+    printf("Nil size=%ld addr=%d ctor=%d\n", sizeof(Nil), (int)(&Nil), (int)Nil.ctor);
 
     Cons *c = __List_Cons(&Unit, &Nil); // [()]
-    printf("Cons addr=%d ctor=%d head=%d tail=%d\n",
-        (int)c, (int)c->ctor, (int)c->head, (int)c->tail
+    printf("Cons size=%ld addr=%d ctor=%d head=%d tail=%d\n",
+        sizeof(Cons), (int)c, (int)c->ctor, (int)c->head, (int)c->tail
     );
     printf("\n");
 
     Tuple2 *t2 = __Tuple2(&Unit, &Unit); // ((),())
-    printf("Tuple2 addr=%d ctor=%d a=%d b=%d\n",
-        (int)t2, (int)t2->ctor, (int)t2->a, (int)t2->b
+    printf("Tuple2 size=%ld addr=%d ctor=%d a=%d b=%d\n",
+        sizeof(Tuple2), (int)t2, (int)t2->ctor, (int)t2->a, (int)t2->b
     );
 
     Tuple3 *t3 = __Tuple3(&Unit, &Unit, &Unit); // ((),(),())
-    printf("Tuple3 addr=%d ctor=%d a=%d b=%d c=%d\n",
-        (int)t3, (int)t3->ctor, (int)t3->a, (int)t3->b, (int)t3->c
+    printf("Tuple3 size=%ld addr=%d ctor=%d a=%d b=%d c=%d\n",
+        sizeof(Tuple3), (int)t3, (int)t3->ctor, (int)t3->a, (int)t3->b, (int)t3->c
     );
     printf("\n");
 
     ElmInt *i = __ElmInt(123);
-    printf("Int addr=%d ctor=%d value=%d\n", (int)i, (int)i->ctor, i->value);
+    printf("Int size=%ld addr=%d ctor=%d value=%d\n",
+        sizeof(ElmInt), (int)i, (int)i->ctor, i->value
+    );
     ElmFloat *f = __ElmFloat(123.456);
-    printf("Float addr=%d ctor=%d value=%f\n", (int)f, (int)f->ctor, f->value);
+    printf("Float size=%ld addr=%d ctor=%d value=%f\n",
+        sizeof(ElmFloat), (int)f, (int)f->ctor, f->value
+    );
+
+    ElmChar *ch = __ElmChar('A');
+    printf("Char size=%ld addr=%d ctor=%d value=%c\n",
+        sizeof(ElmChar), (int)ch, (int)ch->ctor, ch->value
+    );
+
 
 };
 
