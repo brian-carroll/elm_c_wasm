@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 // Primitive types
@@ -205,6 +206,46 @@ void* apply(u32 n_args, Closure* c_orig, void* args[]) {
     } else {
         c->arity = arity;
         return c;
+    }
+}
+
+
+typedef union number {
+    ElmInt i;
+    ElmFloat f;
+} Number;
+
+
+ElmInt* eval_add_i(Closure* c) {
+    ElmInt *args, *result;
+
+    result = malloc(sizeof(ElmInt));
+    args = (ElmInt*)c->values;
+
+    memcpy(args, result, sizeof(ElmInt));
+
+    result->value = args[0].value + args[1].value;
+    return result;
+}
+
+ElmFloat* eval_add_f(Closure* c) {
+    ElmFloat *args, *result;
+
+    result = malloc(sizeof(ElmFloat));
+    args = (ElmFloat*)c->values;
+
+    memcpy(args, result, sizeof(ElmFloat));
+
+    result->value = args[0].value + args[1].value;
+    return result;
+}
+
+Number* eval_add(Closure* c) {
+    Number* a = c->values[0];
+    if (a->f.ctor == Ctor_Float) {
+        return (Number*)eval_add_f(c);
+    } else {
+        return (Number*)eval_add_i(c);
     }
 }
 
