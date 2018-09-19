@@ -187,26 +187,26 @@ typedef struct closure {
 } Closure;
 
 
-void* apply2(Closure* c_orig, void* arg0, void* arg1) {
-    Closure *c = malloc(sizeof(Closure));
+void* apply(u32 n_args, Closure* c_orig, void* args[]) {
+    u8 arity;
+    Closure* c;
+    u32 i;
+
+    c = malloc(sizeof(Closure));
     memcpy(c_orig, c, sizeof(Closure));
 
-    u8 arity = c->arity;
-    u8 remaining = arity - 2;
+    arity = c->arity;
+    for (i=0; i < n_args; i++) {
+        c->values[arity--] = args[i];
+    }
 
-    c->values[arity] = arg0;
-    c->values[arity-1] = arg1;
-
-    if (remaining != 0) {
-        c->arity = remaining;
-        return c;
-    } else {
+    if (arity == 0) {
         return c->evaluator(c);
+    } else {
+        c->arity = arity;
+        return c;
     }
 }
-
-
-
 
 
 int main(int argc, char ** argv) {
