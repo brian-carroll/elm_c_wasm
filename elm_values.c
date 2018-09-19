@@ -216,36 +216,19 @@ typedef union number {
 } Number;
 
 
-ElmInt* eval_add_i(Closure* c) {
-    ElmInt *args, *result;
-
-    result = malloc(sizeof(ElmInt));
-    args = (ElmInt*)c->values;
-
-    memcpy(args, result, sizeof(ElmInt));
-
-    result->value = args[0].value + args[1].value;
-    return result;
-}
-
-ElmFloat* eval_add_f(Closure* c) {
-    ElmFloat *args, *result;
-
-    result = malloc(sizeof(ElmFloat));
-    args = (ElmFloat*)c->values;
-
-    memcpy(args, result, sizeof(ElmFloat));
-
-    result->value = args[0].value + args[1].value;
-    return result;
-}
-
 Number* eval_add(Closure* c) {
-    Number* a = c->values[0];
-    if (a->f.ctor == Ctor_Float) {
-        return (Number*)eval_add_f(c);
+    Number *pa = c->values[0];
+    Number *pb = c->values[1];
+    if (pa->f.ctor == Ctor_Float) {
+        f64 fa = pa->f.value;
+        f64 fb = pb->f.value;
+        f64 f = fa + fb;
+        return (Number*)__ElmFloat(f);
     } else {
-        return (Number*)eval_add_i(c);
+        i32 ia = pa->i.value;
+        i32 ib = pb->i.value;
+        i32 i = ia + ib;
+        return (Number*)__ElmInt(i);
     }
 }
 
