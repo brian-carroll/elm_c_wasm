@@ -2,6 +2,22 @@
 #include <stdlib.h>
 
 
+// Primitive types
+
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef long int i64;
+
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long int u64;
+
+typedef float f32;
+typedef double f64;
+
+
 // Constants
 
 char False = 0;
@@ -10,8 +26,9 @@ char True = 1;
 char Unit = 0;
 
 
-// Comparables
-
+// Comparable constructor values
+// Enum is 4 bytes, not just 1. But in a struct, C compiler will pad to 4 bytes anyway.
+// Later we may use the extra bytes for a GC header
 typedef enum ctor_comp {
     Ctor_Nil,
     Ctor_Cons,
@@ -29,7 +46,9 @@ typedef enum ctor_comp {
 struct nil {
     Ctor_Comp ctor;
 };
-struct nil Nil;
+struct nil Nil = {
+    .ctor = Ctor_Nil
+};
 
 typedef struct cons {
     Ctor_Comp ctor;
@@ -83,10 +102,10 @@ Tuple3* __Tuple3(void* a, void* b, void* c) {
 
 typedef struct elm_int {
     Ctor_Comp ctor;
-    int value;
+    i32 value;
 } ElmInt;
 
-ElmInt* __ElmInt(int value) {
+ElmInt* __ElmInt(i32 value) {
     ElmInt *p = malloc(sizeof(ElmInt));
     p->ctor = Ctor_Int;
     p->value = value;
@@ -95,10 +114,10 @@ ElmInt* __ElmInt(int value) {
 
 typedef struct elm_float {
     Ctor_Comp ctor;
-    double value;
+    f64 value;
 } ElmFloat;
 
-ElmFloat* __ElmFloat(double value) {
+ElmFloat* __ElmFloat(f64 value) {
     ElmFloat *p = malloc(sizeof(ElmFloat));
     p->ctor = Ctor_Float;
     p->value = value;
@@ -109,8 +128,8 @@ ElmFloat* __ElmFloat(double value) {
 // Char
 
 typedef ElmInt ElmChar;
-ElmChar* __ElmChar(unsigned int value) {
-    ElmChar *p = malloc(sizeof(ElmInt));
+ElmChar* __ElmChar(u32 value) {
+    ElmChar *p = malloc(sizeof(ElmChar));
     p->ctor = Ctor_Char;
     p->value = value;
     return p;
@@ -120,18 +139,65 @@ ElmChar* __ElmChar(unsigned int value) {
 
 typedef struct elm_string {
     Ctor_Comp ctor;
-    unsigned int len_unicode;
-    unsigned int len_bytes;
-    char bytes[];
+    u32 len_unicode;
+    u32 len_bytes;
+    u8 bytes[];
 } ElmString;
 
-// string constructor function?
+// string constructor function? I'm not sure what we want it to look like!
+
+
+// Enums (unions with no params)
+/*
+ Elm compiler generates constants in memory, structures can point to them
+ Choose smallest required size.
+*/
+
+
+// Union types
+/*
+ Elm compiler generates C structs, enums, consts/functions
+*/
+
+// Record
+
+typedef struct field_set {
+    u32 size;
+    u32 fields[];
+} FieldSet;
+
+typedef struct record {
+    FieldSet* fields;
+    void* values[];
+} Record;
+
+/*
+ Elm compiler generates
+    field sets (global constant structs)
+    record constructor functions
+*/
+
+
+// Closure
+
+typedef struct closure {
+    u8 arity;
+    void* (*evaluator)(struct closure*); // pointer to a function that takes a pointer and returns a pointer
+    void* values[];
+} Closure;
+
+
+void* apply(void) {
+    return(NULL);
+}
+
+
 
 
 
 int main(int argc, char ** argv) {
     printf("sizeof(int) = %d\n", (int)sizeof(int));
-    printf("sizeof(double) = %d\n", (int)sizeof(double));
+    printf("sizeof(f64) = %d\n", (int)sizeof(f64));
     printf("sizeof(Ctor_Comp) = %d\n", (int)sizeof(Ctor_Comp));
     printf("\n");
 
@@ -175,39 +241,3 @@ int main(int argc, char ** argv) {
 
 
 };
-
-
-/*
-
-    False,
-    True,
-    Unit,
-    Int(i32),
-    Float(f64),
-    Char(char),
-    Str(Box<str>),
-    Nil,
-    Cons {
-        head: ElmRef,
-        tail: ElmRef,
-    },
-    Tuple2(ElmRef, ElmRef),
-    Tuple3(ElmRef, ElmRef, ElmRef),
-    Union {
-        ctor: Ctor,
-        params: Box<[ElmRef]>,
-    },
-    Enum(Ctor),
-    Record {
-        field_set: &'static [Field],
-        values: Box<[ElmRef]>,
-    },
-    Closure {
-        arity: u8,
-        values: Box<[ElmRef]>,
-        evaluator: &'static Fn(Box<[ElmRef]>) -> ElmValue,
-    },
-
-
-*/
-
