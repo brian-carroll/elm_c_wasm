@@ -187,8 +187,22 @@ typedef struct closure {
 } Closure;
 
 
-void* apply(void) {
-    return(NULL);
+void* apply2(Closure* c_orig, void* arg0, void* arg1) {
+    Closure *c = malloc(sizeof(Closure));
+    memcpy(c_orig, c, sizeof(Closure));
+
+    u8 arity = c->arity;
+    u8 remaining = arity - 2;
+
+    c->values[arity] = arg0;
+    c->values[arity-1] = arg1;
+
+    if (remaining != 0) {
+        c->arity = remaining;
+        return c;
+    } else {
+        return c->evaluator(c);
+    }
 }
 
 
