@@ -182,30 +182,35 @@ typedef struct record {
 // Closure
 
 typedef struct closure {
-    u8 arity;
-    void* (*evaluator)(struct closure*); // pointer to a function that takes a pointer and returns a pointer
+    u8 n_values; // current number of applied args
+    u8 max_values;
+    void* (*evaluator)(void**); // pointer to a function that takes an array of pointers and returns a pointer
     void* values[];
 } Closure;
 
 
-void* apply(u32 n_args, Closure* c_orig, void* args[]) {
-    u8 arity;
-    Closure* c;
-    u32 i;
-
-    c = malloc(sizeof(Closure));
-    memcpy(c_orig, c, sizeof(Closure));
-
-    arity = c->arity;
-    for (i=0; i < n_args; i++) {
-        c->values[arity--] = args[i];
-    }
-
-    if (arity == 0) {
-        return c->evaluator(c);
+void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
+    if (c_old->max_values == n_applied) {
+        // avoid allocating a new closure if we don't need it
+        return (*c_old->evaluator)(applied);
     } else {
-        c->arity = arity;
-        return c;
+        u8 n_old = c_old->n_values;
+        u8 n_new = n_old + n_applied;
+
+        size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
+        size_t size_applied = n_applied * sizeof(void*);
+        size_t size_new = size_old + size_applied;
+
+        Closure *c = malloc(size_new);
+        memcpy(c, c_old, size_old);
+        memcpy(&c->values[n_old], applied, size_applied);
+        c->n_values = n_new;
+
+        if (n_new == c->max_values) {
+            return (*c->evaluator)(c->values);
+        } else {
+            return c;
+        }
     }
 }
 
@@ -216,21 +221,54 @@ typedef union number {
 } Number;
 
 
-Number* eval_add(Closure* c) {
-    Number *pa = c->values[0];
-    Number *pb = c->values[1];
+void* eval_add(void* args[2]) {
+    Number *pa = args[0];
+    Number *pb = args[1];
     if (pa->f.ctor == Ctor_Float) {
         f64 fa = pa->f.value;
         f64 fb = pb->f.value;
         f64 f = fa + fb;
-        return (Number*)__ElmFloat(f);
+        return __ElmFloat(f);
     } else {
         i32 ia = pa->i.value;
         i32 ib = pb->i.value;
         i32 i = ia + ib;
-        return (Number*)__ElmInt(i);
+        return __ElmInt(i);
     }
 }
+
+Closure add = {
+    .n_values = 0,
+    .max_values = 2,
+    .evaluator = &eval_add,
+    .values = {}
+};
+
+
+
+
+// What I could generate from Elm compiler, not what I could write by hand
+// Obvious optimizations missing:
+//   Intermediate ElmInt allocated on heap. No way to work on unboxed ints and only
+//     create the final result of the function on the heap.
+//   No way to skip the convoluted 'apply' in this common case of having all args ready
+//     because `add` needs to be first-class *always* and I don't have a way to
+//     specialize it for when it's not being passed around.
+void* eval_user_project_closure(void* args[]) {
+    ElmInt *outerScopeValue = args[0];
+    ElmInt *arg1 = args[1];
+    ElmInt *arg2 = args[2];
+
+    ElmInt *tmp = apply(&add, 2, (void*[]){arg2, outerScopeValue});
+    return apply(&add, 2, (void*[]){arg1, tmp});
+}
+
+Closure user_project_closure = {
+    .n_values = 0,
+    .max_values = 3,
+    .evaluator = &eval_user_project_closure,
+    .values = {}
+};
 
 
 int main(int argc, char ** argv) {
@@ -278,4 +316,45 @@ int main(int argc, char ** argv) {
     );
 
 
+    /*
+        outerScopeValue =
+            1
+
+        closure arg1 arg2 =
+            outerScopeValue + arg1 + arg2
+
+        curried = 
+            closure 2
+
+        answer =
+            curried 3
+    */
+    ElmInt* outerScopeValue = __ElmInt(1);
+    Closure* closure = apply(
+        &user_project_closure,
+        1,
+        (void*[]){outerScopeValue}
+    );
+    Closure* curried = apply(
+        closure,
+        1,
+        (void*[]){__ElmInt(2)}
+    );
+    ElmInt* answer = apply(
+        curried,
+        1,
+        (void*[]){__ElmInt(3)}
+    );
+
+    printf("outerScopeValue addr=%d ctor=%d value=%d\n",
+        (int)outerScopeValue, (int)outerScopeValue->ctor, outerScopeValue->value
+    );
+
+    printf("curried addr=%d n_values=%d max_values=%d\n",
+        (int)curried, (int)curried->n_values, (int)curried->max_values
+    );
+
+    printf("answer addr=%d ctor=%d value=%d\n",
+        (int)answer, (int)answer->ctor, answer->value
+    );
 };
