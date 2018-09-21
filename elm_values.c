@@ -314,6 +314,7 @@ int main(int argc, char ** argv) {
     printf("Char size=%ld addr=%d ctor=%d value=%c\n",
         sizeof(ElmChar), (int)ch, (int)ch->ctor, ch->value
     );
+    printf("\n");
 
 
     /*
@@ -348,6 +349,10 @@ int main(int argc, char ** argv) {
 
     printf("outerScopeValue addr=%d ctor=%d value=%d\n",
         (int)outerScopeValue, (int)outerScopeValue->ctor, outerScopeValue->value
+    );
+
+    printf("closure addr=%d n_values=%d max_values=%d\n",
+        (int)closure, (int)closure->n_values, (int)closure->max_values
     );
 
     printf("curried addr=%d n_values=%d max_values=%d\n",
