@@ -57,7 +57,9 @@ typedef struct cons {
     void* tail;
 } Cons;
 
-Cons* __List_Cons(void* head, void* tail) {
+#define CONS(h,t) { .ctor = Ctor_Cons, .head = h, .tail = t }
+
+Cons* newList_Cons(void* head, void* tail) {
     Cons *p = malloc(sizeof(Cons));
     p->ctor = Ctor_Cons;
     p->head = head;
@@ -74,7 +76,9 @@ typedef struct tuple2 {
     void* b;
 } Tuple2;
 
-Tuple2* __Tuple2(void* a, void* b) {
+#define TUPLE2(a,b) { .ctor = Ctor_Tuple2, .a = a, .b = b }
+
+Tuple2* newTuple2(void* a, void* b) {
     Tuple2 *p = malloc(sizeof(Tuple2));
     p->ctor = Ctor_Tuple2;
     p->a = a;
@@ -89,7 +93,9 @@ typedef struct tuple3 {
     void* c;
 } Tuple3;
 
-Tuple3* __Tuple3(void* a, void* b, void* c) {
+#define TUPLE3(a,b,c) { .ctor = Ctor_Tuple3, .a = a, .b = b, .c = c }
+
+Tuple3* newTuple3(void* a, void* b, void* c) {
     Tuple3 *p = malloc(sizeof(Tuple3));
     p->ctor = Ctor_Tuple3;
     p->a = a;
@@ -106,19 +112,24 @@ typedef struct elm_int {
     i32 value;
 } ElmInt;
 
-ElmInt* __ElmInt(i32 value) {
+#define ELM_INT(x) { .ctor = Ctor_Int, .value = x }
+
+ElmInt* newElmInt(i32 value) {
     ElmInt *p = malloc(sizeof(ElmInt));
     p->ctor = Ctor_Int;
     p->value = value;
     return p;
 };
 
+
 typedef struct elm_float {
     Ctor_Comp ctor;
     f64 value;
 } ElmFloat;
 
-ElmFloat* __ElmFloat(f64 value) {
+#define ELM_FLOAT(x) { .ctor = Ctor_Float, .value = x }
+
+ElmFloat* newElmFloat(f64 value) {
     ElmFloat *p = malloc(sizeof(ElmFloat));
     p->ctor = Ctor_Float;
     p->value = value;
@@ -128,8 +139,14 @@ ElmFloat* __ElmFloat(f64 value) {
 
 // Char
 
-typedef ElmInt ElmChar;
-ElmChar* __ElmChar(u32 value) {
+typedef struct elm_char {
+    Ctor_Comp ctor;
+    i32 value;
+} ElmChar;
+
+#define ELM_CHAR(x) { .ctor = Ctor_Char, .value = x }
+
+ElmChar* newElmChar(u32 value) {
     ElmChar *p = malloc(sizeof(ElmChar));
     p->ctor = Ctor_Char;
     p->value = value;
@@ -188,6 +205,7 @@ typedef struct closure {
     void* values[];
 } Closure;
 
+#define CLOSURE(f, n) { .evaluator = &f, .max_values = n, .n_values = 0, .values = {} }
 
 void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
     if (c_old->max_values == n_applied) {
@@ -228,32 +246,23 @@ void* eval_add(void* args[2]) {
         f64 fa = pa->f.value;
         f64 fb = pb->f.value;
         f64 f = fa + fb;
-        return __ElmFloat(f);
+        return newElmFloat(f);
     } else {
         i32 ia = pa->i.value;
         i32 ib = pb->i.value;
         i32 i = ia + ib;
-        return __ElmInt(i);
+        return newElmInt(i);
     }
 }
 
-Closure add = {
-    .n_values = 0,
-    .max_values = 2,
-    .evaluator = &eval_add,
-    .values = {}
-};
+Closure add = CLOSURE(eval_add, 2);
 
 
 
 
 // What I could generate from Elm compiler, not what I could write by hand
-// Obvious optimizations missing:
-//   Intermediate ElmInt allocated on heap. No way to work on unboxed ints and only
-//     create the final result of the function on the heap.
-//   No way to skip the convoluted 'apply' in this common case of having all args ready
-//     because `add` needs to be first-class *always* and I don't have a way to
-//     specialize it for when it's not being passed around.
+// Intermediate ElmInt allocated on heap. No way to work on unboxed ints and only
+// create the final result of the function on the heap.
 void* eval_user_project_closure(void* args[]) {
     ElmInt *outerScopeValue = args[0];
     ElmInt *arg1 = args[1];
@@ -263,12 +272,8 @@ void* eval_user_project_closure(void* args[]) {
     return apply(&add, 2, (void*[]){arg1, tmp});
 }
 
-Closure user_project_closure = {
-    .n_values = 0,
-    .max_values = 3,
-    .evaluator = &eval_user_project_closure,
-    .values = {}
-};
+Closure user_project_closure = CLOSURE(eval_user_project_closure, 3);
+ElmInt outerScopeValue = ELM_INT(1);
 
 
 int main(int argc, char ** argv) {
@@ -284,33 +289,33 @@ int main(int argc, char ** argv) {
 
     printf("Nil size=%ld addr=%d ctor=%d\n", sizeof(Nil), (int)(&Nil), (int)Nil.ctor);
 
-    Cons *c = __List_Cons(&Unit, &Nil); // [()]
+    Cons *c = newList_Cons(&Unit, &Nil); // [()]
     printf("Cons size=%ld addr=%d ctor=%d head=%d tail=%d\n",
         sizeof(Cons), (int)c, (int)c->ctor, (int)c->head, (int)c->tail
     );
     printf("\n");
 
-    Tuple2 *t2 = __Tuple2(&Unit, &Unit); // ((),())
+    Tuple2 *t2 = newTuple2(&Unit, &Unit); // ((),())
     printf("Tuple2 size=%ld addr=%d ctor=%d a=%d b=%d\n",
         sizeof(Tuple2), (int)t2, (int)t2->ctor, (int)t2->a, (int)t2->b
     );
 
-    Tuple3 *t3 = __Tuple3(&Unit, &Unit, &Unit); // ((),(),())
+    Tuple3 *t3 = newTuple3(&Unit, &Unit, &Unit); // ((),(),())
     printf("Tuple3 size=%ld addr=%d ctor=%d a=%d b=%d c=%d\n",
         sizeof(Tuple3), (int)t3, (int)t3->ctor, (int)t3->a, (int)t3->b, (int)t3->c
     );
     printf("\n");
 
-    ElmInt *i = __ElmInt(123);
+    ElmInt *i = newElmInt(123);
     printf("Int size=%ld addr=%d ctor=%d value=%d\n",
         sizeof(ElmInt), (int)i, (int)i->ctor, i->value
     );
-    ElmFloat *f = __ElmFloat(123.456);
+    ElmFloat *f = newElmFloat(123.456);
     printf("Float size=%ld addr=%d ctor=%d value=%f\n",
         sizeof(ElmFloat), (int)f, (int)f->ctor, f->value
     );
 
-    ElmChar *ch = __ElmChar('A');
+    ElmChar *ch = newElmChar('A');
     printf("Char size=%ld addr=%d ctor=%d value=%c\n",
         sizeof(ElmChar), (int)ch, (int)ch->ctor, ch->value
     );
@@ -330,25 +335,26 @@ int main(int argc, char ** argv) {
         answer =
             curried 3
     */
-    ElmInt* outerScopeValue = __ElmInt(1);
+    // ElmInt* outerScopeValue = newElmInt(1);
     Closure* closure = apply(
         &user_project_closure,
         1,
-        (void*[]){outerScopeValue}
+        (void*[]){&outerScopeValue}
     );
     Closure* curried = apply(
         closure,
         1,
-        (void*[]){__ElmInt(2)}
+        (void*[]){newElmInt(2)}
     );
     ElmInt* answer = apply(
         curried,
         1,
-        (void*[]){__ElmInt(3)}
+        (void*[]){newElmInt(3)}
     );
 
     printf("outerScopeValue addr=%d ctor=%d value=%d\n",
-        (int)outerScopeValue, (int)outerScopeValue->ctor, outerScopeValue->value
+        // (int)outerScopeValue, (int)outerScopeValue->ctor, outerScopeValue->value
+        (int)&outerScopeValue, (int)outerScopeValue.ctor, outerScopeValue.value
     );
 
     printf("closure addr=%d n_values=%d max_values=%d\n",
