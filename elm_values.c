@@ -20,11 +20,10 @@ typedef double f64;
 
 
 // Constants
-
-char False = 0;
-char True = 1;
-
-char Unit = 0;
+// using 'const' qualifier is pointless because we cast pointers to void*
+u8 False = 0;
+u8 True = 1;
+u8 Unit = 0;
 
 
 // Comparable constructor values
