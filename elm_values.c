@@ -221,6 +221,8 @@ void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
         Closure *c = malloc(size_new);
         memcpy(c, c_old, size_old);
         memcpy(&c->values[n_old], applied, size_applied);
+        // void* c_applied = c + size_old;
+        // memcpy(c_applied, applied, size_applied);
         c->n_values = n_new;
 
         if (n_new == c->max_values) {
@@ -259,9 +261,11 @@ Closure add = CLOSURE(eval_add, 2);
 
 
 
-// What I could generate from Elm compiler, not what I could write by hand
-// Intermediate ElmInt allocated on heap. No way to work on unboxed ints and only
-// create the final result of the function on the heap.
+// This is code I could generate from the Elm compiler. I could write better by hand.
+// The intermediate ElmInt allocated on heap is hard to eliminate in generated code.
+// Would be nice to evaluate entire expression on raw ints, and only then box it in ElmInt
+// Would require Elm compiler optimizer to identify Int-only subexpressions (also Float-only)
+// so that the code generator would know what to do.
 void* eval_user_project_closure(void* args[]) {
     ElmInt *outerScopeValue = args[0];
     ElmInt *arg1 = args[1];
@@ -275,48 +279,72 @@ Closure user_project_closure = CLOSURE(eval_user_project_closure, 3);
 ElmInt outerScopeValue = ELM_INT(1);
 
 
+char* hex(void* addr, int size) {
+    char *str;
+    int i, c=0, n=(9*size)/4;
+    str = malloc(n);
+    for (i=0; i < size; c += 9, i += 4) {
+        // Print in actual byte order (little endian)
+        sprintf(str + c,
+            "%02x%02x%02x%02x|",
+            *(char*)(addr + i),
+            *(char*)(addr + i + 1),
+            *(char*)(addr + i + 2),
+            *(char*)(addr + i + 3)
+        );
+    }
+    str[c-1] = 0; // erase last "|" and terminate the string
+    return str;
+}
+
+char* hex_ptr(void* ptr) {
+    return hex(&ptr, sizeof(void*));
+}
+
+
+
 int main(int argc, char ** argv) {
     printf("sizeof(int) = %d\n", (int)sizeof(int));
     printf("sizeof(f64) = %d\n", (int)sizeof(f64));
     printf("sizeof(Ctor_Comp) = %d\n", (int)sizeof(Ctor_Comp));
     printf("\n");
 
-    printf("False size=%ld %d %d\n", sizeof(False), (int)(&False), False);
-    printf("True size=%ld %d %d\n", sizeof(True), (int)(&True), True);
-    printf("Unit size=%ld %d %d\n", sizeof(Unit), (int)(&Unit), Unit);
+    printf("False size=%ld %s %d\n", sizeof(False), hex_ptr(&False), False);
+    printf("True size=%ld %s %d\n", sizeof(True), hex_ptr(&True), True);
+    printf("Unit size=%ld %s %d\n", sizeof(Unit), hex_ptr(&Unit), Unit);
     printf("\n");
 
-    printf("Nil size=%ld addr=%d ctor=%d\n", sizeof(Nil), (int)(&Nil), (int)Nil.ctor);
+    printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.ctor);
 
     Cons *c = newList_Cons(&Unit, &Nil); // [()]
-    printf("Cons size=%ld addr=%d ctor=%d head=%d tail=%d\n",
-        sizeof(Cons), (int)c, (int)c->ctor, (int)c->head, (int)c->tail
+    printf("Cons size=%ld addr=%s ctor=%d head=%d tail=%d\n",
+        sizeof(Cons), hex_ptr(c), (int)c->ctor, (int)c->head, (int)c->tail
     );
     printf("\n");
 
     Tuple2 *t2 = newTuple2(&Unit, &Unit); // ((),())
-    printf("Tuple2 size=%ld addr=%d ctor=%d a=%d b=%d\n",
-        sizeof(Tuple2), (int)t2, (int)t2->ctor, (int)t2->a, (int)t2->b
+    printf("Tuple2 size=%ld addr=%s ctor=%d a=%d b=%d\n",
+        sizeof(Tuple2), hex_ptr(t2), (int)t2->ctor, (int)t2->a, (int)t2->b
     );
 
     Tuple3 *t3 = newTuple3(&Unit, &Unit, &Unit); // ((),(),())
-    printf("Tuple3 size=%ld addr=%d ctor=%d a=%d b=%d c=%d\n",
-        sizeof(Tuple3), (int)t3, (int)t3->ctor, (int)t3->a, (int)t3->b, (int)t3->c
+    printf("Tuple3 size=%ld addr=%s ctor=%d a=%d b=%d c=%d\n",
+        sizeof(Tuple3), hex_ptr(t3), (int)t3->ctor, (int)t3->a, (int)t3->b, (int)t3->c
     );
     printf("\n");
 
     ElmInt *i = newElmInt(123);
-    printf("Int size=%ld addr=%d ctor=%d value=%d\n",
-        sizeof(ElmInt), (int)i, (int)i->ctor, i->value
+    printf("Int size=%ld addr=%s ctor=%d value=%d\n",
+        sizeof(ElmInt), hex_ptr(i), (int)i->ctor, i->value
     );
     ElmFloat *f = newElmFloat(123.456);
-    printf("Float size=%ld addr=%d ctor=%d value=%f\n",
-        sizeof(ElmFloat), (int)f, (int)f->ctor, f->value
+    printf("Float size=%ld addr=%s ctor=%d value=%f\n",
+        sizeof(ElmFloat), hex_ptr(f), (int)f->ctor, f->value
     );
 
     ElmChar *ch = newElmChar('A');
-    printf("Char size=%ld addr=%d ctor=%d value=%c\n",
-        sizeof(ElmChar), (int)ch, (int)ch->ctor, ch->value
+    printf("Char size=%ld addr=%s ctor=%d value=%c\n",
+        sizeof(ElmChar), hex_ptr(ch), (int)ch->ctor, ch->value
     );
     printf("\n");
 
@@ -340,31 +368,46 @@ int main(int argc, char ** argv) {
         1,
         (void*[]){&outerScopeValue}
     );
+    ElmInt *two = newElmInt(2);
+    ElmInt *three = newElmInt(3);
     Closure* curried = apply(
         closure,
         1,
-        (void*[]){newElmInt(2)}
+        (void*[]){two}
     );
     ElmInt* answer = apply(
         curried,
         1,
-        (void*[]){newElmInt(3)}
+        (void*[]){three}
     );
 
-    printf("outerScopeValue addr=%d ctor=%d value=%d\n",
-        // (int)outerScopeValue, (int)outerScopeValue->ctor, outerScopeValue->value
-        (int)&outerScopeValue, (int)outerScopeValue.ctor, outerScopeValue.value
+    printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
+        hex_ptr(&outerScopeValue), (int)outerScopeValue.ctor, outerScopeValue.value,
+        hex(&outerScopeValue, sizeof(ElmInt))
     );
 
-    printf("closure addr=%d n_values=%d max_values=%d\n",
-        (int)closure, (int)closure->n_values, (int)closure->max_values
+    printf("two addr=%s ctor=%d value=%d, hex=%s\n",
+        hex_ptr(two), (int)two->ctor, two->value,
+        hex(two, sizeof(ElmInt))
     );
 
-    printf("curried addr=%d n_values=%d max_values=%d\n",
-        (int)curried, (int)curried->n_values, (int)curried->max_values
+    printf("three addr=%s ctor=%d value=%d, hex=%s\n",
+        hex_ptr(three), (int)three->ctor, three->value,
+        hex(three, sizeof(ElmInt))
     );
 
-    printf("answer addr=%d ctor=%d value=%d\n",
-        (int)answer, (int)answer->ctor, answer->value
+    printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n",
+        hex_ptr(closure), (int)closure->n_values, (int)closure->max_values,
+        hex(closure, sizeof(Closure) + closure->n_values * sizeof(void*))
+    );
+
+    printf("curried addr=%s n_values=%d max_values=%d, hex=%s\n",
+        hex_ptr(curried), (int)curried->n_values, (int)curried->max_values,
+        hex(curried, sizeof(Closure) + curried->n_values * sizeof(void*))
+    );
+
+    printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
+        hex_ptr(answer), (int)answer->ctor, answer->value,
+        hex(answer, sizeof(ElmInt))
     );
 };
