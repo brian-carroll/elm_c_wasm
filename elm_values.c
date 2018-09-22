@@ -275,8 +275,11 @@ void* eval_user_project_closure(void* args[]) {
     return apply(&add, 2, (void*[]){arg1, tmp});
 }
 
+// Constants calculated at compile time and pre-loaded into memory from Wasm data segment
 Closure user_project_closure = CLOSURE(eval_user_project_closure, 3);
 ElmInt outerScopeValue = ELM_INT(1);
+ElmInt two = ELM_INT(2);
+ElmInt three = ELM_INT(3);
 
 
 char* hex(void* addr, int size) {
@@ -297,6 +300,10 @@ char* hex(void* addr, int size) {
     return str;
 }
 
+// Print a memory address held in a pointer
+//   Addresses are printed in little-endian format
+//   => Easier to see what pointers are pointing to it
+//   => Harder to subtract in your head if you're interested in sizes & memory layout
 char* hex_ptr(void* ptr) {
     return hex(&ptr, sizeof(void*));
 }
@@ -368,17 +375,15 @@ int main(int argc, char ** argv) {
         1,
         (void*[]){&outerScopeValue}
     );
-    ElmInt *two = newElmInt(2);
-    ElmInt *three = newElmInt(3);
     Closure* curried = apply(
         closure,
         1,
-        (void*[]){two}
+        (void*[]){&two}
     );
     ElmInt* answer = apply(
         curried,
         1,
-        (void*[]){three}
+        (void*[]){&three}
     );
 
     printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
@@ -387,13 +392,13 @@ int main(int argc, char ** argv) {
     );
 
     printf("two addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(two), (int)two->ctor, two->value,
-        hex(two, sizeof(ElmInt))
+        hex_ptr(&two), (int)two.ctor, two.value,
+        hex(&two, sizeof(ElmInt))
     );
 
     printf("three addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(three), (int)three->ctor, three->value,
-        hex(three, sizeof(ElmInt))
+        hex_ptr(&three), (int)three.ctor, three.value,
+        hex(&three, sizeof(ElmInt))
     );
 
     printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n",
