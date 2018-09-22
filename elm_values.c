@@ -278,8 +278,6 @@ void* eval_user_project_closure(void* args[]) {
 // Constants calculated at compile time and pre-loaded into memory from Wasm data segment
 Closure user_project_closure = CLOSURE(eval_user_project_closure, 3);
 ElmInt outerScopeValue = ELM_INT(1);
-ElmInt two = ELM_INT(2);
-ElmInt three = ELM_INT(3);
 
 
 char* hex(void* addr, int size) {
@@ -375,6 +373,8 @@ int main(int argc, char ** argv) {
         1,
         (void*[]){&outerScopeValue}
     );
+    ElmInt two = ELM_INT(2);
+    ElmInt three = ELM_INT(3);
     Closure* curried = apply(
         closure,
         1,
