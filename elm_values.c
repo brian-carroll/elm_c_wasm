@@ -29,7 +29,7 @@ u8 Unit = 0;
 // Comparable constructor values
 // Enum is 4 bytes, not just 1. But in a struct, C compiler will pad to 4 bytes anyway.
 // Later we may use the extra bytes for a GC header
-typedef enum ctor_comp {
+typedef enum {
     Ctor_Nil,
     Ctor_Cons,
     Ctor_Tuple2,
@@ -50,7 +50,7 @@ struct nil Nil = {
     .ctor = Ctor_Nil
 };
 
-typedef struct cons {
+typedef struct {
     Ctor_Comp ctor;
     void* head;
     void* tail;
@@ -69,7 +69,7 @@ Cons* newList_Cons(void* head, void* tail) {
 
 // Tuples
 
-typedef struct tuple2 {
+typedef struct {
     Ctor_Comp ctor;
     void* a;
     void* b;
@@ -85,7 +85,7 @@ Tuple2* newTuple2(void* a, void* b) {
     return p;
 };
 
-typedef struct tuple3 {
+typedef struct {
     Ctor_Comp ctor;
     void* a;
     void* b;
@@ -106,7 +106,7 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
 
 // Numbers
 
-typedef struct elm_int {
+typedef struct {
     Ctor_Comp ctor;
     i32 value;
 } ElmInt;
@@ -121,7 +121,7 @@ ElmInt* newElmInt(i32 value) {
 };
 
 
-typedef struct elm_float {
+typedef struct {
     Ctor_Comp ctor;
     f64 value;
 } ElmFloat;
@@ -138,7 +138,7 @@ ElmFloat* newElmFloat(f64 value) {
 
 // Char
 
-typedef struct elm_char {
+typedef struct {
     Ctor_Comp ctor;
     i32 value;
 } ElmChar;
@@ -154,7 +154,7 @@ ElmChar* newElmChar(u32 value) {
 
 // String
 
-typedef struct elm_string {
+typedef struct {
     Ctor_Comp ctor;
     u32 len_unicode;
     u32 len_bytes;
@@ -178,12 +178,12 @@ typedef struct elm_string {
 
 // Record
 
-typedef struct field_set {
+typedef struct {
     u32 size;
     u32 fields[];
 } FieldSet;
 
-typedef struct record {
+typedef struct {
     FieldSet* fields;
     void* values[];
 } Record;
@@ -197,7 +197,7 @@ typedef struct record {
 
 // Closure
 
-typedef struct closure {
+typedef struct {
     u8 n_values; // current number of applied args
     u8 max_values;
     void* (*evaluator)(void**); // pointer to a function that takes an array of pointers and returns a pointer
@@ -234,7 +234,7 @@ void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
 }
 
 
-typedef union number {
+typedef union {
     ElmInt i;
     ElmFloat f;
 } Number;
