@@ -19,48 +19,99 @@ typedef float f32;
 typedef double f64;
 
 
-// Constants
+// Static values (not on dynamic heap)
 // using 'const' qualifier is pointless because we cast pointers to void*
 u8 False = 0;
 u8 True = 1;
 u8 Unit = 0;
 
 
-// Comparable constructor values
-// Enum is 4 bytes, not just 1. But in a struct, C compiler will pad to 4 bytes anyway.
-// Later we may use the extra bytes for a GC header
+// Type tags for heap values
 typedef enum {
-    Ctor_Nil,
-    Ctor_Cons,
-    Ctor_Tuple2,
-    Ctor_Tuple3,
-    Ctor_Int,
-    Ctor_Float,
-    Ctor_Char,
-    Ctor_String,
-} Ctor_Comp;
+    Tag_Int,
+    Tag_Float,
+    Tag_Char,
+    Tag_String,
+    Tag_Nil,
+    Tag_Cons,
+    Tag_Tuple2,
+    Tag_Tuple3,
+    Tag_Custom,
+    Tag_Record,
+    Tag_Closure,
+} Tag;
 
+
+typedef enum {
+    GcWhite,
+    GcGray,
+    GcBlack,
+} GcColor;
+
+
+// Header for heap values
+typedef struct {
+    Tag tag :4;          // runtime type tag (4 bits)
+    GcColor gc_color :2; // GC white/gray/black (2 bits)
+    u32 size :26;        // payload size in integers (26 bits => <256MB)
+} Header;
+
+#define HEADER_INT        (Header){ .tag=Tag_Int,     .size=0,   .gc_color=GcWhite }
+#define HEADER_FLOAT      (Header){ .tag=Tag_Float,   .size=0,   .gc_color=GcWhite }
+#define HEADER_CHAR       (Header){ .tag=Tag_Char,    .size=0,   .gc_color=GcWhite }
+#define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=x/4, .gc_color=GcWhite }
+#define HEADER_NIL        (Header){ .tag=Tag_Nil,     .size=0,   .gc_color=GcWhite }
+#define HEADER_CONS       (Header){ .tag=Tag_Cons,    .size=2,   .gc_color=GcWhite }
+#define HEADER_TUPLE2     (Header){ .tag=Tag_Tuple2,  .size=2,   .gc_color=GcWhite }
+#define HEADER_TUPLE3     (Header){ .tag=Tag_Tuple3,  .size=3,   .gc_color=GcWhite }
+#define HEADER_CUSTOM(x)  (Header){ .tag=Tag_Custom,  .size=sizeof(Custom)+x, .gc_color=GcWhite }
+#define HEADER_RECORD(x)  (Header){ .tag=Tag_Record,  .size=sizeof(Record)+x, .gc_color=GcWhite }
+#define HEADER_CLOSURE(x) (Header){ .tag=Tag_Closure, .size=sizeof(Closure)+x, .gc_color=GcWhite }
+
+int gc_first_pointer_offset(Header header) {
+    switch (header.tag) {
+        case Tag_Int:
+        case Tag_Float:
+        case Tag_Char:
+        case Tag_String:
+        case Tag_Nil:
+            return -1; // no pointers to trace
+
+        case Tag_Cons:
+        case Tag_Tuple2:
+        case Tag_Tuple3:
+            return 0;  // first pointer is directly after header
+
+        case Tag_Custom:
+        case Tag_Record:
+            return 1;  // skip 1 pointer-sized element (4 bytes)
+
+        case Tag_Closure:
+            return 2;  // skip 2 pointer-sized elements (8 bytes)
+        
+        default:
+            return -1;
+    }
+}
 
 // List
 
 struct nil {
-    Ctor_Comp ctor;
+    Header header;
 };
 struct nil Nil = {
-    .ctor = Ctor_Nil
+    .header = HEADER_NIL  // not on the dynamic heap, but has a header anyway
 };
 
 typedef struct {
-    Ctor_Comp ctor;
+    Header header;
     void* head;
     void* tail;
 } Cons;
 
-#define CONS(h,t) { .ctor = Ctor_Cons, .head = h, .tail = t }
-
 Cons* newList_Cons(void* head, void* tail) {
     Cons *p = malloc(sizeof(Cons));
-    p->ctor = Ctor_Cons;
+    p->header = HEADER_CONS;
     p->head = head;
     p->tail = tail;
     return p;
@@ -70,33 +121,29 @@ Cons* newList_Cons(void* head, void* tail) {
 // Tuples
 
 typedef struct {
-    Ctor_Comp ctor;
+    Header header;
     void* a;
     void* b;
 } Tuple2;
 
-#define TUPLE2(a,b) { .ctor = Ctor_Tuple2, .a = a, .b = b }
-
 Tuple2* newTuple2(void* a, void* b) {
     Tuple2 *p = malloc(sizeof(Tuple2));
-    p->ctor = Ctor_Tuple2;
+    p->header = HEADER_TUPLE2;
     p->a = a;
     p->b = b;
     return p;
 };
 
 typedef struct {
-    Ctor_Comp ctor;
+    Header header;
     void* a;
     void* b;
     void* c;
 } Tuple3;
 
-#define TUPLE3(a,b,c) { .ctor = Ctor_Tuple3, .a = a, .b = b, .c = c }
-
 Tuple3* newTuple3(void* a, void* b, void* c) {
     Tuple3 *p = malloc(sizeof(Tuple3));
-    p->ctor = Ctor_Tuple3;
+    p->header = HEADER_TUPLE3;
     p->a = a;
     p->b = b;
     p->c = c;
@@ -107,30 +154,26 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
 // Numbers
 
 typedef struct {
-    Ctor_Comp ctor;
+    Header header;
     i32 value;
 } ElmInt;
 
-#define ELM_INT(x) { .ctor = Ctor_Int, .value = x }
-
 ElmInt* newElmInt(i32 value) {
     ElmInt *p = malloc(sizeof(ElmInt));
-    p->ctor = Ctor_Int;
+    p->header = HEADER_INT;
     p->value = value;
     return p;
 };
 
 
 typedef struct {
-    Ctor_Comp ctor;
+    Header header;
     f64 value;
 } ElmFloat;
 
-#define ELM_FLOAT(x) { .ctor = Ctor_Float, .value = x }
-
 ElmFloat* newElmFloat(f64 value) {
     ElmFloat *p = malloc(sizeof(ElmFloat));
-    p->ctor = Ctor_Float;
+    p->header = HEADER_FLOAT;
     p->value = value;
     return p;
 };
@@ -139,15 +182,13 @@ ElmFloat* newElmFloat(f64 value) {
 // Char
 
 typedef struct {
-    Ctor_Comp ctor;
+    Header header;
     i32 value;
 } ElmChar;
 
-#define ELM_CHAR(x) { .ctor = Ctor_Char, .value = x }
-
 ElmChar* newElmChar(u32 value) {
     ElmChar *p = malloc(sizeof(ElmChar));
-    p->ctor = Ctor_Char;
+    p->header = HEADER_CHAR;
     p->value = value;
     return p;
 };
@@ -155,8 +196,7 @@ ElmChar* newElmChar(u32 value) {
 // String
 
 typedef struct {
-    Ctor_Comp ctor;
-    u32 len_unicode;
+    Header header;
     u32 len_bytes;
     u8 bytes[];
 } ElmString;
@@ -171,10 +211,14 @@ typedef struct {
 */
 
 
-// Union types
-/*
- Elm compiler generates C structs, enums, consts/functions
-*/
+// Custom types
+
+typedef struct {
+    Header header;
+    u32 ctor;
+    void* values[];
+} Custom;
+
 
 // Record
 
@@ -184,6 +228,7 @@ typedef struct {
 } FieldSet;
 
 typedef struct {
+    Header header;
     FieldSet* fields;
     void* values[];
 } Record;
@@ -198,13 +243,20 @@ typedef struct {
 // Closure
 
 typedef struct {
-    u8 n_values; // current number of applied args
-    u8 max_values;
+    Header header;
+    u16 n_values; // current number of applied args
+    u16 max_values;
     void* (*evaluator)(void**); // pointer to a function that takes an array of pointers and returns a pointer
     void* values[];
 } Closure;
 
-#define CLOSURE(f, n) { .evaluator = &f, .max_values = n, .n_values = 0, .values = {} }
+#define CLOSURE(f, n) (Closure){ \
+    .header = HEADER_CLOSURE(0), \
+    .evaluator = &f, \
+    .max_values = n, \
+    .n_values = 0, \
+    .values = {} \
+}
 
 void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
     if (c_old->max_values == n_applied) {
@@ -221,8 +273,7 @@ void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
         Closure *c = malloc(size_new);
         memcpy(c, c_old, size_old);
         memcpy(&c->values[n_old], applied, size_applied);
-        // void* c_applied = c + size_old;
-        // memcpy(c_applied, applied, size_applied);
+        c->header = HEADER_CLOSURE(n_new);
         c->n_values = n_new;
 
         if (n_new == c->max_values) {
@@ -243,7 +294,7 @@ typedef union {
 void* eval_add(void* args[2]) {
     Number *pa = args[0];
     Number *pb = args[1];
-    if (pa->f.ctor == Ctor_Float) {
+    if (pa->f.header.tag == Tag_Float) {
         f64 fa = pa->f.value;
         f64 fb = pb->f.value;
         f64 f = fa + fb;
@@ -277,7 +328,7 @@ void* eval_user_project_closure(void* args[]) {
 
 // Constants calculated at compile time and pre-loaded into memory from Wasm data segment
 Closure user_project_closure = CLOSURE(eval_user_project_closure, 3);
-ElmInt outerScopeValue = ELM_INT(1);
+ElmInt outerScopeValue = (ElmInt){ .header = HEADER_INT, .value = 1 };
 
 
 char* hex(void* addr, int size) {
@@ -311,7 +362,6 @@ char* hex_ptr(void* ptr) {
 int main(int argc, char ** argv) {
     printf("sizeof(int) = %d\n", (int)sizeof(int));
     printf("sizeof(f64) = %d\n", (int)sizeof(f64));
-    printf("sizeof(Ctor_Comp) = %d\n", (int)sizeof(Ctor_Comp));
     printf("\n");
 
     printf("False size=%ld %s %d\n", sizeof(False), hex_ptr(&False), False);
@@ -319,37 +369,37 @@ int main(int argc, char ** argv) {
     printf("Unit size=%ld %s %d\n", sizeof(Unit), hex_ptr(&Unit), Unit);
     printf("\n");
 
-    printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.ctor);
+    printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
 
     Cons *c = newList_Cons(&Unit, &Nil); // [()]
     printf("Cons size=%ld addr=%s ctor=%d head=%d tail=%d\n",
-        sizeof(Cons), hex_ptr(c), (int)c->ctor, (int)c->head, (int)c->tail
+        sizeof(Cons), hex_ptr(c), (int)c->header.tag, (int)c->head, (int)c->tail
     );
     printf("\n");
 
     Tuple2 *t2 = newTuple2(&Unit, &Unit); // ((),())
     printf("Tuple2 size=%ld addr=%s ctor=%d a=%d b=%d\n",
-        sizeof(Tuple2), hex_ptr(t2), (int)t2->ctor, (int)t2->a, (int)t2->b
+        sizeof(Tuple2), hex_ptr(t2), (int)t2->header.tag, (int)t2->a, (int)t2->b
     );
 
     Tuple3 *t3 = newTuple3(&Unit, &Unit, &Unit); // ((),(),())
     printf("Tuple3 size=%ld addr=%s ctor=%d a=%d b=%d c=%d\n",
-        sizeof(Tuple3), hex_ptr(t3), (int)t3->ctor, (int)t3->a, (int)t3->b, (int)t3->c
+        sizeof(Tuple3), hex_ptr(t3), (int)t3->header.tag, (int)t3->a, (int)t3->b, (int)t3->c
     );
     printf("\n");
 
     ElmInt *i = newElmInt(123);
     printf("Int size=%ld addr=%s ctor=%d value=%d\n",
-        sizeof(ElmInt), hex_ptr(i), (int)i->ctor, i->value
+        sizeof(ElmInt), hex_ptr(i), (int)i->header.tag, i->value
     );
     ElmFloat *f = newElmFloat(123.456);
     printf("Float size=%ld addr=%s ctor=%d value=%f\n",
-        sizeof(ElmFloat), hex_ptr(f), (int)f->ctor, f->value
+        sizeof(ElmFloat), hex_ptr(f), (int)f->header.tag, f->value
     );
 
     ElmChar *ch = newElmChar('A');
     printf("Char size=%ld addr=%s ctor=%d value=%c\n",
-        sizeof(ElmChar), hex_ptr(ch), (int)ch->ctor, ch->value
+        sizeof(ElmChar), hex_ptr(ch), (int)ch->header.tag, ch->value
     );
     printf("\n");
 
@@ -373,8 +423,8 @@ int main(int argc, char ** argv) {
         1,
         (void*[]){&outerScopeValue}
     );
-    ElmInt two = ELM_INT(2);
-    ElmInt three = ELM_INT(3);
+    ElmInt two = (ElmInt){ .header = HEADER_INT, .value = 2 };
+    ElmInt three = (ElmInt){ .header = HEADER_INT, .value = 3 };
     Closure* curried = apply(
         closure,
         1,
@@ -387,17 +437,17 @@ int main(int argc, char ** argv) {
     );
 
     printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(&outerScopeValue), (int)outerScopeValue.ctor, outerScopeValue.value,
+        hex_ptr(&outerScopeValue), (int)outerScopeValue.header.tag, outerScopeValue.value,
         hex(&outerScopeValue, sizeof(ElmInt))
     );
 
     printf("two addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(&two), (int)two.ctor, two.value,
+        hex_ptr(&two), (int)two.header.tag, two.value,
         hex(&two, sizeof(ElmInt))
     );
 
     printf("three addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(&three), (int)three.ctor, three.value,
+        hex_ptr(&three), (int)three.header.tag, three.value,
         hex(&three, sizeof(ElmInt))
     );
 
@@ -412,7 +462,7 @@ int main(int argc, char ** argv) {
     );
 
     printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(answer), (int)answer->ctor, answer->value,
+        hex_ptr(answer), (int)answer->header.tag, answer->value,
         hex(answer, sizeof(ElmInt))
     );
 };
