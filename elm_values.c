@@ -48,6 +48,7 @@ typedef enum {
     GcBlack,
 } GcColor;
 
+#define DEFAULT_COLOR GcWhite
 
 // Header for heap values
 typedef struct {
@@ -56,17 +57,21 @@ typedef struct {
     u32 size :26;        // payload size in integers (26 bits => <256MB)
 } Header;
 
-#define HEADER_INT        (Header){ .tag=Tag_Int,     .size=0,   .gc_color=GcWhite }
-#define HEADER_FLOAT      (Header){ .tag=Tag_Float,   .size=0,   .gc_color=GcWhite }
-#define HEADER_CHAR       (Header){ .tag=Tag_Char,    .size=0,   .gc_color=GcWhite }
-#define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=x/4, .gc_color=GcWhite }
-#define HEADER_NIL        (Header){ .tag=Tag_Nil,     .size=0,   .gc_color=GcWhite }
-#define HEADER_CONS       (Header){ .tag=Tag_Cons,    .size=2,   .gc_color=GcWhite }
-#define HEADER_TUPLE2     (Header){ .tag=Tag_Tuple2,  .size=2,   .gc_color=GcWhite }
-#define HEADER_TUPLE3     (Header){ .tag=Tag_Tuple3,  .size=3,   .gc_color=GcWhite }
-#define HEADER_CUSTOM(x)  (Header){ .tag=Tag_Custom,  .size=sizeof(Custom)+x, .gc_color=GcWhite }
-#define HEADER_RECORD(x)  (Header){ .tag=Tag_Record,  .size=sizeof(Record)+x, .gc_color=GcWhite }
-#define HEADER_CLOSURE(x) (Header){ .tag=Tag_Closure, .size=sizeof(Closure)+x, .gc_color=GcWhite }
+#define HEADER_INT        (Header){ .tag=Tag_Int,     .size=0, .gc_color=DEFAULT_COLOR }
+#define HEADER_FLOAT      (Header){ .tag=Tag_Float,   .size=0, .gc_color=DEFAULT_COLOR }
+#define HEADER_CHAR       (Header){ .tag=Tag_Char,    .size=0, .gc_color=DEFAULT_COLOR }
+#define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=(x+3)/4, .gc_color=DEFAULT_COLOR }
+#define HEADER_NIL        (Header){ .tag=Tag_Nil,     .size=0, .gc_color=DEFAULT_COLOR }
+#define HEADER_CONS       (Header){ .tag=Tag_Cons,    .size=2, .gc_color=DEFAULT_COLOR }
+#define HEADER_TUPLE2     (Header){ .tag=Tag_Tuple2,  .size=2, .gc_color=DEFAULT_COLOR }
+#define HEADER_TUPLE3     (Header){ .tag=Tag_Tuple3,  .size=3, .gc_color=DEFAULT_COLOR }
+#define HEADER_CUSTOM(x)  (Header){ .tag=Tag_Custom,  .size=1+x, .gc_color=DEFAULT_COLOR }
+#define HEADER_RECORD(x)  (Header){ .tag=Tag_Record,  .size=1+x, .gc_color=DEFAULT_COLOR }
+#define HEADER_CLOSURE(x) (Header){ .tag=Tag_Closure, .size=2+x, .gc_color=DEFAULT_COLOR }
+
+u32 eq_header(Header a, Header b) {
+    return a.tag == b.tag && a.size == b.size;
+}
 
 int gc_first_pointer_offset(Header header) {
     switch (header.tag) {
