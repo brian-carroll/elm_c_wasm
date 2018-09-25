@@ -197,7 +197,6 @@ ElmChar* newElmChar(u32 value) {
 
 typedef struct {
     Header header;
-    u32 len_bytes;
     u8 bytes[];
 } ElmString;
 
