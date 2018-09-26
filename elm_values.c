@@ -289,6 +289,126 @@ void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
 }
 
 
+// __________________________
+
+
+typedef union {
+    u8 unit_or_bool;
+    ElmInt elm_int;
+    ElmFloat elm_float;
+    ElmChar elm_char;
+    ElmString elm_string;
+    struct nil nil;
+    Cons cons;
+    Tuple2 tuple2;
+    Tuple3 tuple3;
+    Custom custom;
+    Record record;
+    Closure closure;
+} ElmValue;
+
+// Equality with recursion (and possible stack overflow)
+u8* eq(ElmValue *pa, ElmValue *pb) {
+
+    // Reference equality shortcut
+    if (pa == pb) {
+        return &True;
+    }
+
+    // Bool and Unit don't have headers, so check them first
+    u8 *pa_const = &pa->unit_or_bool;
+    if (pa_const == &True || pa_const == &False || pa_const == &Unit) {
+        // Wouldn't get here if they were equal. It would be reference equality.
+        return &False;
+    }
+
+    Header ha = *(Header*)pa;
+    Header hb = *(Header*)pb;
+    if (ha.tag != hb.tag) {
+        return &False;
+    }
+    if (ha.size != hb.size) {
+        return &False;
+    }
+
+    switch (ha.tag) {
+        case Tag_Int:
+            return pa->elm_int.value == pb->elm_int.value
+                ? &True : &False;
+
+        case Tag_Float:
+            return pa->elm_float.value == pb->elm_float.value
+                ? &True : &False;
+
+        case Tag_Char:
+            return pa->elm_char.value == pb->elm_char.value
+                ? &True : &False;
+
+        case Tag_String: {
+            // Cast array of bytes to array of ints, for speed
+            u32* a32 = (u32*)pa->elm_string.bytes;
+            u32* b32 = (u32*)pb->elm_string.bytes;
+            for (int i=0; i < ha.size; i++) {
+                if (a32[i] != b32[i]) {
+                    return &False;
+                }
+            }
+            return &True;
+        }            
+
+        case Tag_Nil:
+            return &False; // we know pa!=pb, so can't both be Nil
+
+        case Tag_Cons:
+            return eq(pa->cons.head, pb->cons.head)
+                && eq(pa->cons.tail, pb->cons.tail)
+                ? &True : &False;
+            
+
+        case Tag_Tuple2:
+            return eq(pa->tuple2.a, pb->tuple2.a)
+                && eq(pa->tuple2.b, pb->tuple2.b)
+                ? &True : &False;
+
+        case Tag_Tuple3:
+            return eq(pa->tuple3.a, pb->tuple3.a)
+                && eq(pa->tuple3.b, pb->tuple3.b)
+                && eq(pa->tuple3.c, pb->tuple3.c)
+                ? &True : &False;
+
+        case Tag_Custom:
+            if (pa->custom.ctor != pb->custom.ctor) {
+                return &False;
+            }
+            for (int i=0; i<ha.size; i++) {
+                if (!eq(pa->custom.values[i], pb->custom.values[i])) {
+                    return &False;                   
+                }
+            }
+            return &True;
+
+        case Tag_Record:
+            if (pa->record.fields != pb->record.fields) {
+                return &False;
+            }
+            for (int i=0; i<ha.size; i++) {
+                if (!eq(pa->record.values[i], pb->record.values[i])) {
+                    return &False;                    
+                }
+            }
+            return &True;
+
+        case Tag_Closure:
+        default:
+            // Debug.crash
+            return &False;
+    }
+}
+
+
+// __________________________
+
+
 typedef union {
     ElmInt i;
     ElmFloat f;
