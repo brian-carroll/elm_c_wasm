@@ -58,7 +58,7 @@ typedef struct {
 } Header;
 
 #define HEADER_INT        (Header){ .tag=Tag_Int,     .size=0, .gc_color=DEFAULT_COLOR }
-#define HEADER_FLOAT      (Header){ .tag=Tag_Float,   .size=0, .gc_color=DEFAULT_COLOR }
+#define HEADER_FLOAT      (Header){ .tag=Tag_Float,f32   .size=0, .gc_color=DEFAULT_COLOR }
 #define HEADER_CHAR       (Header){ .tag=Tag_Char,    .size=0, .gc_color=DEFAULT_COLOR }
 #define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=x, .gc_color=DEFAULT_COLOR }
 #define HEADER_NIL        (Header){ .tag=Tag_Nil,     .size=0, .gc_color=DEFAULT_COLOR }
@@ -322,7 +322,9 @@ typedef union {
 } ElmValue;
 
 // Equality with recursion (and possible stack overflow)
-u8* eq(ElmValue *pa, ElmValue *pb) {
+u8* eq(void* ptr_a, void* ptr_b) {
+    ElmValue* pa = (ElmValue*)ptr_a;
+    ElmValue* pb = (ElmValue*)ptr_b;
 
     // Reference equality shortcut
     if (pa == pb) {
@@ -338,13 +340,6 @@ u8* eq(ElmValue *pa, ElmValue *pb) {
 
     Header ha = *(Header*)pa;
     Header hb = *(Header*)pb;
-    if (ha.tag != hb.tag) {
-        return &False;
-    }
-    if (ha.size != hb.size) {
-        return &False;
-    }
-
     switch (ha.tag) {
         case Tag_Int:
             return pa->elm_int.value == pb->elm_int.value
@@ -359,6 +354,9 @@ u8* eq(ElmValue *pa, ElmValue *pb) {
                 ? &True : &False;
 
         case Tag_String: {
+            if (ha.size != hb.size) {
+                return &False;
+            }
             // Cast array of bytes to array of ints, for speed
             u32* a32 = (u32*)pa->elm_string.bytes;
             u32* b32 = (u32*)pb->elm_string.bytes;
@@ -371,13 +369,12 @@ u8* eq(ElmValue *pa, ElmValue *pb) {
         }            
 
         case Tag_Nil:
-            return &False; // we know pa!=pb, so can't both be Nil
+            return &False; // not ref equal, so can't both be Nil
 
         case Tag_Cons:
             return eq(pa->cons.head, pb->cons.head)
                 && eq(pa->cons.tail, pb->cons.tail)
                 ? &True : &False;
-            
 
         case Tag_Tuple2:
             return eq(pa->tuple2.a, pb->tuple2.a)
@@ -603,4 +600,29 @@ int main(int argc, char ** argv) {
         hex_ptr(answer), (int)answer->header.tag, answer->value,
         hex(answer, sizeof(ElmInt))
     );
+
+    //  EQUALITY
+    printf("Unit==Unit : %s\n", *eq(&Unit, &Unit) ? "True" : "False" );
+
+    printf("True==True : %s\n", *eq(&True, &True) ? "True" : "False" );
+    printf("False==False : %s\n", *eq(&False, &False) ? "True" : "False" );
+    printf("True==False : %s\n", *eq(&True, &False) ? "True" : "False" );
+    printf("False==True : %s\n", *eq(&False, &True) ? "True" : "False" );
+
+    printf("2==2 : %s\n", *eq(&two, &two) ? "True" : "False" );
+    printf("2==3 : %s\n", *eq(&two, &three) ? "True" : "False" );
+
+    printf("True==3 : %s\n", *eq(&True, &three) ? "True" : "False" );
+
+    printf("123.456==123.456 : %s (ref)\n", *eq(f, f) ? "True" : "False" );
+    printf("123.456==123.456 : %s (val)\n", *eq(f, newElmFloat(123.456)) ? "True" : "False" );
+    printf("123.456==1.0 : %s\n", *eq(f, newElmFloat(1.0)) ? "True" : "False" );
+
+    printf("A==A : %s\n", *eq(newElmChar('A'), newElmChar('A')) ? "True" : "False" );
+    printf("A==B : %s\n", *eq(newElmChar('A'), newElmChar('B')) ? "True" : "False" );
+
+    ElmString hello1 = (ElmString) {
+        .header = HEADER_STRING(5),
+        .bytes = {'h', 'e', 'l', 'l', 'o', 0, 0, 0}
+    };
 };
