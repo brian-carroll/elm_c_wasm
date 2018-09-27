@@ -60,7 +60,7 @@ typedef struct {
 #define HEADER_INT        (Header){ .tag=Tag_Int,     .size=0, .gc_color=DEFAULT_COLOR }
 #define HEADER_FLOAT      (Header){ .tag=Tag_Float,   .size=0, .gc_color=DEFAULT_COLOR }
 #define HEADER_CHAR       (Header){ .tag=Tag_Char,    .size=0, .gc_color=DEFAULT_COLOR }
-#define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=(x+3)/4, .gc_color=DEFAULT_COLOR }
+#define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=x, .gc_color=DEFAULT_COLOR }
 #define HEADER_NIL        (Header){ .tag=Tag_Nil,     .size=0, .gc_color=DEFAULT_COLOR }
 #define HEADER_CONS       (Header){ .tag=Tag_Cons,    .size=2, .gc_color=DEFAULT_COLOR }
 #define HEADER_TUPLE2     (Header){ .tag=Tag_Tuple2,  .size=2, .gc_color=DEFAULT_COLOR }
@@ -205,8 +205,22 @@ typedef struct {
     u8 bytes[];
 } ElmString;
 
-// string constructor function? I'm not sure what we want it to look like!
+ElmString* newElmString(size_t n, char *str) {
+    ElmString *p = malloc(sizeof(ElmString) + n);
+    size_t n_ints = n/4 + 1; // pad to next 32-bit boundary
+    size_t n_bytes_padded = n_ints * 4;
+    u8 padding = n_bytes_padded - n;
+    p->header = HEADER_STRING(n_ints);
+    memcpy(p->bytes, str, n_bytes_padded);
+    p->bytes[n_bytes_padded] = padding;
+    return p;
+}
 
+u32 String_length_bytes(ElmString *s) {
+    u32 n_bytes_padded = s->header.size * 4;
+    u32 padding = s->bytes[n_bytes_padded];
+    return n_bytes_padded - padding;
+}
 
 // Enums (unions with no params)
 /*
