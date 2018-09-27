@@ -18,6 +18,34 @@ typedef unsigned long int u64;
 typedef float f32;
 typedef double f64;
 
+// Debug function
+char* hex(void* addr, int size) {
+    char *str;
+    u32 i, c=0, n=(9*size)/4;
+    str = malloc(n);
+    for (i=0; i < size; c += 9, i += 4) {
+        // Print in actual byte order (little endian)
+        sprintf(str + c,
+            "%02x%02x%02x%02x|",
+            *(u8*)(addr + i),
+            *(u8*)(addr + i + 1),
+            *(u8*)(addr + i + 2),
+            *(u8*)(addr + i + 3)
+        );
+    }
+    str[c-1] = 0; // erase last "|" and terminate the string
+    return str;
+}
+
+// Print a memory address held in a pointer
+//   Addresses are printed in little-endian format
+//   => Easier to see what pointers are pointing to it
+//   => Harder to subtract in your head if you're interested in sizes & memory layout
+char* hex_ptr(void* ptr) {
+    return hex(&ptr, sizeof(void*));
+}
+
+
 
 // Static values (not on dynamic heap)
 // using 'const' qualifier is pointless because we cast pointers to void*
@@ -58,7 +86,7 @@ typedef struct {
 } Header;
 
 #define HEADER_INT        (Header){ .tag=Tag_Int,     .size=0, .gc_color=DEFAULT_COLOR }
-#define HEADER_FLOAT      (Header){ .tag=Tag_Float,f32   .size=0, .gc_color=DEFAULT_COLOR }
+#define HEADER_FLOAT      (Header){ .tag=Tag_Float,   .size=0, .gc_color=DEFAULT_COLOR }
 #define HEADER_CHAR       (Header){ .tag=Tag_Char,    .size=0, .gc_color=DEFAULT_COLOR }
 #define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=x, .gc_color=DEFAULT_COLOR }
 #define HEADER_NIL        (Header){ .tag=Tag_Nil,     .size=0, .gc_color=DEFAULT_COLOR }
@@ -206,20 +234,27 @@ typedef struct {
 } ElmString;
 
 ElmString* newElmString(size_t n, char *str) {
-    ElmString *p = malloc(sizeof(ElmString) + n);
-    size_t n_ints = n/4 + 1; // pad to next 32-bit boundary
+    // Pad to next 32-bit boundary
+    size_t n_ints = n/4 + 1;
     size_t n_bytes_padded = n_ints * 4;
-    u8 padding = n_bytes_padded - n;
+
+    ElmString *p = malloc(sizeof(ElmString) + n_bytes_padded);
     p->header = HEADER_STRING(n_ints);
-    memcpy(p->bytes, str, n_bytes_padded);
-    p->bytes[n_bytes_padded] = padding;
+
+    // Last byte of the padding contains its size in bytes
+    u32* ints = (u32*)p->bytes;
+    u32 padding = (n_bytes_padded - n) << 24; // padding size, with 3 bytes of leading zeros (little-endian)
+    ints[n_ints-1] = padding;
+
+    // Copy string content (overwrites some of the padding and that's OK)
+    memcpy(p->bytes, str, n);
     return p;
 }
 
-u32 String_length_bytes(ElmString *s) {
+ElmInt* String_length_bytes(ElmString *s) {
     u32 n_bytes_padded = s->header.size * 4;
-    u32 padding = s->bytes[n_bytes_padded];
-    return n_bytes_padded - padding;
+    u32 padding = (u32)s->bytes[n_bytes_padded-1];
+    return newElmInt(n_bytes_padded - padding);
 }
 
 // Enums (unions with no params)
@@ -466,35 +501,11 @@ Closure user_project_closure = CLOSURE(eval_user_project_closure, 3);
 ElmInt outerScopeValue = (ElmInt){ .header = HEADER_INT, .value = 1 };
 
 
-char* hex(void* addr, int size) {
-    char *str;
-    int i, c=0, n=(9*size)/4;
-    str = malloc(n);
-    for (i=0; i < size; c += 9, i += 4) {
-        // Print in actual byte order (little endian)
-        sprintf(str + c,
-            "%02x%02x%02x%02x|",
-            *(char*)(addr + i),
-            *(char*)(addr + i + 1),
-            *(char*)(addr + i + 2),
-            *(char*)(addr + i + 3)
-        );
-    }
-    str[c-1] = 0; // erase last "|" and terminate the string
-    return str;
-}
-
-// Print a memory address held in a pointer
-//   Addresses are printed in little-endian format
-//   => Easier to see what pointers are pointing to it
-//   => Harder to subtract in your head if you're interested in sizes & memory layout
-char* hex_ptr(void* ptr) {
-    return hex(&ptr, sizeof(void*));
-}
-
-
 
 int main(int argc, char ** argv) {
+
+    // Memory layout
+
     printf("sizeof(int) = %d\n", (int)sizeof(int));
     printf("sizeof(f64) = %d\n", (int)sizeof(f64));
     printf("\n");
@@ -502,6 +513,26 @@ int main(int argc, char ** argv) {
     printf("False size=%ld %s %d\n", sizeof(False), hex_ptr(&False), False);
     printf("True size=%ld %s %d\n", sizeof(True), hex_ptr(&True), True);
     printf("Unit size=%ld %s %d\n", sizeof(Unit), hex_ptr(&Unit), Unit);
+    printf("\n");
+
+    Header mask_tag = (Header){
+        .tag = -1,
+        .gc_color = 0,
+        .size = 0
+    };
+    Header mask_color = (Header){
+        .tag = 0,
+        .gc_color = -1,
+        .size = 0
+    };
+    Header mask_size = (Header){
+        .tag = 0,
+        .gc_color = 0,
+        .size = -1
+    };
+    printf("mask_tag   BE=%08x, LE=%s\n", *(u32*)&mask_tag,   hex(&mask_tag,   4));
+    printf("mask_color BE=%08x, LE=%s\n", *(u32*)&mask_color, hex(&mask_color, 4));
+    printf("mask_size  BE=%08x, LE=%s\n", *(u32*)&mask_size,  hex(&mask_size,  4));
     printf("\n");
 
     printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
@@ -600,6 +631,25 @@ int main(int argc, char ** argv) {
         hex_ptr(answer), (int)answer->header.tag, answer->value,
         hex(answer, sizeof(ElmInt))
     );
+    printf("\n");
+
+    // String memory layout & length calculation
+
+    ElmString* str4 = newElmString(4, "1234");
+    ElmString* str5 = newElmString(5, "12345");
+    ElmString* str6 = newElmString(6, "123456");
+    ElmString* str7 = newElmString(7, "1234567");
+    ElmString* str8 = newElmString(8, "12345678");
+    ElmString* strN = newElmString(45, "The quick brown fox jumped over the lazy dog.");
+
+    printf("str4: tag=%d, size=%d, length=%d, hex=%s\n", str4->header.tag, str4->header.size, String_length_bytes(str4)->value, hex(str4, sizeof(ElmString) + 8));
+    printf("str5: tag=%d, size=%d, length=%d, hex=%s\n", str5->header.tag, str5->header.size, String_length_bytes(str5)->value, hex(str5, sizeof(ElmString) + 8));
+    printf("str6: tag=%d, size=%d, length=%d, hex=%s\n", str6->header.tag, str6->header.size, String_length_bytes(str6)->value, hex(str6, sizeof(ElmString) + 8));
+    printf("str7: tag=%d, size=%d, length=%d, hex=%s\n", str7->header.tag, str7->header.size, String_length_bytes(str7)->value, hex(str7, sizeof(ElmString) + 8));
+    printf("str8: tag=%d, size=%d, length=%d, hex=%s\n", str8->header.tag, str8->header.size, String_length_bytes(str8)->value, hex(str8, sizeof(ElmString) + 12));
+    printf("strN: tag=%d, size=%d, length=%d, hex=%s\n", strN->header.tag, strN->header.size, String_length_bytes(strN)->value, hex(strN, sizeof(ElmString) + 48));
+    printf("\n");
+
 
     //  EQUALITY
     printf("Unit==Unit : %s\n", *eq(&Unit, &Unit) ? "True" : "False" );
@@ -621,8 +671,14 @@ int main(int argc, char ** argv) {
     printf("A==A : %s\n", *eq(newElmChar('A'), newElmChar('A')) ? "True" : "False" );
     printf("A==B : %s\n", *eq(newElmChar('A'), newElmChar('B')) ? "True" : "False" );
 
-    ElmString hello1 = (ElmString) {
-        .header = HEADER_STRING(5),
-        .bytes = {'h', 'e', 'l', 'l', 'o', 0, 0, 0}
-    };
+    ElmString* hello1 = newElmString(5, "hello");
+    ElmString* hello2 = newElmString(5, "hello");
+    ElmString* hello_ = newElmString(6, "hello_");
+    ElmString* world = newElmString(5, "world");
+
+    printf("ref equal hello==hello : %s\n", *eq(hello1, hello1) ? "True" : "False" );
+    printf("val equal hello==hello : %s\n", *eq(hello1, hello2) ? "True" : "False" );
+    printf("diff length hello==hello_ : %s\n", *eq(hello1, hello_) ? "True" : "False" );
+    printf("diff value hello_==world : %s\n", *eq(hello_, world) ? "True" : "False" );
+
 };
