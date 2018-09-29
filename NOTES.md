@@ -1,3 +1,80 @@
+Build system
+============
+- This is C, so might as well use `make` and follow the herd.
+- No need for `configure`
+- Tests can target a binary rather than a browser
+- Project structure
+```
+    src/
+        kernel/
+            types.c
+            utils.c
+            basics.c
+        user/
+            example1.c
+            example2.c
+    tests/
+        kernel/
+            types_tests.c
+            utils_tests.c
+            basics_tests.c
+        user/
+            example1_tests.c
+            example2_tests.c
+    build/
+        kernel/
+            *.o
+        user/
+            *.o
+        tests/
+            *.o
+    dist/
+        prod/
+            *.js, *.html, *.wasm
+        dev/
+            *.js, *.html, *.wasm
+        tests/
+            run
+            kernel/
+                types_tests
+                utils_tests
+                basics_tests
+            user/
+                example1_tests
+                example2_tests
+```
+- Makefile conventional target names
+    - `all` the default... I'll use it for dev build
+    - `clean` delete generated stuff
+    - `dist` production build
+    - `check` run tests
+
+
+Testing
+=======
+- Need it! Made lots of mistakes in String.
+- https://stackoverflow.com/questions/65820/unit-testing-c-code
+- Start with stupidly simple zero-magic [MinUnit](http://www.jera.com/techinfo/jtns/jtn002.html) because I'll lose motivation if I have to deal with setting things up in C.
+
+
+
+Optimisations
+=============
+
+Effect of various emcc compiler [optimisation settings](https://kripken.github.io/emscripten-site/docs/tools_reference/emcc.html)
+
+| option | time | wasm | js |
+| ------ | ---- | ---- | -- |
+| -O0 | 6.13 | 58,785 | 103,092 |
+| -O1 | 4.85 | 28,695 | 68,823 |
+| -O2 | 7.60 | 32,520 | 27,899 |
+| -O3 | 9.49 | 30,209 | 21,999 |
+| -Os | 9.06 | 25,744 | 21,999 |
+| -Oz | 8.92 | 25,670 | 21,999 |
+
+`-Os` and `-Oz` are size-only optimisations, the rest are a size/speed tradeoff.
+- `-O3` is recommended for production.
+- `-O1` seems good for development.
 
 Less allocation
 ===============

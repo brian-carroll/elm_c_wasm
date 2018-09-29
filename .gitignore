@@ -2,3 +2,4 @@
 *.js
 *.wasm
 .vscode/
+opt.md
