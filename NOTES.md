@@ -1,3 +1,13 @@
+Assertions & Exceptions
+=======================
+Is there any way to add assertions in C and optimise them away in prod?
+Would be great to sprinkle them around to do type checks and other invariant checks.
+Maybe an alternative is to have a `#define ELM_WARNINGS` that enables some `printf` warning statements.
+
+For the cases where Elm actually throws exceptions, can I even do that?
+What happens if I divide by zero? Nuthin'
+
+
 Build system
 ============
 - This is C, so might as well use `make` and follow the herd.

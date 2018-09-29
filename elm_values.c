@@ -681,4 +681,7 @@ int main(int argc, char ** argv) {
     printf("diff length hello==hello_ : %s\n", *eq(hello1, hello_) ? "True" : "False" );
     printf("diff value hello_==world : %s\n", *eq(hello_, world) ? "True" : "False" );
 
+    printf("before divide-by-zero\n");
+    int kaboom=0, kablowie=5, kerpow = kablowie/kaboom;
+    printf("after divide-by-zero %d/%d=%d\n", kablowie, kaboom, kerpow);
 };
