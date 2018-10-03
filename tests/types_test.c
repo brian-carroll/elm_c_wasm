@@ -3,10 +3,7 @@
 #include "./test.c"
 
 
-int main(int argc, char ** argv) {
-
-    // Memory layout
-
+void test_wasm_types(void) {
     printf("sizeof(void*) = %d\n", (int)sizeof(void*));
     printf("sizeof(int) = %d\n", (int)sizeof(int));
     printf("\n");
@@ -21,12 +18,18 @@ int main(int argc, char ** argv) {
     printf("sizeof(f32) = %d\n", (int)sizeof(f32));
     printf("sizeof(f64) = %d\n", (int)sizeof(f64));
     printf("\n");
+}
 
-    printf("False size=%ld %s %d\n", sizeof(False), hex_ptr(&False), False);
-    printf("True size=%ld %s %d\n", sizeof(True), hex_ptr(&True), True);
-    printf("Unit size=%ld %s %d\n", sizeof(Unit), hex_ptr(&Unit), Unit);
+
+void test_elm_constants(void) {
+    printf("True size=%ld value=%d addr=%s\n", sizeof(True), True, hex_ptr(&True));
+    printf("False size=%ld value=%d addr=%s\n", sizeof(False), False, hex_ptr(&False));
+    printf("Unit size=%ld value=%d addr=%s\n", sizeof(Unit), Unit, hex_ptr(&Unit));
     printf("\n");
+}
 
+
+void test_header_layout(void) {
     Header mask_tag = (Header){
         .tag = -1,
         .gc_color = 0,
@@ -46,24 +49,28 @@ int main(int argc, char ** argv) {
     printf("mask_color BE=%08x, LE=%s\n", *(u32*)&mask_color, hex(&mask_color, 4));
     printf("mask_size  BE=%08x, LE=%s\n", *(u32*)&mask_size,  hex(&mask_size,  4));
     printf("\n");
+}
+
+
+void test_fixed_size_values(void) {
 
     printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
 
     Cons *c = newCons(&Unit, &Nil); // [()]
-    printf("Cons size=%ld addr=%s ctor=%d head=%d tail=%d\n",
-        sizeof(Cons), hex_ptr(c), (int)c->header.tag, (int)c->head, (int)c->tail
+    printf("Cons size=%ld addr=%s ctor=%d head=%s tail=%s\n",
+        sizeof(Cons), hex_ptr(c), (int)c->header.tag, hex_ptr(c->head), hex_ptr(c->tail)
     );
     free(c);
 
     Tuple2 *t2 = newTuple2(&Unit, &Unit); // ((),())
-    printf("Tuple2 size=%ld addr=%s ctor=%d a=%d b=%d\n",
-        sizeof(Tuple2), hex_ptr(t2), (int)t2->header.tag, (int)t2->a, (int)t2->b
+    printf("Tuple2 size=%ld addr=%s ctor=%d a=%s b=%s\n",
+        sizeof(Tuple2), hex_ptr(t2), (int)t2->header.tag, hex_ptr(t2->a), hex_ptr(t2->b)
     );
     free(t2);
 
     Tuple3 *t3 = newTuple3(&Unit, &Unit, &Unit); // ((),(),())
-    printf("Tuple3 size=%ld addr=%s ctor=%d a=%d b=%d c=%d\n",
-        sizeof(Tuple3), hex_ptr(t3), (int)t3->header.tag, (int)t3->a, (int)t3->b, (int)t3->c
+    printf("Tuple3 size=%ld addr=%s ctor=%d a=%s b=%s c=%s\n",
+        sizeof(Tuple3), hex_ptr(t3), (int)t3->header.tag, hex_ptr(t3->a), hex_ptr(t3->b), hex_ptr(t3->c)
     );
     free(t3);
 
@@ -73,7 +80,7 @@ int main(int argc, char ** argv) {
     );
     free(i);
 
-    ElmFloat *f = newElmFloat(123.456);
+    ElmFloat *f = newElmFloat(123.456789);
     printf("Float size=%ld addr=%s ctor=%d value=%f\n",
         sizeof(ElmFloat), hex_ptr(f), (int)f->header.tag, f->value
     );
@@ -85,8 +92,10 @@ int main(int argc, char ** argv) {
     );
     free(ch);
     printf("\n");
+}
 
-    
+
+void test_strings(void) {    
     ElmString* str4 = newElmString(4, "1234");
     ElmString* str5 = newElmString(5, "12345");
     ElmString* str6 = newElmString(6, "123456");
@@ -100,4 +109,15 @@ int main(int argc, char ** argv) {
     printf("str7: tag=%d, size=%d, hex=%s\n", str7->header.tag, str7->header.size, hex(str7, sizeof(ElmString) + 8));
     printf("str8: tag=%d, size=%d, hex=%s\n", str8->header.tag, str8->header.size, hex(str8, sizeof(ElmString) + 12));
     printf("strN: tag=%d, size=%d, hex=%s\n", strN->header.tag, strN->header.size, hex(strN, sizeof(ElmString) + 48));
+
+    printf("\n");
+}
+
+
+int main(int argc, char ** argv) {
+    test_wasm_types();
+    test_elm_constants();
+    test_header_layout();
+    test_strings();
+    test_fixed_size_values();
 }
