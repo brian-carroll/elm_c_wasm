@@ -3,3 +3,4 @@
 *.wasm
 .vscode/
 opt.md
+a.out
