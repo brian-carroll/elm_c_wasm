@@ -2,10 +2,12 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include "../src/types.h"
-#include "./test.c"
+#include "./test.c" // including .c file, naughty!
 
+bool verbose = false;
+int tests_run = 0;
 
-void test_wasm_types(bool verbose) {
+char* test_wasm_types() {
     if (verbose) {
         printf("sizeof(void*) = %d\n", (int)sizeof(void*));
         printf("sizeof(int) = %d\n", (int)sizeof(int));
@@ -22,20 +24,32 @@ void test_wasm_types(bool verbose) {
         printf("sizeof(f64) = %d\n", (int)sizeof(f64));
         printf("\n");
     }
+    return NULL;
 }
 
 
-void test_elm_constants(bool verbose) {
+char* test_elm_constants() {
     if (verbose) {
         printf("True size=%ld value=%d addr=%s\n", sizeof(True), True, hex_ptr(&True));
         printf("False size=%ld value=%d addr=%s\n", sizeof(False), False, hex_ptr(&False));
         printf("Unit size=%ld value=%d addr=%s\n", sizeof(Unit), Unit, hex_ptr(&Unit));
         printf("\n");
     }
+    return NULL;
 }
 
 
-void test_header_layout(bool verbose) {
+int count_flags(u32 flags) {
+    u32 count = 0;
+    while (flags) {
+        count += flags & 1;
+        flags = flags >> 1;
+    }
+    return count;
+}
+
+
+char* test_header_layout() {
     Header mask_tag = (Header){
         .tag = -1,
         .gc_color = 0,
@@ -51,16 +65,36 @@ void test_header_layout(bool verbose) {
         .gc_color = 0,
         .size = -1
     };
+
     if (verbose) {
         printf("mask_tag   BE=%08x, LE=%s\n", *(u32*)&mask_tag,   hex(&mask_tag,   4));
         printf("mask_color BE=%08x, LE=%s\n", *(u32*)&mask_color, hex(&mask_color, 4));
         printf("mask_size  BE=%08x, LE=%s\n", *(u32*)&mask_size,  hex(&mask_size,  4));
         printf("\n");
     }
+
+    if (sizeof(Header) != 4) {
+        return "Expected Header size to be 4 bytes";
+    }
+
+    if (count_flags(*(u32*)&mask_tag) != 4) {
+        printf("test_header_layout: after if\n");
+        return "Expected tag field to have 4 bits";
+    }
+
+    if (count_flags(*(u32*)&mask_color) != 2) {
+        return "Expected color field to have 2 bits";
+    }
+
+    if (count_flags(*(u32*)&mask_size) != 26) {
+        return "Expected size field to have 26 bits";
+    }
+
+    return NULL;
 }
 
 
-void test_fixed_size_values(bool verbose) {
+char* test_fixed_size_values() {
     if (verbose) printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
 
     Cons *c = newCons(&Unit, &Nil); // [()]
@@ -99,10 +133,11 @@ void test_fixed_size_values(bool verbose) {
     );
     free(ch);
     if (verbose) printf("\n");
+    return NULL;
 }
 
 
-void test_strings(bool verbose) {    
+char* test_strings() {
     ElmString* str4 = newElmString(4, "1234");
     ElmString* str5 = newElmString(5, "12345");
     ElmString* str6 = newElmString(6, "123456");
@@ -119,11 +154,21 @@ void test_strings(bool verbose) {
         printf("strN: tag=%d, size=%d, hex=%s\n", strN->header.tag, strN->header.size, hex(strN, sizeof(ElmString) + 48));
         printf("\n");
     }
+    return NULL;
+}
+
+
+char* test_all() {
+    mu_run_test(test_wasm_types);
+    mu_run_test(test_elm_constants);
+    mu_run_test(test_header_layout);
+    mu_run_test(test_fixed_size_values);
+    mu_run_test(test_strings);
+    return NULL;
 }
 
 
 int main(int argc, char ** argv) {
-    bool verbose = false;
     int opt;
 
     while ((opt = getopt(argc, argv, "v")) != -1) {
@@ -137,9 +182,15 @@ int main(int argc, char ** argv) {
         }
     }
 
-    test_wasm_types(verbose);
-    test_elm_constants(verbose);
-    test_header_layout(verbose);
-    test_fixed_size_values(verbose);
-    test_strings(verbose);
+    char* result = test_all();
+    bool passed = result == NULL;
+
+    if (!passed) {
+        printf("%s\n", result);
+    } else {
+        printf("ALL TESTS PASSED\n");
+    }
+    printf("Tests run: %d\n", tests_run);
+
+    return !passed;
 }

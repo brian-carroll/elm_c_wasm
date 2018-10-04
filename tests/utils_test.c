@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "../src/utils.h"
 #include "../src/basics.h"
-#include "./test.c"
+#include "./test.c" // including .c file, naughty!
 
 // This is code I could generate from the Elm compiler. I could write better by hand.
 // The intermediate ElmInt allocated on heap is hard to eliminate in generated code.
