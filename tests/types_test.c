@@ -24,6 +24,18 @@ char* test_wasm_types() {
         printf("sizeof(f64) = %d\n", (int)sizeof(f64));
         printf("\n");
     }
+    mu_assert("i8 should be 1 byte", sizeof(i8)==1);
+    mu_assert("i16 should be 2 bytes", sizeof(i16)==2);
+    mu_assert("i32 should be 4 bytes", sizeof(i32)==4);
+    mu_assert("i64 should be 8 bytes", sizeof(i64)==8);
+
+    mu_assert("u8 should be 1 bytes", sizeof(u8)==1);
+    mu_assert("u16 should be 2 bytes", sizeof(u16)==2);
+    mu_assert("u32 should be 4 bytes", sizeof(u32)==4);
+    mu_assert("u64 should be 8 bytes", sizeof(u64)==8);
+
+    mu_assert("f32 should be 4 bytes", sizeof(f32)==4);
+    mu_assert("f64 should be 8 bytes", sizeof(f64)==8);
     return NULL;
 }
 
@@ -35,6 +47,15 @@ char* test_elm_constants() {
         printf("Unit size=%ld value=%d addr=%s\n", sizeof(Unit), Unit, hex_ptr(&Unit));
         printf("\n");
     }
+
+    mu_assert("True should be 1 byte wide", sizeof(True)==1);
+    mu_assert("False should be 1 byte wide", sizeof(False)==1);
+    mu_assert("Unit should be 1 byte wide", sizeof(Unit)==1);
+
+    mu_assert("True should have value 1", True==1);
+    mu_assert("False should have value 0", False==0);
+    mu_assert("Unit should have value 0", Unit==0);
+
     return NULL;
 }
 
@@ -73,22 +94,25 @@ char* test_header_layout() {
         printf("\n");
     }
 
-    if (sizeof(Header) != 4) {
-        return "Expected Header size to be 4 bytes";
-    }
+    mu_assert(
+        "Header size should be 4 bytes",
+        sizeof(Header) == 4
+    );
 
-    if (count_flags(*(u32*)&mask_tag) != 4) {
-        printf("test_header_layout: after if\n");
-        return "Expected tag field to have 4 bits";
-    }
+    mu_assert(
+        "Tag field should have 4 bits",
+        count_flags(*(u32*)&mask_tag) == 4
+    );
 
-    if (count_flags(*(u32*)&mask_color) != 2) {
-        return "Expected color field to have 2 bits";
-    }
+    mu_assert(
+        "GC color field should have 2 bits",
+        count_flags(*(u32*)&mask_color) == 2
+    );
 
-    if (count_flags(*(u32*)&mask_size) != 26) {
-        return "Expected size field to have 26 bits";
-    }
+    mu_assert(
+        "Size field should have 26 bits",
+        count_flags(*(u32*)&mask_size) == 26
+    );
 
     return NULL;
 }
@@ -98,33 +122,97 @@ char* test_fixed_size_values() {
     if (verbose) printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
 
     Cons *c = newCons(&Unit, &Nil); // [()]
-    if (verbose) printf("Cons size=%ld addr=%s ctor=%d head=%s tail=%s\n",
-        sizeof(Cons), hex_ptr(c), (int)c->header.tag, hex_ptr(c->head), hex_ptr(c->tail)
+    if (verbose) printf("Cons size=%ld addr=%s ctor=%d head=%s tail=%s, hex=%s\n",
+        sizeof(Cons), hex_ptr(c), (int)c->header.tag,
+        hex_ptr(c->head), hex_ptr(c->tail),
+        hex(c, sizeof(Cons))
     );
+    // On a 64-bit target, gcc adds 32 bits of padding between .header and .head
+    // (which aligns the pointers to a 64-bit boundary)
+    // Tests should pass for 32 (Wasm) or 64 (handy test target + maybe future back-end Elm)
+    mu_assert(
+        "Cons type should be wide enough for a header and two pointers",
+        sizeof(Cons) >= sizeof(Header) + 2*sizeof(void*)
+    );
+    mu_assert(
+        "Cons type should no wider than 3 pointers",
+        sizeof(Cons) <= 3*sizeof(void*)
+    );
+    mu_assert("Cons should have header tag Tag_Cons", c->header.tag == Tag_Cons);
+    mu_assert("Cons should have header size 2", c->header.size == 2);
+    mu_assert("[()] should have 'head' pointing to Unit", c->head == &Unit);
+    mu_assert("[()] should have 'tail' pointing to Nil", c->tail == &Nil);
     free(c);
 
-    Tuple2 *t2 = newTuple2(&Unit, &Unit); // ((),())
-    if (verbose) printf("Tuple2 size=%ld addr=%s ctor=%d a=%s b=%s\n",
-        sizeof(Tuple2), hex_ptr(t2), (int)t2->header.tag, hex_ptr(t2->a), hex_ptr(t2->b)
+    ElmInt *i1 = newElmInt(1);
+    ElmInt *i2 = newElmInt(2);
+    ElmInt *i3 = newElmInt(3);
+
+    Tuple2 *t2 = newTuple2(&i1, &i2);
+    if (verbose) printf("Tuple2 size=%ld addr=%s hex=%s\n",
+        sizeof(Tuple2), hex_ptr(t2), hex(t2, sizeof(Tuple2))
     );
+    mu_assert(
+        "Tuple2 type should be wide enough for a header and two pointers",
+        sizeof(Tuple2) >= sizeof(Header) + 2*sizeof(void*)
+    );
+    mu_assert(
+        "Tuple2 type should no wider than 3 pointers",
+        sizeof(Tuple2) <= 3*sizeof(void*)
+    );
+    mu_assert("Tuple2 should have header tag Tag_Tuple2", t2->header.tag == Tag_Tuple2);
+    mu_assert("Tuple2 should have header size 2", t2->header.size == 2);
+    mu_assert("(1,2) should have 'a' pointing to 1", t2->a == &i1);
+    mu_assert("(1,2) should have 'b' pointing to 2", t2->b == &i2);
     free(t2);
 
-    Tuple3 *t3 = newTuple3(&Unit, &Unit, &Unit); // ((),(),())
-    if (verbose) printf("Tuple3 size=%ld addr=%s ctor=%d a=%s b=%s c=%s\n",
-        sizeof(Tuple3), hex_ptr(t3), (int)t3->header.tag, hex_ptr(t3->a), hex_ptr(t3->b), hex_ptr(t3->c)
+    Tuple3 *t3 = newTuple3(&i1, &i2, &i3);
+    if (verbose) printf("Tuple3 size=%ld addr=%s hex=%s\n",
+        sizeof(Tuple3), hex_ptr(t3), hex(t3, sizeof(Tuple3))
     );
+    mu_assert(
+        "Tuple3 type should be wide enough for a header and 3 pointers",
+        sizeof(Tuple3) >= sizeof(Header) + 3*sizeof(void*)
+    );
+    mu_assert(
+        "Tuple3 type should no wider than 4 pointers",
+        sizeof(Tuple3) <= 4*sizeof(void*)
+    );
+    mu_assert("Tuple3 should have header tag Tag_Tuple3", t3->header.tag == Tag_Tuple3);
+    mu_assert("Tuple3 should have header size 3", t3->header.size == 3);
+    mu_assert("(1,2,3) should have 'a' pointing to 1", t3->a == &i1);
+    mu_assert("(1,2,3) should have 'b' pointing to 2", t3->b == &i2);
+    mu_assert("(1,2,3) should have 'c' pointing to 3", t3->c == &i3);
     free(t3);
 
     ElmInt *i = newElmInt(123);
     if (verbose) printf("Int size=%ld addr=%s ctor=%d value=%d\n",
         sizeof(ElmInt), hex_ptr(i), (int)i->header.tag, i->value
     );
+    mu_assert(
+        "ElmInt type should be just wide enough for a header and an i32",
+        sizeof(ElmInt) == sizeof(Header) + sizeof(i32)
+    );
+    mu_assert("ElmInt should have header tag Tag_Int", i->header.tag == Tag_Int);
+    mu_assert("ElmInt should have header size 0", i->header.size == 0);
+    mu_assert("123 should have value of 123", i->value == 123);
     free(i);
 
     ElmFloat *f = newElmFloat(123.456789);
     if (verbose) printf("Float size=%ld addr=%s ctor=%d value=%f\n",
         sizeof(ElmFloat), hex_ptr(f), (int)f->header.tag, f->value
     );
+    mu_assert(
+        "ElmFloat type should be just wide enough for a header and an f64",
+        sizeof(ElmFloat) >= sizeof(Header) + sizeof(f64)
+    );
+    mu_assert(
+        "ElmFloat may have up to 4 bytes of padding",
+        sizeof(ElmFloat) <= sizeof(Header) + sizeof(f64) + 4
+    );
+    mu_assert("ElmFloat should have header tag Tag_Float", f->header.tag == Tag_Float);
+    mu_assert("ElmFloat should have header size 0", f->header.size == 0); // should it?
+    mu_assert("123.456789 should have value of 123", f->value == 123.456789);
     free(f);
 
     ElmChar *ch = newElmChar('A');
@@ -146,6 +234,8 @@ char* test_strings() {
     ElmString* strN = newElmString(45, "The quick brown fox jumped over the lazy dog.");
 
     if (verbose) {
+        printf("sizeof(ElmString) = %ld\n", sizeof(ElmString));
+        printf("&str4->bytes - str4 = %ld\n", (long)(&str4->bytes) - (long)(str4));
         printf("str4: tag=%d, size=%d, hex=%s\n", str4->header.tag, str4->header.size, hex(str4, sizeof(ElmString) + 8));
         printf("str5: tag=%d, size=%d, hex=%s\n", str5->header.tag, str5->header.size, hex(str5, sizeof(ElmString) + 8));
         printf("str6: tag=%d, size=%d, hex=%s\n", str6->header.tag, str6->header.size, hex(str6, sizeof(ElmString) + 8));
@@ -157,6 +247,54 @@ char* test_strings() {
     return NULL;
 }
 
+char* test_custom() {
+    Custom *c = malloc(sizeof(Custom) + 2*sizeof(void*));
+    c->header = HEADER_CUSTOM(2);
+    c->ctor = 1;
+    c->values[0] = &Unit;
+    c->values[1] = &Unit;
+    if (verbose) {
+        printf("custom with 2 values = %s\n", hex(c,  sizeof(Custom) + 2*sizeof(void*)));
+    }
+    return NULL;
+}
+
+char* test_record() {
+    FieldSet *fs = malloc(sizeof(FieldSet) + 2*sizeof(u32));
+    fs->size = 2;
+    fs->fields[0] = 0xaa;
+    fs->fields[1] = 0x55;
+
+    Record *r = malloc(sizeof(Record) + 2*sizeof(void*));
+    r->header = HEADER_RECORD(2);
+    r->fieldset = fs;
+    r->values[0] = &Unit;
+    r->values[1] = &Unit;
+    if (verbose) {
+        printf("FieldSet with 2 values: addr=%s, hex=%s\n", hex_ptr(fs), hex(fs,  sizeof(FieldSet) + 2*sizeof(u32)));
+        printf("Record with 2 values = %s\n", hex(r,  sizeof(Record) + 2*sizeof(void*)));
+    }
+    return NULL;
+}
+
+void* dummy_evaluator(void** args) {
+    return NULL;
+}
+
+char* test_closure() {
+    Closure *c = malloc(sizeof(Closure) + 2*sizeof(void*));
+    c->header = HEADER_CLOSURE(2);
+    c->evaluator = &dummy_evaluator;
+    c->max_values = 3;
+    c->n_values = 2;
+    c->values[0] = &Unit;
+    c->values[1] = &Unit;
+    if (verbose) {
+        printf("Closure with 2 values = %s\n", hex(c,  sizeof(Closure) + 2*sizeof(void*)));
+    }
+    return NULL;
+
+}
 
 char* test_all() {
     mu_run_test(test_wasm_types);
@@ -164,6 +302,9 @@ char* test_all() {
     mu_run_test(test_header_layout);
     mu_run_test(test_fixed_size_values);
     mu_run_test(test_strings);
+    mu_run_test(test_custom);
+    mu_run_test(test_record);
+    mu_run_test(test_closure);
     return NULL;
 }
 
