@@ -1,3 +1,54 @@
+64 bit platforms
+================
+So while doing testing I've discovered that it's much nicer to compile to native binary on my laptop and run things there.
+But my laptop is 64 bits and Wasm is 32.
+So it would be handy to support both. But also a bit of a pain to do.
+
+It mainly affects the `size` field of the header, which is not used for very much except GC and string length.
+
+Padding is added for the following Elm types by gcc for 64-bit target:
+
+|padded?| structure |
+| ----- | --------- |
+|       | ElmInt    |
+| ✔️    | ElmFloat  |
+|       | ElmChar   |
+|       | ElmString |
+|       | Nil       |
+| ✔️    | Cons      |
+| ✔️    | Tuple2    |
+| ✔️    | Tuple3    |
+|       | Custom    |
+| ✔️    | Record    |
+|       | Closure   |
+
+- gcc is making sure that pointers and floats are on 64-bit boundaries for a 64-bit target
+- Elm Float has a float, so is padded
+- Const, Tuple2, Tuple3 and Record have only the header before the first pointer.
+- Int, Char, String, and Nil don't have either floats or pointers don't need this padding
+- Custom and Closure already happen to have their pointers on a 64-bit boundary don't need it )
+- OCaml expands header to 64 bits on 64-bit machines. But that doesn't help me here! Custom and Closure would end up getting padded instead.
+
+OK so there doesn't seem to be any way to avoid the 64-bit alignment happening.
+
+### So what should `size` be?
+I want it to indicate the memory size of the structure's body, shifted by a few bits to gain some range. I decided to exclude the header from the size because it's metadata and things get too self-referential.
+
+Also String length is more understandable this way.
+
+
+### How to handle in GC
+- GC wants to copy the whole structure, header and all
+- For a Cons cell, I have a size of 2 and I need to copy 24 bytes.
+- For an ElmChar I have a size of 0.5! **Can't use pointer units, need int units**
+- Best way to handle it is probably in the `#define` statements for the headers. Make `size` always be right for the target.
+- Function to find first pointer must also be different for 64-bit target.
+
+### How to handle in String length & padding
+- If `size` is measured in pointers, then just add more padding to the end of the string on a 64-bit target, and make sure the algorithm works.
+
+
+
 Assertions & Exceptions
 =======================
 Is there any way to add assertions in C and optimise them away in prod?
@@ -6,6 +57,8 @@ Maybe an alternative is to have a `#define ELM_WARNINGS` that enables some `prin
 
 For the cases where Elm actually throws exceptions, can I even do that?
 What happens if I divide by zero? Nuthin'
+
+Unit tests probably cover a lot of it though.
 
 
 Build system

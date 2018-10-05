@@ -122,8 +122,8 @@ char* test_fixed_size_values() {
     if (verbose) printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
 
     Cons *c = newCons(&Unit, &Nil); // [()]
-    if (verbose) printf("Cons size=%ld addr=%s ctor=%d head=%s tail=%s, hex=%s\n",
-        sizeof(Cons), hex_ptr(c), (int)c->header.tag,
+    if (verbose) printf("Cons size=%ld addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
+        sizeof(Cons), hex_ptr(c), (int)c->header.size,
         hex_ptr(c->head), hex_ptr(c->tail),
         hex(c, sizeof(Cons))
     );
@@ -139,7 +139,11 @@ char* test_fixed_size_values() {
         sizeof(Cons) <= 3*sizeof(void*)
     );
     mu_assert("Cons should have header tag Tag_Cons", c->header.tag == Tag_Cons);
-    mu_assert("Cons should have header size 2", c->header.size == 2);
+    #ifdef TARGET_64BIT
+        mu_assert("Cons should have correct size field", c->header.size == 5);
+    #else
+        mu_assert("Cons should have correct size field", c->header.size == 3);
+    #endif
     mu_assert("[()] should have 'head' pointing to Unit", c->head == &Unit);
     mu_assert("[()] should have 'tail' pointing to Nil", c->tail == &Nil);
     free(c);
@@ -160,8 +164,12 @@ char* test_fixed_size_values() {
         "Tuple2 type should no wider than 3 pointers",
         sizeof(Tuple2) <= 3*sizeof(void*)
     );
+    #ifdef TARGET_64BIT
+        mu_assert("Tuple2 should have correct size field", t2->header.size == 5);
+    #else
+        mu_assert("Tuple2 should have correct size field", t2->header.size == 3);
+    #endif
     mu_assert("Tuple2 should have header tag Tag_Tuple2", t2->header.tag == Tag_Tuple2);
-    mu_assert("Tuple2 should have header size 2", t2->header.size == 2);
     mu_assert("(1,2) should have 'a' pointing to 1", t2->a == &i1);
     mu_assert("(1,2) should have 'b' pointing to 2", t2->b == &i2);
     free(t2);
@@ -178,8 +186,12 @@ char* test_fixed_size_values() {
         "Tuple3 type should no wider than 4 pointers",
         sizeof(Tuple3) <= 4*sizeof(void*)
     );
+    #ifdef TARGET_64BIT
+        mu_assert("Tuple3 should have correct size field", t3->header.size == 7);
+    #else
+        mu_assert("Tuple3 should have correct size field", t3->header.size == 4);
+    #endif
     mu_assert("Tuple3 should have header tag Tag_Tuple3", t3->header.tag == Tag_Tuple3);
-    mu_assert("Tuple3 should have header size 3", t3->header.size == 3);
     mu_assert("(1,2,3) should have 'a' pointing to 1", t3->a == &i1);
     mu_assert("(1,2,3) should have 'b' pointing to 2", t3->b == &i2);
     mu_assert("(1,2,3) should have 'c' pointing to 3", t3->c == &i3);
@@ -194,7 +206,7 @@ char* test_fixed_size_values() {
         sizeof(ElmInt) == sizeof(Header) + sizeof(i32)
     );
     mu_assert("ElmInt should have header tag Tag_Int", i->header.tag == Tag_Int);
-    mu_assert("ElmInt should have header size 0", i->header.size == 0);
+    mu_assert("ElmInt should have header size 0", i->header.size == 1);
     mu_assert("123 should have value of 123", i->value == 123);
     free(i);
 
@@ -211,7 +223,11 @@ char* test_fixed_size_values() {
         sizeof(ElmFloat) <= sizeof(Header) + sizeof(f64) + 4
     );
     mu_assert("ElmFloat should have header tag Tag_Float", f->header.tag == Tag_Float);
-    mu_assert("ElmFloat should have header size 0", f->header.size == 0); // should it?
+    #ifdef TARGET_64BIT
+        mu_assert("ElmFloat should have header size 3", f->header.size == 3);
+    #else
+        mu_assert("ElmFloat should have header size 2", f->header.size == 2);
+    #endif
     mu_assert("123.456789 should have value of 123", f->value == 123.456789);
     free(f);
 

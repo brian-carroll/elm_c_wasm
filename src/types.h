@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-// WEBASSEMBLY PRIMITIVE VALUES
+// WEBASSEMBLY PRIMITIVE TYPES
 
 typedef char i8;
 typedef short i16;
@@ -49,26 +49,43 @@ typedef enum {
     GcBlack,
 } GcColor;
 
-#define DEFAULT_COLOR GcWhite
-
 typedef struct {
     Tag tag :4;          // runtime type tag (4 bits)
     GcColor gc_color :2; // GC white/gray/black (2 bits)
     u32 size :26;        // payload size in integers (26 bits => <256MB)
 } Header;
 
-#define HEADER_INT        (Header){ .tag=Tag_Int,     .size=0, .gc_color=DEFAULT_COLOR }
-#define HEADER_FLOAT      (Header){ .tag=Tag_Float,   .size=0, .gc_color=DEFAULT_COLOR }
-#define HEADER_CHAR       (Header){ .tag=Tag_Char,    .size=0, .gc_color=DEFAULT_COLOR }
-#define HEADER_STRING(x)  (Header){ .tag=Tag_String,  .size=x, .gc_color=DEFAULT_COLOR }
-#define HEADER_NIL        (Header){ .tag=Tag_Nil,     .size=0, .gc_color=DEFAULT_COLOR }
-#define HEADER_CONS       (Header){ .tag=Tag_Cons,    .size=2, .gc_color=DEFAULT_COLOR }
-#define HEADER_TUPLE2     (Header){ .tag=Tag_Tuple2,  .size=2, .gc_color=DEFAULT_COLOR }
-#define HEADER_TUPLE3     (Header){ .tag=Tag_Tuple3,  .size=3, .gc_color=DEFAULT_COLOR }
-#define HEADER_CUSTOM(x)  (Header){ .tag=Tag_Custom,  .size=1+x, .gc_color=DEFAULT_COLOR }
-#define HEADER_RECORD(x)  (Header){ .tag=Tag_Record,  .size=1+x, .gc_color=DEFAULT_COLOR }
-#define HEADER_CLOSURE(x) (Header){ .tag=Tag_Closure, .size=2+x, .gc_color=DEFAULT_COLOR }
+// It's nice if we can target 64-bit platforms
+// C compile times are dramatically faster for native than for WebAssembly => faster dev cycle
+#if defined(_LP64) || defined(_WIN64)
+    #define TARGET_64BIT
+#endif
 
+// Header size field has units corresponding to this many bytes:
+#define SIZE_UNIT 4
+
+// On a 64-bit target, some of our structures get an extra 4 bytes of padding
+// C compiler does this to align pointers and floats to 64-bit boundaries
+#ifdef TARGET_64BIT
+    #define ALIGN (4/SIZE_UNIT)
+    #define PTR (8/SIZE_UNIT)
+#else
+    #define ALIGN 0
+    #define PTR (4/SIZE_UNIT)
+#endif
+
+// GC color defaults to 0 when omitted, and GC must know this.
+#define HEADER_INT         (Header){ .tag=Tag_Int,     .size=4/SIZE_UNIT }
+#define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=ALIGN+(8/SIZE_UNIT) }
+#define HEADER_CHAR        (Header){ .tag=Tag_Char,    .size=4/SIZE_UNIT }
+#define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .size=n32 }
+#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .size=0 }
+#define HEADER_CONS        (Header){ .tag=Tag_Cons,    .size=ALIGN+(2*PTR) }
+#define HEADER_TUPLE2      (Header){ .tag=Tag_Tuple2,  .size=ALIGN+(2*PTR) }
+#define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .size=ALIGN+(3*PTR) }
+#define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .size=(4/SIZE_UNIT)+(p*PTR) }
+#define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=(p+1)*PTR }
+#define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(4/SIZE_UNIT)+(p*PTR) }
 
 // LIST
 

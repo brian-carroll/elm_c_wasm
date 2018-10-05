@@ -16,16 +16,23 @@ int gc_first_pointer_offset(Header header) {
         case Tag_Cons:
         case Tag_Tuple2:
         case Tag_Tuple3:
-            return 0;  // first pointer is directly after header
+            #ifdef TARGET_64BIT
+                return 8; // header(4) + alignment(4)
+            #else
+                return 4; // header(4)
+            #endif
 
         case Tag_Custom:
+            return 8;   // header(4) + ctor(4)
+
         case Tag_Record:
-            return 1;  // skip 1 pointer-sized element (4 bytes)
+            #ifdef TARGET_64BIT
+                return 16; // header(4) + alignment(4) + fieldset(8)
+            #else
+                return 8; // header(4) + fieldset(4)
+            #endif
 
         case Tag_Closure:
-            return 2;  // skip 2 pointer-sized elements (8 bytes)
-        
-        default:
-            return -1;
+            return 8; // header(4) + n_values(2) + max_values(2)
     }
 }
