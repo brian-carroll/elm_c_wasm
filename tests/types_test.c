@@ -348,11 +348,32 @@ char* test_record() {
     r->header = HEADER_RECORD(2);
     r->fieldset = fs;
     r->values[0] = &Unit;
-    r->values[1] = &Unit;
+    r->values[1] = &Nil;
+
     if (verbose) {
         printf("FieldSet with 2 values: addr=%s, hex=%s\n", hex_ptr(fs), hex(fs,  sizeof(FieldSet) + 2*sizeof(u32)));
-        printf("Record with 2 values = %s\n", hex(r,  sizeof(Record) + 2*sizeof(void*)));
+        printf("Record with 2 values: tag=%d, hex=%s\n", r->header.tag, hex(r, sizeof(Record) + 2*sizeof(void*)));
     }
+
+    mu_assert(
+        "FieldSet struct with no fields should be the same size as an integer",
+        sizeof(FieldSet) == sizeof(u32)
+    );
+
+    #ifdef TARGET_64BIT
+        mu_assert(
+            "Record struct with no fields should be the right size for a header, 4 bytes of padding, and 1 pointer",
+            sizeof(Record) == sizeof(Header) + 4 + sizeof(void*)
+        );
+        mu_assert("HEADER_RECORD macro should insert correct size field", r->header.size == 7 ); // 1 + 3*2
+    #else
+        mu_assert(
+            "Record struct with 2 fields should be the right size for a header and a pointer",
+            sizeof(Record) == sizeof(Header) + sizeof(void*)
+        );
+        mu_assert("HEADER_RECORD macro should insert correct size field", r->header.size == 3 ); // 3*1
+    #endif
+    mu_assert("HEADER_RECORD macro should insert correct tag field", r->header.tag == Tag_Record);
 
     free(fs);
     free(r);
