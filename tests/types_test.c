@@ -118,13 +118,15 @@ char* test_header_layout() {
     return NULL;
 }
 
-
-char* test_fixed_size_values() {
+char* test_nil() {
     if (verbose) printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
     mu_assert("Nil should be the same size as a header", sizeof(Nil) == sizeof(Header));
     mu_assert("Nil should have the right tag field", Nil.header.tag == Tag_Nil);
     mu_assert("Nil should have the right size field", Nil.header.size == 0);
+    return NULL;
+}
 
+char* test_cons() {
     Cons *c = newCons(&Unit, &Nil); // [()]
     if (verbose) printf("Cons size=%ld addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
         sizeof(Cons), hex_ptr(c), (int)c->header.size,
@@ -148,11 +150,16 @@ char* test_fixed_size_values() {
 
     mu_assert("[()] should have 'head' pointing to Unit", c->head == &Unit);
     mu_assert("[()] should have 'tail' pointing to Nil", c->tail == &Nil);
-    free(c);
 
+    free(c);
+    return NULL;
+}
+
+char* test_tuples() {
     ElmInt *i1 = newElmInt(1);
     ElmInt *i2 = newElmInt(2);
     ElmInt *i3 = newElmInt(3);
+
 
     Tuple2 *t2 = newTuple2(&i1, &i2);
     if (verbose) printf("Tuple2 size=%ld addr=%s hex=%s\n",
@@ -174,7 +181,7 @@ char* test_fixed_size_values() {
     mu_assert("Tuple2 should have correct tag field", t2->header.tag == Tag_Tuple2);
     mu_assert("(1,2) should have 'a' pointing to 1", t2->a == &i1);
     mu_assert("(1,2) should have 'b' pointing to 2", t2->b == &i2);
-    free(t2);
+
 
     Tuple3 *t3 = newTuple3(&i1, &i2, &i3);
     if (verbose) printf("Tuple3 size=%ld addr=%s hex=%s\n",
@@ -198,25 +205,40 @@ char* test_fixed_size_values() {
     mu_assert("(1,2,3) should have 'a' pointing to 1", t3->a == &i1);
     mu_assert("(1,2,3) should have 'b' pointing to 2", t3->b == &i2);
     mu_assert("(1,2,3) should have 'c' pointing to 3", t3->c == &i3);
-    free(t3);
 
+
+    free(i1);
+    free(i2);
+    free(i3);
+    free(t2);
+    free(t3);
+    return NULL;
+}
+
+char* test_int() {
     ElmInt *i = newElmInt(123);
-    if (verbose) printf("Int size=%ld addr=%s ctor=%d value=%d\n",
+
+    if (verbose) printf("ElmInt size=%ld addr=%s ctor=%d value=%d\n",
         sizeof(ElmInt), hex_ptr(i), (int)i->header.tag, i->value
     );
     mu_assert(
         "ElmInt type should be just wide enough for a header and an i32",
         sizeof(ElmInt) == sizeof(Header) + sizeof(i32)
     );
-    mu_assert("ElmInt should have correct tag field", i->header.tag == Tag_Int);
-    mu_assert("ElmInt should have correct size field", i->header.size == 1);
-    mu_assert("123 should have value of 123", i->value == 123);
-    free(i);
+    mu_assert("newElmInt should insert correct tag field", i->header.tag == Tag_Int);
+    mu_assert("newElmInt should insert correct size field", i->header.size == 1);
+    mu_assert("newElmInt 123 should insert value of 123", i->value == 123);
 
+    free(i);
+    return NULL;
+}
+
+char* test_float() {
     ElmFloat *f = newElmFloat(123.456789);
     if (verbose) printf("Float size=%ld addr=%s ctor=%d value=%f\n",
         sizeof(ElmFloat), hex_ptr(f), (int)f->header.tag, f->value
     );
+
     mu_assert("newElmFloat should insert correct tag field", f->header.tag == Tag_Float);
     mu_assert("newElmFloat should insert correct value", f->value == 123.456789);
 
@@ -233,12 +255,17 @@ char* test_fixed_size_values() {
         );
         mu_assert("ElmFloat should have correct size field", f->header.size == 2);
     #endif
-    free(f);
 
+    free(f);
+    return NULL;
+}
+
+char* test_char() {
     ElmChar *ch = newElmChar('A');
     if (verbose) printf("Char size=%ld addr=%s ctor=%d value=%c\n",
         sizeof(ElmChar), hex_ptr(ch), (int)ch->header.tag, ch->value
     );
+
     mu_assert(
         "ElmChar type should be the right size for a header and an i32",
         sizeof(ElmChar) == sizeof(Header) + sizeof(i32)
@@ -246,9 +273,8 @@ char* test_fixed_size_values() {
     mu_assert("ElmChar should have correct tag field", ch->header.tag == Tag_Char);
     mu_assert("ElmChar should have correct size field", ch->header.size == 1);
     mu_assert("ElmChar 'A' should have correct value", ch->value == 'A');
-    free(ch);
 
-    if (verbose) printf("\n");
+    free(ch);
     return NULL;
 }
 
@@ -345,7 +371,15 @@ char* test_all() {
     mu_run_test(test_wasm_types);
     mu_run_test(test_elm_constants);
     mu_run_test(test_header_layout);
-    mu_run_test(test_fixed_size_values);
+
+    mu_run_test(test_nil);
+    mu_run_test(test_cons);
+    mu_run_test(test_tuples);
+    mu_run_test(test_int);
+    mu_run_test(test_float);
+    mu_run_test(test_char);
+    if (verbose) printf("\n");
+
     mu_run_test(test_strings);
     mu_run_test(test_custom);
     mu_run_test(test_record);
