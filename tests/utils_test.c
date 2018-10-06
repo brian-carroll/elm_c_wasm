@@ -105,49 +105,65 @@ char* test_apply(void) {
     mu_assert("answer should be ElmInt 6",
         memcmp(answer, &expected_answer, sizeof(ElmInt)) == 0
     );
+
+    free(curried);
+    free(closure);
+    free(answer);
+    // The intermediate ElmInt created in eval_user_project_closure is unreachable, can't free it
+    // Oh well... tests won't crash anyway, I'm being too careful. I guess we need GC
     return NULL;
 }
 
 
-void test_eq(void) {
-    printf("Unit==Unit : %s\n", *eq(&Unit, &Unit) ? "True" : "False" );
+char* test_eq(void) {
+    mu_assert("Expect: () == ()", eq(&Unit, &Unit) == &True);
 
-    printf("True==True : %s\n", *eq(&True, &True) ? "True" : "False" );
-    printf("False==False : %s\n", *eq(&False, &False) ? "True" : "False" );
-    printf("True==False : %s\n", *eq(&True, &False) ? "True" : "False" );
-    printf("False==True : %s\n", *eq(&False, &True) ? "True" : "False" );
+    mu_assert("Expect: True == True", eq(&True, &True) == &True);
+    mu_assert("Expect: False == False", eq(&False, &False) == &True);
+    mu_assert("Expect: True /= False", eq(&True, &False) == &False);
+    mu_assert("Expect: False /= True", eq(&False, &True) == &False);
 
     ElmInt two = (ElmInt){ .header = HEADER_INT, .value = 2 };
     ElmInt three = (ElmInt){ .header = HEADER_INT, .value = 3 };
 
-    printf("2==2 : %s\n", *eq(&two, &two) ? "True" : "False" );
-    printf("2==3 : %s\n", *eq(&two, &three) ? "True" : "False" );
+    mu_assert("Expect: 2 == 2", eq(&two, &two) == &True);
+    mu_assert("Expect: 2 /= 3", eq(&two, &three) == &False);
 
-    printf("True==3 : %s\n", *eq(&True, &three) ? "True" : "False" );
+    mu_assert("Expect: True /= 3", eq(&True, &three) == &False);
 
     ElmFloat *f = newElmFloat(123.456);
-    printf("123.456==123.456 : %s (ref)\n", *eq(f, f) ? "True" : "False" );
-    printf("123.456==123.456 : %s (val)\n", *eq(f, newElmFloat(123.456)) ? "True" : "False" );
-    printf("123.456==1.0 : %s\n", *eq(f, newElmFloat(1.0)) ? "True" : "False" );
+    ElmFloat *f1 = newElmFloat(123.456);
+    mu_assert("Expect: 123.456 == 123.456 (by reference)", eq(f, f) == &True);
+    mu_assert("Expect: 123.456 == 123.456 (by value)", eq(f, f1) == &True);
+    mu_assert("Expect: 123.456 /= 1.0 : %s\n", eq(f, newElmFloat(1.0)) == &False);
 
-    printf("A==A : %s\n", *eq(newElmChar('A'), newElmChar('A')) ? "True" : "False" );
-    printf("A==B : %s\n", *eq(newElmChar('A'), newElmChar('B')) ? "True" : "False" );
+    mu_assert("Expect: 'A' == 'A'", eq(newElmChar('A'), newElmChar('A')) == &True);
+    mu_assert("Expect: 'A' /= 'B'", eq(newElmChar('A'), newElmChar('B')) == &False);
 
     ElmString* hello1 = newElmString(5, "hello");
     ElmString* hello2 = newElmString(5, "hello");
     ElmString* hello_ = newElmString(6, "hello_");
     ElmString* world = newElmString(5, "world");
 
-    printf("ref equal hello==hello : %s\n", *eq(hello1, hello1) ? "True" : "False" );
-    printf("val equal hello==hello : %s\n", *eq(hello1, hello2) ? "True" : "False" );
-    printf("diff length hello==hello_ : %s\n", *eq(hello1, hello_) ? "True" : "False" );
-    printf("diff value hello_==world : %s\n", *eq(hello_, world) ? "True" : "False" );
+    mu_assert("Expect: \"hello\" == \"hello\" (by reference)", eq(hello1, hello1) == &True);
+    mu_assert("Expect: \"hello\" == \"hello\" (by value)", eq(hello1, hello2) == &True);
+    mu_assert("Expect: \"hello\" /= \"hello_\"", eq(hello1, hello_) == &False);
+    mu_assert("Expect: \"hello_\" /= \"hello\"", eq(hello_, hello1) == &False);
+    mu_assert("Expect: \"hello_\" /= \"world\"", eq(hello_, world) == &False);
+
+    free(f);
+    free(f1);
+    free(hello1);
+    free(hello2);
+    free(hello_);
+    free(world);
+    return NULL;
 }
 
 
 char* test_all() {
     mu_run_test(test_apply);
-    test_eq();
+    mu_run_test(test_eq);
 
     return NULL;
 }
