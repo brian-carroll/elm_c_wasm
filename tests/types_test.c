@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 #include "../src/types.h"
 #include "./test.c" // including .c file, naughty!
 
@@ -260,6 +261,23 @@ char* test_strings() {
         printf("strN: tag=%d, size=%d, hex=%s\n", strN->header.tag, strN->header.size, hex(strN, sizeof(ElmString) + 48));
         printf("\n");
     }
+
+    mu_assert("4-byte string should have correct body & padding", memcmp(str4->bytes, "1234\0\0\0\4", 8) == 0);
+    mu_assert("5-byte string should have correct body & padding", memcmp(str5->bytes, "12345\0\0\3", 8) == 0);
+    mu_assert("6-byte string should have correct body & padding", memcmp(str6->bytes, "123456\0\2", 8) == 0);
+    mu_assert("7-byte string should have correct body & padding", memcmp(str7->bytes, "1234567\1", 8) == 0);
+    mu_assert("8-byte string should have correct body & padding", memcmp(str8->bytes, "12345678\0\0\0\4", 12) == 0);
+    mu_assert("45-byte string should have correct body & padding", memcmp(strN->bytes, "The quick brown fox jumped over the lazy dog.\0\0\3", 48) == 0);
+
+    mu_assert("4-byte string should have correct header size", str4->header.size == 8/SIZE_UNIT);
+    mu_assert("5-byte string should have correct header size", str5->header.size == 8/SIZE_UNIT);
+    mu_assert("6-byte string should have correct header size", str6->header.size == 8/SIZE_UNIT);
+    mu_assert("7-byte string should have correct header size", str7->header.size == 8/SIZE_UNIT);
+    mu_assert("8-byte string should have correct header size", str8->header.size == 12/SIZE_UNIT);
+    mu_assert("45-byte string should have correct header size", strN->header.size == 48/SIZE_UNIT);
+
+    mu_assert("newString should insert the correct type tag", str4->header.tag == Tag_String);
+
     return NULL;
 }
 
