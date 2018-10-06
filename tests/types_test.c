@@ -119,7 +119,7 @@ char* test_header_layout() {
 }
 
 char* test_nil() {
-    if (verbose) printf("Nil size=%ld addr=%s ctor=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
+    if (verbose) printf("Nil size=%ld addr=%s tag=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
     mu_assert("Nil should be the same size as a header", sizeof(Nil) == sizeof(Header));
     mu_assert("Nil should have the right tag field", Nil.header.tag == Tag_Nil);
     mu_assert("Nil should have the right size field", Nil.header.size == 0);
@@ -218,7 +218,7 @@ char* test_tuples() {
 char* test_int() {
     ElmInt *i = newElmInt(123);
 
-    if (verbose) printf("ElmInt size=%ld addr=%s ctor=%d value=%d\n",
+    if (verbose) printf("ElmInt size=%ld addr=%s tag=%d value=%d\n",
         sizeof(ElmInt), hex_ptr(i), (int)i->header.tag, i->value
     );
     mu_assert(
@@ -235,7 +235,7 @@ char* test_int() {
 
 char* test_float() {
     ElmFloat *f = newElmFloat(123.456789);
-    if (verbose) printf("Float size=%ld addr=%s ctor=%d value=%f\n",
+    if (verbose) printf("Float size=%ld addr=%s tag=%d value=%f\n",
         sizeof(ElmFloat), hex_ptr(f), (int)f->header.tag, f->value
     );
 
@@ -262,7 +262,7 @@ char* test_float() {
 
 char* test_char() {
     ElmChar *ch = newElmChar('A');
-    if (verbose) printf("Char size=%ld addr=%s ctor=%d value=%c\n",
+    if (verbose) printf("Char size=%ld addr=%s tag=%d value=%c\n",
         sizeof(ElmChar), hex_ptr(ch), (int)ch->header.tag, ch->value
     );
 
