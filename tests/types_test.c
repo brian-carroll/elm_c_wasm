@@ -145,7 +145,7 @@ char* test_cons() {
                 "Cons struct should be the right size for a header and 2 pointers",
                 sizeof(Cons) == sizeof(Header) + 2*sizeof(void*)
         );
-        mu_assert("newCons should insert correct size field", c->header.size == 3);
+        mu_assert("newCons should insert correct size field", c->header.size == 2);
     #endif
 
     mu_assert("[()] should have 'head' pointing to Unit", c->head == &Unit);
@@ -176,7 +176,7 @@ char* test_tuples() {
                 "Tuple2 struct should be the right size for a header and 2 pointers",
                 sizeof(Tuple2) == sizeof(Header) + 2*sizeof(void*)
         );
-        mu_assert("newTuple2 should insert correct size field", t2->header.size == 3);
+        mu_assert("newTuple2 should insert correct size field", t2->header.size == 2);
     #endif
     mu_assert("Tuple2 should have correct tag field", t2->header.tag == Tag_Tuple2);
     mu_assert("(1,2) should have 'a' pointing to 1", t2->a == &i1);
@@ -199,7 +199,7 @@ char* test_tuples() {
                 "Tuple3 struct should be the right size for a header and 3 pointers",
                 sizeof(Tuple3) == sizeof(Header) + 3*sizeof(void*)
         );
-        mu_assert("newTuple3 should insert correct size field", t3->header.size == 4);
+        mu_assert("newTuple3 should insert correct size field", t3->header.size == 3);
     #endif
     mu_assert("Tuple3 should have correct tag field", t3->header.tag == Tag_Tuple3);
     mu_assert("(1,2,3) should have 'a' pointing to 1", t3->a == &i1);
@@ -242,19 +242,12 @@ char* test_float() {
     mu_assert("newElmFloat should insert correct tag field", f->header.tag == Tag_Float);
     mu_assert("newElmFloat should insert correct value", f->value == 123.456789);
 
-    #ifdef TARGET_64BIT
-        mu_assert(
-                "ElmFloat struct should be the right size for a header, 4 bytes of alignment padding, and an f64",
-                sizeof(ElmFloat) == sizeof(Header) + 4 + sizeof(f64)
-        );
-        mu_assert("newElmFloat should insert correct size field", f->header.size == 3);
-    #else
-        mu_assert(
-                "ElmFloat struct should be the right size for a header and an f64",
-                sizeof(ElmFloat) == sizeof(Header) + sizeof(f64)
-        );
-        mu_assert("ElmFloat should have correct size field", f->header.size == 2);
-    #endif
+    // f64 always gets aligned to 64-bit boundary, even for Wasm target
+    mu_assert(
+        "ElmFloat struct should be the right size for a header, 4 bytes of alignment padding, and an f64",
+        sizeof(ElmFloat) == sizeof(Header) + 4 + sizeof(f64)
+    );
+    mu_assert("newElmFloat should insert correct size field", f->header.size == 3);
 
     free(f);
     return NULL;

@@ -76,7 +76,7 @@ typedef struct {
 
 // GC color defaults to 0 when omitted, and GC must know this.
 #define HEADER_INT         (Header){ .tag=Tag_Int,     .size=4/SIZE_UNIT }
-#define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=ALIGN + (8/SIZE_UNIT) }
+#define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=(4+8)/SIZE_UNIT }
 #define HEADER_CHAR        (Header){ .tag=Tag_Char,    .size=4/SIZE_UNIT }
 #define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .size=n32 }
 #define HEADER_NIL         (Header){ .tag=Tag_Nil,     .size=0 }
