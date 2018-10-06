@@ -106,7 +106,7 @@ u8* eq(void* ptr_a, void* ptr_b) {
             return &True;
 
         case Tag_Record:
-            if (pa->record.fields != pb->record.fields) {
+            if (pa->record.fieldset != pb->record.fieldset) {
                 return &False;
             }
             for (int i=0; i<ha.size; i++) {
