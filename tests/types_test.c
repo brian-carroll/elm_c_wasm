@@ -334,6 +334,18 @@ char* test_custom() {
         printf("custom with 2 values = %s\n", hex(c,  sizeof(Custom) + 2*sizeof(void*)));
     }
 
+    mu_assert(
+        "Custom struct with no fields should be the size of a Header and an integer",
+        sizeof(Custom)==sizeof(Header) + sizeof(u32)
+    );
+    #ifdef TARGET_64BIT
+        mu_assert("HEADER_CUSTOM macro should insert correct size field", c->header.size == 5 ); // 1 + 2*2
+    #else
+        mu_assert("HEADER_CUSTOM macro should insert correct size field", c->header.size == 3 ); // 1 + 2
+    #endif
+    mu_assert("HEADER_CUSTOM macro should insert correct tag field", c->header.tag == Tag_Custom);
+
+
     free(c);
     return NULL;
 }
