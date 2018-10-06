@@ -328,7 +328,7 @@ char* test_custom() {
     }
 
     mu_assert(
-        "Custom struct with no fields should be the size of a Header and an integer",
+        "Custom struct with no parameters should be the size of a Header and an integer",
         sizeof(Custom)==sizeof(Header) + sizeof(u32)
     );
     #ifdef TARGET_64BIT
@@ -400,6 +400,17 @@ char* test_closure() {
     if (verbose) {
         printf("Closure with 2 values = %s\n", hex(c,  sizeof(Closure) + 2*sizeof(void*)));
     }
+
+    mu_assert(
+        "Closure struct with no values should be the size of a Header, an integer, and a pointer",
+        sizeof(Closure) == sizeof(Header) + sizeof(u32) + sizeof(void*)
+    );
+    #ifdef TARGET_64BIT
+        mu_assert("HEADER_CLOSURE macro should insert correct size field", c->header.size == 7 ); // 1 + 2 + 2*2
+    #else
+        mu_assert("HEADER_CLOSURE macro should insert correct size field", c->header.size == 4 ); // 1 + 1 + 2
+    #endif
+    mu_assert("HEADER_CLOSURE macro should insert correct tag field", c->header.tag == Tag_Closure);
 
     free(c);
     return NULL;

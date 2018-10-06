@@ -85,7 +85,7 @@ typedef struct {
 #define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .size=ALIGN + 3*PTR }
 #define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .size=(4/SIZE_UNIT)+(p*PTR) }
 #define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=ALIGN + (p+1)*PTR }
-#define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(4/SIZE_UNIT)+(p*PTR) }
+#define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(4/SIZE_UNIT)+((p+1)*PTR) }
 
 // LIST
 
