@@ -315,6 +315,12 @@ char* test_strings() {
 
     mu_assert("ElmString should have the correct type tag", str4->header.tag == Tag_String);
 
+    free(str4);
+    free(str5);
+    free(str6);
+    free(str7);
+    free(str8);
+    free(strN);
     return NULL;
 }
 
@@ -327,6 +333,8 @@ char* test_custom() {
     if (verbose) {
         printf("custom with 2 values = %s\n", hex(c,  sizeof(Custom) + 2*sizeof(void*)));
     }
+
+    free(c);
     return NULL;
 }
 
@@ -345,6 +353,9 @@ char* test_record() {
         printf("FieldSet with 2 values: addr=%s, hex=%s\n", hex_ptr(fs), hex(fs,  sizeof(FieldSet) + 2*sizeof(u32)));
         printf("Record with 2 values = %s\n", hex(r,  sizeof(Record) + 2*sizeof(void*)));
     }
+
+    free(fs);
+    free(r);
     return NULL;
 }
 
@@ -363,8 +374,9 @@ char* test_closure() {
     if (verbose) {
         printf("Closure with 2 values = %s\n", hex(c,  sizeof(Closure) + 2*sizeof(void*)));
     }
-    return NULL;
 
+    free(c);
+    return NULL;
 }
 
 char* test_all() {
