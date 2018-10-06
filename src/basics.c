@@ -1,6 +1,6 @@
 #include "types.h"
 
-void* eval_add(void* args[2]) {
+static void* eval_add(void* args[2]) {
     Number *pa = args[0];
     Number *pb = args[1];
     if (pa->f.header.tag == Tag_Float) {
@@ -16,4 +16,8 @@ void* eval_add(void* args[2]) {
     }
 }
 
-Closure add = CLOSURE(eval_add, 2);
+Closure add;
+
+void basics_init() {
+    add = CLOSURE(eval_add, 2);
+}

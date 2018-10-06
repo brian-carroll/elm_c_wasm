@@ -209,7 +209,6 @@ typedef struct {
     .evaluator = &f, \
     .max_values = n, \
     .n_values = 0, \
-    .values = {} \
 }
 
 

@@ -134,6 +134,7 @@ void test_eq(void) {
 
 
 int main(int argc, char ** argv) {
+    basics_init();
     test_closure_example1();
     test_eq();
 }
