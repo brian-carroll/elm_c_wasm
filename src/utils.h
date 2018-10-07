@@ -5,7 +5,7 @@
 
 void* apply(Closure* c_old, u8 n_applied, void* applied[]);
 
-ElmInt* String_length_bytes(ElmString *s);
-u8* eq(void* ptr_a, void* ptr_b);
+Closure eq;
+void utils_init();
 
 #endif

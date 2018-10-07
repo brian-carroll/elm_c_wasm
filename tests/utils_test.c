@@ -7,7 +7,12 @@
 #include "../src/basics.h"
 #include "./test.c" // including .c file, naughty!
 
-bool verbose = false;
+#ifdef __EMSCRIPTEN__
+    bool verbose = true;
+#else
+    bool verbose = false;
+#endif
+
 int tests_run = 0;
 
 // This is code I could generate from the Elm compiler. I could write better by hand.
@@ -116,43 +121,60 @@ char* test_apply(void) {
 
 
 char* test_eq(void) {
-    mu_assert("Expect: () == ()", eq(&Unit, &Unit) == &True);
+    mu_assert("Expect: () == ()", apply(&eq, 2, (void*[]){&Unit, &Unit}) == &True);
 
-    mu_assert("Expect: True == True", eq(&True, &True) == &True);
-    mu_assert("Expect: False == False", eq(&False, &False) == &True);
-    mu_assert("Expect: True /= False", eq(&True, &False) == &False);
-    mu_assert("Expect: False /= True", eq(&False, &True) == &False);
+    mu_assert("Expect: True == True", apply(&eq, 2, (void*[]){&True, &True}) == &True);
+    mu_assert("Expect: False == False", apply(&eq, 2, (void*[]){&False, &False}) == &True);
+    mu_assert("Expect: True /= False", apply(&eq, 2, (void*[]){&True, &False}) == &False);
+    mu_assert("Expect: False /= True", apply(&eq, 2, (void*[]){&False, &True}) == &False);
 
     ElmInt two = (ElmInt){ .header = HEADER_INT, .value = 2 };
     ElmInt three = (ElmInt){ .header = HEADER_INT, .value = 3 };
 
-    mu_assert("Expect: 2 == 2", eq(&two, &two) == &True);
-    mu_assert("Expect: 2 /= 3", eq(&two, &three) == &False);
+    mu_assert("Expect: 2 == 2", apply(&eq, 2, (void*[]){&two, &two}) == &True);
+    mu_assert("Expect: 2 /= 3", apply(&eq, 2, (void*[]){&two, &three}) == &False);
 
-    mu_assert("Expect: True /= 3", eq(&True, &three) == &False);
+    mu_assert("Expect: True /= 3", apply(&eq, 2, (void*[]){&True, &three}) == &False);
 
     ElmFloat *f = newElmFloat(123.456);
     ElmFloat *f1 = newElmFloat(123.456);
-    mu_assert("Expect: 123.456 == 123.456 (by reference)", eq(f, f) == &True);
-    mu_assert("Expect: 123.456 == 123.456 (by value)", eq(f, f1) == &True);
-    mu_assert("Expect: 123.456 /= 1.0 : %s\n", eq(f, newElmFloat(1.0)) == &False);
+    ElmFloat *f2 = newElmFloat(2.0);
+    mu_assert("Expect: 123.456 == 123.456 (by reference)", apply(&eq, 2, (void*[]){f, f}) == &True);
+    mu_assert("Expect: 123.456 == 123.456 (by value)", apply(&eq, 2, (void*[]){f, f1}) == &True);
+    mu_assert("Expect: 123.456 == 2.0 (by value)", apply(&eq, 2, (void*[]){f, f2}) == &False);
 
-    mu_assert("Expect: 'A' == 'A'", eq(newElmChar('A'), newElmChar('A')) == &True);
-    mu_assert("Expect: 'A' /= 'B'", eq(newElmChar('A'), newElmChar('B')) == &False);
+    ElmChar a1 = (ElmChar){ .header = HEADER_CHAR, .value = 'A' };
+    ElmChar a2 = (ElmChar){ .header = HEADER_CHAR, .value = 'A' };
+    ElmChar b  = (ElmChar){ .header = HEADER_CHAR, .value = 'B' };
+    mu_assert("Expect: 'A' == 'A', by reference", apply(&eq, 2, (void*[]){&a1, &a1}) == &True);
+    mu_assert("Expect: 'A' == 'A', by value", apply(&eq, 2, (void*[]){&a1, &a2}) == &True);
+    mu_assert("Expect: 'A' /= 'B'", apply(&eq, 2, (void*[]){&a1, &b}) == &False);
 
     ElmString* hello1 = newElmString(5, "hello");
     ElmString* hello2 = newElmString(5, "hello");
     ElmString* hello_ = newElmString(6, "hello_");
     ElmString* world = newElmString(5, "world");
 
-    mu_assert("Expect: \"hello\" == \"hello\" (by reference)", eq(hello1, hello1) == &True);
-    mu_assert("Expect: \"hello\" == \"hello\" (by value)", eq(hello1, hello2) == &True);
-    mu_assert("Expect: \"hello\" /= \"hello_\"", eq(hello1, hello_) == &False);
-    mu_assert("Expect: \"hello_\" /= \"hello\"", eq(hello_, hello1) == &False);
-    mu_assert("Expect: \"hello_\" /= \"world\"", eq(hello_, world) == &False);
+    if (verbose) {
+        printf("hello1 str=\"%s\" hex=%s\n", hello1->bytes, hex(hello1, (1+hello1->header.size)*4) );
+        printf("hello2 str=\"%s\" hex=%s\n", hello2->bytes, hex(hello2, (1+hello2->header.size)*4) );
+        printf("hello_ str=\"%s\" hex=%s\n", hello_->bytes, hex(hello_, (1+hello_->header.size)*4) );
+        printf("world str=\"%s\" hex=%s\n", world->bytes, hex(world, (1+world->header.size)*4) );
+    }
+
+    mu_assert("Expect: \"hello\" == \"hello\" (by reference)", apply(&eq, 2, (void*[]){hello1, hello1}) == &True);
+    mu_assert("Expect: \"hello\" == \"hello\" (by value)", apply(&eq, 2, (void*[]){hello1, hello2}) == &True);
+    mu_assert("Expect: \"hello\" /= \"world\"", apply(&eq, 2, (void*[]){hello1, world}) == &False);
+    mu_assert("Expect: \"hello\" /= \"hello_\"", apply(&eq, 2, (void*[]){hello1, hello_}) == &False);
+    mu_assert("Expect: \"hello_\" /= \"hello\"", apply(&eq, 2, (void*[]){hello_, hello1}) == &False);
+
+
+    // TODO: Lists and tuples and nested values
+
 
     free(f);
     free(f1);
+    free(f2);
     free(hello1);
     free(hello2);
     free(hello_);
@@ -173,6 +195,7 @@ int main(int argc, char ** argv) {
     int opt;
 
     basics_init();
+    utils_init();
 
     while ((opt = getopt(argc, argv, "v")) != -1) {
         switch (opt) {

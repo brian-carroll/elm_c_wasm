@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "types.h"
 
 void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
@@ -29,97 +30,96 @@ void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
 
 
 // Equality with recursion (and possible stack overflow)
-u8* eq(void* ptr_a, void* ptr_b) {
-    ElmValue* pa = (ElmValue*)ptr_a;
-    ElmValue* pb = (ElmValue*)ptr_b;
+static u32 eq_help(ElmValue* pa, ElmValue* pb) {
 
     // Reference equality shortcut
     if (pa == pb) {
-        return &True;
+        return 1;
     }
 
-    // Bool and Unit don't have headers, so check them first
-    u8 *pa_const = &pa->unit_or_bool;
+    // True, False and Unit are constants with no headers. Check for them first.
+    u8* pa_const = &pa->unit_or_bool;
     if (pa_const == &True || pa_const == &False || pa_const == &Unit) {
-        // Wouldn't get here if they were equal. It would be reference equality.
-        return &False;
+        return 0; // These values only have reference equality. Can't be equal if we got this far.
     }
 
+    // It's not Bool or Unit so it must have a header.
     Header ha = *(Header*)pa;
     Header hb = *(Header*)pb;
     switch (ha.tag) {
         case Tag_Int:
-            return pa->elm_int.value == pb->elm_int.value
-                ? &True : &False;
+            return pa->elm_int.value == pb->elm_int.value;
 
         case Tag_Float:
-            return pa->elm_float.value == pb->elm_float.value
-                ? &True : &False;
+            return pa->elm_float.value == pb->elm_float.value;
 
         case Tag_Char:
-            return pa->elm_char.value == pb->elm_char.value
-                ? &True : &False;
+            return pa->elm_char.value == pb->elm_char.value;
 
         case Tag_String: {
-            if (ha.size != hb.size) {
-                return &False;
+            if (ha.size != hb.size) return 0;
+            u32* a_ints = (u32*)pa->elm_string.bytes;
+            u32* b_ints = (u32*)pb->elm_string.bytes;
+            for (u32 i=0; i<ha.size; ++i) {
+                if (a_ints[i] != b_ints[i]) return 0;
             }
-            // Cast array of bytes to array of ints, for speed
-            u32* a32 = (u32*)pa->elm_string.bytes;
-            u32* b32 = (u32*)pb->elm_string.bytes;
-            for (int i=0; i < ha.size; i++) {
-                if (a32[i] != b32[i]) {
-                    return &False;
-                }
-            }
-            return &True;
-        }            
+            return 1;
+        }
 
         case Tag_Nil:
-            return &False; // not ref equal, so can't both be Nil
+            return 0; // if we got this far, can't both be Nil
 
         case Tag_Cons:
-            return eq(pa->cons.head, pb->cons.head)
-                && eq(pa->cons.tail, pb->cons.tail)
-                ? &True : &False;
+            return eq_help(pa->cons.head, pb->cons.head)
+                && eq_help(pa->cons.tail, pb->cons.tail);
 
         case Tag_Tuple2:
-            return eq(pa->tuple2.a, pb->tuple2.a)
-                && eq(pa->tuple2.b, pb->tuple2.b)
-                ? &True : &False;
+            return eq_help(pa->tuple2.a, pb->tuple2.a)
+                && eq_help(pa->tuple2.b, pb->tuple2.b);
 
         case Tag_Tuple3:
-            return eq(pa->tuple3.a, pb->tuple3.a)
-                && eq(pa->tuple3.b, pb->tuple3.b)
-                && eq(pa->tuple3.c, pb->tuple3.c)
-                ? &True : &False;
+            return eq_help(pa->tuple3.a, pb->tuple3.a)
+                && eq_help(pa->tuple3.b, pb->tuple3.b)
+                && eq_help(pa->tuple3.c, pb->tuple3.c);
 
         case Tag_Custom:
             if (pa->custom.ctor != pb->custom.ctor) {
-                return &False;
+                return 0;
             }
-            for (int i=0; i<ha.size; i++) {
-                if (!eq(pa->custom.values[i], pb->custom.values[i])) {
-                    return &False;                   
+            for (u32 i=0; i<ha.size; i++) {
+                if (!eq_help(pa->custom.values[i], pb->custom.values[i])) {
+                    return 0;
                 }
             }
-            return &True;
+            return 1;
 
         case Tag_Record:
             if (pa->record.fieldset != pb->record.fieldset) {
-                return &False;
+                return 0;
             }
-            for (int i=0; i<ha.size; i++) {
-                if (!eq(pa->record.values[i], pb->record.values[i])) {
-                    return &False;                    
+            for (u32 i=0; i<ha.size; i++) {
+                if (!eq_help(pa->record.values[i], pb->record.values[i])) {
+                    return 0;
                 }
             }
-            return &True;
+            return 1;
 
         case Tag_Closure:
+            fprintf(stderr, "Elm Warning: Functions can't be compared for equality. Returning 'False'.\n"); // TODO: implement exceptions?
+            return 0;
+
         default:
-            // Debug.crash
-            return &False;
+            fprintf(stderr, "Elm Warning: Tried to apply '==' to an unknown value type. Returning 'False'.\n"); // TODO: implement exceptions?
+            return 0;
     }
 }
 
+static void* eq_eval(void* args[]) {
+    return eq_help(args[0], args[1]) ? &True : &False;
+}
+
+Closure eq;
+
+void utils_init() {
+    eq = CLOSURE(eq_eval, 2);
+}
