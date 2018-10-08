@@ -1,10 +1,40 @@
+Next steps
+==========
+- Nested equality
+- Record accessors & updates
+    - Functions in utils, curried with an ElmInt
+    - Test code in test_utils
+- Destructuring
+- Case expression / pattern match
+    - Come up with some C structures corresponding to Haskell types
+    - Use JS as a reference
+- Cover all the Expr types
+
+
+Unboxing integers
+=================
+What would it actually take?
+
+All containers would need a bitmap. Could be just a single word (32 or 64)
+It has to be pointer-sized so that for large containers, we can put the bitmap in an separate look-up table (like Haskell). LSB can be the marker of large/small container, like OCaml does for a different purpose.
+Maybe it's simpler to just always externalise the bitmap.
+
+This would also allow unboxing Unit, Bool, and Char.
+
+So whenever we want to access a field of a container, we have to call a function to get it, rather than directly using the struct.
+
+**Key Problem:** How does `compare` know that it's looking at an `Int` rather than a pointer to some structure? Not really feasible at runtime. Code gen would need to do something different for Int. Which means the AST going into code gen would need to have type information. Currently it doesn't, and I'm not going down that rabbit hole.
+
+
 64 bit platforms
 ================
-So while doing testing I've discovered that it's much nicer to compile to native binary on my laptop and run things there.
-But my laptop is 64 bits and Wasm is 32.
-So it would be handy to support both. But also a bit of a pain to do.
+I've discovered that it's a _much_ faster dev cycle to compile to a binary executable on my laptop and run tests that way. Compile time alone is ~6x faster, and you don't have to switch windows and reload and all that. Once all tests are passing in binary, I can run a WebAssembly test in the browser and fix up any remaining issues.
 
-It mainly affects the `size` field of the header, which is not used for very much except GC and string length.
+But my laptop is 64 bits and Wasm is 32, so a bit of work is needed to support both. It's also nice for future server-side Elm and whatnot.
+
+Most of the C code is independent of 32 vs 64 bits. We just use array indices or structure fields and the compiler figures out the pointer offsets.
+
+It mainly affects the `size` field of the header, which is intended for GC and for string length.
 
 Padding is added for the following Elm types by gcc for 64-bit target:
 
