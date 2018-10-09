@@ -1,4 +1,5 @@
 #include "types.h"
+#include "basics.h"
 
 static void* eval_add(void* args[2]) {
     Number *pa = args[0];
