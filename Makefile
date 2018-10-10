@@ -4,19 +4,22 @@ SRCDIR=src
 BUILDDIR=build
 TARGETDIR=dist
 
-.PHONY: all clean check www resources
+.PHONY: all check dist www clean resources
 
-
-all: check www
-
-clean:
-	rm -rf build/*
-	rm -rf dist/*
+# 'all' = default with no arguments
+all: check
 
 check: resources ./dist/bin/test
 	./dist/bin/test
 
+dist: check www
+
 www: resources ./dist/www/test.html
+
+
+clean:
+	rm -rf build/*
+	rm -rf dist/*
 
 resources:
 	@mkdir -p build/bin/kernel build/bin/test
