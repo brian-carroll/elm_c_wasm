@@ -1,12 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <stdbool.h>
 #include <string.h>
 #include "../kernel/types.h"
-#include "./test.c" // including .c file, naughty!
-
-bool verbose = false;
-int tests_run = 0;
+#include "./test.h"
 
 char* test_wasm_types() {
     if (verbose) {
@@ -416,7 +412,7 @@ char* test_closure() {
     return NULL;
 }
 
-char* test_all() {
+char* types_test() {
     mu_run_test(test_wasm_types);
     mu_run_test(test_elm_constants);
     mu_run_test(test_header_layout);
@@ -434,32 +430,4 @@ char* test_all() {
     mu_run_test(test_record);
     mu_run_test(test_closure);
     return NULL;
-}
-
-
-int main(int argc, char ** argv) {
-    int opt;
-
-    while ((opt = getopt(argc, argv, "v")) != -1) {
-        switch (opt) {
-            case 'v':
-                verbose = true;
-                break;
-            default:
-                fprintf(stderr, "Usage: %s [-v]\n", argv[0]);
-                exit(EXIT_FAILURE);
-        }
-    }
-
-    char* result = test_all();
-    bool passed = result == NULL;
-
-    if (!passed) {
-        printf("%s\n", result);
-    } else {
-        printf("ALL TESTS PASSED\n");
-    }
-    printf("Tests run: %d\n", tests_run);
-
-    return !passed;
 }

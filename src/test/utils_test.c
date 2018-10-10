@@ -1,19 +1,9 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include "../kernel/utils.h"
 #include "../kernel/basics.h"
-#include "./test.c" // including .c file, naughty!
-
-#ifdef __EMSCRIPTEN__
-    bool verbose = true;
-#else
-    bool verbose = false;
-#endif
-
-int tests_run = 0;
+#include "./test.h"
 
 // This is code I could generate from the Elm compiler. I could write better by hand.
 // The intermediate ElmInt allocated on heap is hard to eliminate in generated code.
@@ -182,41 +172,9 @@ char* test_eq(void) {
     return NULL;
 }
 
-
-char* test_all() {
+char* utils_test() {
     mu_run_test(test_apply);
     mu_run_test(test_eq);
 
     return NULL;
-}
-
-
-int main(int argc, char ** argv) {
-    int opt;
-
-    basics_init();
-    utils_init();
-
-    while ((opt = getopt(argc, argv, "v")) != -1) {
-        switch (opt) {
-            case 'v':
-                verbose = true;
-                break;
-            default:
-                fprintf(stderr, "Usage: %s [-v]\n", argv[0]);
-                exit(EXIT_FAILURE);
-        }
-    }
-
-    char* result = test_all();
-    bool passed = result == NULL;
-
-    if (!passed) {
-        printf("%s\n", result);
-    } else {
-        printf("ALL TESTS PASSED\n");
-    }
-    printf("Tests run: %d\n", tests_run);
-
-    return !passed;
 }
