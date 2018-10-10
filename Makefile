@@ -11,7 +11,7 @@ all: check www
 
 clean:
 	rm -rf build/*
-	rm -f dist/*
+	rm -rf dist/*
 
 check: resources ./dist/bin/test
 	./dist/bin/test
@@ -19,15 +19,16 @@ check: resources ./dist/bin/test
 www: resources ./dist/www/test.html
 
 resources:
-	mkdir -p build/bin/kernel build/bin/test
-	mkdir -p build/www/kernel build/www/test
-	mkdir -p dist/bin dist/www
+	@mkdir -p build/bin/kernel build/bin/test
+	@mkdir -p build/www/kernel build/www/test
+	@mkdir -p dist/bin dist/www
 
 
 # Makefile squiggles:
-#  $@   target filename
-#  $^   all prerequisite names
-#  $<   first prerequisite name
+#  @CMD  run CMD but don't print it
+#  $@    target filename
+#  $^    all prerequisite names
+#  $<    first prerequisite name
 #
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 
