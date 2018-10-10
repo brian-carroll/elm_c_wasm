@@ -1,1 +1,0 @@
-emcc elm_values.c -O1 -s WASM=1 -o elm_values.html
