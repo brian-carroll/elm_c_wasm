@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include "../src/utils.h"
-#include "../src/basics.h"
+#include "../kernel/utils.h"
+#include "../kernel/basics.h"
 #include "./test.c" // including .c file, naughty!
 
 #ifdef __EMSCRIPTEN__

@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
-#include "../src/types.h"
+#include "../kernel/types.h"
 #include "./test.c" // including .c file, naughty!
 
 bool verbose = false;

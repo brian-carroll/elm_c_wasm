@@ -1,25 +1,29 @@
-
 CC=gcc
 CFLAGS=-Wall -O1
 SRCDIR=src
+TESTDIR=tests
 BUILDDIR=build
 TARGETDIR=bin
 
-.PHONY: all check clean
+.PHONY: all check clean www resources
 
 
-all: check
+all: check www
 
 
 clean:
-	rm -f build/*
+	rm -rf build/*
 	rm -f bin/*
 
 
-check: ./bin/types_test ./bin/utils_test
+check: resources ./bin/types_test ./bin/utils_test
 	./bin/types_test
 	./bin/utils_test
 
+
+resources:
+	mkdir -p build/bin/kernel build/bin/test
+	mkdir -p build/www/kernel build/www/test
 
 # Makefile squiggles:
 #  $@   target filename
@@ -31,14 +35,35 @@ check: ./bin/types_test ./bin/utils_test
 
 # Compile object files
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h
-	$(CC) $(CFLAGS) -c -o $@ $<
+$(BUILDDIR)/bin/kernel/%.o: $(SRCDIR)/kernel/%.c $(SRCDIR)/kernel/%.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILDDIR)/www/kernel/%.o: $(SRCDIR)/kernel/%.c $(SRCDIR)/kernel/%.h
+	emcc $(CFLAGS) -c $< -o $@
+
+
+$(BUILDDIR)/bin/test/%.o: $(SRCDIR)/test/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILDDIR)/www/test/%.o: $(SRCDIR)/test/%.c
+	emcc $(CFLAGS) -c $< -o $@
 
 
 # Compile and link binaries
 
-./bin/utils_test: tests/utils_test.c build/utils.o build/types.o build/basics.o
-	$(CC) $(CFLAGS) -o $@ $^
+./bin/utils_test: $(BUILDDIR)/bin/test/utils_test.o $(BUILDDIR)/bin/kernel/utils.o $(BUILDDIR)/bin/kernel/types.o $(BUILDDIR)/bin/kernel/basics.o
+	$(CC) $(CFLAGS) $^ -o $@
 
-./bin/types_test: tests/types_test.c build/types.o
-	$(CC) $(CFLAGS) -o $@ $^
+./bin/types_test: $(BUILDDIR)/bin/test/types_test.o $(BUILDDIR)/bin/kernel/types.o
+	$(CC) $(CFLAGS) $^ -o $@
+
+
+# Compile and link Wasm
+
+www: ./www/utils_test.html ./www/types_test.html
+
+./www/utils_test.html: $(BUILDDIR)/www/test/utils_test.o $(BUILDDIR)/www/kernel/utils.o $(BUILDDIR)/www/kernel/types.o $(BUILDDIR)/www/kernel/basics.o
+	emcc $(CFLAGS) -s WASM=1 $^ -o $@
+
+./www/types_test.html: $(BUILDDIR)/www/test/types_test.o $(BUILDDIR)/www/kernel/types.o
+	emcc $(CFLAGS) -s WASM=1 $^ -o $@
