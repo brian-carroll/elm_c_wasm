@@ -2,6 +2,41 @@
 #include <stdio.h>
 #include "types.h"
 
+
+u32 fieldset_search(FieldSet* fieldset, u32 search) {
+    u32 first = 0;
+    u32 last = fieldset->size - 1;
+    u32* array = fieldset->fields;
+
+    while (first <= last) {
+        u32 middle = (first + last)/2;
+        if (array[middle] == search) {
+            return middle;
+        } else if (array[middle] < search) {
+            first = middle + 1;
+        } else {
+            last = middle - 1;
+        }
+    }
+
+    fprintf(stderr, "Failed to find field %d in record fieldset at %llx\n",
+        search, (u64)fieldset
+    );
+    return 0;
+}
+
+
+void* record_access_eval(void* args[]) {
+    ElmInt* field = (ElmInt*)args[0];
+    Record* record = (Record*)args[1];
+
+    u32 index = fieldset_search(record->fieldset, field->value);
+    return record->values[index];
+}
+
+Closure record_access;
+
+
 void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
     if (c_old->max_values == n_applied) {
         // avoid allocating a new closure if we don't need it
@@ -122,4 +157,5 @@ Closure eq;
 
 void utils_init() {
     eq = CLOSURE(eq_eval, 2);
+    record_access = CLOSURE(record_access_eval, 2);
 }

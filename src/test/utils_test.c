@@ -5,6 +5,98 @@
 #include "../kernel/basics.h"
 #include "./test.h"
 
+
+char* test_records() {
+
+    /*
+        type alias Record1 =
+            { someField: Int
+            , otherField: String
+            }
+
+        type alias Record2 =
+            { things: Int
+            , someField: Int
+            , stuff: Float
+            }
+
+        r1 = Record1 123 "hello"
+        r2 = Record2 456 321 1.0
+
+        int1 = .someField r1  -- 123
+        int2 = .someField r2  -- 321
+    */
+
+    // Elm compiler transforms field names to numbers
+    u32 things = 12;
+    u32 someField = 23;
+    u32 otherField = 42;
+    u32 stuff = 71;
+
+    FieldSet* fsRecord1 = malloc(sizeof(FieldSet) + 2*sizeof(u32));
+    FieldSet* fsRecord2 = malloc(sizeof(FieldSet) + 3*sizeof(u32));
+
+    fsRecord1->size = 2;
+    fsRecord1->fields[0] = someField;
+    fsRecord1->fields[1] = otherField;
+
+    fsRecord2->size = 3;
+    fsRecord2->fields[0] = things;
+    fsRecord2->fields[1] = someField;
+    fsRecord2->fields[2] = stuff;
+
+    Record* r1 = malloc(sizeof(Record) + 2*sizeof(void*));
+    Record* r2 = malloc(sizeof(Record) + 3*sizeof(void*));
+
+    r1->header = HEADER_RECORD(2);
+    r1->fieldset = fsRecord1;
+    r1->values[0] = newElmInt(123);
+    r1->values[1] = newElmString(5, "hello");
+
+    r2->header = HEADER_RECORD(3);
+    r2->fieldset = fsRecord2;
+    r2->values[0] = newElmInt(456);
+    r2->values[1] = newElmInt(321);
+    r2->values[2] = newElmFloat(1.0);
+
+    // The actual accessor function
+    Closure* access_someField = apply(
+        &record_access, 1,
+        (void*[]){ newElmInt(someField) }
+    );
+
+    if (verbose) {
+        printf("access_someField = %s\n",
+            hex(access_someField, sizeof(Closure) + sizeof(void*))
+        );
+        printf("fsRecord1: addr=%llx val=%s\n",
+            (u64)fsRecord1,
+            hex(fsRecord1, sizeof(FieldSet) + 2*sizeof(u32))
+        );
+        printf("fsRecord2: addr=%llx val=%s\n",
+            (u64)fsRecord2,
+            hex(fsRecord2, sizeof(FieldSet) + 3*sizeof(u32))
+        );
+    }
+
+    ElmInt* int1 = apply(
+        access_someField, 1,
+        (void*[]){ r1 }
+    );
+
+    ElmInt* int2 = apply(
+        access_someField, 1,
+        (void*[]){ r2 }
+    );
+
+    mu_assert("Accessor should work on r1", int1->value = 123);
+    mu_assert("Accessor should work on r2", int2->value = 321);
+
+    return NULL;
+}
+
+
+
 // This is code I could generate from the Elm compiler. I could write better by hand.
 // The intermediate ElmInt allocated on heap is hard to eliminate in generated code.
 // Would be nice to evaluate entire expression on raw ints, and only then box it in ElmInt
@@ -173,6 +265,7 @@ char* test_eq(void) {
 }
 
 char* utils_test() {
+    mu_run_test(test_records);
     mu_run_test(test_apply);
     mu_run_test(test_eq);
 

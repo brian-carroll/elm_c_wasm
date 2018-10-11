@@ -6,6 +6,7 @@
 void* apply(Closure* c_old, u8 n_applied, void* applied[]);
 
 Closure eq;
+Closure record_access;
 void utils_init();
 
 #endif
