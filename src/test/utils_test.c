@@ -25,6 +25,12 @@ char* test_records() {
 
         int1 = .someField r1  -- 123
         int2 = .someField r2  -- 321
+
+        r3 = { r2
+               | things = 111
+               , stuff = 3.14
+             }
+
     */
 
     // Elm compiler transforms field names to numbers
@@ -89,8 +95,33 @@ char* test_records() {
         (void*[]){ r2 }
     );
 
-    mu_assert("Accessor should work on r1", int1->value = 123);
-    mu_assert("Accessor should work on r2", int2->value = 321);
+    /*
+        r3 = { r2
+               | things = 111
+               , stuff = 3.14
+             }
+    */
+    ElmInt* updated_thing = newElmInt(111);
+    ElmFloat* updated_stuff = newElmFloat(3.14);
+    Record* r3 = record_update(
+        r2, 2, (u32[]){ things, stuff },
+        (void*[]){ updated_thing, updated_stuff }
+    );
+
+    mu_assert("Record accessor should work on r1", int1->value = 123);
+    mu_assert("Record accessor should work on r2", int2->value = 321);
+
+    mu_assert("Updated record should have same fieldset",
+        r3->fieldset == r2->fieldset
+    );
+    mu_assert("Updated record should have same header",
+        memcmp(r3, r2, sizeof(Header)) == 0
+    );
+    mu_assert("Updated record should have 3 correct fields",
+        r3->values[0] == updated_thing &&
+        r3->values[1] == r2->values[1] &&
+        r3->values[2] == updated_stuff
+    );
 
     return NULL;
 }

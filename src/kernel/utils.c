@@ -3,7 +3,7 @@
 #include "types.h"
 
 
-u32 fieldset_search(FieldSet* fieldset, u32 search) {
+static u32 fieldset_search(FieldSet* fieldset, u32 search) {
     u32 first = 0;
     u32 last = fieldset->size - 1;
     u32* array = fieldset->fields;
@@ -26,7 +26,7 @@ u32 fieldset_search(FieldSet* fieldset, u32 search) {
 }
 
 
-void* record_access_eval(void* args[]) {
+static void* record_access_eval(void* args[]) {
     ElmInt* field = (ElmInt*)args[0];
     Record* record = (Record*)args[1];
 
@@ -35,6 +35,20 @@ void* record_access_eval(void* args[]) {
 }
 
 Closure record_access;
+
+
+Record* record_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
+    size_t n_bytes = (size_t)r->header.size * SIZE_UNIT;
+    Record* r_new = malloc(n_bytes);
+    memcpy(r_new, r, n_bytes);
+
+    for (u32 i=0; i<n_updates; ++i) {
+        u32 field_pos = fieldset_search(r_new->fieldset, fields[i]);
+        r_new->values[field_pos] = values[i];
+    }
+
+    return r_new;
+}
 
 
 void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
