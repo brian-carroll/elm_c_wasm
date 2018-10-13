@@ -1,8 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -O1
 SRCDIR=src
-BUILDDIR=build
-TARGETDIR=dist
 
 .PHONY: all check dist www clean resources
 
@@ -35,27 +33,36 @@ resources:
 #
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 
+SOURCES := $(wildcard src/kernel/*.c)
+HEADERS := $(wildcard src/kernel/*.h)
+
+BIN_OBJ := $(patsubst src/kernel/%.c, build/bin/kernel/%.o, $(SOURCES)) \
+			build/bin/test/test.o
+
+WWW_OBJ := $(patsubst src/kernel/%.c, build/www/kernel/%.o, $(SOURCES)) \
+			build/www/test/test.o
+
 
 # Object files
 
-$(BUILDDIR)/bin/kernel/%.o: $(SRCDIR)/kernel/%.c $(SRCDIR)/kernel/%.h
+build/bin/kernel/%.o: src/kernel/%.c src/kernel/%.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILDDIR)/www/kernel/%.o: $(SRCDIR)/kernel/%.c $(SRCDIR)/kernel/%.h
+build/www/kernel/%.o: src/kernel/%.c src/kernel/%.h
 	emcc $(CFLAGS) -c $< -o $@
 
 
-$(BUILDDIR)/bin/test/%.o: $(SRCDIR)/test/%.c
+build/bin/test/test.o: src/test/test.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILDDIR)/www/test/%.o: $(SRCDIR)/test/%.c
+build/www/test/test.o: src/test/test.c
 	emcc $(CFLAGS) -c $< -o $@
 
 
 # Binary & Wasm
 
-./dist/bin/test: $(BUILDDIR)/bin/test/test.o $(BUILDDIR)/bin/kernel/utils.o $(BUILDDIR)/bin/kernel/types.o $(BUILDDIR)/bin/kernel/basics.o
+./dist/bin/test: $(BIN_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@
 
-./dist/www/test.html: $(BUILDDIR)/www/test/test.o $(BUILDDIR)/www/kernel/utils.o $(BUILDDIR)/www/kernel/types.o $(BUILDDIR)/www/kernel/basics.o
+./dist/www/test.html: $(WWW_OBJ)
 	emcc $(CFLAGS) -s WASM=1 $^ -o $@
