@@ -1,14 +1,113 @@
 Next steps
 ==========
-- Nested equality
-- Record accessors & updates
-    - Functions in utils, curried with an ElmInt
-    - Test code in test_utils
-- Destructuring
-- Case expression / pattern match
-    - Come up with some C structures corresponding to Haskell types
-    - Use JS as a reference
-- Cover all the Expr types
+- Platform/runtime
+    - Goals
+        - be able to create a `Program`
+        - prove out all the tricky stuff
+    - Translate Scheduler.js and Platform.js to C
+    - Scheduler & Tasks
+    - Ports, Effect Managers, HTTP, vdom
+- Other core libs
+    - Nested equality tests
+    - JSON (required for all the effects stuff)
+- More handwritten prototypes of stuff that will be code generated
+    - _interesting but not really blockers or priorities_
+    - Destructuring
+    - Case expression / pattern match (Decider, Choice)
+    - Cover all the `Expr` constructors
+
+
+Initialising static values
+==========================
+There are lots of values that belong in the 'static' area of memory rather than the stack or the heap areas.
+- In a C program, these are global variables declared outside any function, and are pre-loaded before `main` is called.
+- Wasm has a special feature for this, the data segments. Memory is pre-loaded from the data segments as soon as the module loads. In Wasm text format they are specified as strings.
+- Using this mechanism would be nice for fast start-up time, but it's tricky because C doesn't allow it for `struct`s.
+- We can also initialize them dynamically at the start of `main`.
+- Elm static values
+    - Top level functions: Closures with no 'free values' => size is known, which is good
+    - Elm primitive literals anywhere in the program (Int, Float, String, Char)
+    - Built-ins like Unit, True, False, Nil
+    - Record fieldset
+    - Custom type constructor (function or constant)
+    - Top-level constant expressions (evaluated once on program initialization)
+    - Top-level recursive values (special case of constant expressions)
+- Pointers vs values
+    - Most Elm expressions will return pointers, not values. Code gen way more feasible that way.
+    - Therefore most code refers to pointers to the static value rather than the value itself.
+    - This is kind of how C strings work.
+- C compiler constraints
+    - To initialise a static value in the declaration itself, you can only use _constant expressions_
+    - This is a specific C syntax term, not just the obvious meaning. Only numeric literals, string literals, arithmetic ops, ternary op
+    - In particular _structs are not considered 'constant expressions'_, even if all the fields are constant. This is quite annoying.
+
+- Implementation options
+    - Static allocation & initialisation
+        - C compiler won't let us use structs, but maybe we can typecast...
+        - C strings actually have pointer type, so we can cast them to another pointer type!.
+        - `Closure* myElmFunction = (Closure*)"\0\1\123\111";` (with octal escapes)
+        - Value is anonymous, only the pointer has a name. Nice. C code less cluttered with names.
+        - BUT... either Elm compiler needs to know byte-level details (=> generated C is not cross-platform, bummer)
+        - OR we hide those details in a C macro somehow (including conversion to octal? Yuck)
+        - AND for Closures we would need to put a function pointer into this string literal, which is **impossible**.
+
+    - Static allocation, dynamic initialisation
+        - Two variables: value & pointer
+        - init function initialises the value, and points the pointer at it.
+        - The value can be just local to the file. The pointer is what we export via the header
+        - More clutter in the code, which is a bit annoying. Need a naming convention.
+        - **Works only for fixed-size structures**
+        - Variable size: String, Record, FieldSet, Custom
+        - Closure always intialised to a fixed size (no closed-over values)
+
+    - Dynamic allocation, dynamic initialisation
+        - We could just allocate all of this stuff on the heap.
+        - Code looks the same as anywhere else, which makes things easier.
+        - Just use malloc in the initialization function.
+        - As long as GC is implemented correctly, they will never get collected. GC may waste time checking them to make sure they're still alive though.
+        - Value is anonymous, only the pointer has a name. Nice. C code less cluttered with names.
+        - It's slower startup. Gives the memory manager lots of work to do on initialisation. Meh, it's totally fine. But if I can find a nice way to statically allocate I'd prefer to do that.
+
+    - How to do dynamic initialisation
+        - Create a local struct literal and then `memcpy`
+            - bonkers, why do this?
+        - Assign to struct literal
+            - 
+        - Field by field
+
+
+- Need to be initialised dynamically, C won't allow structs to be global static constants
+    - This is a limitation of C (and actually Rust too). Must be some reason for it but I suspect it's a reason that may not apply in the case of language implementation as opposed to handwritten C code.
+        - Global initialisers have to be C primitive literals: 
+- Literals in expressions
+    - May want to actually turn them into globals
+    - Or create them on the stack in C? But this is tricky
+
+
+Compiler special cases for numeric binops
+=========================================
+Could have special cases in code gen for Basics (0.19 JS code gen already has some).
+
+While current expression is a (saturated) call to a Basics binop, recurse down the AST, emitting a C expression that gets evaluated in the stack or registers.
+
+When the recursion finishes (end of expression or we reach a non-Basics function call or something), then and only then, save it to the heap.
+
+That wrapper function could work on any `number`, checking the header of the final value of the expression for Int or Float. Or we could look up the return type of the function at the top of the AST in a Map. If we it's Int or Float, no need to check at runtime. Let compiler optimise away some header code.
+
+There are three versions of that final wrapper function, depending on the return type of the function at the top of the AST tree (which we can look up in a Haskell Map). The return value will either be number, Int or Float.
+
+Basics functions:
+- 14 return Float
+- 7 return number
+- 7 return Int
+
+Would have both heap and stack versions of each Basics numeric op, where the heap version is built on top of the stack version but has a wrapper around it that does the allocation. Stack versions are marked `inline`.
+
+Advantage is that the header is available to `number` functions. `Int` and `Float` functions will just have no header-related code.
+
+As long as we can inline these functions, this should give the C compiler enough freedom to optimise things. They could also be function-like macros, but that might be more awkward.
+
+It's still doing more header checks than a monomorphised version would, but at least it gets rid of intermediate allocations.
 
 
 Unboxing integers
@@ -28,7 +127,7 @@ So whenever we want to access a field of a container, we have to call a function
 
 64 bit platforms
 ================
-I've discovered that it's a _much_ faster dev cycle to compile to a binary executable on my laptop and run tests that way. Compile time alone is ~6x faster, and you don't have to switch windows and reload and all that. Once all tests are passing in binary, I can run a WebAssembly test in the browser and fix up any remaining issues.
+I've discovered that it's a _much_ faster dev cycle to compile to a binary executable on my laptop and run tests that way. Compile time is ~6x faster, and you don't have to open a browser window or set up some hot reload thing. Once all tests are passing in binary, I can run a WebAssembly test in the browser and fix up any remaining issues.
 
 But my laptop is 64 bits and Wasm is 32, so a bit of work is needed to support both. It's also nice for future server-side Elm and whatnot.
 
@@ -53,10 +152,11 @@ Padding is added for the following Elm types by gcc for 64-bit target:
 |       | Closure   |
 
 - gcc is making sure that pointers and floats are on 64-bit boundaries for a 64-bit target
-- Elm Float has a float, so is padded
-- Const, Tuple2, Tuple3 and Record have only the header before the first pointer.
-- Int, Char, String, and Nil don't have either floats or pointers don't need this padding
-- Custom and Closure already happen to have their pointers on a 64-bit boundary don't need it )
+- All structure instances are placed on 64-bit boundaries, and the header is 32 bits, so anything that has only pointers or only floats in the body will get padding inserted
+- Elm Float has only a float in the body.
+- Const, Tuple2, Tuple3 and Record have only pointers in the body.
+- Int, Char, String, and Nil don't have either floats or pointers so don't need this padding
+- Custom and Closure already happen to have their pointers on a 64-bit boundary don't need padding
 - OCaml expands header to 64 bits on 64-bit machines. But that doesn't help me here! Custom and Closure would end up getting padded instead.
 
 OK so there doesn't seem to be any way to avoid the 64-bit alignment happening.
@@ -89,66 +189,6 @@ For the cases where Elm actually throws exceptions, can I even do that?
 What happens if I divide by zero? Nuthin'
 
 Unit tests probably cover a lot of it though.
-
-
-Build system
-============
-- This is C, so might as well use `make` and follow the herd.
-- No need for `configure`
-- Tests can target a binary rather than a browser
-- Project structure
-```
-    src/
-        kernel/
-            types.c
-            utils.c
-            basics.c
-        user/
-            example1.c
-            example2.c
-    tests/
-        kernel/
-            types_tests.c
-            utils_tests.c
-            basics_tests.c
-        user/
-            example1_tests.c
-            example2_tests.c
-    build/
-        kernel/
-            *.o
-        user/
-            *.o
-        tests/
-            *.o
-    dist/
-        prod/
-            *.js, *.html, *.wasm
-        dev/
-            *.js, *.html, *.wasm
-        tests/
-            run
-            kernel/
-                types_tests
-                utils_tests
-                basics_tests
-            user/
-                example1_tests
-                example2_tests
-```
-- Makefile conventional target names
-    - `all` the default... I'll use it for dev build
-    - `clean` delete generated stuff
-    - `dist` production build
-    - `check` run tests
-
-
-Testing
-=======
-- Need it! Made lots of mistakes in String.
-- https://stackoverflow.com/questions/65820/unit-testing-c-code
-- Start with stupidly simple zero-magic [MinUnit](http://www.jera.com/techinfo/jtns/jtn002.html) because I'll lose motivation if I have to deal with setting things up in C.
-
 
 
 Optimisations
