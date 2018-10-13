@@ -4,5 +4,6 @@
 #include "types.h"
 
 ElmInt* String_length_bytes(ElmString *s);
+void* string_append_eval(void* args[]);
 
 #endif

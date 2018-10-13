@@ -35,4 +35,5 @@ int gc_first_pointer_offset(Header header) {
         case Tag_Closure:
             return 8; // header(4) + n_values(2) + max_values(2)
     }
+    return 0;
 }

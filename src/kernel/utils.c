@@ -1,6 +1,21 @@
 #include <string.h>
 #include <stdio.h>
-#include "types.h"
+#include "./types.h"
+#include "./string.h"
+#include "./list.h"
+
+
+void* clone(void* x) {
+    u8* xconst = (u8*)x;
+    if (xconst == &Unit || xconst == &True || xconst == &False) {
+        return x;
+    }
+    Header* h = (Header*)x;
+    size_t n_bytes = (size_t)h->size * SIZE_UNIT;
+    ElmValue* x_new = malloc(n_bytes);
+    memcpy(x_new, x, n_bytes);
+    return x_new;
+}
 
 
 static u32 fieldset_search(FieldSet* fieldset, u32 search) {
@@ -38,9 +53,7 @@ Closure record_access;
 
 
 Record* record_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
-    size_t n_bytes = (size_t)r->header.size * SIZE_UNIT;
-    Record* r_new = malloc(n_bytes);
-    memcpy(r_new, r, n_bytes);
+    Record* r_new = clone(r);
 
     for (u32 i=0; i<n_updates; ++i) {
         u32 field_pos = fieldset_search(r_new->fieldset, fields[i]);
@@ -169,7 +182,28 @@ static void* eq_eval(void* args[]) {
 
 Closure eq;
 
+static void* append_eval(void* args[]) {
+    Header* h = (Header*)args[0];
+
+    switch (h->tag) {
+        case Tag_String:
+            return string_append_eval(args);
+
+        case Tag_Nil:
+        case Tag_Cons:
+            return list_append_eval(args);
+
+        default:
+            fprintf(stderr, "Tried to append non-appendable\n");
+    }
+    return h;
+}
+
+Closure append;
+
+
 void utils_init() {
     eq = CLOSURE(eq_eval, 2);
     record_access = CLOSURE(record_access_eval, 2);
+    append = CLOSURE(append_eval, 2);
 }
