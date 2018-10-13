@@ -1,3 +1,9 @@
+Publish
+=======
+
+
+
+
 Next steps
 ==========
 - Platform/runtime
@@ -83,7 +89,6 @@ There are lots of values that belong in the 'static' area of memory rather than 
         - Create a local struct literal and then `memcpy`
             - bonkers, why do this?
         - Assign to struct literal
-            - 
         - Field by field
 
 
@@ -103,7 +108,7 @@ While current expression is a (saturated) call to a Basics binop, recurse down t
 
 When the recursion finishes (end of expression or we reach a non-Basics function call or something), then and only then, save it to the heap.
 
-That wrapper function could work on any `number`, checking the header of the final value of the expression for Int or Float. Or we could look up the return type of the function at the top of the AST in a Map. If we it's Int or Float, no need to check at runtime. Let compiler optimise away some header code.
+That wrapper function could work on any `number`, checking the header of the final value of the expression for Int or Float. Or we could look up the return type of the function at the top of the AST in a Map. If we already know it's Int or Float, then there's no need to check at runtime. Let compiler optimise away some header code.
 
 There are three versions of that final wrapper function, depending on the return type of the function at the top of the AST tree (which we can look up in a Haskell Map). The return value will either be number, Int or Float.
 
@@ -205,7 +210,7 @@ Unit tests probably cover a lot of it though.
 Optimisations
 =============
 
-Effect of various emcc compiler [optimisation settings](https://kripken.github.io/emscripten-site/docs/tools_reference/emcc.html)
+Compilation time and file size for various emcc compiler [optimisation settings](https://kripken.github.io/emscripten-site/docs/tools_reference/emcc.html)
 
 | option | time | wasm | js |
 | ------ | ---- | ---- | -- |
