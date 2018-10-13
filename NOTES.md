@@ -50,15 +50,26 @@ There are lots of values that belong in the 'static' area of memory rather than 
         - BUT... either Elm compiler needs to know byte-level details (=> generated C is not cross-platform, bummer)
         - OR we hide those details in a C macro somehow (including conversion to octal? Yuck)
         - AND for Closures we would need to put a function pointer into this string literal, which is **impossible**.
+        - Can't be preloaded as zero then overwritten from C `main`. This results in a segmentation fault.
+        - Initialising from a C string is possible, as long as Elm compiler can generate a Header, for the following structs:
+            - ElmString
+            - ElmChar
+            - ElmInt
+            - ElmFloat (need to know 32 or 64 bit, need to get encoding right)
+            - FieldSet
+        - With this technique there's no way to ensure 32 or 64 bit alignment. C strings have no reason to be aligned. gcc does it for longer strings, but emcc doesn't. But meh.
+        - OK so I'll do this for string literals but nothing else. Strings are the only things that can be big, the rest don't matter.
 
     - Static allocation, dynamic initialisation
         - Two variables: value & pointer
         - init function initialises the value, and points the pointer at it.
         - The value can be just local to the file. The pointer is what we export via the header
         - More clutter in the code, which is a bit annoying. Need a naming convention.
-        - **Works only for fixed-size structures**
-        - Variable size: String, Record, FieldSet, Custom
-        - Closure always intialised to a fixed size (no closed-over values)
+        - Trickier for variable sized structures
+            - Variable size: String, Record, FieldSet, Custom
+            - C has assumes the variable part of the struct has zero size. (Actually true for Closures on init.)
+            - Would need to use type casting. Make the _value_ an array of bytes, with number of elements given by `sizeof` the real structure. Then just cast it to the real structure when initialising it.
+            - For strings, prefer not to have two chunks of memory reserved!
 
     - Dynamic allocation, dynamic initialisation
         - We could just allocate all of this stuff on the heap.
