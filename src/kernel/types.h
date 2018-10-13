@@ -50,9 +50,9 @@ typedef enum {
 } GcColor;
 
 typedef struct {
-    Tag tag :4;          // runtime type tag (4 bits)
-    GcColor gc_color :2; // GC white/gray/black (2 bits)
     u32 size :26;        // payload size in integers (26 bits => <256MB)
+    GcColor gc_color :2; // GC white/gray/black (2 bits)
+    Tag tag :4;          // runtime type tag (4 bits)
 } Header;
 
 // It's nice if we can target 64-bit platforms
