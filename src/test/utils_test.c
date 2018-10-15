@@ -328,17 +328,18 @@ char* test_eq(void) {
     mu_assert("Expect: (1,1,1) /= (1,2,1)", apply(&eq, 2, (void*[]){tuple111, tuple121}) == &False);
     mu_assert("Expect: (1,1,1) /= (1,1,2)", apply(&eq, 2, (void*[]){tuple111, tuple112}) == &False);
 
-    // TODO: nested values
 
+    Cons* bigList1 = newCons(&one, &Nil);
+    Cons* bigList2 = newCons(&one, &Nil);
+    Cons* bigList3 = cons2;
+    for (u32 i=0; i<123; ++i) {
+        bigList1 = newCons(&one, bigList1);
+        bigList2 = newCons(&one, bigList2);
+        bigList3 = newCons(&one, bigList3);
+    }
+    mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]", apply(&eq, 2, (void*[]){bigList1, bigList2}) == &True);
+    mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]", apply(&eq, 2, (void*[]){bigList1, bigList3}) == &False);
 
-
-    free(f);
-    free(f1);
-    free(f2);
-    free(hello1);
-    free(hello2);
-    free(hello_);
-    free(world);
     return NULL;
 }
 
