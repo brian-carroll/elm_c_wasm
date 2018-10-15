@@ -234,6 +234,8 @@ char* test_apply(void) {
 
 
 char* test_eq(void) {
+    if (verbose) printf("\n\nEquality\n--------\n");
+
     mu_assert("Expect: () == ()", apply(&eq, 2, (void*[]){&Unit, &Unit}) == &True);
 
     mu_assert("Expect: True == True", apply(&eq, 2, (void*[]){&True, &True}) == &True);
@@ -281,8 +283,53 @@ char* test_eq(void) {
     mu_assert("Expect: \"hello\" /= \"hello_\"", apply(&eq, 2, (void*[]){hello1, hello_}) == &False);
     mu_assert("Expect: \"hello_\" /= \"hello\"", apply(&eq, 2, (void*[]){hello_, hello1}) == &False);
 
+    Cons* cons2 = newCons(&two, &Nil);
+    Cons* cons2a = newCons(&two, &Nil);
+    Cons* cons3 = newCons(&three, &Nil);
+    Cons* cons23 = newCons(&two, cons3);
+    Cons* cons23a = newCons(&two, cons3);
+    Cons* cons32 = newCons(&three, cons2);
+    Cons* cons22 = newCons(&two, cons2);
 
-    // TODO: Lists and tuples and nested values
+    mu_assert("Expect: [] == []", apply(&eq, 2, (void*[]){&Nil, &Nil}) == &True);
+    mu_assert("Expect: [] /= [2]", apply(&eq, 2, (void*[]){&Nil, cons2}) == &False);
+    mu_assert("Expect: [2] /= []", apply(&eq, 2, (void*[]){cons2, &Nil}) == &False);
+    mu_assert("Expect: [2] == [2] (by ref)", apply(&eq, 2, (void*[]){cons2, cons2}) == &True);
+    mu_assert("Expect: [2] == [2] (by value)", apply(&eq, 2, (void*[]){cons2, cons2a}) == &True);
+    mu_assert("Expect: [2] /= [3]", apply(&eq, 2, (void*[]){cons2, cons3}) == &False);
+    mu_assert("Expect: [2] /= [2,3]", apply(&eq, 2, (void*[]){cons2, cons23}) == &False);
+    mu_assert("Expect: [2,3] == [2,3] (by ref)", apply(&eq, 2, (void*[]){cons23, cons23}) == &True);
+    mu_assert("Expect: [2,3] == [2,3] (by value)", apply(&eq, 2, (void*[]){cons23, cons23a}) == &True);
+    mu_assert("Expect: [3,2] /= [2,2]", apply(&eq, 2, (void*[]){cons32, cons22}) == &False);
+    mu_assert("Expect: [2,3] /= [2,2]", apply(&eq, 2, (void*[]){cons23, cons22}) == &False);
+
+
+    Tuple2* tuple23 = newTuple2(&two, &three);
+    Tuple2* tuple23a = newTuple2(&two, &three);
+    Tuple2* tuple32 = newTuple2(&three, &two);
+    Tuple2* tuple22 = newTuple2(&two, &two);
+
+    mu_assert("Expect: (2,3) == (2,3) (by ref)", apply(&eq, 2, (void*[]){tuple23, tuple23}) == &True);
+    mu_assert("Expect: (2,3) == (2,3) (by value)", apply(&eq, 2, (void*[]){tuple23, tuple23a}) == &True);
+    mu_assert("Expect: (3,2) /= (2,2)", apply(&eq, 2, (void*[]){tuple32, tuple22}) == &False);
+    mu_assert("Expect: (2,3) /= (2,2)", apply(&eq, 2, (void*[]){tuple23, tuple22}) == &False);
+
+    ElmInt one = (ElmInt){ .header = HEADER_INT, .value = 1 };
+    Tuple3* tuple123 = newTuple3(&one, &two, &three);
+    Tuple3* tuple123a = newTuple3(&one, &two, &three);
+    Tuple3* tuple111 = newTuple3(&one, &one, &one);
+    Tuple3* tuple211 = newTuple3(&two, &one, &one);
+    Tuple3* tuple121 = newTuple3(&one, &two, &one);
+    Tuple3* tuple112 = newTuple3(&one, &one, &two);
+    
+    mu_assert("Expect: (1,2,3) == (1,2,3) (by ref)", apply(&eq, 2, (void*[]){tuple123, tuple123}) == &True);
+    mu_assert("Expect: (1,2,3) == (1,2,3) (by value)", apply(&eq, 2, (void*[]){tuple123, tuple123a}) == &True);
+    mu_assert("Expect: (1,1,1) /= (2,1,1)", apply(&eq, 2, (void*[]){tuple111, tuple211}) == &False);
+    mu_assert("Expect: (1,1,1) /= (1,2,1)", apply(&eq, 2, (void*[]){tuple111, tuple121}) == &False);
+    mu_assert("Expect: (1,1,1) /= (1,1,2)", apply(&eq, 2, (void*[]){tuple111, tuple112}) == &False);
+
+    // TODO: nested values
+
 
 
     free(f);

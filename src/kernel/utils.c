@@ -91,10 +91,13 @@ void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
 }
 
 
-// Equality with recursion (and possible stack overflow)
-static u32 eq_help(ElmValue* pa, ElmValue* pb) {
+static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, void* stack) {
 
-    // Reference equality shortcut
+    if (depth > 100) {
+        stack = newCons(newTuple2(pa, pb), stack);
+        return 1;
+    }
+
     if (pa == pb) {
         return 1;
     }
@@ -132,24 +135,25 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb) {
             return 0; // if we got this far, can't both be Nil
 
         case Tag_Cons:
-            return eq_help(pa->cons.head, pb->cons.head)
-                && eq_help(pa->cons.tail, pb->cons.tail);
+            if (hb.tag == Tag_Nil) return 0;
+            return eq_help(pa->cons.head, pb->cons.head, depth + 1, stack)
+                && eq_help(pa->cons.tail, pb->cons.tail, depth + 1, stack);
 
         case Tag_Tuple2:
-            return eq_help(pa->tuple2.a, pb->tuple2.a)
-                && eq_help(pa->tuple2.b, pb->tuple2.b);
+            return eq_help(pa->tuple2.a, pb->tuple2.a, depth + 1, stack)
+                && eq_help(pa->tuple2.b, pb->tuple2.b, depth + 1, stack);
 
         case Tag_Tuple3:
-            return eq_help(pa->tuple3.a, pb->tuple3.a)
-                && eq_help(pa->tuple3.b, pb->tuple3.b)
-                && eq_help(pa->tuple3.c, pb->tuple3.c);
+            return eq_help(pa->tuple3.a, pb->tuple3.a, depth + 1, stack)
+                && eq_help(pa->tuple3.b, pb->tuple3.b, depth + 1, stack)
+                && eq_help(pa->tuple3.c, pb->tuple3.c, depth + 1, stack);
 
         case Tag_Custom:
             if (pa->custom.ctor != pb->custom.ctor) {
                 return 0;
             }
             for (u32 i=0; i<ha.size; i++) {
-                if (!eq_help(pa->custom.values[i], pb->custom.values[i])) {
+                if (!eq_help(pa->custom.values[i], pb->custom.values[i], depth + 1, stack)) {
                     return 0;
                 }
             }
@@ -160,7 +164,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb) {
                 return 0;
             }
             for (u32 i=0; i<ha.size; i++) {
-                if (!eq_help(pa->record.values[i], pb->record.values[i])) {
+                if (!eq_help(pa->record.values[i], pb->record.values[i], depth + 1, stack)) {
                     return 0;
                 }
             }
@@ -177,10 +181,23 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb) {
 }
 
 static void* eq_eval(void* args[]) {
-    return eq_help(args[0], args[1]) ? &True : &False;
+    ElmValue* nil = (ElmValue*)&Nil;
+    ElmValue* stack = nil;
+    u32 isEqual = eq_help(args[0], args[1], 0, stack);
+
+    while (isEqual && stack != nil) {
+        // eq_help reached max recursion depth. Pick up again where it left off.
+        Tuple2* pair = stack->cons.head;
+        stack = stack->cons.tail;
+        isEqual = eq_help(pair->a, pair->b, 0, stack);
+    }
+
+    return isEqual ? &True : &False;
 }
 
 Closure eq;
+
+
 
 static void* append_eval(void* args[]) {
     Header* h = (Header*)args[0];
@@ -195,8 +212,8 @@ static void* append_eval(void* args[]) {
 
         default:
             fprintf(stderr, "Tried to append non-appendable\n");
+            return args[0];
     }
-    return h;
 }
 
 Closure append;
