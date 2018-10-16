@@ -35,15 +35,23 @@ However I really learned a lot about WebAssembly by doing this.
 
 
 # Closures
-https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
+I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](./src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
+
+In a nutshell, the Closure data structure is a value that can be passed around an Elm program. It stores up any arguments that are partially applied to it, until it is "full". It also contains a function pointer, so that when the last argument is applied, that function can be called. A working example of all of this can be found in `test_apply` in [utils_test.c](./src/test/utils_test.c).
+
+The version in the blog post used the same number of bytes regardless of the number of closed-over values held in the Closure. The new version is a bit more compact, using only the space it needs.
+
+[blogpost]: https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
 
 
 # Extensible Records
-- Split into two data structures: `Record` and `FieldSet`
-- The `Record` stores the values only. The field names are stored in a `FieldSet`, shared by all values of the same exact Record type.
-- Field names are represented as integers. This will use a variation of the 0.19 optimisation that shortens field names, adapted to generate unique integers instead of unique letter combinations.
+- A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). 
+- In this project they are split into two C structures, `Record` and `FieldSet`, defined in [types.h](./src/kernel/types.h)
+- The `Record` stores the values only. The field names are stored in a `FieldSet`, shared by all values of the same Record type.
+- Field names are represented as integers. The compiler will convert every field name in the project to a unique integer, using the same kind of optimisation the Elm 0.19 compiler uses to map field names to short combinations of letters.
 
 - Record accessor functions
+    - Elm has special functions for accessing records, prefixed by a dot, like `.name`. The important thing is that this function can be applied to _any_ Record type that contains a field called `name`.
     - Implemented using a Kernel function that takes the field ID as an Elm Int, and the record itself
     ```elm
         recordAccess : Int -> r -> a
@@ -55,19 +63,20 @@ https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
     ```
     - An accessor function for a particular field is created by partially applying the field ID in the generated code. In Elm syntax it would look something like the following:
     ```elm
-        .myField : { r | myField : a } -> a
-        .myField = recordAccess 123  -- partial application
+        .name : { r | name : a } -> a
+        .name = recordAccess 123  -- where 123 represents the field called 'name'
     ```
     - Field lookups are implemented as a binary search, which requires the fields to be pre-sorted by the Elm compiler
     - `recordAccess` is not safe if the field does not actually exist in the record, but it's not available to user Elm code, it can only be emitted by the compiler.
 
 - Record update
     - `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
-    - Implemented using a C function `record_update` that the compiler can insert into the generated.
-    - First clone the original record
+    - This Elm syntax is implemented using a C function `record_update`, found in [utils.c](./src/kernel/utils.c)
+    - First it clones the original record
     - Then for each field to be updated
-        - Look up the field position in the record's FieldSet
-        - Mutate the relevant position in the copied record to point to the update value
+        - Finds the index of the field in the record's FieldSet
+        - Changes the value at the same index in the Record
+
 
 # SuperTypes / constrained type variables
 
