@@ -1,16 +1,10 @@
-Publish
-=======
-
-
-
-
 Next steps
 ==========
 - Platform/runtime
     - Goals
         - be able to create a `Program`
-        - prove out all the tricky stuff
-    - Translate Scheduler.js and Platform.js to C
+        - figure out some of the tricky stuff to do with effects and JS interop
+    - Translate Scheduler.js and Platform.js to C & Elm
     - Scheduler & Tasks
     - Ports, Effect Managers, HTTP, vdom
 - Other core libs
