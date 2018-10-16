@@ -10,6 +10,9 @@ all: check
 check: resources ./dist/bin/test
 	./dist/bin/test
 
+verbose: resources ./dist/bin/test
+	./dist/bin/test -v
+
 dist: check www
 
 www: resources ./dist/www/test.html
