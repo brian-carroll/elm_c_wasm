@@ -11,10 +11,15 @@ void* clone(void* x) {
         return x;
     }
     Header* h = (Header*)x;
-    size_t n_bytes = (size_t)h->size * SIZE_UNIT;
+    size_t n_bytes = sizeof(Header) + SIZE_UNIT * (size_t)h->size;
     ElmValue* x_new = malloc(n_bytes);
     memcpy(x_new, x, n_bytes);
     return x_new;
+}
+
+
+inline u32 custom_param_count(Custom* c) {
+    return ((c->header.size * SIZE_UNIT) - sizeof(Header)) / sizeof(void*);
 }
 
 
@@ -152,7 +157,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             if (pa->custom.ctor != pb->custom.ctor) {
                 return 0;
             }
-            for (u32 i=0; i<ha.size; i++) {
+            for (u32 i=0; i < custom_param_count(&pa->custom); ++i) {
                 if (!eq_help(pa->custom.values[i], pb->custom.values[i], depth + 1, pstack)) {
                     return 0;
                 }
@@ -160,10 +165,8 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             return 1;
 
         case Tag_Record:
-            if (pa->record.fieldset != pb->record.fieldset) {
-                return 0;
-            }
-            for (u32 i=0; i<ha.size; i++) {
+            // Elm guarantees same Record type => same fieldset
+            for (u32 i=0; i < pa->record.fieldset->size; ++i) {
                 if (!eq_help(pa->record.values[i], pb->record.values[i], depth + 1, pstack)) {
                     return 0;
                 }
@@ -171,11 +174,15 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             return 1;
 
         case Tag_Closure:
-            fprintf(stderr, "Elm Warning: Functions can't be compared for equality. Returning 'False'.\n"); // TODO: implement exceptions?
+            // C doesn't have exceptions, I'd have to call out to JS.
+            // For now it's a warning rather than error and returns False
+            fprintf(stderr, "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which describes why it is this way and what the better version will look like.\n");
             return 0;
 
         default:
-            fprintf(stderr, "Elm Warning: Tried to apply '==' to an unknown value type. Returning 'False'.\n"); // TODO: implement exceptions?
+            // C doesn't have exceptions, I'd have to call out to JS.
+            // Return False for now.
+            fprintf(stderr, "Warning: Trying to apply '==' to an unknown value type. Returning 'False'.\n");
             return 0;
     }
 }

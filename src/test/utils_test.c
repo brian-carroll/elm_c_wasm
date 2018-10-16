@@ -340,6 +340,62 @@ char* test_eq(void) {
     mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]", apply(&eq, 2, (void*[]){bigList1, bigList2}) == &True);
     mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]", apply(&eq, 2, (void*[]){bigList1, bigList3}) == &False);
 
+
+    Custom* custom_1_1A = malloc(sizeof(Custom) + 2*sizeof(void*));
+    custom_1_1A->header = HEADER_CUSTOM(2);
+    custom_1_1A->ctor = 1;
+    custom_1_1A->values[0] = &one;
+    custom_1_1A->values[1] = &a1;
+
+    Custom* custom_1_1A_clone = clone(custom_1_1A);
+
+    Custom* custom_2_1A = clone(custom_1_1A);
+    custom_2_1A->ctor = 2;
+
+    Custom* custom_1_2A = clone(custom_1_1A);
+    custom_1_2A->values[0] = &two;
+
+    Custom* custom_1_1B = clone(custom_1_1A);
+    custom_1_1B->values[1] = &b;
+
+    mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (ref)", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_1A}) == &True);
+    mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (value)", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_1A_clone}) == &True);
+    mu_assert("Expect: Ctor1 1 'A' /= Ctor2 1 'A'", apply(&eq, 2, (void*[]){custom_1_1A, custom_2_1A}) == &False);
+    mu_assert("Expect: Ctor1 1 'A' /= Ctor1 2 'A'", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_2A}) == &False);
+    mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_1B}) == &False);
+
+
+    FieldSet* fs = malloc(sizeof(FieldSet) + 2*sizeof(void*));
+    fs->size = 2;
+    fs->fields[0] = 123;
+    fs->fields[1] = 321;
+
+    size_t rsize = sizeof(Record) + 2*sizeof(void*);
+    Record* rec12 = malloc(rsize);
+    rec12->header = HEADER_RECORD(2);
+    rec12->fieldset = fs;
+    rec12->values[0] = &one;
+    rec12->values[1] = &two;
+
+    Record* rec12a = clone(rec12);
+    Record* rec22 = clone(rec12);
+    rec22->values[0] = &two;
+    Record* rec13 = clone(rec12);
+    rec13->values[1] = &three;
+
+    if (verbose) {
+        printf("rec12  = %s\n", hex(rec12, rsize));
+        printf("rec12a = %s\n", hex(rec12a, rsize));
+        printf("rec22  = %s\n", hex(rec22, rsize));
+        printf("rec13  = %s\n", hex(rec13, rsize));
+    }
+    mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (ref)", apply(&eq, 2, (void*[]){rec12, rec12}) == &True);
+    mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (value)", apply(&eq, 2, (void*[]){rec12, rec12a}) == &True);
+    mu_assert("Expect: {a=1, b=2} /= {a=2, b=2}", apply(&eq, 2, (void*[]){rec12, rec22}) == &False);
+    mu_assert("Expect: {a=1, b=2} /= {a=1, b=3}", apply(&eq, 2, (void*[]){rec12, rec13}) == &False);
+
+
+
     return NULL;
 }
 
