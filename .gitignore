@@ -1,15 +1,12 @@
 # Editor config
 .vscode/
 
-# Output directories
-build/
-dist/
-
-# Any stray generated files
+# Generated files
 *.html
 *.js
 *.wasm
 *.o
+*.d
 a.out
 
 # Generated report

@@ -1,31 +1,32 @@
 CC=gcc
 CFLAGS=-Wall -O1
-SRCDIR=src
 
-.PHONY: all check dist www clean resources
+SOURCES := $(wildcard src/*/*.c)
 
-# 'all' = default with no arguments
+BIN_OBJ := $(patsubst src/%.c, build/bin/%.o, $(SOURCES))
+WWW_OBJ := $(patsubst src/%.c, build/www/%.o, $(SOURCES))
+
+DEPS := $(patsubst src/%.c, build/deps/%.d, $(SOURCES))
+
+
+.PHONY: all check dist www clean vars
+
+# 'all' = default for `make` with no arguments
 all: check
 
-check: resources ./dist/bin/test
+check: ./dist/bin/test
 	./dist/bin/test
 
-verbose: resources ./dist/bin/test
+verbose: ./dist/bin/test
 	./dist/bin/test -v
 
 dist: check www
 
-www: resources ./dist/www/test.html
-
+www: ./dist/www/test.html
 
 clean:
-	rm -rf build/*
-	rm -rf dist/*
-
-resources:
-	@mkdir -p build/bin/kernel build/bin/test
-	@mkdir -p build/www/kernel build/www/test
-	@mkdir -p dist/bin dist/www
+	rm -f $(BIN_OBJ) $(WWW_OBJ) $(DEPS)
+	find dist -type f ! -name '.gitkeep' -exec rm {} \;
 
 
 # Makefile squiggles:
@@ -36,36 +37,42 @@ resources:
 #
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 
-SOURCES := $(wildcard src/kernel/*.c)
-HEADERS := $(wildcard src/kernel/*.h)
-
-BIN_OBJ := $(patsubst src/kernel/%.c, build/bin/kernel/%.o, $(SOURCES)) \
-			build/bin/test/test.o
-
-WWW_OBJ := $(patsubst src/kernel/%.c, build/www/kernel/%.o, $(SOURCES)) \
-			build/www/test/test.o
-
-
-# Object files
-
-build/bin/kernel/%.o: src/kernel/%.c src/kernel/%.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/www/kernel/%.o: src/kernel/%.c src/kernel/%.h
-	emcc $(CFLAGS) -c $< -o $@
-
-
-build/bin/test/test.o: src/test/test.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/www/test/test.o: src/test/test.c
-	emcc $(CFLAGS) -c $< -o $@
-
 
 # Binary & Wasm
 
 ./dist/bin/test: $(BIN_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@
 
-./dist/www/test.html: $(WWW_OBJ)
+./dist/www/test.html: $(SOURCES) $(TEST_SOURCES)
 	emcc $(CFLAGS) -s WASM=1 $^ -o $@
+
+
+
+# Object files
+
+build/bin/kernel/%.o: src/kernel/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/www/kernel/%.o: src/kernel/%.c
+	emcc $(CFLAGS) -c $< -o $@
+
+
+build/bin/test/%.o: src/test/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/www/test/%.o: src/test/%.c
+	emcc $(CFLAGS) -c $< -o $@
+
+
+# Dependencies
+
+# rule to generate a dep file by using the C preprocessor
+# (see man cpp for details on the -MM and -MT options)
+build/deps/kernel/%.d: src/kernel/%.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
+build/deps/test/%.d: src/test/%.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
+
+-include $(DEPS)

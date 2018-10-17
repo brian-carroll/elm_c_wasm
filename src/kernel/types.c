@@ -49,7 +49,6 @@ ElmFloat* newElmFloat(f64 value) {
     return p;
 };
 
-
 ElmChar* newElmChar(u32 value) {
     ElmChar *p = malloc(sizeof(ElmChar));
     p->header = HEADER_CHAR;
