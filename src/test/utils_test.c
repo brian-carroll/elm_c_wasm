@@ -7,6 +7,10 @@
 
 
 char* test_records() {
+    if (verbose) {
+        printf("\n");
+        printf("## Record access & update\n");
+    }
 
     /*
         type alias Record1 =
@@ -158,6 +162,11 @@ void* eval_user_project_closure(void* args[]) {
 */
 
 char* test_apply(void) {
+    if (verbose) {
+        printf("\n");
+        printf("## Apply\n");
+    }
+
     Closure user_project_closure = (Closure) {
         .header = HEADER_CLOSURE(0),
         .evaluator = &eval_user_project_closure,
@@ -216,7 +225,6 @@ char* test_apply(void) {
             hex_ptr(answer), (int)answer->header.tag, answer->value,
             hex(answer, sizeof(ElmInt))
         );
-        printf("\n");
     }
 
     ElmInt expected_answer = (ElmInt){ .header = HEADER_INT, .value = 6 };
@@ -234,7 +242,10 @@ char* test_apply(void) {
 
 
 char* test_eq(void) {
-    if (verbose) printf("\n\nEquality\n--------\n");
+    if (verbose) {
+        printf("\n");
+        printf("## Equality\n");
+    }
 
     mu_assert("Expect: () == ()", apply(&eq, 2, (void*[]){&Unit, &Unit}) == &True);
 
@@ -400,6 +411,11 @@ char* test_eq(void) {
 }
 
 char* utils_test() {
+    if (verbose) {
+        printf("\n");
+        printf("Utils\n");
+        printf("-----\n");
+    }
     mu_run_test(test_records);
     mu_run_test(test_apply);
     mu_run_test(test_eq);

@@ -6,11 +6,10 @@
 
 
 void* clone(void* x) {
-    u8* xconst = (u8*)x;
-    if (xconst == &Unit || xconst == &True || xconst == &False) {
+    Header* h = (Header*)x;
+    if (h == &Unit || h == &True || h == &False || h == &Nil) {
         return x;
     }
-    Header* h = (Header*)x;
     size_t n_bytes = sizeof(Header) + SIZE_UNIT * (size_t)h->size;
     ElmValue* x_new = malloc(n_bytes);
     memcpy(x_new, x, n_bytes);
@@ -107,16 +106,19 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
         return 1;
     }
 
-    // True, False and Unit are constants with no headers. Check for them first.
-    u8* pa_const = &pa->unit_or_bool;
-    if (pa_const == &True || pa_const == &False || pa_const == &Unit) {
-        return 0; // These values only have reference equality. Can't be equal if we got this far.
-    }
-
-    // It's not Bool or Unit so it must have a header.
     Header ha = *(Header*)pa;
     Header hb = *(Header*)pb;
+    if (ha.tag != hb.tag) {
+        return 0;
+    }
+
     switch (ha.tag) {
+        case Tag_Unit:
+        case Tag_True:
+        case Tag_False:
+        case Tag_Nil:
+            return 0;
+
         case Tag_Int:
             return pa->elm_int.value == pb->elm_int.value;
 
@@ -136,11 +138,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             return 1;
         }
 
-        case Tag_Nil:
-            return 0; // if we got this far, can't both be Nil
-
         case Tag_Cons:
-            if (hb.tag == Tag_Nil) return 0;
             return eq_help(pa->cons.head, pb->cons.head, depth + 1, pstack)
                 && eq_help(pa->cons.tail, pb->cons.tail, depth + 1, pstack);
 

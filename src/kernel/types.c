@@ -3,14 +3,12 @@
 #include <string.h>
 #include "types.h"
 
-// Global constants that don't need headers
-u8 False = 0;
-u8 True = 1;
-u8 Unit = 0;
+Header Unit = HEADER_UNIT;
 
-struct nil Nil = {
-    .header = HEADER_NIL
-};
+Header True = HEADER_TRUE;
+Header False = HEADER_FALSE;
+
+Header Nil = HEADER_NIL;
 
 Cons* newCons(void* head, void* tail) {
     Cons *p = malloc(sizeof(Cons));

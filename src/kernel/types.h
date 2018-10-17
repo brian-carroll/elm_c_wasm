@@ -19,16 +19,11 @@ typedef float f32;
 typedef double f64;
 
 
-// ELM STATIC CONSTANTS
-
-u8 False;
-u8 True;
-u8 Unit;
-
-
-// HEADER FOR HEAP VALUES
 
 typedef enum {
+    Tag_Unit,
+    Tag_True,
+    Tag_False,
     Tag_Int,
     Tag_Float,
     Tag_Char,
@@ -74,7 +69,10 @@ typedef struct {
     #define PTR (4/SIZE_UNIT)
 #endif
 
-// GC color defaults to 0 when omitted, and GC must know this.
+// GC color defaults to 0 when omitted
+#define HEADER_UNIT        (Header){ .tag=Tag_Unit,    .size=0 }
+#define HEADER_TRUE        (Header){ .tag=Tag_True,    .size=0 }
+#define HEADER_FALSE       (Header){ .tag=Tag_False,   .size=0 }
 #define HEADER_INT         (Header){ .tag=Tag_Int,     .size=4/SIZE_UNIT }
 #define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=(4+8)/SIZE_UNIT }
 #define HEADER_CHAR        (Header){ .tag=Tag_Char,    .size=4/SIZE_UNIT }
@@ -87,12 +85,20 @@ typedef struct {
 #define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=ALIGN + (p+1)*PTR }
 #define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(4/SIZE_UNIT)+((p+1)*PTR) }
 
+
+
+
+// ELM STATIC CONSTANTS
+
+Header Unit;
+
+Header False;
+Header True;
+
+
 // LIST
 
-struct nil {
-    Header header;
-};
-struct nil Nil;
+Header Nil;
 
 typedef struct {
     Header header;
@@ -214,12 +220,11 @@ typedef struct {
 
 // ANY ELM VALUE (for pointers in collections)
 typedef union {
-    u8 unit_or_bool;
+    Header header; // (), True, False, []
     ElmInt elm_int;
     ElmFloat elm_float;
     ElmChar elm_char;
     ElmString elm_string;
-    struct nil nil;
     Cons cons;
     Tuple2 tuple2;
     Tuple3 tuple3;

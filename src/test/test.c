@@ -81,7 +81,7 @@ int main(int argc, char ** argv) {
     if (!passed) {
         printf("%s\n", result);
     } else {
-        printf("ALL TESTS PASSED\n");
+        printf("\nALL TESTS PASSED\n");
     }
     printf("Tests run: %d\n", tests_run);
 

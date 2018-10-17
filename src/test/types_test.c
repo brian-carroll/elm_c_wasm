@@ -39,19 +39,15 @@ char* test_wasm_types() {
 
 char* test_elm_constants() {
     if (verbose) {
-        printf("True size=%ld value=%d addr=%s\n", sizeof(True), True, hex_ptr(&True));
-        printf("False size=%ld value=%d addr=%s\n", sizeof(False), False, hex_ptr(&False));
-        printf("Unit size=%ld value=%d addr=%s\n", sizeof(Unit), Unit, hex_ptr(&Unit));
+        printf("Unit size=%ld addr=%s hex=%s\n", sizeof(Unit), hex_ptr(&Unit), hex(&Unit, sizeof(Unit)));
+        printf("True size=%ld addr=%s hex=%s\n", sizeof(True), hex_ptr(&True), hex(&True, sizeof(True)));
+        printf("False size=%ld addr=%s hex=%s\n", sizeof(False), hex_ptr(&False), hex(&False, sizeof(False)));
         printf("\n");
     }
 
-    mu_assert("True should be 1 byte wide", sizeof(True)==1);
-    mu_assert("False should be 1 byte wide", sizeof(False)==1);
-    mu_assert("Unit should be 1 byte wide", sizeof(Unit)==1);
-
-    mu_assert("True should have value 1", True==1);
-    mu_assert("False should have value 0", False==0);
-    mu_assert("Unit should have value 0", Unit==0);
+    mu_assert("Unit should be 4 bytes wide", sizeof(Unit)==4);
+    mu_assert("True should be 4 bytes wide", sizeof(True)==4);
+    mu_assert("False should be 4 bytes wide", sizeof(False)==4);
 
     return NULL;
 }
@@ -115,10 +111,10 @@ char* test_header_layout() {
 }
 
 char* test_nil() {
-    if (verbose) printf("Nil size=%ld addr=%s tag=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
+    if (verbose) printf("Nil size=%ld addr=%s tag=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.tag);
     mu_assert("Nil should be the same size as a header", sizeof(Nil) == sizeof(Header));
-    mu_assert("Nil should have the right tag field", Nil.header.tag == Tag_Nil);
-    mu_assert("Nil should have the right size field", Nil.header.size == 0);
+    mu_assert("Nil should have the right tag field", Nil.tag == Tag_Nil);
+    mu_assert("Nil should have the right size field", Nil.size == 0);
     return NULL;
 }
 
@@ -132,14 +128,14 @@ char* test_cons() {
 
     #ifdef TARGET_64BIT
         mu_assert(
-                "Cons struct should be the right size for a header, 4 bytes of padding, and 2 pointers",
-                sizeof(Cons) == sizeof(Header) + 4 + 2*sizeof(void*)
+            "Cons struct should be the right size for a header, 4 bytes of padding, and 2 pointers",
+            sizeof(Cons) == sizeof(Header) + 4 + 2*sizeof(void*)
         );
         mu_assert("newCons should insert correct size field", c->header.size == 5);
     #else
         mu_assert(
-                "Cons struct should be the right size for a header and 2 pointers",
-                sizeof(Cons) == sizeof(Header) + 2*sizeof(void*)
+            "Cons struct should be the right size for a header and 2 pointers",
+            sizeof(Cons) == sizeof(Header) + 2*sizeof(void*)
         );
         mu_assert("newCons should insert correct size field", c->header.size == 2);
     #endif
@@ -413,6 +409,12 @@ char* test_closure() {
 }
 
 char* types_test() {
+    if (verbose) {
+        printf("\n");
+        printf("Elm type structures\n");
+        printf("-------------------\n\n");
+    }
+
     mu_run_test(test_wasm_types);
     mu_run_test(test_elm_constants);
     mu_run_test(test_header_layout);
