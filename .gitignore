@@ -8,6 +8,7 @@
 *.o
 *.d
 a.out
+build.log
 
 # Generated report
 opt.md

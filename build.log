@@ -1,8 +1,0 @@
-make[2]: Entering directory '/mnt/c/Users/brian/Code/wasm/c/elm_c_wasm'
-gcc -Wall -O1 -c src/kernel/types.c -o build/bin/kernel/types.o
-gcc -Wall -O1 build/bin/test/utils_test.o build/bin/test/types_test.o build/bin/test/test.o build/bin/kernel/basics.o build/bin/kernel/types.o build/bin/kernel/string.o build/bin/kernel/list.o build/bin/kernel/gc.o build/bin/kernel/utils.o -o dist/bin/test
-./dist/bin/test
-
-ALL TESTS PASSED
-Tests run: 18
-make[2]: Leaving directory '/mnt/c/Users/brian/Code/wasm/c/elm_c_wasm'
