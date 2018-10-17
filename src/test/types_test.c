@@ -3,6 +3,7 @@
 #include <string.h>
 #include "../kernel/types.h"
 #include "./test.h"
+#include "./types_test.h"
 
 char* test_wasm_types() {
     if (verbose) {

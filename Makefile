@@ -37,14 +37,13 @@ resources:
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 
 SOURCES := $(wildcard src/kernel/*.c)
+TEST_SRC := $(wildcard src/test/*.c)
 HEADERS := $(wildcard src/kernel/*.h)
 
 BIN_OBJ := $(patsubst src/kernel/%.c, build/bin/kernel/%.o, $(SOURCES)) \
-			build/bin/test/test.o
+			$(patsubst src/test/%.c, build/bin/test/%.o, $(TEST_SRC))
 
-WWW_OBJ := $(patsubst src/kernel/%.c, build/www/kernel/%.o, $(SOURCES)) \
-			build/www/test/test.o
-
+WWW_OBJ := $(patsubst build/bin/%, build/www/%, $(BIN_OBJ))
 
 # Object files
 
@@ -55,10 +54,10 @@ build/www/kernel/%.o: src/kernel/%.c src/kernel/%.h
 	emcc $(CFLAGS) -c $< -o $@
 
 
-build/bin/test/test.o: src/test/test.c
+build/bin/test/%.o: src/test/%.c src/test/%.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/www/test/test.o: src/test/test.c
+build/www/test/%.o: src/test/%.c src/test/%.h
 	emcc $(CFLAGS) -c $< -o $@
 
 

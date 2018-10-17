@@ -4,12 +4,11 @@
 #include <stdbool.h>
 #include <string.h>
 #include "../kernel/types.h"
+#include "../kernel/utils.h"
+#include "../kernel/basics.h"
 #include "./test.h"
-
-// Test C files
-#include "./types_test.c"
-#include "./utils_test.c"
-
+#include "./types_test.h"
+#include "./utils_test.h"
 
 #ifdef __EMSCRIPTEN__
     int verbose = true;

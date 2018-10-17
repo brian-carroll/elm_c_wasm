@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../kernel/types.h"
 #include "../kernel/utils.h"
 #include "../kernel/basics.h"
 #include "./test.h"
-
+#include "./utils_test.h"
 
 char* test_records() {
     if (verbose) {
