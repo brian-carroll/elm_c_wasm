@@ -9,6 +9,6 @@ Closure record_access;
 void* apply(Closure* c_old, u8 n_applied, void* applied[]);
 Record* record_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
 void* clone(void* x);
-void utils_init();
+void init_utils();
 
 #endif

@@ -3,11 +3,6 @@
 #include <string.h>
 #include "types.h"
 
-Header Unit = HEADER_UNIT;
-
-Header True = HEADER_TRUE;
-Header False = HEADER_FALSE;
-
 Header Nil = HEADER_NIL;
 
 Cons* newCons(void* head, void* tail) {
@@ -73,4 +68,11 @@ ElmString* newElmString(size_t n, char *str) {
 
     memcpy(p->bytes, str, n);
     return p;
+}
+
+
+void init_types() {
+    Unit = (Custom){ .header = HEADER_CUSTOM(0), .ctor = 0 };
+    True = (Custom){ .header = HEADER_CUSTOM(0), .ctor = 1 };
+    False = (Custom){ .header = HEADER_CUSTOM(0), .ctor = 0 };
 }

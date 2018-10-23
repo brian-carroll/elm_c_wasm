@@ -46,9 +46,9 @@ char* test_elm_constants() {
         printf("\n");
     }
 
-    mu_assert("Unit should be 4 bytes wide", sizeof(Unit)==4);
-    mu_assert("True should be 4 bytes wide", sizeof(True)==4);
-    mu_assert("False should be 4 bytes wide", sizeof(False)==4);
+    mu_assert("Unit should be 8 bytes wide", sizeof(Unit)==8);
+    mu_assert("True should be 8 bytes wide", sizeof(True)==8);
+    mu_assert("False should be 8 bytes wide", sizeof(False)==8);
 
     return NULL;
 }

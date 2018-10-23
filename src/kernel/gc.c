@@ -6,9 +6,6 @@
 
 int gc_first_pointer_offset(Header header) {
     switch (header.tag) {
-        case Tag_Unit:
-        case Tag_True:
-        case Tag_False:
         case Tag_Int:
         case Tag_Float:
         case Tag_Char:

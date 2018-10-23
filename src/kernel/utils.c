@@ -7,7 +7,7 @@
 
 void* clone(void* x) {
     Header* h = (Header*)x;
-    if (h == &Unit || h == &True || h == &False || h == &Nil) {
+    if (h->tag == Tag_Nil || (h->tag == Tag_Custom && h->size == 0)) {
         return x;
     }
     size_t n_bytes = sizeof(Header) + SIZE_UNIT * (size_t)h->size;
@@ -113,9 +113,6 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     }
 
     switch (ha.tag) {
-        case Tag_Unit:
-        case Tag_True:
-        case Tag_False:
         case Tag_Nil:
             return 0;
 
@@ -224,7 +221,7 @@ static void* append_eval(void* args[]) {
 Closure append;
 
 
-void utils_init() {
+void init_utils() {
     eq = CLOSURE(eq_eval, 2);
     record_access = CLOSURE(record_access_eval, 2);
     append = CLOSURE(append_eval, 2);

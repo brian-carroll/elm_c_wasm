@@ -2,6 +2,6 @@
 #define ELM_KERNEL_BASICS
 
 Closure add;
-void basics_init();
+void init_basics();
 
 #endif

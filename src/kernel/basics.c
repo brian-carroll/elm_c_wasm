@@ -19,6 +19,6 @@ static void* eval_add(void* args[2]) {
 
 Closure add;
 
-void basics_init() {
+void init_basics() {
     add = CLOSURE(eval_add, 2);
 }
