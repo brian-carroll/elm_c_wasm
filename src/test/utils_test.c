@@ -143,8 +143,8 @@ void* eval_user_project_closure(void* args[]) {
     ElmInt *arg1 = args[1];
     ElmInt *arg2 = args[2];
 
-    ElmInt *tmp = apply(&add, 2, (void*[]){arg2, outerScopeValue});
-    return apply(&add, 2, (void*[]){arg1, tmp});
+    ElmInt *tmp = apply(&Basics_add, 2, (void*[]){arg2, outerScopeValue});
+    return apply(&Basics_add, 2, (void*[]){arg1, tmp});
 }
 
 

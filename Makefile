@@ -43,7 +43,7 @@ build.log: $(SOURCES) $(HEADERS)
 # Binary & Wasm
 
 ./dist/bin/test: $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) $(SOURCES) -o $@
+	$(CC) $(CFLAGS) $(SOURCES) -o $@ -lm
 
 ./dist/www/test.html: $(SOURCES) $(HEADERS)
 	emcc $(CFLAGS) -s WASM=1 $(SOURCES) -o $@

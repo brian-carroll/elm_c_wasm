@@ -9,6 +9,7 @@
 #include "./test.h"
 #include "./types_test.h"
 #include "./utils_test.h"
+#include "./basics_test.h"
 
 #ifdef __EMSCRIPTEN__
     int verbose = true;
@@ -51,6 +52,7 @@ char* hex_ptr(void* ptr) {
 char* test_all() {
     mu_run_test(types_test);
     mu_run_test(utils_test);
+    mu_run_test(basics_test);
 
     return NULL;
 }
