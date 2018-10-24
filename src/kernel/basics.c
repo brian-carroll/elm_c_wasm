@@ -3,7 +3,13 @@
 #include "basics.h"
 
 i32 ipow(i32 base, i32 exp) {
-    if (exp < 0) return 0;
+    if (exp < 0) {
+        if (base == 1 || base == -1) {
+            exp = -exp;
+        } else {
+            return 0;
+        }
+    }
 
     i32 result = 1;
     for (;;) {
