@@ -14,7 +14,7 @@ char* string_append_test() {
 
     if (verbose) {
         printf("## String_append\n");
-        printf("\"%s\" + \"%s\" == \"%s\"\n", h->bytes, w->bytes, hw->bytes);
+        printf("\"%s\" ++ \"%s\" == \"%s\"\n", h->bytes, w->bytes, hw->bytes);
         printf("hello: %s\n", hex(h, sizeof(ElmString) + 8));
         printf("world: %s\n", hex(w, sizeof(ElmString) + 8));
         printf("hello world: %s\n", hex(hw, sizeof(ElmString) + 12));

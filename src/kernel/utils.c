@@ -17,11 +17,6 @@ void* clone(void* x) {
 }
 
 
-inline u32 custom_param_count(Custom* c) {
-    return ((c->header.size * SIZE_UNIT) - sizeof(Header)) / sizeof(void*);
-}
-
-
 static u32 fieldset_search(FieldSet* fieldset, u32 search) {
     u32 first = 0;
     u32 last = fieldset->size - 1;
@@ -45,7 +40,7 @@ static u32 fieldset_search(FieldSet* fieldset, u32 search) {
 }
 
 
-static void* record_access_eval(void* args[]) {
+static void* record_access_eval(void* args[2]) {
     ElmInt* field = (ElmInt*)args[0];
     Record* record = (Record*)args[1];
 
@@ -148,16 +143,18 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
                 && eq_help(pa->tuple3.b, pb->tuple3.b, depth + 1, pstack)
                 && eq_help(pa->tuple3.c, pb->tuple3.c, depth + 1, pstack);
 
-        case Tag_Custom:
+        case Tag_Custom: {
             if (pa->custom.ctor != pb->custom.ctor) {
                 return 0;
             }
-            for (u32 i=0; i < custom_param_count(&pa->custom); ++i) {
+            u32 nparams = ((ha.size * SIZE_UNIT) - sizeof(u32)) / sizeof(void*);
+            for (u32 i=0; i < nparams; ++i) {
                 if (!eq_help(pa->custom.values[i], pb->custom.values[i], depth + 1, pstack)) {
                     return 0;
                 }
             }
             return 1;
+        }
 
         case Tag_Record:
             // Elm guarantees same Record type => same fieldset
@@ -182,7 +179,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     }
 }
 
-static void* eq_eval(void* args[]) {
+static void* eq_eval(void* args[2]) {
     ElmValue* nil = (ElmValue*)&Nil;
     ElmValue* stack = nil;
     u32 isEqual = eq_help(args[0], args[1], 0, &stack);
@@ -201,7 +198,7 @@ Closure eq;
 
 
 
-static void* append_eval(void* args[]) {
+static void* append_eval(void* args[2]) {
     Header* h = (Header*)args[0];
 
     switch (h->tag) {
