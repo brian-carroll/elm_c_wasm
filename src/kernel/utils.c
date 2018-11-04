@@ -206,11 +206,11 @@ static void* append_eval(void* args[]) {
 
     switch (h->tag) {
         case Tag_String:
-            return string_append_eval(args);
+            return String_append_eval(args);
 
         case Tag_Nil:
         case Tag_Cons:
-            return list_append_eval(args);
+            return List_append_eval(args);
 
         default:
             fprintf(stderr, "Tried to append non-appendable\n");

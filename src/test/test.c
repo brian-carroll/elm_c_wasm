@@ -6,10 +6,12 @@
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
 #include "../kernel/basics.h"
+#include "../kernel/string.h"
 #include "./test.h"
 #include "./types_test.h"
 #include "./utils_test.h"
 #include "./basics_test.h"
+#include "./string_test.h"
 
 #ifdef __EMSCRIPTEN__
     int verbose = true;
@@ -53,6 +55,7 @@ char* test_all() {
     mu_run_test(types_test);
     mu_run_test(utils_test);
     mu_run_test(basics_test);
+    mu_run_test(string_test);
 
     return NULL;
 }
@@ -65,6 +68,7 @@ int main(int argc, char ** argv) {
     init_types();
     init_basics();
     init_utils();
+    init_string();
 
     while ((opt = getopt(argc, argv, "v")) != -1) {
         switch (opt) {
