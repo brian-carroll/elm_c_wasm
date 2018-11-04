@@ -63,7 +63,7 @@ ElmString* newElmString(size_t n, char *str) {
     p->header = HEADER_STRING(n_ints);
 
     u32* ints = (u32*)p->bytes;
-    u32 padding = (n_bytes_padded - n) << 24; // little-endian => high byte goes last
+    u32 padding = (n_bytes_padded - n -1) << 24; // little-endian => high byte goes last
     ints[n_ints-1] = padding;
 
     memcpy(p->bytes, str, n);

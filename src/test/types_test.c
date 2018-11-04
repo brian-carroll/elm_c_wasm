@@ -285,12 +285,12 @@ char* test_strings() {
         printf("\n");
     }
 
-    mu_assert("4-byte string should have correct body & padding", memcmp(str4->bytes, "1234\0\0\0\4", 8) == 0);
-    mu_assert("5-byte string should have correct body & padding", memcmp(str5->bytes, "12345\0\0\3", 8) == 0);
-    mu_assert("6-byte string should have correct body & padding", memcmp(str6->bytes, "123456\0\2", 8) == 0);
-    mu_assert("7-byte string should have correct body & padding", memcmp(str7->bytes, "1234567\1", 8) == 0);
-    mu_assert("8-byte string should have correct body & padding", memcmp(str8->bytes, "12345678\0\0\0\4", 12) == 0);
-    mu_assert("45-byte string should have correct body & padding", memcmp(strN->bytes, "The quick brown fox jumped over the lazy dog.\0\0\3", 48) == 0);
+    mu_assert("4-byte string should have correct body & padding", memcmp(str4->bytes, "1234\0\0\0\3", 8) == 0);
+    mu_assert("5-byte string should have correct body & padding", memcmp(str5->bytes, "12345\0\0\2", 8) == 0);
+    mu_assert("6-byte string should have correct body & padding", memcmp(str6->bytes, "123456\0\1", 8) == 0);
+    mu_assert("7-byte string should have correct body & padding", memcmp(str7->bytes, "1234567\0", 8) == 0);
+    mu_assert("8-byte string should have correct body & padding", memcmp(str8->bytes, "12345678\0\0\0\3", 12) == 0);
+    mu_assert("45-byte string should have correct body & padding", memcmp(strN->bytes, "The quick brown fox jumped over the lazy dog.\0\0\2", 48) == 0);
 
     mu_assert("4-byte string should have correct size field", str4->header.size == 8/SIZE_UNIT);
     mu_assert("5-byte string should have correct size field", str5->header.size == 8/SIZE_UNIT);

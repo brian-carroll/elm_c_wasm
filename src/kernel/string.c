@@ -4,7 +4,7 @@
 
 ElmInt* String_length_bytes(ElmString *s) {
     u32 n_bytes_padded = s->header.size * SIZE_UNIT;
-    u8 padding = s->bytes[n_bytes_padded-1];
+    u8 padding = sizeof('\0') + s->bytes[n_bytes_padded-1];
     return newElmInt(n_bytes_padded - (u32)padding);
 }
 
