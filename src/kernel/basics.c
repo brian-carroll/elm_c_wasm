@@ -2,24 +2,24 @@
 #include "types.h"
 #include "basics.h"
 
-i32 ipow(i32 base, i32 exp) {
-    if (exp < 0) {
+i32 ipow(i32 base, i32 ex) {
+    if (ex < 0) {
         if (base == 1) {
             return 1;
         } else if (base == -1) {
-            return (exp & 1) ? -1 : 1;
+            return (ex & 1) ? -1 : 1;
         } else {
             return 0;
         }
     }
 
     i32 result = 1;
-    while (1) { // <32 iterations since exp>=0
-        if (exp & 1) {
+    while (1) { // < 32 iterations since ex >= 0
+        if (ex & 1) {
             result *= base;
         }
-        exp >>= 1;
-        if (!exp) {
+        ex >>= 1;
+        if (!ex) {
             break;
         }
         base *= base;
