@@ -4,15 +4,17 @@
 
 i32 ipow(i32 base, i32 exp) {
     if (exp < 0) {
-        if (base == 1 || base == -1) {
-            exp = -exp;
+        if (base == 1) {
+            return 1;
+        } else if (base == -1) {
+            return (exp & 1) ? -1 : 1;
         } else {
             return 0;
         }
     }
 
     i32 result = 1;
-    for (;;) {
+    while (1) { // <32 iterations since exp>=0
         if (exp & 1) {
             result *= base;
         }
