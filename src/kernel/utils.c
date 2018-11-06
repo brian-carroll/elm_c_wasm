@@ -194,7 +194,7 @@ static void* eq_eval(void* args[2]) {
     return isEqual ? &True : &False;
 }
 
-Closure eq;
+Closure Utils_eq;
 
 
 
@@ -210,16 +210,16 @@ static void* append_eval(void* args[2]) {
             return List_append_eval(args);
 
         default:
-            fprintf(stderr, "Tried to append non-appendable\n");
+            fprintf(stderr, "Tried to Utils_append non-appendable\n");
             return args[0];
     }
 }
 
-Closure append;
+Closure Utils_append;
 
 
 void Utils_init() {
-    eq = F2(eq_eval);
+    Utils_eq = F2(eq_eval);
     Utils_access = F2(access_eval);
-    append = F2(append_eval);
+    Utils_append = F2(append_eval);
 }

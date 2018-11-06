@@ -3,8 +3,9 @@
 
 #include "types.h"
 
-Closure eq;
+Closure Utils_eq;
 Closure Utils_access;
+Closure Utils_append;
 
 void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
