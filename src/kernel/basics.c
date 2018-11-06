@@ -53,8 +53,8 @@ Closure Basics_mul;
 Closure Basics_pow;
 
 void init_basics() {
-    Basics_add = CLOSURE(eval_add, 2);
-    Basics_sub = CLOSURE(eval_sub, 2);
-    Basics_mul = CLOSURE(eval_mul, 2);
-    Basics_pow = CLOSURE(eval_pow, 2);
+    Basics_add = F2(eval_add);
+    Basics_sub = F2(eval_sub);
+    Basics_mul = F2(eval_mul);
+    Basics_pow = F2(eval_pow);
 }

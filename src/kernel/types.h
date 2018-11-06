@@ -194,11 +194,10 @@ typedef struct {
     void* values[];
 } Closure;
 
-#define CLOSURE(f, n) (Closure) { \
+#define F2(f) (Closure) { \
     .header = HEADER_CLOSURE(0), \
     .evaluator = &f, \
-    .max_values = n, \
-    .n_values = 0, \
+    .max_values = 2, \
 }
 
 

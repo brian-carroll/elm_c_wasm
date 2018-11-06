@@ -4,10 +4,10 @@
 #include "types.h"
 
 Closure eq;
-Closure record_access;
+Closure Utils_access;
 
 void* apply(Closure* c_old, u8 n_applied, void* applied[]);
-Record* record_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
+Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
 void* clone(void* x);
 void init_utils();
 

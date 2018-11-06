@@ -72,7 +72,7 @@ char* test_records() {
 
     // The actual accessor function
     Closure* access_someField = apply(
-        &record_access, 1,
+        &Utils_access, 1,
         (void*[]){ newElmInt(someField) }
     );
 
@@ -108,7 +108,7 @@ char* test_records() {
     */
     ElmInt* updated_thing = newElmInt(111);
     ElmFloat* updated_stuff = newElmFloat(3.14);
-    Record* r3 = record_update(
+    Record* r3 = Utils_update(
         r2, 2, (u32[]){ things, stuff },
         (void*[]){ updated_thing, updated_stuff }
     );

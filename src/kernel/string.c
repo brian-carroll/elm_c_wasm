@@ -28,5 +28,5 @@ Closure String_append;
 
 
 void init_string() {
-    String_append = CLOSURE(String_append_eval, 2);
+    String_append = F2(String_append_eval);
 }

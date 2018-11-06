@@ -40,7 +40,7 @@ static u32 fieldset_search(FieldSet* fieldset, u32 search) {
 }
 
 
-static void* record_access_eval(void* args[2]) {
+static void* access_eval(void* args[2]) {
     ElmInt* field = (ElmInt*)args[0];
     Record* record = (Record*)args[1];
 
@@ -48,10 +48,10 @@ static void* record_access_eval(void* args[2]) {
     return record->values[index];
 }
 
-Closure record_access;
+Closure Utils_access;
 
 
-Record* record_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
+Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
     Record* r_new = clone(r);
 
     for (u32 i=0; i<n_updates; ++i) {
@@ -219,7 +219,7 @@ Closure append;
 
 
 void init_utils() {
-    eq = CLOSURE(eq_eval, 2);
-    record_access = CLOSURE(record_access_eval, 2);
-    append = CLOSURE(append_eval, 2);
+    eq = F2(eq_eval);
+    Utils_access = F2(access_eval);
+    append = F2(append_eval);
 }
