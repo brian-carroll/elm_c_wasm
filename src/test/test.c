@@ -65,10 +65,10 @@ char* test_all() {
 int main(int argc, char ** argv) {
     int opt;
 
-    init_types();
-    init_basics();
-    init_utils();
-    init_string();
+    Types_init();
+    Basics_init();
+    Utils_init();
+    String_init();
 
     while ((opt = getopt(argc, argv, "v")) != -1) {
         switch (opt) {

@@ -6,6 +6,6 @@ Closure Basics_sub;
 Closure Basics_mul;
 Closure Basics_pow;
 
-void init_basics();
+void Basics_init();
 
 #endif

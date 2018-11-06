@@ -27,6 +27,6 @@ void* String_append_eval(void* args[2]) {
 Closure String_append;
 
 
-void init_string() {
+void String_init() {
     String_append = F2(String_append_eval);
 }

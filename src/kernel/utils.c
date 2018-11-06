@@ -5,7 +5,7 @@
 #include "./list.h"
 
 
-void* clone(void* x) {
+void* Utils_clone(void* x) {
     Header* h = (Header*)x;
     if (h->tag == Tag_Nil || (h->tag == Tag_Custom && h->size == 0)) {
         return x;
@@ -52,7 +52,7 @@ Closure Utils_access;
 
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
-    Record* r_new = clone(r);
+    Record* r_new = Utils_clone(r);
 
     for (u32 i=0; i<n_updates; ++i) {
         u32 field_pos = fieldset_search(r_new->fieldset, fields[i]);
@@ -63,7 +63,7 @@ Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
 }
 
 
-void* apply(Closure* c_old, u8 n_applied, void* applied[]) {
+void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     if (c_old->max_values == n_applied) {
         // avoid allocating a new closure if we don't need it
         return (*c_old->evaluator)(applied);
@@ -218,7 +218,7 @@ static void* append_eval(void* args[2]) {
 Closure append;
 
 
-void init_utils() {
+void Utils_init() {
     eq = F2(eq_eval);
     Utils_access = F2(access_eval);
     append = F2(append_eval);

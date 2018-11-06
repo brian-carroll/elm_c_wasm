@@ -5,6 +5,6 @@
 
 void* String_append_eval(void* args[]);
 Closure String_append;
-void init_string();
+void String_init();
 
 #endif

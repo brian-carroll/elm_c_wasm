@@ -208,7 +208,7 @@ Custom Unit;
 Custom False;
 Custom True;
 
-void init_types();
+void Types_init();
 
 
 // ANY ELM VALUE (for pointers in collections)

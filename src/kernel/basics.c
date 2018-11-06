@@ -54,7 +54,7 @@ Closure Basics_sub;
 Closure Basics_mul;
 Closure Basics_pow;
 
-void init_basics() {
+void Basics_init() {
     Basics_add = F2(eval_add);
     Basics_sub = F2(eval_sub);
     Basics_mul = F2(eval_mul);

@@ -10,7 +10,7 @@ char* string_append_test() {
 
     ElmString* h = newElmString(5, "hello");
     ElmString* w = newElmString(6, " world");
-    ElmString* hw = apply(&String_append, 2, (void*[]){h,w});
+    ElmString* hw = A2(&String_append, h, w);
 
     if (verbose) {
         printf("## String_append\n");

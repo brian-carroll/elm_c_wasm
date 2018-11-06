@@ -71,10 +71,7 @@ char* test_records() {
     r2->values[2] = newElmFloat(1.0);
 
     // The actual accessor function
-    Closure* access_someField = apply(
-        &Utils_access, 1,
-        (void*[]){ newElmInt(someField) }
-    );
+    Closure* access_someField = A1(&Utils_access, newElmInt(someField));
 
     if (verbose) {
         printf("access_someField = %s\n",
@@ -90,15 +87,8 @@ char* test_records() {
         );
     }
 
-    ElmInt* int1 = apply(
-        access_someField, 1,
-        (void*[]){ r1 }
-    );
-
-    ElmInt* int2 = apply(
-        access_someField, 1,
-        (void*[]){ r2 }
-    );
+    ElmInt* int1 = A1(access_someField, r1);
+    ElmInt* int2 = A1(access_someField, r2);
 
     /*
         r3 = { r2
@@ -143,8 +133,8 @@ void* eval_user_project_closure(void* args[]) {
     ElmInt *arg1 = args[1];
     ElmInt *arg2 = args[2];
 
-    ElmInt *tmp = apply(&Basics_add, 2, (void*[]){arg2, outerScopeValue});
-    return apply(&Basics_add, 2, (void*[]){arg1, tmp});
+    ElmInt *tmp = A2(&Basics_add, arg2, outerScopeValue);
+    return A2(&Basics_add, arg1, tmp);
 }
 
 
@@ -179,22 +169,9 @@ char* test_apply(void) {
     ElmInt two = (ElmInt){ .header = HEADER_INT, .value = 2 };
     ElmInt three = (ElmInt){ .header = HEADER_INT, .value = 3 };
 
-    Closure* closure = apply(
-        &user_project_closure,
-        1,
-        (void*[]){&outerScopeValue}
-    );
-
-    Closure* curried = apply(
-        closure,
-        1,
-        (void*[]){&two}
-    );
-    ElmInt* answer = apply(
-        curried,
-        1,
-        (void*[]){&three}
-    );
+    Closure* closure =A1(&user_project_closure, &outerScopeValue);
+    Closure* curried =A1(closure, &two);
+    ElmInt* answer = A1(curried, &three);
 
     if (verbose) {
         printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
@@ -248,34 +225,34 @@ char* test_eq(void) {
         printf("## Equality\n");
     }
 
-    mu_assert("Expect: () == ()", apply(&eq, 2, (void*[]){&Unit, &Unit}) == &True);
+    mu_assert("Expect: () == ()", A2(&eq, &Unit, &Unit) == &True);
 
-    mu_assert("Expect: True == True", apply(&eq, 2, (void*[]){&True, &True}) == &True);
-    mu_assert("Expect: False == False", apply(&eq, 2, (void*[]){&False, &False}) == &True);
-    mu_assert("Expect: True /= False", apply(&eq, 2, (void*[]){&True, &False}) == &False);
-    mu_assert("Expect: False /= True", apply(&eq, 2, (void*[]){&False, &True}) == &False);
+    mu_assert("Expect: True == True", A2(&eq, &True, &True) == &True);
+    mu_assert("Expect: False == False", A2(&eq, &False, &False) == &True);
+    mu_assert("Expect: True /= False", A2(&eq, &True, &False) == &False);
+    mu_assert("Expect: False /= True", A2(&eq, &False, &True) == &False);
 
     ElmInt two = (ElmInt){ .header = HEADER_INT, .value = 2 };
     ElmInt three = (ElmInt){ .header = HEADER_INT, .value = 3 };
 
-    mu_assert("Expect: 2 == 2", apply(&eq, 2, (void*[]){&two, &two}) == &True);
-    mu_assert("Expect: 2 /= 3", apply(&eq, 2, (void*[]){&two, &three}) == &False);
+    mu_assert("Expect: 2 == 2", A2(&eq, &two, &two) == &True);
+    mu_assert("Expect: 2 /= 3", A2(&eq, &two, &three) == &False);
 
-    mu_assert("Expect: True /= 3", apply(&eq, 2, (void*[]){&True, &three}) == &False);
+    mu_assert("Expect: True /= 3", A2(&eq, &True, &three) == &False);
 
     ElmFloat *f = newElmFloat(123.456);
     ElmFloat *f1 = newElmFloat(123.456);
     ElmFloat *f2 = newElmFloat(2.0);
-    mu_assert("Expect: 123.456 == 123.456 (by reference)", apply(&eq, 2, (void*[]){f, f}) == &True);
-    mu_assert("Expect: 123.456 == 123.456 (by value)", apply(&eq, 2, (void*[]){f, f1}) == &True);
-    mu_assert("Expect: 123.456 == 2.0 (by value)", apply(&eq, 2, (void*[]){f, f2}) == &False);
+    mu_assert("Expect: 123.456 == 123.456 (by reference)", A2(&eq, f, f) == &True);
+    mu_assert("Expect: 123.456 == 123.456 (by value)", A2(&eq, f, f1) == &True);
+    mu_assert("Expect: 123.456 == 2.0 (by value)", A2(&eq, f, f2) == &False);
 
     ElmChar a1 = (ElmChar){ .header = HEADER_CHAR, .value = 'A' };
     ElmChar a2 = (ElmChar){ .header = HEADER_CHAR, .value = 'A' };
     ElmChar b  = (ElmChar){ .header = HEADER_CHAR, .value = 'B' };
-    mu_assert("Expect: 'A' == 'A', by reference", apply(&eq, 2, (void*[]){&a1, &a1}) == &True);
-    mu_assert("Expect: 'A' == 'A', by value", apply(&eq, 2, (void*[]){&a1, &a2}) == &True);
-    mu_assert("Expect: 'A' /= 'B'", apply(&eq, 2, (void*[]){&a1, &b}) == &False);
+    mu_assert("Expect: 'A' == 'A', by reference", A2(&eq, &a1, &a1) == &True);
+    mu_assert("Expect: 'A' == 'A', by value", A2(&eq, &a1, &a2) == &True);
+    mu_assert("Expect: 'A' /= 'B'", A2(&eq, &a1, &b) == &False);
 
     ElmString* hello1 = newElmString(5, "hello");
     ElmString* hello2 = newElmString(5, "hello");
@@ -289,11 +266,11 @@ char* test_eq(void) {
         printf("world str=\"%s\" hex=%s\n", world->bytes, hex(world, (1+world->header.size)*4) );
     }
 
-    mu_assert("Expect: \"hello\" == \"hello\" (by reference)", apply(&eq, 2, (void*[]){hello1, hello1}) == &True);
-    mu_assert("Expect: \"hello\" == \"hello\" (by value)", apply(&eq, 2, (void*[]){hello1, hello2}) == &True);
-    mu_assert("Expect: \"hello\" /= \"world\"", apply(&eq, 2, (void*[]){hello1, world}) == &False);
-    mu_assert("Expect: \"hello\" /= \"hello_\"", apply(&eq, 2, (void*[]){hello1, hello_}) == &False);
-    mu_assert("Expect: \"hello_\" /= \"hello\"", apply(&eq, 2, (void*[]){hello_, hello1}) == &False);
+    mu_assert("Expect: \"hello\" == \"hello\" (by reference)", A2(&eq, hello1, hello1) == &True);
+    mu_assert("Expect: \"hello\" == \"hello\" (by value)", A2(&eq, hello1, hello2) == &True);
+    mu_assert("Expect: \"hello\" /= \"world\"", A2(&eq, hello1, world) == &False);
+    mu_assert("Expect: \"hello\" /= \"hello_\"", A2(&eq, hello1, hello_) == &False);
+    mu_assert("Expect: \"hello_\" /= \"hello\"", A2(&eq, hello_, hello1) == &False);
 
     Cons* cons2 = newCons(&two, &Nil);
     Cons* cons2a = newCons(&two, &Nil);
@@ -303,17 +280,17 @@ char* test_eq(void) {
     Cons* cons32 = newCons(&three, cons2);
     Cons* cons22 = newCons(&two, cons2);
 
-    mu_assert("Expect: [] == []", apply(&eq, 2, (void*[]){&Nil, &Nil}) == &True);
-    mu_assert("Expect: [] /= [2]", apply(&eq, 2, (void*[]){&Nil, cons2}) == &False);
-    mu_assert("Expect: [2] /= []", apply(&eq, 2, (void*[]){cons2, &Nil}) == &False);
-    mu_assert("Expect: [2] == [2] (by ref)", apply(&eq, 2, (void*[]){cons2, cons2}) == &True);
-    mu_assert("Expect: [2] == [2] (by value)", apply(&eq, 2, (void*[]){cons2, cons2a}) == &True);
-    mu_assert("Expect: [2] /= [3]", apply(&eq, 2, (void*[]){cons2, cons3}) == &False);
-    mu_assert("Expect: [2] /= [2,3]", apply(&eq, 2, (void*[]){cons2, cons23}) == &False);
-    mu_assert("Expect: [2,3] == [2,3] (by ref)", apply(&eq, 2, (void*[]){cons23, cons23}) == &True);
-    mu_assert("Expect: [2,3] == [2,3] (by value)", apply(&eq, 2, (void*[]){cons23, cons23a}) == &True);
-    mu_assert("Expect: [3,2] /= [2,2]", apply(&eq, 2, (void*[]){cons32, cons22}) == &False);
-    mu_assert("Expect: [2,3] /= [2,2]", apply(&eq, 2, (void*[]){cons23, cons22}) == &False);
+    mu_assert("Expect: [] == []", A2(&eq, &Nil, &Nil) == &True);
+    mu_assert("Expect: [] /= [2]", A2(&eq, &Nil, cons2) == &False);
+    mu_assert("Expect: [2] /= []", A2(&eq, cons2, &Nil) == &False);
+    mu_assert("Expect: [2] == [2] (by ref)", A2(&eq, cons2, cons2) == &True);
+    mu_assert("Expect: [2] == [2] (by value)", A2(&eq, cons2, cons2a) == &True);
+    mu_assert("Expect: [2] /= [3]", A2(&eq, cons2, cons3) == &False);
+    mu_assert("Expect: [2] /= [2,3]", A2(&eq, cons2, cons23) == &False);
+    mu_assert("Expect: [2,3] == [2,3] (by ref)", A2(&eq, cons23, cons23) == &True);
+    mu_assert("Expect: [2,3] == [2,3] (by value)", A2(&eq, cons23, cons23a) == &True);
+    mu_assert("Expect: [3,2] /= [2,2]", A2(&eq, cons32, cons22) == &False);
+    mu_assert("Expect: [2,3] /= [2,2]", A2(&eq, cons23, cons22) == &False);
 
 
     Tuple2* tuple23 = newTuple2(&two, &three);
@@ -321,10 +298,10 @@ char* test_eq(void) {
     Tuple2* tuple32 = newTuple2(&three, &two);
     Tuple2* tuple22 = newTuple2(&two, &two);
 
-    mu_assert("Expect: (2,3) == (2,3) (by ref)", apply(&eq, 2, (void*[]){tuple23, tuple23}) == &True);
-    mu_assert("Expect: (2,3) == (2,3) (by value)", apply(&eq, 2, (void*[]){tuple23, tuple23a}) == &True);
-    mu_assert("Expect: (3,2) /= (2,2)", apply(&eq, 2, (void*[]){tuple32, tuple22}) == &False);
-    mu_assert("Expect: (2,3) /= (2,2)", apply(&eq, 2, (void*[]){tuple23, tuple22}) == &False);
+    mu_assert("Expect: (2,3) == (2,3) (by ref)", A2(&eq, tuple23, tuple23) == &True);
+    mu_assert("Expect: (2,3) == (2,3) (by value)", A2(&eq, tuple23, tuple23a) == &True);
+    mu_assert("Expect: (3,2) /= (2,2)", A2(&eq, tuple32, tuple22) == &False);
+    mu_assert("Expect: (2,3) /= (2,2)", A2(&eq, tuple23, tuple22) == &False);
 
     ElmInt one = (ElmInt){ .header = HEADER_INT, .value = 1 };
     Tuple3* tuple123 = newTuple3(&one, &two, &three);
@@ -334,11 +311,11 @@ char* test_eq(void) {
     Tuple3* tuple121 = newTuple3(&one, &two, &one);
     Tuple3* tuple112 = newTuple3(&one, &one, &two);
     
-    mu_assert("Expect: (1,2,3) == (1,2,3) (by ref)", apply(&eq, 2, (void*[]){tuple123, tuple123}) == &True);
-    mu_assert("Expect: (1,2,3) == (1,2,3) (by value)", apply(&eq, 2, (void*[]){tuple123, tuple123a}) == &True);
-    mu_assert("Expect: (1,1,1) /= (2,1,1)", apply(&eq, 2, (void*[]){tuple111, tuple211}) == &False);
-    mu_assert("Expect: (1,1,1) /= (1,2,1)", apply(&eq, 2, (void*[]){tuple111, tuple121}) == &False);
-    mu_assert("Expect: (1,1,1) /= (1,1,2)", apply(&eq, 2, (void*[]){tuple111, tuple112}) == &False);
+    mu_assert("Expect: (1,2,3) == (1,2,3) (by ref)", A2(&eq, tuple123, tuple123) == &True);
+    mu_assert("Expect: (1,2,3) == (1,2,3) (by value)", A2(&eq, tuple123, tuple123a) == &True);
+    mu_assert("Expect: (1,1,1) /= (2,1,1)", A2(&eq, tuple111, tuple211) == &False);
+    mu_assert("Expect: (1,1,1) /= (1,2,1)", A2(&eq, tuple111, tuple121) == &False);
+    mu_assert("Expect: (1,1,1) /= (1,1,2)", A2(&eq, tuple111, tuple112) == &False);
 
 
     Cons* bigList1 = newCons(&one, &Nil);
@@ -349,8 +326,8 @@ char* test_eq(void) {
         bigList2 = newCons(&one, bigList2);
         bigList3 = newCons(&one, bigList3);
     }
-    mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]", apply(&eq, 2, (void*[]){bigList1, bigList2}) == &True);
-    mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]", apply(&eq, 2, (void*[]){bigList1, bigList3}) == &False);
+    mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]", A2(&eq, bigList1, bigList2) == &True);
+    mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]", A2(&eq, bigList1, bigList3) == &False);
 
 
     Custom* custom_1_1A = malloc(sizeof(Custom) + 2*sizeof(void*));
@@ -359,22 +336,22 @@ char* test_eq(void) {
     custom_1_1A->values[0] = &one;
     custom_1_1A->values[1] = &a1;
 
-    Custom* custom_1_1A_clone = clone(custom_1_1A);
+    Custom* custom_1_1A_clone = Utils_clone(custom_1_1A);
 
-    Custom* custom_2_1A = clone(custom_1_1A);
+    Custom* custom_2_1A = Utils_clone(custom_1_1A);
     custom_2_1A->ctor = 2;
 
-    Custom* custom_1_2A = clone(custom_1_1A);
+    Custom* custom_1_2A = Utils_clone(custom_1_1A);
     custom_1_2A->values[0] = &two;
 
-    Custom* custom_1_1B = clone(custom_1_1A);
+    Custom* custom_1_1B = Utils_clone(custom_1_1A);
     custom_1_1B->values[1] = &b;
 
-    mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (ref)", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_1A}) == &True);
-    mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (value)", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_1A_clone}) == &True);
-    mu_assert("Expect: Ctor1 1 'A' /= Ctor2 1 'A'", apply(&eq, 2, (void*[]){custom_1_1A, custom_2_1A}) == &False);
-    mu_assert("Expect: Ctor1 1 'A' /= Ctor1 2 'A'", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_2A}) == &False);
-    mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'", apply(&eq, 2, (void*[]){custom_1_1A, custom_1_1B}) == &False);
+    mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (ref)", A2(&eq, custom_1_1A, custom_1_1A) == &True);
+    mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (value)", A2(&eq, custom_1_1A, custom_1_1A_clone) == &True);
+    mu_assert("Expect: Ctor1 1 'A' /= Ctor2 1 'A'", A2(&eq, custom_1_1A, custom_2_1A) == &False);
+    mu_assert("Expect: Ctor1 1 'A' /= Ctor1 2 'A'", A2(&eq, custom_1_1A, custom_1_2A) == &False);
+    mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'", A2(&eq, custom_1_1A, custom_1_1B) == &False);
 
 
     FieldSet* fs = malloc(sizeof(FieldSet) + 2*sizeof(void*));
@@ -389,10 +366,10 @@ char* test_eq(void) {
     rec12->values[0] = &one;
     rec12->values[1] = &two;
 
-    Record* rec12a = clone(rec12);
-    Record* rec22 = clone(rec12);
+    Record* rec12a = Utils_clone(rec12);
+    Record* rec22 = Utils_clone(rec12);
     rec22->values[0] = &two;
-    Record* rec13 = clone(rec12);
+    Record* rec13 = Utils_clone(rec12);
     rec13->values[1] = &three;
 
     if (verbose) {
@@ -401,10 +378,10 @@ char* test_eq(void) {
         printf("rec22  = %s\n", hex(rec22, rsize));
         printf("rec13  = %s\n", hex(rec13, rsize));
     }
-    mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (ref)", apply(&eq, 2, (void*[]){rec12, rec12}) == &True);
-    mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (value)", apply(&eq, 2, (void*[]){rec12, rec12a}) == &True);
-    mu_assert("Expect: {a=1, b=2} /= {a=2, b=2}", apply(&eq, 2, (void*[]){rec12, rec22}) == &False);
-    mu_assert("Expect: {a=1, b=2} /= {a=1, b=3}", apply(&eq, 2, (void*[]){rec12, rec13}) == &False);
+    mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (ref)", A2(&eq, rec12, rec12) == &True);
+    mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (value)", A2(&eq, rec12, rec12a) == &True);
+    mu_assert("Expect: {a=1, b=2} /= {a=2, b=2}", A2(&eq, rec12, rec22) == &False);
+    mu_assert("Expect: {a=1, b=2} /= {a=1, b=3}", A2(&eq, rec12, rec13) == &False);
 
 
 
