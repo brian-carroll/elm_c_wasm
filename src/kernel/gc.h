@@ -3,6 +3,6 @@
 
 #include "types.h"
 
-int gc_first_pointer_offset(Header header);
+u32 gc_first_pointer_offset(Header header);
 
 #endif

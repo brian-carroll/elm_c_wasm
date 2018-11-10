@@ -55,28 +55,18 @@ typedef struct {
 // Header size field has units corresponding to this many bytes:
 #define SIZE_UNIT 4
 
-// On a 64-bit target, some of our structures get an extra 4 bytes of padding
-// C compiler does this to align pointers and floats to 64-bit boundaries
-#ifdef TARGET_64BIT
-    #define ALIGN (4/SIZE_UNIT)
-    #define PTR (8/SIZE_UNIT)
-#else
-    #define ALIGN 0
-    #define PTR (4/SIZE_UNIT)
-#endif
-
 // GC color defaults to 0 when omitted
-#define HEADER_INT         (Header){ .tag=Tag_Int,     .size=4/SIZE_UNIT }
-#define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=(4+8)/SIZE_UNIT }
-#define HEADER_CHAR        (Header){ .tag=Tag_Char,    .size=4/SIZE_UNIT }
-#define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .size=n32 }
-#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .size=0 }
-#define HEADER_CONS        (Header){ .tag=Tag_Cons,    .size=ALIGN + 2*PTR }
-#define HEADER_TUPLE2      (Header){ .tag=Tag_Tuple2,  .size=ALIGN + 2*PTR }
-#define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .size=ALIGN + 3*PTR }
-#define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .size=(4/SIZE_UNIT)+(p*PTR) }
-#define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=ALIGN + (p+1)*PTR }
-#define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(4/SIZE_UNIT)+((p+1)*PTR) }
+#define HEADER_INT         (Header){ .tag=Tag_Int,     .size=sizeof(ElmInt)/SIZE_UNIT -1 }
+#define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=sizeof(ElmFloat)/SIZE_UNIT -1 }
+#define HEADER_CHAR        (Header){ .tag=Tag_Char,    .size=sizeof(ElmChar)/SIZE_UNIT -1 }
+#define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .size=sizeof(ElmString)/SIZE_UNIT + n32 -1 }
+#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .size=sizeof(Nil)/SIZE_UNIT -1 }
+#define HEADER_CONS        (Header){ .tag=Tag_Cons,    .size=sizeof(Cons)/SIZE_UNIT -1 }
+#define HEADER_TUPLE2      (Header){ .tag=Tag_Tuple2,  .size=sizeof(Tuple2)/SIZE_UNIT -1 }
+#define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .size=sizeof(Tuple3)/SIZE_UNIT -1 }
+#define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .size=(sizeof(Custom) + p*sizeof(void*))/SIZE_UNIT -1 }
+#define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=(sizeof(Record) + p*sizeof(void*))/SIZE_UNIT -1 }
+#define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(sizeof(Closure) + p*sizeof(void*))/SIZE_UNIT -1 }
 
 
 

@@ -1,39 +1,36 @@
+#include <stdio.h>
 #include "types.h"
 
 // *IF* I built some kind of Garbage Collector for Wasm MVP,
 // then it would need to traverse Elm data structures,
 // and a function like this would be needed
 
-int gc_first_pointer_offset(Header header) {
+u32 gc_first_pointer_offset(Header header) {
     switch (header.tag) {
         case Tag_Int:
         case Tag_Float:
         case Tag_Char:
         case Tag_String:
         case Tag_Nil:
-            return -1; // no pointers to trace
+            return 0; // no pointers to trace
 
         case Tag_Cons:
         case Tag_Tuple2:
         case Tag_Tuple3:
-            #ifdef TARGET_64BIT
-                return 8; // header(4) + alignment(4)
-            #else
-                return 4; // header(4)
-            #endif
+            return sizeof(Cons) - 2*sizeof(void*); // header + padding
 
         case Tag_Custom:
-            return 8;   // header(4) + ctor(4)
+            return sizeof(Custom);
 
         case Tag_Record:
-            #ifdef TARGET_64BIT
-                return 16; // header(4) + alignment(4) + fieldset(8)
-            #else
-                return 8; // header(4) + fieldset(4)
-            #endif
+            return sizeof(Record);
 
         case Tag_Closure:
-            return 8; // header(4) + n_values(2) + max_values(2)
+            return sizeof(Closure);
     }
+    // C compiler wants _any_ int value to be handled (int could be typecast to enum)
+    // But I also want warnings about missing cases, so no default.
+    // A return value here satisfies both requirements.
+    fprintf(stderr, "Unknown type tag: %d\n", header.tag);
     return 0;
 }
