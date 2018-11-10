@@ -5,7 +5,7 @@
 
 // local utility function
 static u32 String_bytes(ElmString *s) {
-    u32 n_bytes_padded = s->header.size * SIZE_UNIT;
+    u32 n_bytes_padded = (s->header.size - 1) * SIZE_UNIT;
     u32 padding = 1 + s->bytes[n_bytes_padded-1];
     return n_bytes_padded - padding;
 }

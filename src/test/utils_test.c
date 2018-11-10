@@ -260,10 +260,10 @@ char* test_eq(void) {
     ElmString* world = newElmString(5, "world");
 
     if (verbose) {
-        printf("hello1 str=\"%s\" hex=%s\n", hello1->bytes, hex(hello1, (1+hello1->header.size)*4) );
-        printf("hello2 str=\"%s\" hex=%s\n", hello2->bytes, hex(hello2, (1+hello2->header.size)*4) );
-        printf("hello_ str=\"%s\" hex=%s\n", hello_->bytes, hex(hello_, (1+hello_->header.size)*4) );
-        printf("world str=\"%s\" hex=%s\n", world->bytes, hex(world, (1+world->header.size)*4) );
+        printf("hello1 str=\"%s\" hex=%s\n", hello1->bytes, hex(hello1, hello1->header.size*4) );
+        printf("hello2 str=\"%s\" hex=%s\n", hello2->bytes, hex(hello2, hello2->header.size*4) );
+        printf("hello_ str=\"%s\" hex=%s\n", hello_->bytes, hex(hello_, hello_->header.size*4) );
+        printf("world str=\"%s\" hex=%s\n", world->bytes, hex(world, world->header.size*4) );
     }
 
     mu_assert("Expect: \"hello\" == \"hello\" (by reference)", A2(&Utils_eq, hello1, hello1) == &True);

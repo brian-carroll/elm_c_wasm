@@ -7,10 +7,10 @@
 
 void* Utils_clone(void* x) {
     Header* h = (Header*)x;
-    if (h->tag == Tag_Nil || (h->tag == Tag_Custom && h->size == 0)) {
+    if (h->tag == Tag_Nil || (h->tag == Tag_Custom && h->size == 1)) {
         return x;
     }
-    size_t n_bytes = sizeof(Header) + SIZE_UNIT * (size_t)h->size;
+    size_t n_bytes = SIZE_UNIT * (size_t)h->size;
     ElmValue* x_new = malloc(n_bytes);
     memcpy(x_new, x, n_bytes);
     return x_new;
@@ -124,7 +124,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             if (ha.size != hb.size) return 0;
             u32* a_ints = (u32*)pa->elm_string.bytes;
             u32* b_ints = (u32*)pb->elm_string.bytes;
-            for (u32 i=0; i<ha.size; ++i) {
+            for (u32 i=0; i < ha.size - 1; ++i) {
                 if (a_ints[i] != b_ints[i]) return 0;
             }
             return 1;
@@ -147,7 +147,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             if (pa->custom.ctor != pb->custom.ctor) {
                 return 0;
             }
-            u32 nparams = ((ha.size * SIZE_UNIT) - sizeof(u32)) / sizeof(void*);
+            u32 nparams = ((ha.size * SIZE_UNIT) - sizeof(Header) - sizeof(u32)) / sizeof(void*);
             for (u32 i=0; i < nparams; ++i) {
                 if (!eq_help(pa->custom.values[i], pb->custom.values[i], depth + 1, pstack)) {
                     return 0;
