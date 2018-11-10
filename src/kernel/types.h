@@ -35,15 +35,14 @@ typedef enum {
 
 
 typedef enum {
-    GcWhite,
-    GcGray,
-    GcBlack,
-} GcColor;
+    GcDead,
+    GcAlive
+} GcMark;
 
 typedef struct {
-    u32 size :26;        // payload size in integers (26 bits => <256MB)
-    GcColor gc_color :2; // GC white/gray/black (2 bits)
-    Tag tag :4;          // runtime type tag (4 bits)
+    u32 size :27;       // payload size in integers (27 bits => <512MB)
+    GcMark gc_mark :1;  // GC "alive or dead" mark bit
+    Tag tag :4;         // runtime type tag (4 bits)
 } Header;
 
 // It's nice if we can target 64-bit platforms
@@ -55,18 +54,17 @@ typedef struct {
 // Header size field has units corresponding to this many bytes:
 #define SIZE_UNIT 4
 
-// GC color defaults to 0 when omitted
-#define HEADER_INT         (Header){ .tag=Tag_Int,     .size=sizeof(ElmInt)/SIZE_UNIT }
-#define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=sizeof(ElmFloat)/SIZE_UNIT }
-#define HEADER_CHAR        (Header){ .tag=Tag_Char,    .size=sizeof(ElmChar)/SIZE_UNIT }
-#define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .size=sizeof(ElmString)/SIZE_UNIT + n32 }
-#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .size=sizeof(Nil)/SIZE_UNIT }
-#define HEADER_CONS        (Header){ .tag=Tag_Cons,    .size=sizeof(Cons)/SIZE_UNIT }
-#define HEADER_TUPLE2      (Header){ .tag=Tag_Tuple2,  .size=sizeof(Tuple2)/SIZE_UNIT }
-#define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .size=sizeof(Tuple3)/SIZE_UNIT }
-#define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .size=(sizeof(Custom) + p*sizeof(void*))/SIZE_UNIT }
-#define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=(sizeof(Record) + p*sizeof(void*))/SIZE_UNIT }
-#define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(sizeof(Closure) + p*sizeof(void*))/SIZE_UNIT }
+#define HEADER_INT         (Header){ .tag=Tag_Int,     .gc_mark=GcDead, .size=sizeof(ElmInt)/SIZE_UNIT }
+#define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .gc_mark=GcDead, .size=sizeof(ElmFloat)/SIZE_UNIT }
+#define HEADER_CHAR        (Header){ .tag=Tag_Char,    .gc_mark=GcDead, .size=sizeof(ElmChar)/SIZE_UNIT }
+#define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .gc_mark=GcDead, .size=sizeof(ElmString)/SIZE_UNIT + n32 }
+#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .gc_mark=GcDead, .size=sizeof(Nil)/SIZE_UNIT }
+#define HEADER_CONS        (Header){ .tag=Tag_Cons,    .gc_mark=GcDead, .size=sizeof(Cons)/SIZE_UNIT }
+#define HEADER_TUPLE2      (Header){ .tag=Tag_Tuple2,  .gc_mark=GcDead, .size=sizeof(Tuple2)/SIZE_UNIT }
+#define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .gc_mark=GcDead, .size=sizeof(Tuple3)/SIZE_UNIT }
+#define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .gc_mark=GcDead, .size=(sizeof(Custom) + p*sizeof(void*))/SIZE_UNIT }
+#define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .gc_mark=GcDead, .size=(sizeof(Record) + p*sizeof(void*))/SIZE_UNIT }
+#define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .gc_mark=GcDead, .size=(sizeof(Closure) + p*sizeof(void*))/SIZE_UNIT }
 
 
 
