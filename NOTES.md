@@ -101,6 +101,31 @@ GC thoughts
         - return to apply with `HeapOverflowContinuation` or `HeapOverflow TailCall`
         - `apply` puts the continuation into the stack map
         - after GC, continue by calling the evaluator again with the `TailCall`
+    - General recursion easy to add on
+    - Self-recursion doesn't pay the extra cost of general recursion (trampolining)
+
+- Algo for `apply`
+    - If not replay mode
+        - Create a `StackPush`
+        - If it's a saturated call, result = evaluate(args)
+        - If it's a partial application
+            - allocate a closure (maybe result = `HeapOverflow`)
+            - if not saturated, result = closure
+            - if saturated, result = evaluate(closure)
+        - Inspect result's type tag
+            - `HeapOverflow` => return `HeapOverflow`
+            - `HeapOverflowTailCall` => create `StackTailCall`, return `HeapOverflow`
+            - `TailCall` => create `StackTailCall`, loop back
+            - anything else => create `StackPop`, return value
+    - If replay mode
+        - Save replay_pointer to return_pointer
+        - Decrement n_replays
+        - For next time: Iterate through StackMap, stop after n_replays StackPops, set replay_pointer to this.
+        - if return_pointer points at a full closure, evaluate it
+        - otherwise return return_pointer
+
+- Do I need `StackTailCall` or will `StackPop` do?
+    - Self recursion interrupted => create stackpop with a full closure, special case it in 'replay mode'
 
 
 - Reversing the StackMap or pop list for replay
