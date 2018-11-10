@@ -17,6 +17,102 @@ Next steps
     - Cover all the `Expr` constructors
 
 
+GC thoughts
+===========
+- Stack map
+    - Build stack map tracking into `apply`
+    - On entering a new Closure, cons a `StackPush` onto the stack map, referencing the Closure
+    - On returning from a Closure, create a `StackPop`
+        - A Cons where the tail is the `StackPush` where we entered the same Closure
+        - Replaces the old head, skipping over any other pushes and pops that happened in between (because they're not on the call stack anymore)
+        - `StackPop` has a return value pointer
+    - On returning with a tail-call closure, create a `StackTailCall`
+        - try to find a `StackPush` that entered this Closure and link to it
+        - if instead we find another `StackTailCall` that went _into_ the current closure,
+            bypass it and link to _its_ `StackPush`
+    - The address of each is, by definition, the location of the heap pointer when it was created
+    ```elm
+    type StackMap
+        = StackPush Closure StackMap
+        | StackPop ElmValue StackMap
+        | StackTailCall Closure TailClosure StackMap
+        | StackRoot
+    ```
+
+- Replacing stack pointers using indirect pointers / double pointers
+    - Might rely on C compiler optimisations not being too clever
+    - If C puts things in registers, we're screwed. Can't continue running those functions after GC.
+    - Would have to use `volatile` for every pointer to an Elm value so it rereads them
+    - So this basically blocks good assembly optimisations
+
+
+- Unwinding the C call stack
+    - Need to do this in order to GC & replay, otherwise stack overflow
+    - Need almost an 'exception' mechanism to bail out
+    - Something more monadic-looking? Like a `HeapOverflow` header tag?
+        - a special runtime-only Elm value
+        - check for it on every allocation/call
+        - Use macros to avoid having to remember to return? Also easy to disable GC for future Wasm.
+
+
+- No point partially unwinding the stack, calculating garbage is expensive
+    - Easy to find the gaps, harder to determine how much of that is the return value.
+    - Rerunning higher level functions frees way more stuff
+
+
+- Replay algorithm
+    - On heap overflow
+        - return `HeapOverflow` from bottom function to unwind the "real" stack in C
+        - `apply` watches out for the highest function (`update` or `view`). When it sees it, stops unwinding the stack and doesn't return.
+        - Now `apply` triggers the prep for GC & replay. Afterwards it will call the evaluator again
+    - Prepare for GC & replay
+        - Mark all the stuff allocated by the target function as "live"
+        - StackMap is a GC root. Everything we don't need has been removed (except Pushes but keep them for simplicity)
+        - Count the length of the Pop replay list and store it in a GC variable.
+    - Minor GC
+        - No need to worry about marking stuff from other GC roots
+            - they are all older than the stack and we're not going to sweep/compact them!
+            - browser prevents async things coming in during this tick
+        - Mark everything allocated by the target function
+            - Two loops: outer loop iterates over StackMap (descending addresses), inner loop iterates _up_ through heap objects.
+            - Need a separate "mark" algorithm because we're not traversing trees of objects via pointers
+        - Compact everything from the Push into the target function
+        - Set heap pointer
+        - Return all the way up to the `apply` where we unwound the stack map and let it call the evaluator
+    - Replay
+        - `malloc` becomes a playback function
+            - Tracks a replay pointer instead of normal heap pointer.
+            - Returns the replay pointer (to an object created on previous run) and advances it by the size of that object
+        - `apply` becomes a playback function
+            - Get the `n`th item in the pop list and decrement `n` (it's a fair bit of iterating but not too bad)
+            - Increment malloc's replay pointer by the size of a Pop.
+    - Continue as normal
+        - Pop list size has dropped to zero, nothing left to replay => `apply` returns to normal mode
+        - malloc replay pointer has reached heap pointer => `malloc` returns to normal mode
+
+
+- Self recursion
+    - Self tail calls are optimised to `while` loops. What to do if we run out of memory in the middle of one?
+    - Before going into the `while` loop, allocate a Closure and a stack map item just in case we need them
+        - Stack map item is a `Pop` or some special thing for tail calls
+    - If `malloc` or `apply` ever return `HeapOverflow`
+        - break out of the `while`.
+        - Copy the args into the Closure (or special `TailCall` closure with unique tag)
+        - return to apply with `HeapOverflowContinuation` or `HeapOverflow TailCall`
+        - `apply` puts the continuation into the stack map
+        - after GC, continue by calling the evaluator again with the `TailCall`
+
+
+- Reversing the StackMap or pop list for replay
+    - Before doing the replay, reverse the pop list
+    - => need to keep space on the heap for it
+    - need a running calculation of how many pops you need to reverse the list to a new one
+    - would need Pop objects to have a running total in them
+        - whenever a Pop bypasses a load of the stackmap, increments from the pop before the push that it just skipped from
+    - the speedup of replay is maybe not worth the complexity and the extra processing to track it on _every_ pop
+
+
+
 Initialising static values
 ==========================
 There are lots of values that belong in the 'static' area of memory rather than the stack or the heap areas.
