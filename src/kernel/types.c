@@ -76,6 +76,12 @@ ElmString* newElmString(size_t n, char *str) {
 
 void Types_init() {
     Unit = (Custom){ .header = HEADER_CUSTOM(0), .ctor = 0 };
+
     True = (Custom){ .header = HEADER_CUSTOM(0), .ctor = 1 };
     False = (Custom){ .header = HEADER_CUSTOM(0), .ctor = 0 };
+
+    GcFull = (GcContinuation){
+        .header = HEADER_GCFULL,
+        .continuation = NULL
+    };
 }

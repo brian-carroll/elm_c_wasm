@@ -4,6 +4,7 @@
 void* max_heap;
 Header* current_heap;
 Header* root;
+Header* stack_map;
 
 
 static void mark_trace(Header* h, void* ignore_below) {

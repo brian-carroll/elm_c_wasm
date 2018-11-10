@@ -31,6 +31,7 @@ typedef enum {
     Tag_Custom,
     Tag_Record,
     Tag_Closure,
+    Tag_GcFull,
 } Tag;
 
 
@@ -65,7 +66,7 @@ typedef struct {
 #define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .gc_mark=GcDead, .size=(sizeof(Custom) + p*sizeof(void*))/SIZE_UNIT }
 #define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .gc_mark=GcDead, .size=(sizeof(Record) + p*sizeof(void*))/SIZE_UNIT }
 #define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .gc_mark=GcDead, .size=(sizeof(Closure) + p*sizeof(void*))/SIZE_UNIT }
-
+#define HEADER_GCFULL      (Header){ .tag=Tag_GcFull,  .gc_mark=GcDead, .size=sizeof(GcContinuation)/SIZE_UNIT }
 
 
 // LIST
@@ -189,13 +190,21 @@ typedef struct {
 }
 
 
-// ELM STATIC CONSTANTS
+// GARBAGE COLLECTOR TYPES
 
+// A value used to implement an 'exception' when GC is full
+typedef struct {
+    Header header;
+    Closure* continuation; // a partially complete tail recursion
+} GcContinuation;
+
+
+// STATIC CONSTANTS
+
+GcContinuation GcFull; // constant where continuation=NULL
 Custom Unit;
-
 Custom False;
 Custom True;
-
 void Types_init();
 
 
