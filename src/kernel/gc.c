@@ -24,41 +24,48 @@ static void mark_trace(Header* h, void* ignore_below) {
             break;
 
         case Tag_Cons:
-            first = &v->cons.head;
-            last = &v->cons.tail;
+            first = v->cons.head;
+            last = v->cons.tail;
             break;
 
         case Tag_Tuple2:
-            first = &v->tuple2.a;
-            last = &v->tuple2.b;
+            first = v->tuple2.a;
+            last = v->tuple2.b;
             break;
 
         case Tag_Tuple3:
-            first = &v->tuple3.a;
-            last = &v->tuple3.c;
+            first = v->tuple3.a;
+            last = v->tuple3.c;
             break;
 
         case Tag_Custom:
             nparams = ((h->size * SIZE_UNIT) - sizeof(u32)) / sizeof(void*);
             if (nparams > 0) {
-                first = &v->custom.values[0];
-                last = nparams ? &v->custom.values[nparams-1] : NULL;
+                first = v->custom.values[0];
+                last = v->custom.values[nparams-1];
             }
             break;
 
         case Tag_Record:
             nparams = v->record.fieldset->size;
             if (nparams > 0) {
-                first = &v->record.values[0];
-                last = &v->record.values[nparams-1];
+                first = v->record.values[0];
+                last = v->record.values[nparams-1];
             }
             break;
 
         case Tag_Closure:
             nparams = v->closure.n_values;
             if (nparams > 0) {
-                first = &v->closure.values[0];
-                last = &v->closure.values[nparams-1];
+                first = v->closure.values[0];
+                last = v->closure.values[nparams-1];
+            }
+            break;
+
+        case Tag_GcFull:
+            if (v->gc_cont.continuation != NULL) {
+                first = v->gc_cont.continuation;
+                last = first;
             }
             break;
     }
