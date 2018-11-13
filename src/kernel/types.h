@@ -37,7 +37,7 @@ typedef enum {
 
 typedef enum {
     GcDead,
-    GcAlive
+    GcLive
 } GcMark;
 
 typedef struct {
@@ -179,7 +179,7 @@ typedef struct {
     Header header;
     u16 n_values; // current number of applied args
     u16 max_values;
-    void* (*evaluator)(void**); // pointer to a function that takes an array of pointers and returns a pointer
+    void* (*evaluator)(void*[]); // pointer to a function that takes an array of pointers and returns a pointer
     void* values[];
 } Closure;
 
@@ -199,17 +199,9 @@ typedef struct {
 } GcContinuation;
 
 
-// STATIC CONSTANTS
-
-GcContinuation GcFull; // constant where continuation=NULL
-Custom Unit;
-Custom False;
-Custom True;
-void Types_init();
-
-
 // ANY ELM VALUE (for pointers in collections)
 typedef union {
+    Header header;
     ElmInt elm_int;
     ElmFloat elm_float;
     ElmChar elm_char;
@@ -220,8 +212,19 @@ typedef union {
     Custom custom;
     Record record;
     Closure closure;
+    GcContinuation gc_full;
 } ElmValue;
 
 
-#endif // #ifndef ELM_KERNEL_TYPES
+// STATIC CONSTANTS
 
+GcContinuation GcFull; // constant where continuation=NULL
+void* pGcFull;
+
+Custom Unit;
+Custom False;
+Custom True;
+void Types_init();
+
+
+#endif // #ifndef ELM_KERNEL_TYPES

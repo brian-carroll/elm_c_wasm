@@ -7,6 +7,7 @@ Header Nil = HEADER_NIL;
 
 Cons* newCons(void* head, void* tail) {
     Cons *p = malloc(sizeof(Cons));
+    if (p == NULL) return pGcFull;
     p->header = HEADER_CONS;
     p->head = head;
     p->tail = tail;
@@ -15,6 +16,7 @@ Cons* newCons(void* head, void* tail) {
 
 Tuple2* newTuple2(void* a, void* b) {
     Tuple2 *p = malloc(sizeof(Tuple2));
+    if (p == NULL) return pGcFull;
     p->header = HEADER_TUPLE2;
     p->a = a;
     p->b = b;
@@ -23,6 +25,7 @@ Tuple2* newTuple2(void* a, void* b) {
 
 Tuple3* newTuple3(void* a, void* b, void* c) {
     Tuple3 *p = malloc(sizeof(Tuple3));
+    if (p == NULL) return pGcFull;
     p->header = HEADER_TUPLE3;
     p->a = a;
     p->b = b;
@@ -32,6 +35,7 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
 
 ElmInt* newElmInt(i32 value) {
     ElmInt *p = malloc(sizeof(ElmInt));
+    if (p == NULL) return pGcFull;
     p->header = HEADER_INT;
     p->value = value;
     return p;
@@ -39,6 +43,7 @@ ElmInt* newElmInt(i32 value) {
 
 ElmFloat* newElmFloat(f64 value) {
     ElmFloat *p = malloc(sizeof(ElmFloat));
+    if (p == NULL) return pGcFull;
     p->header = HEADER_FLOAT;
     p->value = value;
     return p;
@@ -46,6 +51,7 @@ ElmFloat* newElmFloat(f64 value) {
 
 ElmChar* newElmChar(u32 value) {
     ElmChar *p = malloc(sizeof(ElmChar));
+    if (p == NULL) return pGcFull;
     p->header = HEADER_CHAR;
     p->value = value;
     return p;
@@ -60,6 +66,7 @@ ElmString* newElmString(size_t n, char *str) {
     size_t n_bytes_padded = n_ints * 4;
 
     ElmString *p = malloc(sizeof(ElmString) + n_bytes_padded);
+    if (p == NULL) return pGcFull;
     p->header = HEADER_STRING(n_ints);
 
     u32* ints = (u32*)p->bytes;
@@ -84,4 +91,5 @@ void Types_init() {
         .header = HEADER_GCFULL,
         .continuation = NULL
     };
+    pGcFull = &GcFull;
 }

@@ -19,6 +19,7 @@ void* String_append_eval(void* args[2]) {
     u32 nb = String_bytes(b);
 
     ElmString* s = newElmString(na + nb, NULL);
+    if (s == pGcFull) return pGcFull;
     memcpy(s->bytes, a->bytes, na);
     memcpy(&s->bytes[na], b->bytes, nb);
 

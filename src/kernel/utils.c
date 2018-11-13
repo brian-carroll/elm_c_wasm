@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "./types.h"
 #include "./string.h"
 #include "./list.h"
@@ -12,6 +13,7 @@ void* Utils_clone(void* x) {
     }
     size_t n_bytes = SIZE_UNIT * (size_t)h->size;
     ElmValue* x_new = malloc(n_bytes);
+    if (x_new == NULL) return pGcFull;
     memcpy(x_new, x, n_bytes);
     return x_new;
 }
@@ -51,22 +53,27 @@ static void* access_eval(void* args[2]) {
 Closure Utils_access;
 
 
-Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
+ElmValue* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
     Record* r_new = Utils_clone(r);
+    if (r_new == pGcFull) return pGcFull;
 
     for (u32 i=0; i<n_updates; ++i) {
         u32 field_pos = fieldset_search(r_new->fieldset, fields[i]);
         r_new->values[field_pos] = values[i];
     }
 
-    return r_new;
+    return (ElmValue*)r_new;
 }
 
 
 void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
+    void** args;
+    Closure *c;
+
     if (c_old->max_values == n_applied) {
-        // avoid allocating a new closure if we don't need it
-        return (*c_old->evaluator)(applied);
+        // 'saturated' call. No need to allocate a new Closure.
+        c = c_old;
+        args = applied;
     } else {
         u8 n_old = c_old->n_values;
         u8 n_new = n_old + n_applied;
@@ -75,18 +82,59 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         size_t size_applied = n_applied * sizeof(void*);
         size_t size_new = size_old + size_applied;
 
-        Closure *c = malloc(size_new);
+        c = malloc(size_new);
+        if (c == NULL) {
+            return pGcFull;
+        }
+
         memcpy(c, c_old, size_old);
         memcpy(&c->values[n_old], applied, size_applied);
         c->header = HEADER_CLOSURE(n_new);
         c->n_values = n_new;
 
-        if (n_new == c->max_values) {
-            return (*c->evaluator)(c->values);
-        } else {
+        if (n_new != c->max_values) {
+            // Partial application (not calling evaluator => no stack push)
             return c;
         }
+        args = c->values;
     }
+
+    void* push = GC_stack_push(c);
+
+    ElmValue* result;
+    bool tail_call;
+    do {
+        result = (*c->evaluator)(args);
+
+        switch (result->header.tag) {
+            case Tag_GcFull:
+                if (result->gc_full.continuation != NULL) {
+                    GC_stack_tailcall(result->gc_full.continuation);
+                    result = pGcFull;
+                }
+                tail_call = false;
+                break;
+
+            case Tag_Closure:
+                if (result->closure.n_values == result->closure.max_values) {
+                    GC_stack_tailcall(result, push);
+                    c = &result->closure;
+                    args = result->closure.values;
+                    tail_call = true;
+                } else {
+                    GC_stack_pop(result, push);
+                    tail_call = false;
+                }
+                break;
+
+            default:
+                GC_stack_pop(result, push);
+                tail_call = false;
+                break;
+        }
+    } while (tail_call);
+
+    return result;
 }
 
 
@@ -101,13 +149,11 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
         return 1;
     }
 
-    Header ha = *(Header*)pa;
-    Header hb = *(Header*)pb;
-    if (ha.tag != hb.tag) {
+    if (pa->header.tag != pb->header.tag) {
         return 0;
     }
 
-    switch (ha.tag) {
+    switch (pa->header.tag) {
         case Tag_Nil:
             return 0;
 
@@ -121,10 +167,10 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             return pa->elm_char.value == pb->elm_char.value;
 
         case Tag_String: {
-            if (ha.size != hb.size) return 0;
+            if (pa->header.size != pb->header.size) return 0;
             u32* a_ints = (u32*)pa->elm_string.bytes;
             u32* b_ints = (u32*)pb->elm_string.bytes;
-            for (u32 i=0; i < ha.size - 1; ++i) {
+            for (u32 i=0; i < pa->header.size - 1; ++i) {
                 if (a_ints[i] != b_ints[i]) return 0;
             }
             return 1;
@@ -147,7 +193,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             if (pa->custom.ctor != pb->custom.ctor) {
                 return 0;
             }
-            u32 nparams = ((ha.size * SIZE_UNIT) - sizeof(Header) - sizeof(u32)) / sizeof(void*);
+            u32 nparams = ((pa->header.size * SIZE_UNIT) - sizeof(Header) - sizeof(u32)) / sizeof(void*);
             for (u32 i=0; i < nparams; ++i) {
                 if (!eq_help(pa->custom.values[i], pb->custom.values[i], depth + 1, pstack)) {
                     return 0;
@@ -166,32 +212,36 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             return 1;
 
         case Tag_Closure:
-            // C doesn't have exceptions, I'd have to call out to JS.
+            // C doesn't have exceptions, would have to call out to JS.
             // For now it's a warning rather than error and returns False
             fprintf(stderr, "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which describes why it is this way and what the better version will look like.\n");
             return 0;
 
-        default:
-            // C doesn't have exceptions, I'd have to call out to JS.
-            // Return False for now.
-            fprintf(stderr, "Warning: Trying to apply '==' to an unknown value type. Returning 'False'.\n");
-            return 0;
+        case Tag_GcFull: {}
     }
+
+    // C compiler requires all int values to be handled but also want warnings
+    // for missing cases above. Falling through and returning here solves this.
+    fprintf(stderr, "Warning: Trying to apply '==' to an unknown value type (tag %d). Returning 'False'.\n", pa->header.tag);
+    return 0;
 }
+
 
 static void* eq_eval(void* args[2]) {
     ElmValue* nil = (ElmValue*)&Nil;
     ElmValue* stack = nil;
     u32 isEqual = eq_help(args[0], args[1], 0, &stack);
 
-    while (isEqual && stack != nil) {
+    while (isEqual && stack != nil && stack != pGcFull) {
         // eq_help reached max recursion depth. Pick up again where it left off.
         Tuple2* pair = stack->cons.head;
         stack = stack->cons.tail;
         isEqual = eq_help(pair->a, pair->b, 0, &stack);
     }
 
-    return isEqual ? &True : &False;
+    return stack == pGcFull
+        ? pGcFull
+        : isEqual ? &True : &False;
 }
 
 Closure Utils_eq;
