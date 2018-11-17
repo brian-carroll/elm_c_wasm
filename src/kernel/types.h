@@ -150,6 +150,7 @@ typedef struct {
     void* values[];
 } Custom;
 
+u32 custom_params(Custom* c); // number of parameters in a Custom struct
 
 // RECORD
 

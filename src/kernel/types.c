@@ -80,6 +80,10 @@ ElmString* newElmString(size_t n, char *str) {
     return p;
 }
 
+u32 custom_params(Custom* c) {
+    return ((c->header.size * SIZE_UNIT) - sizeof(u32)) / sizeof(void*);
+}
+
 
 void Types_init() {
     Nil = (ElmValue)HEADER_NIL;

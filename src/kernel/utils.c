@@ -193,7 +193,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             if (pa->custom.ctor != pb->custom.ctor) {
                 return 0;
             }
-            u32 nparams = ((pa->header.size * SIZE_UNIT) - sizeof(Header) - sizeof(u32)) / sizeof(void*);
+            u32 nparams = custom_params(&pa->custom);
             for (u32 i=0; i < nparams; ++i) {
                 if (!eq_help(pa->custom.values[i], pb->custom.values[i], depth + 1, pstack)) {
                     return 0;
