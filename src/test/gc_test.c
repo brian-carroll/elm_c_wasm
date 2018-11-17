@@ -152,23 +152,31 @@ char* gc_stackmap_test() {
         print_state(state);
     }
 
+    // Call the top-level function. e.g. `update`
     Closure* c1 = GC_allocate(sizeof(Closure));
     memcpy(c1, &Basics_add, sizeof(Closure));
     live[nlive++] = c1;
     void* push1 = GC_stack_push(c1);
     live[nlive++] = push1;
+
+    // The currently-running function allocates some stuff.
+    // This function won't have returned by end of test, so it needs these values.
     live[nlive++] = newElmInt(state->stack_depth);
     live[nlive++] = newElmInt(state->stack_depth);
     live[nlive++] = newElmInt(state->stack_depth);
 
+    // Push down to level 2. This will complete. Need its return value
     Closure* c2 = GC_allocate(sizeof(Closure));
     memcpy(c2, &Basics_mul, sizeof(Closure));
     live[nlive++] = c2;
     void* push2 = GC_stack_push(c2);
     live[nlive++] = push2;
+
+    // Temporary values from level 2, not in return value
     dead[ndead++] = newElmInt(state->stack_depth);
     dead[ndead++] = newElmInt(state->stack_depth);
-    
+
+    // 3rd level function call. All dead, since we have the return value of a higher level call.
     void* push3 = GC_stack_push(&Basics_sub);
     dead[ndead++] = push3;
     dead[ndead++] = newElmInt(state->stack_depth);
@@ -178,7 +186,7 @@ char* gc_stackmap_test() {
     dead[ndead++] = state->current_heap; // the pop we're about to allocate
     GC_stack_pop(ret3, push3);
 
-
+    // return value from level 2. Keep it to provide to level 1 on replay
     ElmValue* ret2a = (ElmValue*)newElmInt(state->stack_depth);
     ElmValue* ret2b = (ElmValue*)newCons(ret2a, &Nil);
     ElmValue* ret2c = (ElmValue*)newElmInt(state->stack_depth);
@@ -187,8 +195,11 @@ char* gc_stackmap_test() {
     live[nlive++] = ret2b;
     live[nlive++] = ret2c;
     live[nlive++] = ret2d;
-    live[nlive++] = state->current_heap; // the pop we're about to allocate
 
+    // Pop back up to top-level function and allocate a few more things.
+    // We actually have a choice whether these are considered alive or dead.
+    // Implementation treats them as live for consistency and ease of coding
+    live[nlive++] = state->current_heap; // the pop we're about to allocate
     GC_stack_pop(ret2d, push2);
     live[nlive++] = newElmInt(state->stack_depth);
     live[nlive++] = newElmInt(state->stack_depth);
