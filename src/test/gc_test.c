@@ -139,31 +139,38 @@ char* gc_stackmap_test() {
     memcpy(c1, &Basics_add, sizeof(Closure));
     // void* push1 = 
     GC_stack_push(c1);
+    newElmInt(123);
+    newElmInt(123);
+    newElmInt(123);
 
     Closure* c2 = GC_allocate(sizeof(Closure));
     memcpy(c2, &Basics_mul, sizeof(Closure));
     void* push2 = GC_stack_push(c2);
+    newElmInt(123);
+    newElmInt(123);
+    Cons* ret2 = newCons(
+        newElmInt(456),
+        newCons(
+            newElmInt(456),
+            &Nil
+        )
+    );
 
-    GC_stack_pop(&Unit, push2);
-
+    GC_stack_pop(ret2, push2);
+    newElmInt(123);
+    newElmInt(123);
+    newElmInt(123);
 
     printf("GC final state:\n");
     print_state(state);
+
+    printf("Marking stack map:\n");
+    ElmValue* ignore_below = (ElmValue*)c1;
+    mark_stack_map(ignore_below);
+    printf("\n");
+
+    printf("Final heap state:\n");
     print_heap(state);
-
-    /*
-    
-typedef struct {
-    GcPage pages[1];
-    void* system_max_heap; // The point at which we need new memory from the OS/browser
-    void* max_heap; // The point at which allocation fails (keeping some space for GC internal use)
-    u32* current_heap; // Next allocated address
-
-    ElmValue* roots;  // All "GC roots" in a linked list
-    Custom* stack_map; // Special "GC root". Track which pointers are on the call stack.
-    u32 stack_depth;
-} GcState;
-*/
 
     return NULL;
 }

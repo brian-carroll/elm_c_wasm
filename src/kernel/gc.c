@@ -50,10 +50,10 @@ void* GC_allocate(size_t size) {
 
 
 static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
-    ElmValue* first = v;
-    ElmValue* last = NULL;
-    u32 nparams;
+    ElmValue** children;
+    u32 n_children = 0;
 
+    printf("Marking object at %llx\n", (u64)v);
     v->header.gc_mark = GcLive;
 
     switch (v->header.tag) {
@@ -65,55 +65,49 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
             break;
 
         case Tag_Cons:
-            first = v->cons.head;
-            last = v->cons.tail;
+            printf("mark_trace detected Cons\n");
+            children = &v->cons.head;
+            n_children = 2;
             break;
 
         case Tag_Tuple2:
-            first = v->tuple2.a;
-            last = v->tuple2.b;
+            children = &v->tuple2.a;
+            n_children = 2;
             break;
 
         case Tag_Tuple3:
-            first = v->tuple3.a;
-            last = v->tuple3.c;
+            children = &v->tuple3.a;
+            n_children = 3;
             break;
 
         case Tag_Custom:
-            nparams = custom_params(&v->custom);
-            if (nparams > 0) {
-                first = v->custom.values[0];
-                last = v->custom.values[nparams-1];
-            }
+            children = &v->custom.values[0];
+            n_children = custom_params(&v->custom);
             break;
 
         case Tag_Record:
-            nparams = v->record.fieldset->size;
-            if (nparams > 0) {
-                first = v->record.values[0];
-                last = v->record.values[nparams-1];
-            }
+            children = &v->record.values[0];
+            n_children = v->record.fieldset->size;
             break;
 
         case Tag_Closure:
-            nparams = v->closure.n_values;
-            if (nparams > 0) {
-                first = v->closure.values[0];
-                last = v->closure.values[nparams-1];
-            }
+            children = &v->closure.values[0];
+            n_children = v->closure.n_values;
             break;
 
         case Tag_GcFull:
-            if (v->gc_full.continuation != NULL) {
-                first = (ElmValue*)v->gc_full.continuation;
-                last = first;
-            }
+            children = &v->gc_full.continuation;
+            n_children = (v->gc_full.continuation != NULL) ? 1 : 0;
             break;
     }
 
-    for (ElmValue* child = first; child <= last; child += sizeof(void*)) {
+    // Loop through children in the order they appear in the parent
+    //
+    for (u32 i=0; i<n_children; ++i) {
+        ElmValue* child = children[i];
         if (child->header.gc_mark == GcLive) continue;
         if (child < ignore_below) continue;
+        printf("recursing into mark_trace\n");
         mark_trace(child, ignore_below);
     }
 }
@@ -208,20 +202,21 @@ static void mark_linear(void* from, void* to) {
     }
 }
 
-static void mark_stack_map(ElmValue* ignore_below) {
+void mark_stack_map(ElmValue* ignore_below) {
     // Types are important for pointer arithmetic, be careful
     Custom* stack_item = state.stack_map;
     Custom* prev_item = (Custom*)state.current_heap;
 
     i32 min_depth = state.stack_depth;
     i32 current_depth = state.stack_depth;
-    i32 new_depth;
+    i32 new_depth = state.stack_depth;
 
     // Mark all values allocated by running functions, which we need to replay & resume
     // These values may be needed in local variables of those functions
     while (1) {
         switch (stack_item->ctor) {
             case GcStackPush:
+                printf("GcStackPush @ %llx\n", (u64)stack_item);
                 // going backwards => entering a section that's shallower than before
                 new_depth = current_depth - 1;
                 if (current_depth < min_depth) {
@@ -232,11 +227,15 @@ static void mark_stack_map(ElmValue* ignore_below) {
                 break;
 
             case GcStackPop:
+                printf("GcStackPop @ %llx\n", (u64)stack_item);
                 // going backwards => entering a section that's deeper than before
                 new_depth = current_depth + 1;
             case GcStackTailCall:
+                if (stack_item->ctor == GcStackTailCall) printf("GcStackTailCall @ %llx\n", (u64)stack_item);
                 if (current_depth == min_depth) {
+                    printf("Entering mark_trace\n");
                     mark_trace(stack_item->values[head], ignore_below); // returned value from deeper function to active function
+                    printf("Entering mark_linear\n");
                     mark_linear(stack_item + stack_item->header.size, prev_item);
                 }
                 break;
