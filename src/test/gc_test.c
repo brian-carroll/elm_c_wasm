@@ -86,7 +86,15 @@ void print_heap(GcState *state) {
                 printf("Tuple3 a=%llx b=%llx c=%llx", (u64)v->tuple3.a, (u64)v->tuple3.b, (u64)v->tuple3.c);
                 break;
             case Tag_Custom:
-                printf("Custom ctor=%d values= ", v->custom.ctor);
+                // Assume that Custom type objects are stack map objects
+                // Mostly true in GC tests if not in 'real life'
+                switch (v->custom.ctor) {
+                    case 0: printf("GcStackEmpty"); break;
+                    case 1: printf("GcStackPush"); break;
+                    case 2: printf("GcStackPop"); break;
+                    case 3: printf("GcStackTailCall"); break;
+                }
+                printf(" values= ");
                 for (u32 i=0; i<custom_params(&v->custom); ++i) {
                     printf("%llx ", (u64)v->custom.values[i]);
                 }
@@ -139,27 +147,33 @@ char* gc_stackmap_test() {
     memcpy(c1, &Basics_add, sizeof(Closure));
     // void* push1 = 
     GC_stack_push(c1);
-    newElmInt(123);
-    newElmInt(123);
-    newElmInt(123);
+    newElmInt(state->stack_depth);
+    newElmInt(state->stack_depth);
+    newElmInt(state->stack_depth);
 
     Closure* c2 = GC_allocate(sizeof(Closure));
     memcpy(c2, &Basics_mul, sizeof(Closure));
     void* push2 = GC_stack_push(c2);
-    newElmInt(123);
-    newElmInt(123);
+    newElmInt(state->stack_depth); // dead (allocated in a call that's finished)
+    newElmInt(state->stack_depth); // dead (allocated in a call that's finished)
+
+    void* push3 = GC_stack_push(&Basics_sub);
+    newElmInt(state->stack_depth);
+    newElmInt(state->stack_depth);
+    GC_stack_pop(newElmInt(state->stack_depth), push3);
+
     ElmValue* ret2 = (ElmValue*)newCons(
-        newElmInt(456),
+        newElmInt(state->stack_depth),
         newCons(
-            newElmInt(456),
+            newElmInt(state->stack_depth),
             &Nil
         )
     );
 
     GC_stack_pop(ret2, push2);
-    newElmInt(123);
-    newElmInt(123);
-    newElmInt(123);
+    newElmInt(state->stack_depth);
+    newElmInt(state->stack_depth);
+    newElmInt(state->stack_depth);
 
     printf("GC final state:\n");
     print_state(state);
