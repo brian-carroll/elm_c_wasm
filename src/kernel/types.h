@@ -59,7 +59,7 @@ typedef struct {
 #define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .gc_mark=GcDead, .size=sizeof(ElmFloat)/SIZE_UNIT }
 #define HEADER_CHAR        (Header){ .tag=Tag_Char,    .gc_mark=GcDead, .size=sizeof(ElmChar)/SIZE_UNIT }
 #define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .gc_mark=GcDead, .size=sizeof(ElmString)/SIZE_UNIT + n32 }
-#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .gc_mark=GcDead, .size=sizeof(Nil)/SIZE_UNIT }
+#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .gc_mark=GcDead, .size=sizeof(Header)/SIZE_UNIT }
 #define HEADER_CONS        (Header){ .tag=Tag_Cons,    .gc_mark=GcDead, .size=sizeof(Cons)/SIZE_UNIT }
 #define HEADER_TUPLE2      (Header){ .tag=Tag_Tuple2,  .gc_mark=GcDead, .size=sizeof(Tuple2)/SIZE_UNIT }
 #define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .gc_mark=GcDead, .size=sizeof(Tuple3)/SIZE_UNIT }
@@ -70,8 +70,6 @@ typedef struct {
 
 
 // LIST
-
-Header Nil;
 
 typedef struct {
     Header header;
@@ -221,9 +219,10 @@ typedef union {
 GcContinuation GcFull; // constant where continuation=NULL
 void* pGcFull;
 
-Custom Unit;
-Custom False;
-Custom True;
+ElmValue Nil;
+ElmValue Unit;
+ElmValue False;
+ElmValue True;
 void Types_init();
 
 

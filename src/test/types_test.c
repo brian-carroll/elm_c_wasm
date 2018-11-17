@@ -112,10 +112,10 @@ char* test_header_layout() {
 }
 
 char* test_nil() {
-    if (verbose) printf("Nil size=%ld addr=%s tag=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.tag);
+    if (verbose) printf("Nil size=%ld addr=%s tag=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
     mu_assert("Nil should be the same size as a header", sizeof(Nil) == sizeof(Header));
-    mu_assert("Nil should have the right tag field", Nil.tag == Tag_Nil);
-    mu_assert("Nil should have the right size field", Nil.size == 1);
+    mu_assert("Nil should have the right tag field", Nil.header.tag == Tag_Nil);
+    mu_assert("Nil should have the right size field", Nil.header.size == 1);
     return NULL;
 }
 
