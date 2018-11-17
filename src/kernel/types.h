@@ -20,18 +20,18 @@ typedef double f64;
 
 
 typedef enum {
-    Tag_Int,
-    Tag_Float,
-    Tag_Char,
-    Tag_String,
-    Tag_Nil,
-    Tag_Cons,
-    Tag_Tuple2,
-    Tag_Tuple3,
-    Tag_Custom,
-    Tag_Record,
-    Tag_Closure,
-    Tag_GcFull,
+    Tag_Int,     // 0
+    Tag_Float,   // 1
+    Tag_Char,    // 2
+    Tag_String,  // 3
+    Tag_Nil,     // 4
+    Tag_Cons,    // 5
+    Tag_Tuple2,  // 6
+    Tag_Tuple3,  // 7
+    Tag_Custom,  // 8
+    Tag_Record,  // 9
+    Tag_Closure, // a
+    Tag_GcFull,  // b
 } Tag;
 
 

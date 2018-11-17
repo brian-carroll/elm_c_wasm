@@ -1,14 +1,122 @@
 #include <stdio.h>
+#include <string.h>
 #include "types.h"
+#include "gc.h"
 
-void* system_max_heap; // The point at which we need new memory from the OS/browser
-void* max_heap; // The point at which allocation fails (keeping some space for GC internal use)
+enum {
+    GcStackEmpty,
+    GcStackPush,
+    GcStackPop,
+    GcStackTailCall,
+} GcStackCtor;
 
-Header* current_heap; // Next allocated address
-ElmValue* roots;  // All "GC roots" in a linked list
-Custom* stack_map; // Special "GC root". Track which pointers are on the call stack.
-Custom stack_empty;
-i32 stack_depth = 0;
+Custom stack_empty; // ends up *above* the heap! Agh! How do I make sure heap is above constants?
+GcState state;
+
+GcState* GC_init() {
+    stack_empty = (Custom){
+        .header = HEADER_CUSTOM(0),
+        .ctor = GcStackEmpty
+    };
+    u32* heap_data = state.pages[0].data;
+    memset(heap_data, 0, GC_PAGE_BYTES);
+    state.system_max_heap = &heap_data[GC_PAGE_BYTES/4];
+    state.max_heap = state.system_max_heap;
+    state.current_heap = &heap_data[0];
+    state.roots = &Nil;
+    state.stack_map = &stack_empty;
+    state.stack_depth = 0;
+    return &state;
+}
+
+static void* collect() {
+    printf("collect: not implemented yet\n");
+    return state.current_heap;
+}
+
+
+void* GC_allocate(size_t size) {
+    u32 ints = (size+3)/4;
+    u32* old_heap = state.current_heap;
+    u32* new_heap = state.current_heap + ints;
+
+    if (new_heap < (u32*)state.max_heap) {
+        state.current_heap = new_heap;
+        return old_heap;
+    } else {
+        return collect();
+    }
+}
+
+
+static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
+    ElmValue* first = v;
+    ElmValue* last = NULL;
+    u32 nparams;
+
+    v->header.gc_mark = GcLive;
+
+    switch (v->header.tag) {
+        case Tag_Int:
+        case Tag_Float:
+        case Tag_Char:
+        case Tag_String:
+        case Tag_Nil:
+            break;
+
+        case Tag_Cons:
+            first = v->cons.head;
+            last = v->cons.tail;
+            break;
+
+        case Tag_Tuple2:
+            first = v->tuple2.a;
+            last = v->tuple2.b;
+            break;
+
+        case Tag_Tuple3:
+            first = v->tuple3.a;
+            last = v->tuple3.c;
+            break;
+
+        case Tag_Custom:
+            nparams = custom_params(&v->custom);
+            if (nparams > 0) {
+                first = v->custom.values[0];
+                last = v->custom.values[nparams-1];
+            }
+            break;
+
+        case Tag_Record:
+            nparams = v->record.fieldset->size;
+            if (nparams > 0) {
+                first = v->record.values[0];
+                last = v->record.values[nparams-1];
+            }
+            break;
+
+        case Tag_Closure:
+            nparams = v->closure.n_values;
+            if (nparams > 0) {
+                first = v->closure.values[0];
+                last = v->closure.values[nparams-1];
+            }
+            break;
+
+        case Tag_GcFull:
+            if (v->gc_full.continuation != NULL) {
+                first = (ElmValue*)v->gc_full.continuation;
+                last = first;
+            }
+            break;
+    }
+
+    for (ElmValue* child = first; child <= last; child += sizeof(void*)) {
+        if (child->header.gc_mark == GcLive) continue;
+        if (child < ignore_below) continue;
+        mark_trace(child, ignore_below);
+    }
+}
 
 
 /*          STACK MAP
@@ -49,75 +157,64 @@ i32 stack_depth = 0;
         | StackEmpty
 */
 
-enum {
-    GcStackEmpty,
-    GcStackPush,
-    GcStackPop,
-    GcStackTailCall,
-} GcStackCtor;
 
-// The stack map is like a list with 3 variants of Cons
-// Define constants to make code more readable.
+
+// The stack map works like a list, but with 3 variants of Cons
+// Use list terminology to make code more readable.
 const u32 head = 0;
 const u32 tail = 1;
 
-void GC_init() {
-    roots = &Nil;
-    stack_empty = (Custom){
-        .header = HEADER_CUSTOM(0),
-        .ctor = GcStackEmpty
-    };
-    stack_map = &stack_empty;
-}
-
 void* GC_stack_push(Closure* c) {
-    Custom* p = malloc(sizeof(Custom) + sizeof(void*));
-    p->header = HEADER_CUSTOM(1);
+    Header h = HEADER_CUSTOM(2);
+    Custom* p = GC_allocate(sizeof(Custom) + 2*sizeof(void*));
+    p->header = h;
     p->ctor = GcStackPush;
     p->values[head] = c;
-    p->values[tail] = stack_map;
+    p->values[tail] = state.stack_map;
 
-    stack_map = p;
-    stack_depth++;
+    state.stack_map = p;
+    state.stack_depth++;
     return p;
 }
 
 void GC_stack_tailcall(Closure* c, void* push) {
-    Custom* p = malloc(sizeof(Custom) + 2*sizeof(void*));
+    Custom* p = GC_allocate(sizeof(Custom) + 2*sizeof(void*));
     p->header = HEADER_CUSTOM(2);
     p->ctor = GcStackTailCall;
     p->values[head] = c;
     p->values[tail] = push;
 
-    stack_map = p;
+    state.stack_map = p;
     // stack_depth stays the same
 }
 
 void GC_stack_pop(ElmValue* result, void* push) {
-    Custom* p = malloc(sizeof(Custom) + 2*sizeof(void*));
+    Custom* p = GC_allocate(sizeof(Custom) + 2*sizeof(void*));
     p->header = HEADER_CUSTOM(2);
     p->ctor = GcStackPop;
     p->values[head] = result;
     p->values[tail] = push;
 
-    stack_map = p;
-    stack_depth--;
+    state.stack_map = p;
+    state.stack_depth--;
 }
 
 
-void mark_linear(Header* from, Header* to) {
-    for (Header* h = from ; h <= to ; h += h->size) {
+static void mark_linear(void* from, void* to) {
+    Header* h_from = (Header*)from;
+    Header* h_to = (Header*)to;
+    for (Header* h = h_from ; h < h_to ; h += h->size) {
         h->gc_mark = GcLive;
     }
 }
 
 static void mark_stack_map(ElmValue* ignore_below) {
     // Types are important for pointer arithmetic, be careful
-    Header* stack_item = (Header*)stack_map;
-    Header* prev_item = current_heap;
+    Custom* stack_item = state.stack_map;
+    Custom* prev_item = (Custom*)state.current_heap;
 
-    i32 min_depth = stack_depth;
-    i32 current_depth = stack_depth;
+    i32 min_depth = state.stack_depth;
+    i32 current_depth = state.stack_depth;
     i32 new_depth;
 
     // Mark all values allocated by running functions, which we need to replay & resume
@@ -130,7 +227,7 @@ static void mark_stack_map(ElmValue* ignore_below) {
                 if (current_depth < min_depth) {
                     min_depth = current_depth;
                     mark_trace(stack_item->values[head], ignore_below);
-                    mark_linear(stack_item + stack_item->size, prev_item - 1);
+                    mark_linear(stack_item + stack_item->header.size, prev_item);
                 }
                 break;
 
@@ -140,7 +237,7 @@ static void mark_stack_map(ElmValue* ignore_below) {
             case GcStackTailCall:
                 if (current_depth == min_depth) {
                     mark_trace(stack_item->values[head], ignore_below); // returned value from deeper function to active function
-                    mark_linear(stack_item + stack_item->size, prev_item - 1);
+                    mark_linear(stack_item + stack_item->header.size, prev_item);
                 }
                 break;
 
@@ -159,76 +256,6 @@ static void mark_stack_map(ElmValue* ignore_below) {
 // }
 
 
-
-static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
-    ElmValue* first = v;
-    ElmValue* last = NULL;
-    u32 nparams;
-
-    v->header.gc_mark = GcLive;
-
-    switch (v->header.tag) {
-        case Tag_Int:
-        case Tag_Float:
-        case Tag_Char:
-        case Tag_String:
-        case Tag_Nil:
-            break;
-
-        case Tag_Cons:
-            first = v->cons.head;
-            last = v->cons.tail;
-            break;
-
-        case Tag_Tuple2:
-            first = v->tuple2.a;
-            last = v->tuple2.b;
-            break;
-
-        case Tag_Tuple3:
-            first = v->tuple3.a;
-            last = v->tuple3.c;
-            break;
-
-        case Tag_Custom:
-            nparams = ((v->header.size * SIZE_UNIT) - sizeof(u32)) / sizeof(void*);
-            if (nparams > 0) {
-                first = v->custom.values[0];
-                last = v->custom.values[nparams-1];
-            }
-            break;
-
-        case Tag_Record:
-            nparams = v->record.fieldset->size;
-            if (nparams > 0) {
-                first = v->record.values[0];
-                last = v->record.values[nparams-1];
-            }
-            break;
-
-        case Tag_Closure:
-            nparams = v->closure.n_values;
-            if (nparams > 0) {
-                first = v->closure.values[0];
-                last = v->closure.values[nparams-1];
-            }
-            break;
-
-        case Tag_GcFull:
-            if (v->gc_full.continuation != NULL) {
-                first = (ElmValue*)v->gc_full.continuation;
-                last = first;
-            }
-            break;
-    }
-
-    for (ElmValue* child = first; child <= last; child += sizeof(void*)) {
-        if (child->header.gc_mark == GcLive) continue;
-        if (child < ignore_below) continue;
-        mark_trace(child, ignore_below);
-    }
-}
-
 /* Options
     - clear marks before GC (but this is when there's most garbage)
     - trace it after GC (less garbage)
@@ -236,14 +263,14 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
     - Mark dead *while* compacting (best)
 */
 static void clear_marks(Header* h) {
-    while (h < current_heap) {
+    while (h < (Header*)state.current_heap) {
         h->gc_mark = GcDead;
-        h += h->size * SIZE_UNIT;
+        h += h->size;
     }
 }
 
 static void mark(void* ignore_below) {
-    ElmValue* current_root = roots;
+    ElmValue* current_root = state.roots;
     while (current_root->header.tag == Tag_Cons) {
         mark_trace(current_root->cons.head, ignore_below);
         current_root = current_root->cons.tail;

@@ -4,6 +4,7 @@
 #include "./types.h"
 #include "./string.h"
 #include "./list.h"
+#include "./gc.h"
 
 
 void* Utils_clone(void* x) {
@@ -12,7 +13,7 @@ void* Utils_clone(void* x) {
         return x;
     }
     size_t n_bytes = SIZE_UNIT * (size_t)h->size;
-    ElmValue* x_new = malloc(n_bytes);
+    ElmValue* x_new = GC_allocate(n_bytes);
     if (x_new == NULL) return pGcFull;
     memcpy(x_new, x, n_bytes);
     return x_new;
@@ -82,7 +83,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         size_t size_applied = n_applied * sizeof(void*);
         size_t size_new = size_old + size_applied;
 
-        c = malloc(size_new);
+        c = GC_allocate(size_new);
         if (c == NULL) {
             return pGcFull;
         }
@@ -109,7 +110,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         switch (result->header.tag) {
             case Tag_GcFull:
                 if (result->gc_full.continuation != NULL) {
-                    GC_stack_tailcall(result->gc_full.continuation);
+                    GC_stack_tailcall(result->gc_full.continuation, push);
                     result = pGcFull;
                 }
                 tail_call = false;
@@ -117,7 +118,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
 
             case Tag_Closure:
                 if (result->closure.n_values == result->closure.max_values) {
-                    GC_stack_tailcall(result, push);
+                    GC_stack_tailcall(&result->closure, push);
                     c = &result->closure;
                     args = result->closure.values;
                     tail_call = true;
