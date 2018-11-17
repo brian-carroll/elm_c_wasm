@@ -153,8 +153,7 @@ char* gc_stackmap_test() {
     }
 
     // Call the top-level function. e.g. `update`
-    Closure* c1 = GC_allocate(sizeof(Closure));
-    memcpy(c1, &Basics_add, sizeof(Closure));
+    Closure* c1 = Utils_clone(&Basics_add);
     live[nlive++] = c1;
     void* push1 = GC_stack_push(c1);
     live[nlive++] = push1;
@@ -166,8 +165,7 @@ char* gc_stackmap_test() {
     live[nlive++] = newElmInt(state->stack_depth);
 
     // Push down to level 2. This will complete. Need its return value
-    Closure* c2 = GC_allocate(sizeof(Closure));
-    memcpy(c2, &Basics_mul, sizeof(Closure));
+    Closure* c2 = Utils_clone(&Basics_mul);
     live[nlive++] = c2;
     void* push2 = GC_stack_push(c2);
     live[nlive++] = push2;
@@ -205,6 +203,28 @@ char* gc_stackmap_test() {
     live[nlive++] = newElmInt(state->stack_depth);
     live[nlive++] = newElmInt(state->stack_depth);
 
+    // Call another function, which does a tail call to another
+    void* push4 = GC_stack_push(&Basics_sub);
+    live[nlive++] = push4;
+    dead[ndead++] = newElmInt(state->stack_depth);
+    dead[ndead++] = newElmInt(state->stack_depth);
+
+    // Tail calls
+    Closure* ctail1 = Utils_clone(&Basics_mul);
+    dead[ndead++] = ctail1;
+    dead[ndead++] = state->current_heap; // tailcall we're about to allocate
+    GC_stack_tailcall(ctail1, push4);
+    dead[ndead++] = newElmInt(state->stack_depth);
+    dead[ndead++] = newElmInt(state->stack_depth);
+
+    Closure* ctail2 = Utils_clone(&Basics_mul);
+    live[nlive++] = ctail2;
+    live[nlive++] = state->current_heap; // tailcall we're about to allocate
+    GC_stack_tailcall(ctail2, push4);
+    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(state->stack_depth);
+
+
     if (verbose) {
         printf("GC final state:\n");
         print_state(state);
@@ -217,6 +237,7 @@ char* gc_stackmap_test() {
         printf("Final heap state:\n");
         print_heap(state);
     }
+
     u32 tested_size = 0;
     char* msg;
     while (ndead--) {

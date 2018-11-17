@@ -68,6 +68,9 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
     void** children; // array of pointers to child objects
     u32 n_children = 0;
 
+    if (is_marked(v->header)) return;
+    if (v < ignore_below) return;
+
     mark_object(&v->header);
 
     switch (v->header.tag) {
@@ -116,8 +119,6 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
 
     for (u32 i=0; i<n_children; ++i) {
         ElmValue* child = children[i];
-        if (is_marked(child->header)) continue;
-        if (child < ignore_below) continue;
         mark_trace(child, ignore_below);
     }
 }
@@ -232,7 +233,9 @@ void mark_stack_map(ElmValue* ignore_below) {
                 if (new_depth < min_depth) {
                     min_depth = new_depth;
                     mark_trace(stack_item->values[head], ignore_below);
-                    mark_linear(next_heap_object(stack_item), prev_stack_item);
+                    if (prev_stack_item->ctor != GcStackTailCall) {
+                        mark_linear(next_heap_object(stack_item), prev_stack_item);
+                    }
                 }
                 break;
 
@@ -281,4 +284,5 @@ static void mark(void* ignore_below) {
         mark_trace(current_root->cons.head, ignore_below);
         current_root = current_root->cons.tail;
     }
+    mark_stack_map(ignore_below);
 }
