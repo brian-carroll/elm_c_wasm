@@ -137,6 +137,13 @@ GC thoughts
     - the speedup of replay is maybe not worth the complexity and the extra processing to track it on _every_ pop
 
 
+Mark/compact algorithms
+=======================
+Fastest from book is 'Compressor'
+- Keep a bitmap of live ints
+- Break memory into 256 or 512-byte blocks
+
+
 
 Initialising static values
 ==========================
