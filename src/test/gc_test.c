@@ -135,56 +135,99 @@ void print_state(GcState* state) {
 
 
 char* gc_stackmap_test() {
-    printf("\n");
-    printf("Stack map\n");
-    printf("---------\n");
+    if (verbose) {
+        printf("\n");
+        printf("Stack map\n");
+        printf("---------\n");
+    }
+
+    void* live[100];
+    void* dead[100];
+    u32 nlive=0, ndead=0;
+
 
     GcState* state = GC_init();
-    printf("GC initial state:\n");
-    print_state(state);
+    if (verbose) {
+        printf("GC initial state:\n");
+        print_state(state);
+    }
 
     Closure* c1 = GC_allocate(sizeof(Closure));
     memcpy(c1, &Basics_add, sizeof(Closure));
-    // void* push1 = 
-    GC_stack_push(c1);
-    newElmInt(state->stack_depth);
-    newElmInt(state->stack_depth);
-    newElmInt(state->stack_depth);
+    live[nlive++] = c1;
+    void* push1 = GC_stack_push(c1);
+    live[nlive++] = push1;
+    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(state->stack_depth);
 
     Closure* c2 = GC_allocate(sizeof(Closure));
     memcpy(c2, &Basics_mul, sizeof(Closure));
+    live[nlive++] = c2;
     void* push2 = GC_stack_push(c2);
-    newElmInt(state->stack_depth); // dead (allocated in a call that's finished)
-    newElmInt(state->stack_depth); // dead (allocated in a call that's finished)
-
+    live[nlive++] = push2;
+    dead[ndead++] = newElmInt(state->stack_depth);
+    dead[ndead++] = newElmInt(state->stack_depth);
+    
     void* push3 = GC_stack_push(&Basics_sub);
-    newElmInt(state->stack_depth);
-    newElmInt(state->stack_depth);
-    GC_stack_pop(newElmInt(state->stack_depth), push3);
+    dead[ndead++] = push3;
+    dead[ndead++] = newElmInt(state->stack_depth);
+    dead[ndead++] = newElmInt(state->stack_depth);
+    ElmInt* ret3 = newElmInt(state->stack_depth);
+    dead[ndead++] = ret3;
+    dead[ndead++] = state->current_heap; // the pop we're about to allocate
+    GC_stack_pop(ret3, push3);
 
-    ElmValue* ret2 = (ElmValue*)newCons(
-        newElmInt(state->stack_depth),
-        newCons(
-            newElmInt(state->stack_depth),
-            &Nil
-        )
-    );
 
-    GC_stack_pop(ret2, push2);
-    newElmInt(state->stack_depth);
-    newElmInt(state->stack_depth);
-    newElmInt(state->stack_depth);
+    ElmValue* ret2a = (ElmValue*)newElmInt(state->stack_depth);
+    ElmValue* ret2b = (ElmValue*)newCons(ret2a, &Nil);
+    ElmValue* ret2c = (ElmValue*)newElmInt(state->stack_depth);
+    ElmValue* ret2d = (ElmValue*)newCons(ret2c, ret2b);
+    live[nlive++] = ret2a;
+    live[nlive++] = ret2b;
+    live[nlive++] = ret2c;
+    live[nlive++] = ret2d;
+    live[nlive++] = state->current_heap; // the pop we're about to allocate
 
-    printf("GC final state:\n");
-    print_state(state);
+    GC_stack_pop(ret2d, push2);
+    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(state->stack_depth);
 
-    printf("Marking stack map:\n");
+    if (verbose) {
+        printf("GC final state:\n");
+        print_state(state);
+    }
+
     ElmValue* ignore_below = (ElmValue*)c1;
     mark_stack_map(ignore_below);
-    printf("\n");
 
-    printf("Final heap state:\n");
-    print_heap(state);
+    if (verbose) {
+        printf("Final heap state:\n");
+        print_heap(state);
+    }
+    u32 tested_size = 0;
+    char* msg;
+    while (ndead--) {
+        ElmValue* v = (ElmValue*)dead[ndead];
+        msg = malloc(30);
+        sprintf(msg, "%llx should be dead", (u64)v);
+        mu_assert(msg, v->header.gc_mark == 0);
+        tested_size += v->header.size;
+    }
+
+    while (nlive--) {
+        ElmValue* v = (ElmValue*)live[nlive];
+        msg = malloc(30);
+        sprintf(msg, "%llx should be live", (u64)v);
+        mu_assert(msg, v->header.gc_mark == 1);
+        tested_size += v->header.size;
+    }
+
+    u32 heap_size = state->current_heap - state->pages[0].data;
+    mu_assert("Stack map test should account for all allocated values",
+        tested_size == heap_size
+    );
 
     return NULL;
 }
