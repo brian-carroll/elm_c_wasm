@@ -86,23 +86,23 @@ void print_heap(GcState *state) {
                 printf("Tuple3 a=%llx b=%llx c=%llx", (u64)v->tuple3.a, (u64)v->tuple3.b, (u64)v->tuple3.c);
                 break;
             case Tag_Custom:
-                printf("Custom ctor=%d values=", v->custom.ctor);
+                printf("Custom ctor=%d values= ", v->custom.ctor);
                 for (u32 i=0; i<custom_params(&v->custom); ++i) {
-                    printf("%llx,", (u64)v->custom.values[i]);
+                    printf("%llx ", (u64)v->custom.values[i]);
                 }
                 break;
             case Tag_Record:
-                printf("Record fieldset=%llx values=", (u64)v->record.fieldset);
+                printf("Record fieldset=%llx values= ", (u64)v->record.fieldset);
                 for (u32 i=0; i < v->record.fieldset->size; ++i) {
-                    printf("%llx,", (u64)v->record.values[i]);
+                    printf("%llx ", (u64)v->record.values[i]);
                 }
                 break;
             case Tag_Closure:
-                printf("Closure n_values=%d max_values=%d evaluator=%llx values=",
+                printf("Closure n_values=%d max_values=%d evaluator=%llx values= ",
                     v->closure.n_values, v->closure.max_values, (u64)v->closure.evaluator
                 );
                 for (u32 i=0; i < v->closure.n_values; ++i) {
-                    printf("%llx,", (u64)v->record.values[i]);
+                    printf("%llx ", (u64)v->record.values[i]);
                 }
                 break;
             case Tag_GcFull:

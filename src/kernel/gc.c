@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "types.h"
 #include "gc.h"
@@ -48,12 +49,26 @@ void* GC_allocate(size_t size) {
     }
 }
 
+void* next_heap_object(void* p) {
+    Header* h = (Header*)p;
+    return (void*)(h + h->size);
+}
+
+void mark_object(Header* h) {
+    if (h->gc_mark == GcLive) printf("double mark at %llx\n", (u64)h);
+    h->gc_mark = GcLive; // Will probably use bitmaps later instead of this
+}
+
+bool is_marked(Header h) {
+    return h.gc_mark == GcLive;
+}
+
 
 static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
     void** children; // array of pointers to child objects
     u32 n_children = 0;
 
-    v->header.gc_mark = GcLive;
+    mark_object(&v->header);
 
     switch (v->header.tag) {
         case Tag_Int:
@@ -101,7 +116,7 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
 
     for (u32 i=0; i<n_children; ++i) {
         ElmValue* child = children[i];
-        if (child->header.gc_mark == GcLive) continue;
+        if (is_marked(child->header)) continue;
         if (child < ignore_below) continue;
         mark_trace(child, ignore_below);
     }
@@ -193,14 +208,14 @@ static void mark_linear(void* from, void* to) {
     Header* h_from = (Header*)from;
     Header* h_to = (Header*)to;
     for (Header* h = h_from ; h < h_to ; h += h->size) {
-        h->gc_mark = GcLive;
+        mark_object(h);
     }
 }
 
 void mark_stack_map(ElmValue* ignore_below) {
     // Types are important for pointer arithmetic, be careful
     Custom* stack_item = state.stack_map;
-    Custom* prev_item = (Custom*)state.current_heap;
+    Custom* prev_stack_item = (Custom*)state.current_heap;
 
     i32 min_depth = state.stack_depth;
     i32 current_depth = state.stack_depth;
@@ -209,29 +224,25 @@ void mark_stack_map(ElmValue* ignore_below) {
     // Mark all values allocated by running functions, which we need to replay & resume
     // These values may be needed in local variables of those functions
     while (1) {
+        mark_object(stack_item);
         switch (stack_item->ctor) {
             case GcStackPush:
-                printf("GcStackPush @ %llx\n", (u64)stack_item);
                 // going backwards => entering a section that's shallower than before
                 new_depth = current_depth - 1;
-                if (current_depth < min_depth) {
-                    min_depth = current_depth;
+                if (new_depth < min_depth) {
+                    min_depth = new_depth;
                     mark_trace(stack_item->values[head], ignore_below);
-                    mark_linear(stack_item + stack_item->header.size, prev_item);
+                    mark_linear(next_heap_object(stack_item), prev_stack_item);
                 }
                 break;
 
             case GcStackPop:
-                printf("GcStackPop @ %llx\n", (u64)stack_item);
                 // going backwards => entering a section that's deeper than before
                 new_depth = current_depth + 1;
             case GcStackTailCall:
-                if (stack_item->ctor == GcStackTailCall) printf("GcStackTailCall @ %llx\n", (u64)stack_item);
                 if (current_depth == min_depth) {
-                    printf("Entering mark_trace\n");
                     mark_trace(stack_item->values[head], ignore_below); // returned value from deeper function to active function
-                    printf("Entering mark_linear\n");
-                    mark_linear(stack_item + stack_item->header.size, prev_item);
+                    mark_linear(next_heap_object(stack_item), prev_stack_item);
                 }
                 break;
 
@@ -240,6 +251,7 @@ void mark_stack_map(ElmValue* ignore_below) {
                 return;
         }
         current_depth = new_depth;
+        prev_stack_item = stack_item;
         stack_item = stack_item->values[tail];
     }
 }
