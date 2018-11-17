@@ -8,7 +8,6 @@ Next steps
     - Scheduler & Tasks
     - Ports, Effect Managers, HTTP, vdom
 - Other core libs
-    - Nested equality tests
     - JSON (required for all the effects stuff)
 - More handwritten prototypes of stuff that will be code generated
     - _interesting but not really blockers or priorities_
@@ -16,6 +15,19 @@ Next steps
     - Case expression / pattern match (Decider, Choice)
     - Cover all the `Expr` constructors
 
+
+GC next steps
+=============
+- Test tail calls
+- Implement replay mode
+- Refactor GC state types
+    - figure out ElmValue, Header, u32, etc.
+    - try to use arrays where possible rather than pointer arithmetic
+- Refactor marking to use bitmaps & offsets
+- Implement compaction
+- Measure GC code size in Wasm
+    - Create example Elm program to generate a list or something
+    - Compile option to include only allocation, no collection.
 
 GC thoughts
 ===========
