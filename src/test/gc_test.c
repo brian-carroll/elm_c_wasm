@@ -148,7 +148,7 @@ char* gc_stackmap_test() {
     void* push2 = GC_stack_push(c2);
     newElmInt(123);
     newElmInt(123);
-    Cons* ret2 = newCons(
+    ElmValue* ret2 = (ElmValue*)newCons(
         newElmInt(456),
         newCons(
             newElmInt(456),

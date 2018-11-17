@@ -50,10 +50,9 @@ void* GC_allocate(size_t size) {
 
 
 static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
-    ElmValue** children;
+    void** children; // array of pointers to child objects
     u32 n_children = 0;
 
-    printf("Marking object at %llx\n", (u64)v);
     v->header.gc_mark = GcLive;
 
     switch (v->header.tag) {
@@ -65,7 +64,6 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
             break;
 
         case Tag_Cons:
-            printf("mark_trace detected Cons\n");
             children = &v->cons.head;
             n_children = 2;
             break;
@@ -96,18 +94,15 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
             break;
 
         case Tag_GcFull:
-            children = &v->gc_full.continuation;
+            children = (void**)&v->gc_full.continuation;
             n_children = (v->gc_full.continuation != NULL) ? 1 : 0;
             break;
     }
 
-    // Loop through children in the order they appear in the parent
-    //
     for (u32 i=0; i<n_children; ++i) {
         ElmValue* child = children[i];
         if (child->header.gc_mark == GcLive) continue;
         if (child < ignore_below) continue;
-        printf("recursing into mark_trace\n");
         mark_trace(child, ignore_below);
     }
 }
