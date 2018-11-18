@@ -259,6 +259,41 @@ char* gc_stackmap_test() {
 }
 
 
+char* gc_page_struct_test() {
+    GcState* state = GC_init();
+
+    size_t size_bitmap = sizeof(state->pages[0].bitmap);
+    size_t size_offsets = sizeof(state->pages[0].offsets);
+    size_t size_data = sizeof(state->pages[0].data);
+    size_t size_unused = sizeof(state->pages[0].unused);
+
+    if (verbose) {
+        printf("\n");
+        printf("GC_PAGE_BYTES = %d\n", GC_PAGE_BYTES);
+        printf("GC_BLOCK_BYTES = %d\n", GC_BLOCK_BYTES);
+        printf("GC_PAGE_BLOCKS = %ld\n", GC_PAGE_BLOCKS);
+        printf("GC_PAGE_SLOTS = %ld\n", GC_PAGE_SLOTS);
+        printf("\n");
+        printf("sizeof(bitmap) = %ld\n", size_bitmap);
+        printf("sizeof(offsets) = %ld\n", size_offsets);
+        printf("sizeof(data) = %ld\n", size_data);
+        printf("sizeof(unused) = %ld\n", size_unused);
+        printf("sizeof(GcPage) = %ld\n", sizeof(GcPage));
+        printf("\n");
+        printf("total overhead = %3.2f%%\n", 100.0-(100.0*size_data/GC_PAGE_BYTES));
+    }
+
+    mu_assert("Bitmap should have one bit for each int of data",
+        size_bitmap*32 == size_data     // no integer division here
+    );
+    mu_assert("GcPage should have correct size",
+        sizeof(GcPage) == GC_PAGE_BYTES
+    );
+
+    return NULL;
+}
+
+
 char* gc_test() {
     if (verbose) {
         printf("\n");
@@ -267,5 +302,6 @@ char* gc_test() {
     }
 
     mu_run_test(gc_stackmap_test);
+    mu_run_test(gc_page_struct_test);
     return NULL;
 }

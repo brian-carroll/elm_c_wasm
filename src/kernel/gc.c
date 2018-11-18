@@ -20,8 +20,8 @@ GcState* GC_init() {
         .ctor = GcStackEmpty
     };
     u32* heap_data = state.pages[0].data;
-    memset(heap_data, 0, GC_PAGE_BYTES);
-    state.system_max_heap = &heap_data[GC_PAGE_BYTES/4];
+    memset(heap_data, 0, GC_PAGE_SLOTS*4);
+    state.system_max_heap = &heap_data[GC_PAGE_SLOTS-1];
     state.max_heap = state.system_max_heap;
     state.current_heap = &heap_data[0];
     state.roots = &Nil;
