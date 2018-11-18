@@ -30,6 +30,12 @@ GcState* GC_init() {
     return &state;
 }
 
+
+void GC_register_root(void* root) {
+    state.roots = (ElmValue*)newCons(root, state.roots);
+}
+
+
 static void* collect() {
     printf("collect: not implemented yet\n");
     return state.current_heap;
@@ -54,7 +60,8 @@ void* next_heap_object(void* p) {
     return (void*)(h + h->size);
 }
 
-void mark_object(Header* h) {
+void mark_value(void* p) {
+    Header* h = (Header*)p;
     if (h->gc_mark == GcLive) printf("double mark at %llx\n", (u64)h);
     h->gc_mark = GcLive; // Will probably use bitmaps later instead of this
 }
@@ -71,7 +78,7 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
     if (is_marked(v->header)) return;
     if (v < ignore_below) return;
 
-    mark_object(&v->header);
+    mark_value(v);
 
     switch (v->header.tag) {
         case Tag_Int:
@@ -166,15 +173,14 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
 
 // The stack map works like a list, but with 3 variants of Cons
 // Use list terminology to make code more readable.
-const u32 head = 0;
-const u32 tail = 1;
+const u32 head = 1;
+const u32 tail = 0; // StackPush only has a tail, no head
 
-void* GC_stack_push(Closure* c) {
-    Header h = HEADER_CUSTOM(2);
-    Custom* p = GC_allocate(sizeof(Custom) + 2*sizeof(void*));
+void* GC_stack_push() {
+    Header h = HEADER_CUSTOM(1);
+    Custom* p = GC_allocate(sizeof(Custom) + sizeof(void*));
     p->header = h;
     p->ctor = GcStackPush;
-    p->values[head] = c;
     p->values[tail] = state.stack_map;
 
     state.stack_map = p;
@@ -209,7 +215,7 @@ static void mark_linear(void* from, void* to) {
     Header* h_from = (Header*)from;
     Header* h_to = (Header*)to;
     for (Header* h = h_from ; h < h_to ; h += h->size) {
-        mark_object(h);
+        mark_value(h);
     }
 }
 
@@ -225,14 +231,13 @@ void mark_stack_map(ElmValue* ignore_below) {
     // Mark all values allocated by running functions, which we need to replay & resume
     // These values may be needed in local variables of those functions
     while (1) {
-        mark_object(stack_item);
+        mark_value(stack_item);
         switch (stack_item->ctor) {
             case GcStackPush:
                 // going backwards => entering a section that's shallower than before
                 new_depth = current_depth - 1;
                 if (new_depth < min_depth) {
                     min_depth = new_depth;
-                    mark_trace(stack_item->values[head], ignore_below);
                     if (prev_stack_item->ctor != GcStackTailCall) {
                         mark_linear(next_heap_object(stack_item), prev_stack_item);
                     }
@@ -271,18 +276,19 @@ void mark_stack_map(ElmValue* ignore_below) {
     - iterate by address after GC (less garbage, better cache)
     - Mark dead *while* compacting (best)
 */
-static void clear_marks(Header* h) {
-    while (h < (Header*)state.current_heap) {
-        h->gc_mark = GcDead;
-        h += h->size;
-    }
-}
+// static void clear_marks(Header* h) {
+//     while (h < (Header*)state.current_heap) {
+//         h->gc_mark = GcDead;
+//         h += h->size;
+//     }
+// }
 
-static void mark(void* ignore_below) {
-    ElmValue* current_root = state.roots;
-    while (current_root->header.tag == Tag_Cons) {
-        mark_trace(current_root->cons.head, ignore_below);
-        current_root = current_root->cons.tail;
+void mark(ElmValue* ignore_below) {
+    ElmValue* root_cell = state.roots;
+    while (root_cell->header.tag == Tag_Cons) {
+        mark_value(root_cell);
+        mark_trace(root_cell->cons.head, ignore_below);
+        root_cell = root_cell->cons.tail;
     }
     mark_stack_map(ignore_below);
 }

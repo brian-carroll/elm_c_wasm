@@ -100,7 +100,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         args = c->values;
     }
 
-    void* push = GC_stack_push(c);
+    void* push = GC_stack_push();
 
     ElmValue* result;
     bool tail_call;

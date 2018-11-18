@@ -152,10 +152,19 @@ char* gc_stackmap_test() {
         print_state(state);
     }
 
-    // Call the top-level function. e.g. `update`
-    Closure* c1 = Utils_clone(&Basics_add);
+    // Mock Closures.
+    // We never evaluate these during the test so they can be anything
+    Closure* mock_effect_callback = &Basics_add; // Basics_add is not really an effect callback. It's just a Closure value.
+    Closure* mock_closure = &Basics_mul;
+
+
+    // Call the top-level function (an effect callback or incoming port)
+    Closure* c1 = Utils_clone(mock_effect_callback);
+    live[nlive++] = state->current_heap; // the root Cons cell we're about to allocate
+    GC_register_root(c1); // Effect manager is keeping this Closure alive by connecting it to the GC root.
     live[nlive++] = c1;
-    void* push1 = GC_stack_push(c1);
+
+    void* push1 = GC_stack_push();
     live[nlive++] = push1;
 
     // The currently-running function allocates some stuff.
@@ -165,9 +174,9 @@ char* gc_stackmap_test() {
     live[nlive++] = newElmInt(state->stack_depth);
 
     // Push down to level 2. This will complete. Need its return value
-    Closure* c2 = Utils_clone(&Basics_mul);
+    Closure* c2 = Utils_clone(mock_closure);
     live[nlive++] = c2;
-    void* push2 = GC_stack_push(c2);
+    void* push2 = GC_stack_push();
     live[nlive++] = push2;
 
     // Temporary values from level 2, not in return value
@@ -175,14 +184,14 @@ char* gc_stackmap_test() {
     dead[ndead++] = newElmInt(state->stack_depth);
 
     // 3rd level function call. All dead, since we have the return value of a higher level call.
-    void* push3 = GC_stack_push(&Basics_sub);
+    void* push3 = GC_stack_push();
     dead[ndead++] = push3;
     dead[ndead++] = newElmInt(state->stack_depth);
     dead[ndead++] = newElmInt(state->stack_depth);
     ElmInt* ret3 = newElmInt(state->stack_depth);
     dead[ndead++] = ret3;
     dead[ndead++] = state->current_heap; // the pop we're about to allocate
-    GC_stack_pop(ret3, push3);
+    GC_stack_pop((ElmValue*)ret3, push3);
 
     // return value from level 2. Keep it to provide to level 1 on replay
     ElmValue* ret2a = (ElmValue*)newElmInt(state->stack_depth);
@@ -203,24 +212,41 @@ char* gc_stackmap_test() {
     live[nlive++] = newElmInt(state->stack_depth);
     live[nlive++] = newElmInt(state->stack_depth);
 
-    // Call another function, which does a tail call to another
-    void* push4 = GC_stack_push(&Basics_sub);
-    live[nlive++] = push4;
+    // Call a function that makes a tail call
+    void* push_into_tailrec = GC_stack_push();
+    live[nlive++] = push_into_tailrec;
     dead[ndead++] = newElmInt(state->stack_depth);
     dead[ndead++] = newElmInt(state->stack_depth);
 
-    // Tail calls
-    Closure* ctail1 = Utils_clone(&Basics_mul);
+    // Tail call. Has completed when we stop the world => dead
+    Closure* ctail1 = GC_allocate(sizeof(Closure) + 2*sizeof(void*));
+    ctail1->header = HEADER_CLOSURE(2);
+    ctail1->n_values = 2;
+    ctail1->max_values = 2;
+    ctail1->evaluator = NULL; // just a mock. would be a function pointer in real life
+    ctail1->values[0] = dead[ndead-1];
+    ctail1->values[1] = dead[ndead-2];
     dead[ndead++] = ctail1;
     dead[ndead++] = state->current_heap; // tailcall we're about to allocate
-    GC_stack_tailcall(ctail1, push4);
-    dead[ndead++] = newElmInt(state->stack_depth);
-    dead[ndead++] = newElmInt(state->stack_depth);
+    GC_stack_tailcall(ctail1, push_into_tailrec);
 
-    Closure* ctail2 = Utils_clone(&Basics_mul);
+    // arguments to the next tail call
+    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(state->stack_depth);
+
+    // Tail call. still evaluating this when we stopped the world => keep closure alive
+    Closure* ctail2 = GC_allocate(sizeof(Closure) + 2*sizeof(void*));
+    ctail2->header = HEADER_CLOSURE(2);
+    ctail2->n_values = 2;
+    ctail2->max_values = 2;
+    ctail1->evaluator = NULL; // just a mock. would be a function pointer in real life
+    ctail2->values[0] = live[nlive-1];
+    ctail2->values[1] = live[nlive-2];
     live[nlive++] = ctail2;
-    live[nlive++] = state->current_heap; // tailcall we're about to allocate
-    GC_stack_tailcall(ctail2, push4);
+    live[nlive++] = state->current_heap; // stack tailcall we're about to allocate
+    GC_stack_tailcall(ctail2, push_into_tailrec);
+
+    // allocated just before we stopped the world
     live[nlive++] = newElmInt(state->stack_depth);
     live[nlive++] = newElmInt(state->stack_depth);
 
@@ -231,7 +257,7 @@ char* gc_stackmap_test() {
     }
 
     ElmValue* ignore_below = (ElmValue*)c1;
-    mark_stack_map(ignore_below);
+    mark(ignore_below);
 
     if (verbose) {
         printf("Final heap state:\n");

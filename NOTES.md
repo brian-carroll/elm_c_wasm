@@ -5,6 +5,8 @@ Next steps
         - be able to create a `Program`
         - figure out some of the tricky stuff to do with effects and JS interop
     - Translate Scheduler.js and Platform.js to C & Elm
+        - Maybe Elm isn't the best way to go. Might be better in C.
+        - The only constraint I really need is that new must point to old. Other than that I can mutate values.
     - Scheduler & Tasks
     - Ports, Effect Managers, HTTP, vdom
 - Other core libs
@@ -33,9 +35,10 @@ GC thoughts
 ===========
 - Stack map
     - Build stack map tracking into `apply`
-    - On entering a new Closure, cons a `StackPush` onto the stack map, referencing the Closure
+    - On entering a new Closure, cons a `StackPush` onto the stack map. It's a marker for which values were created in which functions.
     - On returning from a Closure, create a `StackPop`
         - A Cons where the tail is the `StackPush` where we entered the same Closure
+        - Threading the StackPush pointer through `apply` to the Stack Pop allows us to skip over all deeper function calls
         - Replaces the old head, skipping over any other pushes and pops that happened in between (because they're not on the call stack anymore)
         - `StackPop` has a return value pointer
     - On returning with a tail-call closure, create a `StackTailCall`
@@ -50,6 +53,33 @@ GC thoughts
         | StackTailCall Closure TailClosure StackMap
         | StackRoot
     ```
+
+- Does StackPush need to reference its Closure?
+    - Only makes a difference for the entry function
+    - All Closures for deeper stack levels are either:
+        - Allocated by live functions and so will get marked by them
+        - Located off-heap as global constants
+    - The entry point for the stack is always an effect callback, like a DOM event handler or HTTP response handler, etc.
+    - This is in an effect manager, and likely has some closed-over values in it (such as which Msg to sendToApp)
+    - We can only unwind & replay the stack below `sendToApp`. It's only below that that things are guaranteed pure and replayable. Never pop back up *into* `sendToApp`. Stay below it.
+    - Maybe `sendToApp` itself places a special marker in the stackmap like `StackReplayLimit` instead of `StackEmpty`.
+    - When unwinding, `apply` needs to look out for the top level replayable closure.
+    - So we're never allowed to use `apply` for impure functions
+
+
+- Effects and replay
+    - What happens to my impure Elm Kernel code?
+        - Only have a few impure functions, they can set a marker to prevent replaying an effectful function.
+        - I've only done this in Scheduler. All they do is mutate a global state pointer, which is a GC root as well.
+        - Maybe better off in C anyway.
+    - What do the stack and heap look like in effects?
+        - Effects happen after an update cycle via `_Platform_dispatchEffects`
+        - Generates an effect object per manager
+        - Does a `_Scheduler_rawSend` for each
+            - Pushes a message into the mailbox of that process
+
+    - Actual effects triggered by `_Scheduler_step`, which is called from `_Scheduler_rawSpawn` and `_Scheduler_rawSend`
+
 
 - Replacing stack pointers using indirect pointers / double pointers
     - Might rely on C compiler optimisations not being too clever
