@@ -31,11 +31,6 @@ GcState* GC_init() {
 }
 
 
-void GC_register_root(void* root) {
-    state.roots = (ElmValue*)newCons(root, state.roots);
-}
-
-
 static void* collect() {
     printf("collect: not implemented yet\n");
     return state.current_heap;
@@ -283,12 +278,23 @@ void mark_stack_map(ElmValue* ignore_below) {
 //     }
 // }
 
+
+void GC_register_root(ElmValue** root_mutable_pointer) {
+    state.roots = (ElmValue*)newCons(root_mutable_pointer, state.roots);
+}
+
+
 void mark(ElmValue* ignore_below) {
-    ElmValue* root_cell = state.roots;
-    while (root_cell->header.tag == Tag_Cons) {
+    for (ElmValue* root_cell=state.roots; root_cell->header.tag==Tag_Cons; root_cell=root_cell->cons.tail) {
         mark_value(root_cell);
-        mark_trace(root_cell->cons.head, ignore_below);
-        root_cell = root_cell->cons.tail;
+
+        // Each GC root is a mutable pointer in a fixed location outside the dynamic heap,
+        // pointing to a value on the dynamic heap that should be preserved.
+        // e.g. After `update`, the GC root pointer for `model` will be switched from the old to the new value.
+        // The double pointer is the off-heap fixed address where we store the address of the current value
+        ElmValue** root_mutable_pointer = (ElmValue**)root_cell->cons.head;
+        ElmValue* live_heap_value = *root_mutable_pointer;
+        mark_trace(live_heap_value, ignore_below);
     }
     mark_stack_map(ignore_below);
 }

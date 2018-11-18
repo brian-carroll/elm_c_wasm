@@ -159,9 +159,9 @@ char* gc_stackmap_test() {
 
 
     // Call the top-level function (an effect callback or incoming port)
-    Closure* c1 = Utils_clone(mock_effect_callback);
+    ElmValue* c1 = (ElmValue*)Utils_clone(mock_effect_callback);
     live[nlive++] = state->current_heap; // the root Cons cell we're about to allocate
-    GC_register_root(c1); // Effect manager is keeping this Closure alive by connecting it to the GC root.
+    GC_register_root(&c1); // Effect manager is keeping this Closure alive by connecting it to the GC root.
     live[nlive++] = c1;
 
     void* push1 = GC_stack_push();
