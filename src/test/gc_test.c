@@ -8,42 +8,9 @@
 #include "./test.h"
 
 
-/*
-    stack map
-        create by calling apply
-        need a sample Elm program
-            a few levels of calls
-            different numbers of calls
-            some allocations
-            self tail calls
-            mutual tail calls
-        Ideally some kind of generator like jasmine marbles
-        Maybe one evaluator that parses a string to know what to do
-        Configure each function evaluator
-            [a,a,a,c(1),a,a,a,c(2),a,c(3),a,a,a,c(self)]
-        Configure the point at which it bails
-            After the 3rd allocation in function 4
+// Predeclare internal functions from gc.c tested here
+void mark(ElmValue* ignore_below);
 
-    Wait...
-    What errors am I trying to catch?
-        Stupid coding mistakes due to C being C
-        Don't get carried away
-        Design tests bottom-up
-
-    Stack map
-        objects are created as expected
-        If I create a bunch of stackmap items in a row they are linked
-        If I create other objects in-between, they are skipped
-
-    Mark stack map
-        Create a stack map
-        Create some junk
-        Mark it
-        Check the right things are marked
-
-    For each test, create a new heap, then fill it with what you want
-
-*/
 
 void print_heap(GcState *state) {
 
@@ -52,6 +19,7 @@ void print_heap(GcState *state) {
 
     printf("|   Address    | Mark | Size | Value\n");
     printf("| ------------ | ---- | ---- | -----\n");
+
     for (Header* h = from ; h < to ; h += h->size) {
         if (h->size == 0) {
             printf("Zero-size object at %llx = %s\n", (u64)h, hex(h,4));
@@ -68,7 +36,7 @@ void print_heap(GcState *state) {
                 printf("Float %f", v->elm_float.value);
                 break;
             case Tag_Char:
-                printf("Char 0x%2x", v->elm_char.value);
+                printf("Char 0x%8x", v->elm_char.value);
                 break;
             case Tag_String:
                 printf("String \"%s\"", v->elm_string.bytes);
@@ -291,14 +259,6 @@ char* gc_stackmap_test() {
 }
 
 
-
-char* gc_mark_test() {
-
-
-    return NULL;
-}
-
-
 char* gc_test() {
     if (verbose) {
         printf("\n");
@@ -307,6 +267,5 @@ char* gc_test() {
     }
 
     mu_run_test(gc_stackmap_test);
-    mu_run_test(gc_mark_test);
     return NULL;
 }

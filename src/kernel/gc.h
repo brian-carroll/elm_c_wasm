@@ -42,10 +42,4 @@ void* GC_next_replay();
 void* GC_allocate(size_t size);
 
 
-// Private functions exposed only for testing
-void mark_stack_map(ElmValue* ignore_below);
-void mark(ElmValue* ignore_below);
-
-
-
 #endif

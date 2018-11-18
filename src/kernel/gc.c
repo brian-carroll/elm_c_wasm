@@ -214,7 +214,7 @@ static void mark_linear(void* from, void* to) {
     }
 }
 
-void mark_stack_map(ElmValue* ignore_below) {
+static void mark_stack_map(ElmValue* ignore_below) {
     // Types are important for pointer arithmetic, be careful
     Custom* stack_item = state.stack_map;
     Custom* prev_stack_item = (Custom*)state.current_heap;

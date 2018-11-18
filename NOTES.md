@@ -20,7 +20,6 @@ Next steps
 
 GC next steps
 =============
-- Test tail calls
 - Implement replay mode
 - Refactor GC state types
     - figure out ElmValue, Header, u32, etc.
