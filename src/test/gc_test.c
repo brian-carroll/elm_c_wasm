@@ -12,6 +12,7 @@
 // Predeclare internal functions from gc.c tested here
 void mark(ElmValue* ignore_below);
 bool is_marked(void* p);
+void mark_value(void* p);
 
 
 void print_heap(GcState *state) {
@@ -99,7 +100,18 @@ void print_state(GcState* state) {
     printf("roots=%llx\n", (u64)state->roots);
     printf("stack_map=%llx\n", (u64)state->stack_map);
     printf("stack_depth=%d\n", state->stack_depth);
-    printf("pages[0]=%llx\n", (u64)state->pages);
+    printf("bottom of heap=%llx\n", (u64)state->pages[0].data);
+
+    // find last non-zero word in the bitmap
+    u32 last_word = GC_PAGE_SLOTS/GC_BITMAP_WORDSIZE - 1;
+    while (state->pages[0].bitmap[--last_word] == 0) {}
+
+    // Display bitmap in hex
+    printf("Bitmap:\n");
+    for (u32 word=0; word<=last_word; word++) {
+        printf("%2x | %016llx\n", word, state->pages[0].bitmap[word]);
+    }
+
     printf("\n");
 }
 
@@ -221,17 +233,15 @@ char* gc_stackmap_test() {
     live[nlive++] = newElmInt(state->stack_depth);
 
 
-    if (verbose) {
-        printf("GC final state:\n");
-        print_state(state);
-    }
-
     ElmValue* ignore_below = (ElmValue*)c1;
     mark(ignore_below);
 
     if (verbose) {
         printf("Final heap state:\n");
         print_heap(state);
+        printf("\n");
+        printf("GC final state:\n");
+        print_state(state);
     }
 
     u32 tested_size = 0;
@@ -296,6 +306,58 @@ char* gc_page_struct_test() {
 }
 
 
+char* gc_bitmap_test() {
+    char str[] = "This is a test string that takes up a few bytes.";
+
+    GcState* state = GC_init();
+
+    for (u32 i=0; i<10; i++) {
+        void *p1, *p2, *p3, *p4;
+
+        p1 = newElmInt(1);
+        p2 = newElmInt(0);
+        p3 = newElmString(sizeof(str), str);
+        p4 = newElmInt(0);
+
+        mark_value(p1);
+        mark_value(p3);
+
+        mu_assert("p1 should be marked", is_marked(p1));
+        mu_assert("p2 should NOT be marked", !is_marked(p2));
+        mu_assert("p3 should be marked", is_marked(p3));
+        mu_assert("p4 should NOT be marked", !is_marked(p4));
+    }
+
+    if (verbose) {
+        printf("\n");
+        printf("Bitmap test\n");
+        printf("-----------\n");
+        print_heap(state);
+        print_state(state);
+        printf("\n");
+    }
+
+    u32* bottom_of_heap = state->pages[0].data;
+    u32* top_of_heap = state->current_heap;
+
+    u32* ptr = bottom_of_heap;
+    u64* bitmap = state->pages[0].bitmap;
+
+    u32 w = 0;
+    while (ptr <= top_of_heap) {
+        u64 word = bitmap[w];
+        for (u32 b=0; b<64; b++) {
+            bool bitmap_bit = (word & ((u64)1 << b)) != 0;
+            mu_assert("is_marked should match the bitmap", is_marked(ptr) == bitmap_bit);
+            ptr++;
+        }
+        w++;
+    }
+
+    return NULL;
+}
+
+
 char* gc_test() {
     if (verbose) {
         printf("\n");
@@ -303,7 +365,8 @@ char* gc_test() {
         printf("--\n");
     }
 
-    mu_run_test(gc_stackmap_test);
     mu_run_test(gc_page_struct_test);
+    mu_run_test(gc_bitmap_test);
+    mu_run_test(gc_stackmap_test);
     return NULL;
 }

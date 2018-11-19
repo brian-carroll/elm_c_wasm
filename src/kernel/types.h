@@ -35,11 +35,6 @@ typedef enum {
 } Tag;
 
 
-typedef enum {
-    GcDead,
-    GcLive
-} GcMark;
-
 typedef struct {
     u32 size :28;       // payload size in integers (28 bits => <1GB)
     Tag tag :4;         // runtime type tag (4 bits)

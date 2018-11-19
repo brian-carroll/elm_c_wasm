@@ -21,6 +21,7 @@ GcState* GC_init() {
     };
     u32* heap_data = state.pages[0].data;
     memset(heap_data, 0, GC_PAGE_SLOTS*4);
+    memset(state.pages[0].bitmap, 0, sizeof(state.pages[0].bitmap));
     state.system_max_heap = &heap_data[GC_PAGE_SLOTS-1];
     state.max_heap = state.system_max_heap;
     state.current_heap = &heap_data[0];
@@ -59,7 +60,7 @@ void mark_value(void* p) {
 
     // TODO: handle objects crossing page boundaries
     Header* h = (Header*) p;
-    u32 last_slot = first_slot + h->size;
+    u32 last_slot = first_slot + h->size - 1;
     u32 last_word = last_slot / GC_BITMAP_WORDSIZE;
     u32 last_bit = last_slot % GC_BITMAP_WORDSIZE;
 
@@ -86,7 +87,7 @@ bool is_marked(void* p) {
 
     u64* bitmap = state.pages[0].bitmap;
 
-    u64 mask = 1 << bit;
+    u64 mask = (u64)1 << bit;
     return (bitmap[word] & mask) != 0;
 }
 
