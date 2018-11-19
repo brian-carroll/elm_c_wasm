@@ -10,6 +10,7 @@
 a.out
 build.log
 dist/
+junk.c
 
 # Generated report
 opt.md

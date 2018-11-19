@@ -31,8 +31,90 @@ GcState* GC_init() {
 }
 
 
-static void* collect() {
-    printf("collect: not implemented yet\n");
+void* next_heap_object(void* p) {
+    Header* h = (Header*)p;
+    return (void*)(h + h->size);
+}
+
+const u64 ALL_ONES = -1;
+
+u64 bitmask(u32 first_bit, u32 last_bit) {
+    u64 mask = ALL_ONES;
+    mask <<= 63 - last_bit;
+    mask >>= 63 - (last_bit - first_bit);
+    mask <<= first_bit;
+    return mask;
+}
+
+
+void mark_value(void* p) {
+    u32* p32 = (u32*)p;
+    u32 first_slot = p32 - state.pages[0].data;
+
+    // TODO: handle multiple pages
+
+    if (first_slot < 0 || first_slot >= GC_PAGE_SLOTS) return; 
+    u32 first_word = first_slot / GC_BITMAP_WORDSIZE;
+    u32 first_bit = first_slot % GC_BITMAP_WORDSIZE;
+
+    // TODO: handle objects crossing page boundaries
+    Header* h = (Header*) p;
+    u32 last_slot = first_slot + h->size;
+    u32 last_word = last_slot / GC_BITMAP_WORDSIZE;
+    u32 last_bit = last_slot % GC_BITMAP_WORDSIZE;
+
+    u64* bitmap = state.pages[0].bitmap;
+    if (first_word == last_word) {
+        bitmap[first_word] |= bitmask(first_bit, last_bit);
+    } else {
+        bitmap[first_word] |= bitmask(first_bit, 63);
+        bitmap[last_word] |= bitmask(0, last_bit);
+        for (u32 word = first_word+1; word<last_word; ++word) {
+            bitmap[word] = ALL_ONES;
+        }
+    }
+}
+
+
+bool is_marked(void* p) {
+    u32* p32 = (u32*)p;
+    u32 slot = p32 - state.pages[0].data;
+    if ((slot < 0) || (slot >= GC_PAGE_SLOTS)) return true; // off heap => not garbage, stop tracing
+
+    u32 word = slot / GC_BITMAP_WORDSIZE;
+    u32 bit = slot % GC_BITMAP_WORDSIZE;
+
+    u64* bitmap = state.pages[0].bitmap;
+
+    u64 mask = 1 << bit;
+    return (bitmap[word] & mask) != 0;
+}
+
+
+
+static u32* compact() {
+
+    // for now, always compact entire heap
+    u32* current = state.pages[0].data;
+
+    // skip live data
+    while (is_marked(current)) {
+        current = next_heap_object(current);
+    }
+
+    // found garbage. Overwrite live stuff *to* here.
+    u32* to = current;
+
+    // skip garbage
+    while (!is_marked(current)) {
+        current = next_heap_object(current);
+    }
+
+    // found live data. Copy it.
+
+    state.current_heap = to; // dummy to silence compiler error
+
+
     return state.current_heap;
 }
 
@@ -46,23 +128,8 @@ void* GC_allocate(size_t size) {
         state.current_heap = new_heap;
         return old_heap;
     } else {
-        return collect();
+        return compact();
     }
-}
-
-void* next_heap_object(void* p) {
-    Header* h = (Header*)p;
-    return (void*)(h + h->size);
-}
-
-void mark_value(void* p) {
-    Header* h = (Header*)p;
-    if (h->gc_mark == GcLive) printf("double mark at %llx\n", (u64)h);
-    h->gc_mark = GcLive; // Will probably use bitmaps later instead of this
-}
-
-bool is_marked(Header h) {
-    return h.gc_mark == GcLive;
 }
 
 
@@ -70,7 +137,7 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
     void** children; // array of pointers to child objects
     u32 n_children = 0;
 
-    if (is_marked(v->header)) return;
+    if (is_marked(v)) return;
     if (v < ignore_below) return;
 
     mark_value(v);

@@ -67,23 +67,15 @@ int count_flags(u32 flags) {
 char* test_header_layout() {
     Header mask_tag = (Header){
         .tag = -1,
-        .gc_mark = 0,
-        .size = 0
-    };
-    Header mask_mark = (Header){
-        .tag = 0,
-        .gc_mark = -1,
         .size = 0
     };
     Header mask_size = (Header){
         .tag = 0,
-        .gc_mark = 0,
         .size = -1
     };
 
     if (verbose) {
         printf("mask_tag  BE=%08x, LE=%s\n", *(u32*)&mask_tag,   hex(&mask_tag,   4));
-        printf("mask_mark BE=%08x, LE=%s\n", *(u32*)&mask_mark, hex(&mask_mark, 4));
         printf("mask_size BE=%08x, LE=%s\n", *(u32*)&mask_size,  hex(&mask_size,  4));
         printf("\n");
     }
@@ -99,13 +91,8 @@ char* test_header_layout() {
     );
 
     mu_assert(
-        "GC mark field should have 1 bit",
-        count_flags(*(u32*)&mask_mark) == 1
-    );
-
-    mu_assert(
-        "Size field should have 27 bits",
-        count_flags(*(u32*)&mask_size) == 27
+        "Size field should have 28 bits",
+        count_flags(*(u32*)&mask_size) == 28
     );
 
     return NULL;

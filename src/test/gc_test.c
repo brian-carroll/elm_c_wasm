@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
@@ -10,6 +11,7 @@
 
 // Predeclare internal functions from gc.c tested here
 void mark(ElmValue* ignore_below);
+bool is_marked(void* p);
 
 
 void print_heap(GcState *state) {
@@ -27,7 +29,7 @@ void print_heap(GcState *state) {
             return;
         }
         ElmValue* v = (ElmValue*)h;
-        printf("| %llx |  %c   |  %2d  | ", (u64)v, v->header.gc_mark ? 'X' : ' ', v->header.size);
+        printf("| %llx |  %c   |  %2d  | ", (u64)v, is_marked(v) ? 'X' : ' ', v->header.size);
         switch (h->tag) {
             case Tag_Int:
                 printf("Int %d", v->elm_int.value);
@@ -238,7 +240,7 @@ char* gc_stackmap_test() {
         ElmValue* v = (ElmValue*)dead[ndead];
         msg = malloc(30);
         sprintf(msg, "%llx should be dead", (u64)v);
-        mu_assert(msg, v->header.gc_mark == 0);
+        mu_assert(msg, !is_marked(v));
         tested_size += v->header.size;
     }
 
@@ -246,7 +248,7 @@ char* gc_stackmap_test() {
         ElmValue* v = (ElmValue*)live[nlive];
         msg = malloc(30);
         sprintf(msg, "%llx should be live", (u64)v);
-        mu_assert(msg, v->header.gc_mark == 1);
+        mu_assert(msg, is_marked(v));
         tested_size += v->header.size;
     }
 

@@ -9,14 +9,14 @@
 #define GC_BLOCK_BYTES 512
 #define GC_PAGE_BLOCKS (GC_PAGE_BYTES/(GC_BLOCK_BYTES+(GC_BLOCK_BYTES/32)+sizeof(u16)))
 #define GC_PAGE_SLOTS (GC_PAGE_BLOCKS*GC_BLOCK_BYTES/4)
-
+#define GC_BITMAP_WORDSIZE 64
 
 // fields ordered by decreasing unit size to avoid alignment padding
 typedef struct {
-    u64 bitmap[GC_PAGE_SLOTS/64];
+    u64 bitmap[GC_PAGE_SLOTS/GC_BITMAP_WORDSIZE];
     u32 data[GC_PAGE_SLOTS];
     u16 offsets[GC_PAGE_BLOCKS];
-    u8 unused[GC_PAGE_BYTES - (8*GC_PAGE_SLOTS/64 + 4*GC_PAGE_SLOTS + 2*GC_PAGE_BLOCKS)];
+    u8 unused[GC_PAGE_BYTES - (8*GC_PAGE_SLOTS/GC_BITMAP_WORDSIZE + 4*GC_PAGE_SLOTS + 2*GC_PAGE_BLOCKS)];
 } GcPage;
 
 
