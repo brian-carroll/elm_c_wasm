@@ -24,11 +24,46 @@ GC next steps
 - Refactor GC state types
     - figure out ElmValue, Header, u32, etc.
     - try to use arrays where possible rather than pointer arithmetic
-- Refactor marking to use bitmaps & offsets
 - Implement compaction
 - Measure GC code size in Wasm
     - Create example Elm program to generate a list or something
     - Compile option to include only allocation, no collection.
+
+
+
+Dynamic allocation
+==================
+- `brk` moves the top of the data segment + heap.
+- This is how to ensure the heap is in the right place
+- GC_init needs to call `brk`
+- Have some min amount to grab at a time. 64kB? 1MB? 128MB?
+- On init, round up current size to a page, then add a few more pages
+
+- Contiguous heap
+    - Much nicer for the main data area to be contiguous rather than paged
+    - Put the bitmap & offsets together at bottom of heap
+    - When we grow total memory, grow the bitmap too
+    - => move values _up_
+    - May need to run compaction sliding up instead of down
+    - OR calculate the new bottom-of-heap location and start there.
+        - Stuff below that line gets moved up, stuff above gets moved down
+        - Need to know how much live data there is above and below
+        - This can be calculated during marking
+        - Before marking, work out where new bottom-of-heap will be
+        - During marking, keep count of live data between current and new bottom-of-heap
+        - Find enough garbage _above_ the new bottom-of-heap to make room for data below it to move upwards
+        - That 'enough garbage' point is the dividing line between slide-up and slide-down compaction
+        - But slide-up is a bit of a pain. Iterating addresses downwards is hard (very slow) because the 'linked list' of objects links upwards.
+        - However bitmap can tell us the start of each patch of live data and the first int of that is definitely a header!
+        - Bitmap makes all of this stuff way faster actually
+    - Actually no need to slide both up _and_ down, we just allocated a ton of memory at the top so that'll do. Keep the pause short, especially after making a `brk` call. Just slide up to make room for the bitmap.
+
+
+
+
+
+
+
 
 GC thoughts
 ===========
