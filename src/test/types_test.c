@@ -46,9 +46,11 @@ char* test_elm_constants() {
         printf("\n");
     }
 
-    mu_assert("Unit should be 8 bytes wide", sizeof(Unit)==8);
-    mu_assert("True should be 8 bytes wide", sizeof(True)==8);
-    mu_assert("False should be 8 bytes wide", sizeof(False)==8);
+    // These are now defined as ElmValues to avoid lots of casting
+    // Only really need 8 bytes each, not 32. But hey, still tiny.
+    mu_assert("True should be 32 bytes wide", sizeof(True)==32);
+    mu_assert("False should be 32 bytes wide", sizeof(False)==32);
+    mu_assert("False should be 32 bytes wide", sizeof(False)==32);
 
     return NULL;
 }
@@ -100,7 +102,7 @@ char* test_header_layout() {
 
 char* test_nil() {
     if (verbose) printf("Nil size=%ld addr=%s tag=%d\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag);
-    mu_assert("Nil should be the same size as a header", sizeof(Nil) == sizeof(Header));
+    mu_assert("Nil should be the same size as ElmValue", sizeof(Nil) == sizeof(ElmValue));
     mu_assert("Nil should have the right tag field", Nil.header.tag == Tag_Nil);
     mu_assert("Nil should have the right size field", Nil.header.size == 1);
     return NULL;
@@ -131,7 +133,6 @@ char* test_cons() {
     mu_assert("[()] should have 'head' pointing to Unit", c->head == &Unit);
     mu_assert("[()] should have 'tail' pointing to Nil", c->tail == &Nil);
 
-    free(c);
     return NULL;
 }
 
@@ -186,12 +187,6 @@ char* test_tuples() {
     mu_assert("(1,2,3) should have 'b' pointing to 2", t3->b == &i2);
     mu_assert("(1,2,3) should have 'c' pointing to 3", t3->c == &i3);
 
-
-    free(i1);
-    free(i2);
-    free(i3);
-    free(t2);
-    free(t3);
     return NULL;
 }
 
@@ -209,7 +204,6 @@ char* test_int() {
     mu_assert("newElmInt should insert correct size field", i->header.size == 2);
     mu_assert("newElmInt 123 should insert value of 123", i->value == 123);
 
-    free(i);
     return NULL;
 }
 
@@ -229,7 +223,6 @@ char* test_float() {
     );
     mu_assert("newElmFloat should insert correct size field", f->header.size == 4);
 
-    free(f);
     return NULL;
 }
 
@@ -247,7 +240,6 @@ char* test_char() {
     mu_assert("ElmChar should have correct size field", ch->header.size == 2);
     mu_assert("ElmChar 'A' should have correct value", ch->value == 'A');
 
-    free(ch);
     return NULL;
 }
 
@@ -288,17 +280,12 @@ char* test_strings() {
 
     mu_assert("ElmString should have the correct type tag", str4->header.tag == Tag_String);
 
-    free(str4);
-    free(str5);
-    free(str6);
-    free(str7);
-    free(str8);
-    free(strN);
     return NULL;
 }
 
 char* test_custom() {
-    Custom *c = malloc(sizeof(Custom) + 2*sizeof(void*));
+    u8 memory[sizeof(Custom) + 2*sizeof(void*)];
+    Custom *c = (Custom*) memory;
     c->header = HEADER_CUSTOM(2);
     c->ctor = 1;
     c->values[0] = &Unit;
@@ -318,18 +305,18 @@ char* test_custom() {
     #endif
     mu_assert("HEADER_CUSTOM macro should insert correct tag field", c->header.tag == Tag_Custom);
 
-
-    free(c);
     return NULL;
 }
 
 char* test_record() {
-    FieldSet *fs = malloc(sizeof(FieldSet) + 2*sizeof(u32));
+    u8 mem_fs[sizeof(FieldSet) + 2*sizeof(u32)];
+    FieldSet *fs = (FieldSet*) mem_fs;
     fs->size = 2;
     fs->fields[0] = 0xaa;
     fs->fields[1] = 0x55;
 
-    Record *r = malloc(sizeof(Record) + 2*sizeof(void*));
+    u8 mem_r[sizeof(Record) + 2*sizeof(void*)];
+    Record *r = (Record*) mem_r;
     r->header = HEADER_RECORD(2);
     r->fieldset = fs;
     r->values[0] = &Unit;
@@ -360,8 +347,6 @@ char* test_record() {
     #endif
     mu_assert("HEADER_RECORD macro should insert correct tag field", r->header.tag == Tag_Record);
 
-    free(fs);
-    free(r);
     return NULL;
 }
 
@@ -370,7 +355,8 @@ void* dummy_evaluator(void** args) {
 }
 
 char* test_closure() {
-    Closure *c = malloc(sizeof(Closure) + 2*sizeof(void*));
+    u8 mem_c[sizeof(Closure) + 2*sizeof(void*)];
+    Closure *c = (Closure*) mem_c;
     c->header = HEADER_CLOSURE(2);
     c->evaluator = &dummy_evaluator;
     c->max_values = 3;
@@ -392,7 +378,6 @@ char* test_closure() {
     #endif
     mu_assert("HEADER_CLOSURE macro should insert correct tag field", c->header.tag == Tag_Closure);
 
-    free(c);
     return NULL;
 }
 

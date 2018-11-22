@@ -44,8 +44,11 @@ char* test_records() {
     u32 otherField = 42;
     u32 stuff = 71;
 
-    FieldSet* fsRecord1 = malloc(sizeof(FieldSet) + 2*sizeof(u32));
-    FieldSet* fsRecord2 = malloc(sizeof(FieldSet) + 3*sizeof(u32));
+    u8 mem_fsRecord1[sizeof(FieldSet) + 2*sizeof(u32)];
+    u8 mem_fsRecord2[sizeof(FieldSet) + 3*sizeof(u32)];
+
+    FieldSet* fsRecord1 = (FieldSet*) mem_fsRecord1;
+    FieldSet* fsRecord2 = (FieldSet*) mem_fsRecord2;
 
     fsRecord1->size = 2;
     fsRecord1->fields[0] = someField;
@@ -56,8 +59,11 @@ char* test_records() {
     fsRecord2->fields[1] = someField;
     fsRecord2->fields[2] = stuff;
 
-    Record* r1 = malloc(sizeof(Record) + 2*sizeof(void*));
-    Record* r2 = malloc(sizeof(Record) + 3*sizeof(void*));
+    u8 mem_r1[sizeof(Record) + 2*sizeof(void*)];
+    u8 mem_r2[sizeof(Record) + 3*sizeof(void*)];
+
+    Record* r1 = (Record*) mem_r1;
+    Record* r2 = (Record*) mem_r2;
 
     r1->header = HEADER_RECORD(2);
     r1->fieldset = fsRecord1;
@@ -209,12 +215,6 @@ char* test_apply(void) {
     mu_assert("answer should be ElmInt 6",
         memcmp(answer, &expected_answer, sizeof(ElmInt)) == 0
     );
-
-    free(curried);
-    free(closure);
-    free(answer);
-    // The intermediate ElmInt created in eval_user_project_closure is unreachable, can't free it
-    // Oh well... tests won't crash anyway, I'm being too careful. I guess we need GC
     return NULL;
 }
 
@@ -330,7 +330,9 @@ char* test_eq(void) {
     mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]", A2(&Utils_eq, bigList1, bigList3) == &False);
 
 
-    Custom* custom_1_1A = malloc(sizeof(Custom) + 2*sizeof(void*));
+    u8 mem_1_1A[sizeof(Custom) + 2*sizeof(void*)];
+    Custom* custom_1_1A = (Custom*) mem_1_1A;
+
     custom_1_1A->header = HEADER_CUSTOM(2);
     custom_1_1A->ctor = 1;
     custom_1_1A->values[0] = &one;
@@ -354,13 +356,14 @@ char* test_eq(void) {
     mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'", A2(&Utils_eq, custom_1_1A, custom_1_1B) == &False);
 
 
-    FieldSet* fs = malloc(sizeof(FieldSet) + 2*sizeof(void*));
+    u8 mem_fs[sizeof(FieldSet) + 2*sizeof(void*)];
+    FieldSet* fs = (FieldSet*) mem_fs;
     fs->size = 2;
     fs->fields[0] = 123;
     fs->fields[1] = 321;
 
-    size_t rsize = sizeof(Record) + 2*sizeof(void*);
-    Record* rec12 = malloc(rsize);
+    u8 mem_rec12[sizeof(Record) + 2*sizeof(void*)];
+    Record* rec12 = (Record*) mem_rec12;
     rec12->header = HEADER_RECORD(2);
     rec12->fieldset = fs;
     rec12->values[0] = &one;
@@ -373,10 +376,10 @@ char* test_eq(void) {
     rec13->values[1] = &three;
 
     if (verbose) {
-        printf("rec12  = %s\n", hex(rec12, rsize));
-        printf("rec12a = %s\n", hex(rec12a, rsize));
-        printf("rec22  = %s\n", hex(rec22, rsize));
-        printf("rec13  = %s\n", hex(rec13, rsize));
+        printf("rec12  = %s\n", hex(rec12, sizeof(mem_rec12)));
+        printf("rec12a = %s\n", hex(rec12a, sizeof(mem_rec12)));
+        printf("rec22  = %s\n", hex(rec22, sizeof(mem_rec12)));
+        printf("rec13  = %s\n", hex(rec13, sizeof(mem_rec12)));
     }
     mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (ref)", A2(&Utils_eq, rec12, rec12) == &True);
     mu_assert("Expect: {a=1, b=2} == {a=1, b=2} (value)", A2(&Utils_eq, rec12, rec12a) == &True);

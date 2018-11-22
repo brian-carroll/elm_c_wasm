@@ -7,6 +7,7 @@
 #include "../kernel/utils.h"
 #include "../kernel/basics.h"
 #include "../kernel/string.h"
+#include "../kernel/gc.h"
 #include "./test.h"
 #include "./types_test.h"
 #include "./utils_test.h"
@@ -23,14 +24,20 @@
 int tests_run = 0;
 
 
-// Debug function
+// Debug function, with pre-allocated memory for strings
+// Avoiding use of malloc in test code in case it screws up GC
+// A single printf may require many separate hex strings
+#define TEST_MAX_HEXES_PER_PRINTF 16
+char hex_strings[TEST_MAX_HEXES_PER_PRINTF][9*1024/4];
 char* hex(void* addr, int size) {
-    char *str;
-    u32 i, c=0, n=(9*size)/4;
-    str = malloc(n);
+    static u32 rotate = 0;
+    rotate = (rotate+1) % TEST_MAX_HEXES_PER_PRINTF;
+
+    size = (size < 1024) ? size : 1024;
+    u32 i, c=0;
     for (i=0; i < size; c += 9, i += 4) {
         // Print in actual byte order (little endian)
-        sprintf(str + c,
+        sprintf(hex_strings[rotate] + c,
             "%02x%02x%02x%02x|",
             *(u8*)(addr + i),
             *(u8*)(addr + i + 1),
@@ -38,8 +45,8 @@ char* hex(void* addr, int size) {
             *(u8*)(addr + i + 3)
         );
     }
-    str[c-1] = 0; // erase last "|" and terminate the string
-    return str;
+    hex_strings[rotate][c-1] = 0; // erase last "|" and terminate the string
+    return hex_strings[rotate];
 }
 
 // Print a memory address held in a pointer
@@ -53,10 +60,10 @@ char* hex_ptr(void* ptr) {
 
 
 char* test_all() {
-    // mu_run_test(types_test);
-    // mu_run_test(utils_test);
-    // mu_run_test(basics_test);
-    // mu_run_test(string_test);
+    mu_run_test(types_test);
+    mu_run_test(utils_test);
+    mu_run_test(basics_test);
+    mu_run_test(string_test);
     mu_run_test(gc_test);
 
     return NULL;
@@ -67,6 +74,7 @@ char* test_all() {
 int main(int argc, char ** argv) {
     int opt;
 
+    GC_init();
     Types_init();
     Basics_init();
     Utils_init();
