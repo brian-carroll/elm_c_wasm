@@ -58,10 +58,77 @@ Dynamic allocation
         - Bitmap makes all of this stuff way faster actually
     - Actually no need to slide both up _and_ down, we just allocated a ton of memory at the top so that'll do. Keep the pause short, especially after making a `brk` call. Just slide up to make room for the bitmap.
 
+Code structure:
+
+Mutator API
+- GC_init
+- GC_register_root()
+- GC_malloc()
+- GC_maybe_collect()
+    - The only things on the call stack are GC roots
+
+- GC_stack_push
+- GC_stack_pop
+- GC_stack_tailcall
+- GC_next_replay
+
+Mutator API can use hidden state but always delegates to functions handling state explicitly
 
 
+GC operations
+- slide_up(old_bottom, new_bottom)
+- slide_down(ignore_below)
+- mark(ignore_below)
+- grow()
+- shrink()
+- controller(state)
+    - make the decisions. how much garbage is available to collect, are we in the middle of executing, should we grow or shrink memory, do we have enough idle time for things?
+
+Bitmap operations
+- Mark
+    - reset()
+    - mark_value(u32 slot)
+- Controller
+    - find_enough_garbage_bottom(u32 target_garbage)
+    - find_enough_garbage_top(u32 target_garbage)
+    - count_garbage(u32 from, u32 to)
+- Compact 
+    - bitmap_start_iteration(u32 slot, BitmapIter* iter)
+    - next_live(u32 slot, BitmapIter* iter)
+    - next_garbage(u32 slot, BitmapIter* iter)
+    - record_block_offset(u32 slot, BitmapIter* iter)
+    - forwarding_address(u32 old_slot, Bitmap* bitmap)
 
 
+Alignment
+- Slots should be sizeof(void*) because that's the alignment the compiler seems to expect.
+
+Controller algo
+- What can be known before marking?
+    - How big is nursery?
+    - How big is older generation area?
+    - How much space left before we need more?
+    - Are we executing on the stack, or between updates?
+    - Historical stats for prediction
+        - What % reduction do we normally get for nursery and older gen? IIR filter. (Complex algo design to use this, but small code) Easier to just do the marking?
+- What can be known after marking?
+    - Amount of garbage and live in nursery
+    - Amount of garbage and live in older gen
+- What actions can we take? Cheapest first:
+    - Do nothing
+    - Between updates, do a minor GC
+    - Between updates, do a major GC
+    - Between updates, request more memory and slide up
+    - Interrupt execution and do minor GC
+    - Interrupt execution and do major GC
+    - Interrupt execution and request more memory
+        - slide up now or later (bitmap allocated during slide)
+- How to map inputs to actions?
+    - Requesting more memory
+        - I know it's expensive but how expensive relative to GC? Needs benchmarking.
+        - When to fall back to it?
+        - Too many minor GCs in a row
+        - Not very much garbage lying around
 
 
 
