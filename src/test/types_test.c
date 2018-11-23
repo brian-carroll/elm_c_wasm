@@ -47,10 +47,10 @@ char* test_elm_constants() {
     }
 
     // These are now defined as ElmValues to avoid lots of casting
-    // Only really need 8 bytes each, not 32. But hey, still tiny.
-    mu_assert("True should be 32 bytes wide", sizeof(True)==32);
-    mu_assert("False should be 32 bytes wide", sizeof(False)==32);
-    mu_assert("False should be 32 bytes wide", sizeof(False)==32);
+    // Only really need 8 bytes each, not 16 or 32. But hey, still tiny.
+    mu_assert("Unit should be sizeof(ElmValue)", sizeof(Unit)==sizeof(ElmValue));
+    mu_assert("True should be sizeof(ElmValue)", sizeof(True)==sizeof(ElmValue));
+    mu_assert("False should be sizeof(ElmValue)", sizeof(False)==sizeof(ElmValue));
 
     return NULL;
 }

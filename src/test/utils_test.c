@@ -272,6 +272,7 @@ char* test_eq(void) {
     mu_assert("Expect: \"hello\" /= \"hello_\"", A2(&Utils_eq, hello1, hello_) == &False);
     mu_assert("Expect: \"hello_\" /= \"hello\"", A2(&Utils_eq, hello_, hello1) == &False);
 
+    if (verbose) printf("Running List equality tests\n");
     Cons* cons2 = newCons(&two, &Nil);
     Cons* cons2a = newCons(&two, &Nil);
     Cons* cons3 = newCons(&three, &Nil);
@@ -293,6 +294,7 @@ char* test_eq(void) {
     mu_assert("Expect: [2,3] /= [2,2]", A2(&Utils_eq, cons23, cons22) == &False);
 
 
+    if (verbose) printf("Running Tuple equality tests\n");
     Tuple2* tuple23 = newTuple2(&two, &three);
     Tuple2* tuple23a = newTuple2(&two, &three);
     Tuple2* tuple32 = newTuple2(&three, &two);
@@ -318,6 +320,7 @@ char* test_eq(void) {
     mu_assert("Expect: (1,1,1) /= (1,1,2)", A2(&Utils_eq, tuple111, tuple112) == &False);
 
 
+    if (verbose) printf("Running recursive equality tests\n");
     Cons* bigList1 = newCons(&one, &Nil);
     Cons* bigList2 = newCons(&one, &Nil);
     Cons* bigList3 = cons2;
@@ -329,7 +332,7 @@ char* test_eq(void) {
     mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]", A2(&Utils_eq, bigList1, bigList2) == &True);
     mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]", A2(&Utils_eq, bigList1, bigList3) == &False);
 
-
+    if (verbose) printf("Running Custom type equality tests\n");
     u8 mem_1_1A[sizeof(Custom) + 2*sizeof(void*)];
     Custom* custom_1_1A = (Custom*) mem_1_1A;
 
@@ -356,6 +359,7 @@ char* test_eq(void) {
     mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'", A2(&Utils_eq, custom_1_1A, custom_1_1B) == &False);
 
 
+    if (verbose) printf("Running Record equality tests\n");
     u8 mem_fs[sizeof(FieldSet) + 2*sizeof(void*)];
     FieldSet* fs = (FieldSet*) mem_fs;
     fs->size = 2;

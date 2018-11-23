@@ -81,7 +81,9 @@ ElmString* newElmString(size_t n, char *str) {
 }
 
 u32 custom_params(Custom* c) {
-    return ((c->header.size * SIZE_UNIT) - sizeof(u32)) / sizeof(void*);
+    u32 total_size = c->header.size * SIZE_UNIT;
+    u32 before_pointers = sizeof(Header) + sizeof(u32);
+    return (total_size - before_pointers) / sizeof(void*);
 }
 
 
