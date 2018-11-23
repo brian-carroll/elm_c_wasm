@@ -39,7 +39,7 @@ void* next_heap_object(void* p) {
 
 const u64 ALL_ONES = -1;
 
-u64 bitmask(u32 first_bit, u32 last_bit) {
+u64 make_bitmask(u32 first_bit, u32 last_bit) {
     u64 mask = ALL_ONES;
     mask <<= 63 - last_bit;
     mask >>= 63 - (last_bit - first_bit);
@@ -48,13 +48,13 @@ u64 bitmask(u32 first_bit, u32 last_bit) {
 }
 
 
-void mark_value(void* p) {
+bool mark_value(void* p) {
     u32* p32 = (u32*)p;
     u32 first_slot = p32 - state.pages[0].data;
 
     // TODO: handle multiple pages
 
-    if (first_slot < 0 || first_slot >= GC_PAGE_SLOTS) return; 
+    if (first_slot >= GC_PAGE_SLOTS) return false; 
     u32 first_word = first_slot / GC_BITMAP_WORDSIZE;
     u32 first_bit = first_slot % GC_BITMAP_WORDSIZE;
 
@@ -65,56 +65,92 @@ void mark_value(void* p) {
     u32 last_bit = last_slot % GC_BITMAP_WORDSIZE;
 
     u64* bitmap = state.pages[0].bitmap;
+    bool already_marked;
     if (first_word == last_word) {
-        bitmap[first_word] |= bitmask(first_bit, last_bit);
+        u64 bitmask = make_bitmask(first_bit, last_bit);
+        already_marked = !!(bitmap[first_word] & bitmask);
+        bitmap[first_word] |= bitmask;
     } else {
-        bitmap[first_word] |= bitmask(first_bit, 63);
-        bitmap[last_word] |= bitmask(0, last_bit);
+        u64 first_mask = make_bitmask(first_bit, 63);
+        already_marked = !!(bitmap[first_word] & first_mask);
+        bitmap[first_word] |= first_mask;
+        bitmap[last_word] |= make_bitmask(0, last_bit);
         for (u32 word = first_word+1; word<last_word; ++word) {
             bitmap[word] = ALL_ONES;
         }
     }
+    return already_marked;
 }
 
 
 bool is_marked(void* p) {
     u32* p32 = (u32*)p;
     u32 slot = p32 - state.pages[0].data;
-    if ((slot < 0) || (slot >= GC_PAGE_SLOTS)) return true; // off heap => not garbage, stop tracing
+    if (slot >= GC_PAGE_SLOTS) return true; // off heap => not garbage, stop tracing
 
     u32 word = slot / GC_BITMAP_WORDSIZE;
     u32 bit = slot % GC_BITMAP_WORDSIZE;
-
-    u64* bitmap = state.pages[0].bitmap;
-
     u64 mask = (u64)1 << bit;
-    return (bitmap[word] & mask) != 0;
+
+    return (state.pages[0].bitmap[word] & mask) != 0;
+}
+
+
+u32 size_marked(void* p) {
+    u32* p32 = (u32*)p;
+    u32 slot = p32 - state.pages[0].data;
+    if (slot >= GC_PAGE_SLOTS) return 0;
+
+    u32 word = slot / GC_BITMAP_WORDSIZE;
+    u32 bit = slot % GC_BITMAP_WORDSIZE;
+    u64 mask = (u64)1 << bit;
+    u32 size = 0;
+
+    while (word < GC_PAGE_SLOTS/GC_BITMAP_WORDSIZE) {
+        while (mask) {
+            if ((state.pages[0].bitmap[word] & mask) == 0) {
+                return size;
+            }
+            size++;
+            mask <<= 1;
+        }
+        word++;
+        mask = 1;
+    }
+    return size;
 }
 
 
 
-static u32* compact() {
 
-    // for now, always compact entire heap
+static u32* compact() {
     u32* current = state.pages[0].data;
 
-    // skip live data
+    // skip initial live data, find first garbage patch
     while (is_marked(current)) {
         current = next_heap_object(current);
     }
-
-    // found garbage. Overwrite live stuff *to* here.
     u32* to = current;
 
-    // skip garbage
-    while (!is_marked(current)) {
-        current = next_heap_object(current);
+    while (current < state.current_heap) {
+        while (!is_marked(current)) {
+            current = next_heap_object(current);
+        }
+
+        u32* live_start = current;
+        u32* next_garbage = live_start + size_marked(live_start);
+
+        // TODO: Need fancier copying with pointer rewrites and stuff
+        // Simple copy from header up to first child. (Increments? Int or pointer?)
+        // Then start forwarding pointers (all of them will be pointing downwards)
+
+        for (u32* from=live_start; from<next_garbage; ++from) {
+            *to = *from;
+            to++;
+        }
+
+        current = to;
     }
-
-    // found live data. Copy it.
-
-    state.current_heap = to; // dummy to silence compiler error
-
 
     return state.current_heap;
 }
@@ -138,10 +174,10 @@ static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
     void** children; // array of pointers to child objects
     u32 n_children = 0;
 
-    if (is_marked(v)) return;
     if (v < ignore_below) return;
 
-    mark_value(v);
+    bool already_marked = mark_value(v);
+    if (already_marked) return;
 
     switch (v->header.tag) {
         case Tag_Int:

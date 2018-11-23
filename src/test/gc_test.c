@@ -30,7 +30,7 @@ void print_heap(GcState *state) {
             return;
         }
         ElmValue* v = (ElmValue*)h;
-        printf("| %llx |  %c   |  %2d  | ", (u64)v, is_marked(v) ? 'X' : ' ', v->header.size);
+        printf("| %12llx |  %c   |  %2d  | ", (u64)v, is_marked(v) ? 'X' : ' ', v->header.size);
         switch (h->tag) {
             case Tag_Int:
                 printf("Int %d", v->elm_int.value);
@@ -65,19 +65,19 @@ void print_heap(GcState *state) {
                     case 2: printf("GcStackPop"); break;
                     case 3: printf("GcStackTailCall"); break;
                 }
-                printf(" values= ");
+                printf(" values: ");
                 for (u32 i=0; i<custom_params(&v->custom); ++i) {
                     printf("%llx ", (u64)v->custom.values[i]);
                 }
                 break;
             case Tag_Record:
-                printf("Record fieldset=%llx values= ", (u64)v->record.fieldset);
+                printf("Record fieldset=%llx values: ", (u64)v->record.fieldset);
                 for (u32 i=0; i < v->record.fieldset->size; ++i) {
                     printf("%llx ", (u64)v->record.values[i]);
                 }
                 break;
             case Tag_Closure:
-                printf("Closure n_values=%d max_values=%d evaluator=%llx values= ",
+                printf("Closure n_values=%d max_values=%d evaluator=%llx values: ",
                     v->closure.n_values, v->closure.max_values, (u64)v->closure.evaluator
                 );
                 for (u32 i=0; i < v->closure.n_values; ++i) {
@@ -103,18 +103,19 @@ void print_state(GcState* state) {
     printf("bottom of heap=%llx\n", (u64)state->pages[0].data);
 
     // find last non-zero word in the bitmap
-    u32 last_word = GC_PAGE_SLOTS/GC_BITMAP_WORDSIZE - 1;
-    while (state->pages[0].bitmap[--last_word] == 0) {}
+    u32 bitmap_size = GC_PAGE_SLOTS/GC_BITMAP_WORDSIZE;
+    u32 last_word = bitmap_size;
+    while (state->pages[0].bitmap[--last_word] == 0 && last_word != 0) { }
 
-    // Display bitmap in hex
     printf("Bitmap:\n");
-    for (u32 word=0; word<=last_word; word++) {
+    for (u32 word=0; word <= last_word && word < bitmap_size; word++) {
         printf("%2x | %016llx\n", word, state->pages[0].bitmap[word]);
     }
 
     printf("\n");
 }
 
+char alive_or_dead_msg[30];
 
 char* gc_stackmap_test() {
     if (verbose) {
@@ -245,20 +246,17 @@ char* gc_stackmap_test() {
     }
 
     u32 tested_size = 0;
-    char* msg;
     while (ndead--) {
         ElmValue* v = (ElmValue*)dead[ndead];
-        msg = malloc(30);
-        sprintf(msg, "%llx should be dead", (u64)v);
-        mu_assert(msg, !is_marked(v));
+        sprintf(alive_or_dead_msg, "%llx should be dead", (u64)v);
+        mu_assert(alive_or_dead_msg, !is_marked(v));
         tested_size += v->header.size;
     }
 
     while (nlive--) {
         ElmValue* v = (ElmValue*)live[nlive];
-        msg = malloc(30);
-        sprintf(msg, "%llx should be live", (u64)v);
-        mu_assert(msg, is_marked(v));
+        sprintf(alive_or_dead_msg, "%llx should be live", (u64)v);
+        mu_assert(alive_or_dead_msg, is_marked(v));
         tested_size += v->header.size;
     }
 
@@ -307,7 +305,7 @@ char* gc_page_struct_test() {
 
 
 char* gc_bitmap_test() {
-    char str[] = "This is a test string that takes up a few bytes.";
+    char str[] = "This is a test string that's an odd number of ints.....";
 
     GcState* state = GC_init();
 
