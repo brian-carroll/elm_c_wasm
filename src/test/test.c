@@ -60,10 +60,10 @@ char* hex_ptr(void* ptr) {
 
 
 char* test_all() {
-    mu_run_test(types_test);
-    mu_run_test(utils_test);
-    mu_run_test(basics_test);
-    mu_run_test(string_test);
+    // mu_run_test(types_test);
+    // mu_run_test(utils_test);
+    // mu_run_test(basics_test);
+    // mu_run_test(string_test);
     mu_run_test(gc_test);
 
     return NULL;

@@ -6,7 +6,7 @@
 
 
 Cons* newCons(void* head, void* tail) {
-    Cons *p = GC_allocate(sizeof(Cons));
+    Cons *p = GC_malloc(sizeof(Cons));
     if (p == NULL) return pGcFull;
     p->header = HEADER_CONS;
     p->head = head;
@@ -15,7 +15,7 @@ Cons* newCons(void* head, void* tail) {
 };
 
 Tuple2* newTuple2(void* a, void* b) {
-    Tuple2 *p = GC_allocate(sizeof(Tuple2));
+    Tuple2 *p = GC_malloc(sizeof(Tuple2));
     if (p == NULL) return pGcFull;
     p->header = HEADER_TUPLE2;
     p->a = a;
@@ -24,7 +24,7 @@ Tuple2* newTuple2(void* a, void* b) {
 };
 
 Tuple3* newTuple3(void* a, void* b, void* c) {
-    Tuple3 *p = GC_allocate(sizeof(Tuple3));
+    Tuple3 *p = GC_malloc(sizeof(Tuple3));
     if (p == NULL) return pGcFull;
     p->header = HEADER_TUPLE3;
     p->a = a;
@@ -34,7 +34,7 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
 };
 
 ElmInt* newElmInt(i32 value) {
-    ElmInt *p = GC_allocate(sizeof(ElmInt));
+    ElmInt *p = GC_malloc(sizeof(ElmInt));
     if (p == NULL) return pGcFull;
     p->header = HEADER_INT;
     p->value = value;
@@ -42,7 +42,7 @@ ElmInt* newElmInt(i32 value) {
 };
 
 ElmFloat* newElmFloat(f64 value) {
-    ElmFloat *p = GC_allocate(sizeof(ElmFloat));
+    ElmFloat *p = GC_malloc(sizeof(ElmFloat));
     if (p == NULL) return pGcFull;
     p->header = HEADER_FLOAT;
     p->value = value;
@@ -50,7 +50,7 @@ ElmFloat* newElmFloat(f64 value) {
 };
 
 ElmChar* newElmChar(u32 value) {
-    ElmChar *p = GC_allocate(sizeof(ElmChar));
+    ElmChar *p = GC_malloc(sizeof(ElmChar));
     if (p == NULL) return pGcFull;
     p->header = HEADER_CHAR;
     p->value = value;
@@ -65,7 +65,7 @@ ElmString* newElmString(size_t n, char *str) {
     size_t n_ints = n/4 + 1;
     size_t n_bytes_padded = n_ints * 4;
 
-    ElmString *p = GC_allocate(sizeof(ElmString) + n_bytes_padded);
+    ElmString *p = GC_malloc(sizeof(ElmString) + n_bytes_padded);
     if (p == NULL) return pGcFull;
     p->header = HEADER_STRING(n_ints);
 

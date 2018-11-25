@@ -13,7 +13,7 @@ void* Utils_clone(void* x) {
         return x;
     }
     size_t n_bytes = SIZE_UNIT * (size_t)h->size;
-    ElmValue* x_new = GC_allocate(n_bytes);
+    ElmValue* x_new = GC_malloc(n_bytes);
     if (x_new == NULL) return pGcFull;
     memcpy(x_new, x, n_bytes);
     return x_new;
@@ -83,7 +83,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         size_t size_applied = n_applied * sizeof(void*);
         size_t size_new = size_old + size_applied;
 
-        c = GC_allocate(size_new);
+        c = GC_malloc(size_new);
         if (c == NULL) {
             return pGcFull;
         }
