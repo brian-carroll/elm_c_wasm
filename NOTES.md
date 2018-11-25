@@ -41,22 +41,12 @@ Dynamic allocation
 
 - Contiguous heap
     - Much nicer for the main data area to be contiguous rather than paged
-    - Put the bitmap & offsets together at bottom of heap
-    - When we grow total memory, grow the bitmap too
-    - => move values _up_
-    - May need to run compaction sliding up instead of down
-    - OR calculate the new bottom-of-heap location and start there.
-        - Stuff below that line gets moved up, stuff above gets moved down
-        - Need to know how much live data there is above and below
-        - This can be calculated during marking
-        - Before marking, work out where new bottom-of-heap will be
-        - During marking, keep count of live data between current and new bottom-of-heap
-        - Find enough garbage _above_ the new bottom-of-heap to make room for data below it to move upwards
-        - That 'enough garbage' point is the dividing line between slide-up and slide-down compaction
-        - But slide-up is a bit of a pain. Iterating addresses downwards is hard (very slow) because the 'linked list' of objects links upwards.
-        - However bitmap can tell us the start of each patch of live data and the first int of that is definitely a header!
-        - Bitmap makes all of this stuff way faster actually
-    - Actually no need to slide both up _and_ down, we just allocated a ton of memory at the top so that'll do. Keep the pause short, especially after making a `brk` call. Just slide up to make room for the bitmap.
+    - When we grow total memory, bitmap grows too
+    - Reserve room for the bitmap at the _top_ of the heap, enough for a full GC
+    - Bitmap is only used during the actual collection, so can be created fresh each time (reset first)
+    - If it were at the bottom, we'd have to do a slide _up_ to make room for it when we grow memory
+        - We'd have to move the _oldest_ values out of the way to make room for the bitmap. Better to leave them happily sit at the bottom forever.
+
 
 Code structure:
 
@@ -65,6 +55,7 @@ Mutator API
 - GC_register_root()
 - GC_malloc()
 - GC_maybe_collect()
+    - Just finished update, view, or dispatch_effects
     - The only things on the call stack are GC roots
 
 - GC_stack_push
@@ -76,13 +67,17 @@ Mutator API can use hidden state but always delegates to functions handling stat
 
 
 GC operations
-- slide_up(old_bottom, new_bottom)
 - slide_down(ignore_below)
 - mark(ignore_below)
 - grow()
 - shrink()
 - controller(state)
     - make the decisions. how much garbage is available to collect, are we in the middle of executing, should we grow or shrink memory, do we have enough idle time for things?
+- move_value(from, to)
+    - case tag
+    - forward pointers
+
+
 
 Bitmap operations
 - Mark
@@ -93,11 +88,64 @@ Bitmap operations
     - find_enough_garbage_top(u32 target_garbage)
     - count_garbage(u32 from, u32 to)
 - Compact 
-    - bitmap_start_iteration(u32 slot, BitmapIter* iter)
-    - next_live(u32 slot, BitmapIter* iter)
-    - next_garbage(u32 slot, BitmapIter* iter)
+    - bitmap_start_iteration(u32 slot, u32* word, u64* mask)
+    - u32 slot = next_block(bool live, u32* word, u64* mask)
     - record_block_offset(u32 slot, BitmapIter* iter)
     - forwarding_address(u32 old_slot, Bitmap* bitmap)
+
+
+
+- forwarding_address(old_pointer, compaction_start, offsets, bitmap)
+    - old_block_start = old_pointer & BLOCK_MASK
+    - offset_in_block = bitmap_live_between(bitmap, old_block_start, old_pointer)
+    - offset_index = (old_block_start - compaction_start) / block_size
+    - new_block_start = offsets[offset_index]
+    - return new_block_start + offset_in_block;
+
+
+Compaction(compaction_start)
+- to = bitmap_next_garbage(bitmap, compaction_start)
+- from = bitmap_next_live(bitmap, to)
+- next_block_ptr = NULL
+
+- while (from < top)
+    - next_garbage = bitmap_next_garbage(from)
+    - while(from < next_garbage)
+        - Update offsets if this is first in block
+            - If (from >= next_block_ptr)
+                - current_block_idx = pointer_to_block_idx(from)
+                - offsets[current_block_idx] = to
+                - next_block_ptr = (from & BLOCK_MASK) + block_size
+
+        - Move current value
+            - find_children(value)
+            - for each non-pointer
+                - `*to++ = *from++`
+            - for each child pointer
+                - if (from < compaction_start)
+                    - `*to++ = *from++;`
+                - else
+                    - `*to++ = forwarding_address(*from++, compaction_start, offsets, bitmap)`
+
+        - Comments
+            - `from` is now pointing to next object
+            - `to` is now pointing to next free slot
+            - could have advanced many blocks, not just 1 (e.g. long string)
+                - so what do I do with the intermediate offsets? Hopefully nobody pointing to them!
+
+        - Go to next value if live
+    <!-- from == next_garbage -->
+    - from = bitmap_next_live(bitmap, next_garbage)
+    - Go to next patch of live values
+
+
+bitmap should contain its own top word and top bit mask, and the bottom of heap that it represents
+
+
+
+
+BitmapIter is iteration state as we iterate the bitmap linearly through the heap during compaction
+word and bitmask (1-bit high)
 
 
 Alignment
@@ -129,6 +177,14 @@ Controller algo
         - When to fall back to it?
         - Too many minor GCs in a row
         - Not very much garbage lying around
+- Dumb algorithm
+    - Do a minor GC every N updates
+    - Do a major GC every M updates
+    - Grow whenever we need more memory
+    - Total heap size will balance out at some multiple of what's needed per update
+    - How/when to shrink?
+        - Keep track of spare room over last X cycles (X>M)
+        - If spare room > 2 pages then reduce
 
 
 
