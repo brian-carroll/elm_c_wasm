@@ -52,13 +52,10 @@ bool mark_value(void* p) {
     u32* p32 = (u32*)p;
     u32 first_slot = p32 - state.pages[0].data;
 
-    // TODO: handle multiple pages
-
     if (first_slot >= GC_PAGE_SLOTS) return false; 
     u32 first_word = first_slot / GC_BITMAP_WORDSIZE;
     u32 first_bit = first_slot % GC_BITMAP_WORDSIZE;
 
-    // TODO: handle objects crossing page boundaries
     Header* h = (Header*) p;
     u32 last_slot = first_slot + h->size - 1;
     u32 last_word = last_slot / GC_BITMAP_WORDSIZE;
@@ -122,6 +119,86 @@ u32 size_marked(void* p) {
 
 
 
+void* find_children(ElmValue* v, u32* n_children) {
+    void** child_ptr_array = NULL;
+    switch (v->header.tag) {
+        case Tag_Int:
+        case Tag_Float:
+        case Tag_Char:
+        case Tag_String:
+        case Tag_Nil:
+            child_ptr_array = NULL;
+            *n_children = 0;
+            break;
+
+        case Tag_Cons:
+            child_ptr_array = &v->cons.head;
+            *n_children = 2;
+            break;
+
+        case Tag_Tuple2:
+            child_ptr_array = &v->tuple2.a;
+            *n_children = 2;
+            break;
+
+        case Tag_Tuple3:
+            child_ptr_array = &v->tuple3.a;
+            *n_children = 3;
+            break;
+
+        case Tag_Custom:
+            child_ptr_array = &v->custom.values[0];
+            *n_children = custom_params(&v->custom);
+            break;
+
+        case Tag_Record:
+            child_ptr_array = &v->record.values[0];
+            *n_children = v->record.fieldset->size;
+            break;
+
+        case Tag_Closure:
+            child_ptr_array = &v->closure.values[0];
+            *n_children = v->closure.n_values;
+            break;
+
+        case Tag_GcFull:
+            child_ptr_array = (void**)&v->gc_full.continuation;
+            *n_children = (v->gc_full.continuation != NULL) ? 1 : 0;
+            break;
+    }
+    return child_ptr_array;
+}
+
+
+void* forwarding_address(void* old_address) {
+    return NULL;
+}
+
+
+static void copy_value(u32* from, u32* to) {
+    void** child_ptr_array;
+    u32 n_children;
+    ElmValue* v = (ElmValue*)from;
+    child_ptr_array = find_children(v, &n_children);
+
+    if (!child_ptr_array || !n_children) {
+        // Int, Float, Char, String
+        for (u32 i=0; i < v->header.size; ++i) {
+            *to++ = *from++;
+        }
+    } else {
+        // container types
+        while ((void**)from < child_ptr_array) {
+            *to++ = *from++;
+        }
+        void** child_to = (void**)to;
+        void** child_from = (void**)from;
+        for (u32 i=0; i < n_children; ++i) {
+            *child_to++ = forwarding_address(*child_from++);
+        }
+    }
+}
+
 
 static u32* compact() {
     u32* current = state.pages[0].data;
@@ -140,12 +217,8 @@ static u32* compact() {
         u32* live_start = current;
         u32* next_garbage = live_start + size_marked(live_start);
 
-        // TODO: Need fancier copying with pointer rewrites and stuff
-        // Simple copy from header up to first child. (Increments? Int or pointer?)
-        // Then start forwarding pointers (all of them will be pointing downwards)
-
         for (u32* from=live_start; from<next_garbage; ++from) {
-            *to = *from;
+            copy_value(from, to);
             to++;
         }
 
@@ -171,60 +244,19 @@ void* GC_allocate(size_t size) {
 
 
 static void mark_trace(ElmValue* v, ElmValue* ignore_below) {
-    void** children; // array of pointers to child objects
-    u32 n_children = 0;
+    void** child_ptr_array;
+    u32 n_children;
 
     if (v < ignore_below) return;
 
     bool already_marked = mark_value(v);
     if (already_marked) return;
 
-    switch (v->header.tag) {
-        case Tag_Int:
-        case Tag_Float:
-        case Tag_Char:
-        case Tag_String:
-        case Tag_Nil:
-            break;
+    child_ptr_array = find_children(v, &n_children);
 
-        case Tag_Cons:
-            children = &v->cons.head;
-            n_children = 2;
-            break;
-
-        case Tag_Tuple2:
-            children = &v->tuple2.a;
-            n_children = 2;
-            break;
-
-        case Tag_Tuple3:
-            children = &v->tuple3.a;
-            n_children = 3;
-            break;
-
-        case Tag_Custom:
-            children = &v->custom.values[0];
-            n_children = custom_params(&v->custom);
-            break;
-
-        case Tag_Record:
-            children = &v->record.values[0];
-            n_children = v->record.fieldset->size;
-            break;
-
-        case Tag_Closure:
-            children = &v->closure.values[0];
-            n_children = v->closure.n_values;
-            break;
-
-        case Tag_GcFull:
-            children = (void**)&v->gc_full.continuation;
-            n_children = (v->gc_full.continuation != NULL) ? 1 : 0;
-            break;
-    }
-
-    for (u32 i=0; i<n_children; ++i) {
-        ElmValue* child = children[i];
+    if (child_ptr_array == NULL) return;
+    for (u32 i=0; i < n_children; ++i) {
+        ElmValue* child = child_ptr_array[i];
         mark_trace(child, ignore_below);
     }
 }

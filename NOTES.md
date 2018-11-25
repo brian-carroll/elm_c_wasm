@@ -98,24 +98,26 @@ Bitmap operations
 - forwarding_address(old_pointer, compaction_start, offsets, bitmap)
     - old_block_start = old_pointer & BLOCK_MASK
     - offset_in_block = bitmap_live_between(bitmap, old_block_start, old_pointer)
-    - offset_index = (old_block_start - compaction_start) / block_size
+    - offset_index = (old_block_start - compaction_start) / BLOCK_SIZE
     - new_block_start = offsets[offset_index]
     - return new_block_start + offset_in_block;
 
 
 Compaction(compaction_start)
-- to = bitmap_next_garbage(bitmap, compaction_start)
-- from = bitmap_next_live(bitmap, to)
-- next_block_ptr = NULL
+- next_block_ptr = compaction_start
+- next_garbage = bitmap_next_garbage(bitmap, compaction_start)
+- from = compaction_start
+- to = next_garbage
 
 - while (from < top)
-    - next_garbage = bitmap_next_garbage(from)
+    - from = bitmap_next_live(bitmap, next_garbage)
+    - next_garbage = bitmap_next_garbage(bitmap, from)
     - while(from < next_garbage)
         - Update offsets if this is first in block
             - If (from >= next_block_ptr)
-                - current_block_idx = pointer_to_block_idx(from)
+                - current_block_idx = ((from & BLOCK_MASK) - compaction_start) / BLOCK_SIZE
                 - offsets[current_block_idx] = to
-                - next_block_ptr = (from & BLOCK_MASK) + block_size
+                - next_block_ptr = (from & BLOCK_MASK) + BLOCK_SIZE
 
         - Move current value
             - find_children(value)
@@ -132,11 +134,13 @@ Compaction(compaction_start)
             - `to` is now pointing to next free slot
             - could have advanced many blocks, not just 1 (e.g. long string)
                 - so what do I do with the intermediate offsets? Hopefully nobody pointing to them!
+                - could point them all to the start of the moved string
+                - But it's work to do and it only applies when things are broken anyway.
 
         - Go to next value if live
-    <!-- from == next_garbage -->
-    - from = bitmap_next_live(bitmap, next_garbage)
     - Go to next patch of live values
+
+- top = to
 
 
 bitmap should contain its own top word and top bit mask, and the bottom of heap that it represents
