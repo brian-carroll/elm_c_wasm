@@ -9,6 +9,9 @@
 
 GcState gc_state;
 
+void* stack_empty();
+
+
 int GC_init() {
     // Get current max address of program data
     void* break_ptr = sbrk(0);
@@ -40,6 +43,11 @@ int GC_init() {
         (size_t*)(top_of_current_page + GC_WASM_PAGE_SIZE);
 
     int err = set_heap_end(&gc_state.heap, top_of_next_page);
+
+    if (!err) {
+        gc_state.stack_map = stack_empty();
+    }
+
     return err;
 }
 
@@ -116,10 +124,18 @@ void* GC_malloc(size_t bytes) {
 const size_t head = 1;
 const size_t tail = 0; // StackPush only has a tail, no head
 
+void* stack_empty() {
+    Custom* p = GC_malloc(sizeof(Custom));
+    p->header = HEADER_CUSTOM(0);
+    p->ctor = GcStackEmpty;
+
+    gc_state.stack_map = p;
+    return p;
+}
+
 void* GC_stack_push() {
-    Header h = HEADER_CUSTOM(1);
     Custom* p = GC_malloc(sizeof(Custom) + sizeof(void*));
-    p->header = h;
+    p->header = HEADER_CUSTOM(1);
     p->ctor = GcStackPush;
     p->values[tail] = gc_state.stack_map;
 

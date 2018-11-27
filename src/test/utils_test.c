@@ -83,12 +83,12 @@ char* test_records() {
         printf("access_someField = %s\n",
             hex(access_someField, sizeof(Closure) + sizeof(void*))
         );
-        printf("fsRecord1: addr=%llx val=%s\n",
-            (u64)fsRecord1,
+        printf("fsRecord1: addr=%zx val=%s\n",
+            (size_t)fsRecord1,
             hex(fsRecord1, sizeof(FieldSet) + 2*sizeof(u32))
         );
-        printf("fsRecord2: addr=%llx val=%s\n",
-            (u64)fsRecord2,
+        printf("fsRecord2: addr=%zx val=%s\n",
+            (size_t)fsRecord2,
             hex(fsRecord2, sizeof(FieldSet) + 3*sizeof(u32))
         );
     }

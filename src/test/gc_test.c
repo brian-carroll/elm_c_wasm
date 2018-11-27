@@ -6,31 +6,47 @@
 #include "../kernel/utils.h"
 #include "../kernel/basics.h"
 #include "../kernel/gc.h"
+#include "../kernel/gc-internals.h"
 #include "./test.h"
 
+extern GcState gc_state;
 
-// Predeclare internal functions from gc.c tested here
-void mark(ElmValue* ignore_below);
-bool is_marked(void* p);
-void mark_value(void* p);
+
+
+bool is_marked(void* p) {
+    size_t* pword = (size_t*)p;
+    size_t slot = pword - gc_state.heap.start;
+    if (slot >> (GC_WORD_BITS-1)) return true; // off heap => not garbage, stop tracing
+    size_t word = slot / GC_WORD_BITS;
+    size_t bit = slot % GC_WORD_BITS;
+    size_t mask = (size_t)1 << bit;
+
+    return (gc_state.heap.bitmap[word] & mask) != 0;
+}
 
 
 void print_heap(GcState *state) {
 
-    Header* from = (Header*)state->pages[0].data;
-    Header* to = (Header*)state->current_heap;
+    size_t* from = (size_t*)gc_state.heap.start;
+    size_t* to = (size_t*)gc_state.next_alloc;
 
     printf("|   Address    | Mark | Size | Value\n");
     printf("| ------------ | ---- | ---- | -----\n");
 
-    for (Header* h = from ; h < to ; h += h->size) {
+    size_t* p = from;
+    while (p < to) {
+        Header* h = (Header*)p;
         if (h->size == 0) {
-            printf("Zero-size object at %llx = %s\n", (u64)h, hex(h,4));
-            printf("Aborting print_heap\n");
+            for (u32 i=0; i<16; i++) {
+                printf("| %12zx |  ?   |   ?  | %08x\n", (size_t)h, *(u32*)h);
+                h++;
+            }
             return;
         }
+        p += (size_t)h->size;
+
         ElmValue* v = (ElmValue*)h;
-        printf("| %12llx |  %c   |  %2d  | ", (u64)v, is_marked(v) ? 'X' : ' ', v->header.size);
+        printf("| %12zx |  %c   |  %2d  | ", (size_t)v, is_marked(v) ? 'X' : ' ', v->header.size);
         switch (h->tag) {
             case Tag_Int:
                 printf("Int %d", v->elm_int.value);
@@ -48,13 +64,13 @@ void print_heap(GcState *state) {
                 printf("Nil");
                 break;
             case Tag_Cons:
-                printf("Cons head=%llx tail=%llx", (u64)v->cons.head, (u64)v->cons.tail);
+                printf("Cons head=%zx tail=%zx", (size_t)v->cons.head, (size_t)v->cons.tail);
                 break;
             case Tag_Tuple2:
-                printf("Tuple2 a=%llx b=%llx", (u64)v->tuple2.a, (u64)v->tuple2.b);
+                printf("Tuple2 a=%zx b=%zx", (size_t)v->tuple2.a, (size_t)v->tuple2.b);
                 break;
             case Tag_Tuple3:
-                printf("Tuple3 a=%llx b=%llx c=%llx", (u64)v->tuple3.a, (u64)v->tuple3.b, (u64)v->tuple3.c);
+                printf("Tuple3 a=%zx b=%zx c=%zx", (size_t)v->tuple3.a, (size_t)v->tuple3.b, (size_t)v->tuple3.c);
                 break;
             case Tag_Custom:
                 // Assume that Custom type objects are stack map objects
@@ -66,26 +82,26 @@ void print_heap(GcState *state) {
                     case 3: printf("GcStackTailCall"); break;
                 }
                 printf(" values: ");
-                for (u32 i=0; i<custom_params(&v->custom); ++i) {
-                    printf("%llx ", (u64)v->custom.values[i]);
+                for (size_t i=0; i<custom_params(&v->custom); ++i) {
+                    printf("%zx ", (size_t)v->custom.values[i]);
                 }
                 break;
             case Tag_Record:
-                printf("Record fieldset=%llx values: ", (u64)v->record.fieldset);
-                for (u32 i=0; i < v->record.fieldset->size; ++i) {
-                    printf("%llx ", (u64)v->record.values[i]);
+                printf("Record fieldset=%zx values: ", (size_t)v->record.fieldset);
+                for (size_t i=0; i < v->record.fieldset->size; ++i) {
+                    printf("%zx ", (size_t)v->record.values[i]);
                 }
                 break;
             case Tag_Closure:
-                printf("Closure n_values=%d max_values=%d evaluator=%llx values: ",
-                    v->closure.n_values, v->closure.max_values, (u64)v->closure.evaluator
+                printf("Closure n_values=%d max_values=%d evaluator=%zx values: ",
+                    v->closure.n_values, v->closure.max_values, (size_t)v->closure.evaluator
                 );
-                for (u32 i=0; i < v->closure.n_values; ++i) {
-                    printf("%llx ", (u64)v->record.values[i]);
+                for (size_t i=0; i < v->closure.n_values; ++i) {
+                    printf("%zx ", (size_t)v->record.values[i]);
                 }
                 break;
             case Tag_GcFull:
-                printf("GcFull continuation=%llx", (u64)v->gc_full.continuation);
+                printf("GcFull continuation=%zx", (size_t)v->gc_full.continuation);
                 break;
         }
         printf("\n");
@@ -94,22 +110,22 @@ void print_heap(GcState *state) {
 
 
 void print_state(GcState* state) {
-    printf("system_max_heap=%llx\n", (u64)state->system_max_heap);
-    printf("max_heap=%llx\n", (u64)state->max_heap);
-    printf("current_heap=%llx\n", (u64)state->current_heap);
-    printf("roots=%llx\n", (u64)state->roots);
-    printf("stack_map=%llx\n", (u64)state->stack_map);
-    printf("stack_depth=%d\n", state->stack_depth);
-    printf("bottom of heap=%llx\n", (u64)state->pages[0].data);
+    printf("start=%zx\n", (size_t)gc_state.heap.start);
+    printf("end=%zx\n", (size_t)gc_state.heap.end);
+    printf("system_end=%zx\n", (size_t)gc_state.heap.system_end);
+    printf("next_alloc=%zx\n", (size_t)gc_state.next_alloc);
+    printf("roots=%zx\n", (size_t)gc_state.roots);
+    printf("stack_map=%zx\n", (size_t)gc_state.stack_map);
+    printf("stack_depth=%zd\n", gc_state.stack_depth);
 
     // find last non-zero word in the bitmap
-    u32 bitmap_size = GC_PAGE_SLOTS/GC_BITMAP_WORDSIZE;
-    u32 last_word = bitmap_size;
-    while (state->pages[0].bitmap[--last_word] == 0 && last_word != 0) { }
+    size_t bitmap_size = gc_state.heap.system_end - gc_state.heap.bitmap;
+    size_t last_word = bitmap_size;
+    while (gc_state.heap.bitmap[--last_word] == 0 && last_word != 0) { }
 
     printf("Bitmap:\n");
-    for (u32 word=0; word <= last_word && word < bitmap_size; word++) {
-        printf("%2x | %016llx\n", word, state->pages[0].bitmap[word]);
+    for (size_t word=0; word <= last_word && word < bitmap_size; word++) {
+        printf("%2zx | %zx\n", word, gc_state.heap.bitmap[word]);
     }
 
     printf("\n");
@@ -126,13 +142,13 @@ char* gc_stackmap_test() {
 
     void* live[100];
     void* dead[100];
-    u32 nlive=0, ndead=0;
+    size_t nlive=0, ndead=0;
 
 
-    GcState* state = GC_init();
+    GC_init();
     if (verbose) {
         printf("GC initial state:\n");
-        print_state(state);
+        print_state(&gc_state);
     }
 
     // Mock Closures.
@@ -140,10 +156,11 @@ char* gc_stackmap_test() {
     Closure* mock_effect_callback = &Basics_add; // Basics_add is not really an effect callback. It's just a Closure value.
     Closure* mock_closure = &Basics_mul;
 
+    live[nlive++] = gc_state.heap.start; // stack_empty
 
     // Call the top-level function (an effect callback or incoming port)
     ElmValue* c1 = (ElmValue*)Utils_clone(mock_effect_callback);
-    live[nlive++] = state->current_heap; // the root Cons cell we're about to allocate
+    live[nlive++] = gc_state.next_alloc; // the root Cons cell we're about to allocate
     GC_register_root(&c1); // Effect manager is keeping this Closure alive by connecting it to the GC root.
     live[nlive++] = c1;
 
@@ -152,9 +169,9 @@ char* gc_stackmap_test() {
 
     // The currently-running function allocates some stuff.
     // This function won't have returned by end of test, so it needs these values.
-    live[nlive++] = newElmInt(state->stack_depth);
-    live[nlive++] = newElmInt(state->stack_depth);
-    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
 
     // Push down to level 2. This will complete. Need its return value
     Closure* c2 = Utils_clone(mock_closure);
@@ -163,23 +180,23 @@ char* gc_stackmap_test() {
     live[nlive++] = push2;
 
     // Temporary values from level 2, not in return value
-    dead[ndead++] = newElmInt(state->stack_depth);
-    dead[ndead++] = newElmInt(state->stack_depth);
+    dead[ndead++] = newElmInt(gc_state.stack_depth);
+    dead[ndead++] = newElmInt(gc_state.stack_depth);
 
     // 3rd level function call. All dead, since we have the return value of a higher level call.
     void* push3 = GC_stack_push();
     dead[ndead++] = push3;
-    dead[ndead++] = newElmInt(state->stack_depth);
-    dead[ndead++] = newElmInt(state->stack_depth);
-    ElmInt* ret3 = newElmInt(state->stack_depth);
+    dead[ndead++] = newElmInt(gc_state.stack_depth);
+    dead[ndead++] = newElmInt(gc_state.stack_depth);
+    ElmInt* ret3 = newElmInt(gc_state.stack_depth);
     dead[ndead++] = ret3;
-    dead[ndead++] = state->current_heap; // the pop we're about to allocate
+    dead[ndead++] = gc_state.next_alloc; // the pop we're about to allocate
     GC_stack_pop((ElmValue*)ret3, push3);
 
     // return value from level 2. Keep it to provide to level 1 on replay
-    ElmValue* ret2a = (ElmValue*)newElmInt(state->stack_depth);
+    ElmValue* ret2a = (ElmValue*)newElmInt(gc_state.stack_depth);
     ElmValue* ret2b = (ElmValue*)newCons(ret2a, &Nil);
-    ElmValue* ret2c = (ElmValue*)newElmInt(state->stack_depth);
+    ElmValue* ret2c = (ElmValue*)newElmInt(gc_state.stack_depth);
     ElmValue* ret2d = (ElmValue*)newCons(ret2c, ret2b);
     live[nlive++] = ret2a;
     live[nlive++] = ret2b;
@@ -189,20 +206,20 @@ char* gc_stackmap_test() {
     // Pop back up to top-level function and allocate a few more things.
     // We actually have a choice whether these are considered alive or dead.
     // Implementation treats them as live for consistency and ease of coding
-    live[nlive++] = state->current_heap; // the pop we're about to allocate
+    live[nlive++] = gc_state.next_alloc; // the pop we're about to allocate
     GC_stack_pop(ret2d, push2);
-    live[nlive++] = newElmInt(state->stack_depth);
-    live[nlive++] = newElmInt(state->stack_depth);
-    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
 
     // Call a function that makes a tail call
     void* push_into_tailrec = GC_stack_push();
     live[nlive++] = push_into_tailrec;
-    dead[ndead++] = newElmInt(state->stack_depth);
-    dead[ndead++] = newElmInt(state->stack_depth);
+    dead[ndead++] = newElmInt(gc_state.stack_depth);
+    dead[ndead++] = newElmInt(gc_state.stack_depth);
 
     // Tail call. Has completed when we stop the world => dead
-    Closure* ctail1 = GC_allocate(sizeof(Closure) + 2*sizeof(void*));
+    Closure* ctail1 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
     ctail1->header = HEADER_CLOSURE(2);
     ctail1->n_values = 2;
     ctail1->max_values = 2;
@@ -210,15 +227,15 @@ char* gc_stackmap_test() {
     ctail1->values[0] = dead[ndead-1];
     ctail1->values[1] = dead[ndead-2];
     dead[ndead++] = ctail1;
-    dead[ndead++] = state->current_heap; // tailcall we're about to allocate
+    dead[ndead++] = gc_state.next_alloc; // tailcall we're about to allocate
     GC_stack_tailcall(ctail1, push_into_tailrec);
 
     // arguments to the next tail call
-    live[nlive++] = newElmInt(state->stack_depth);
-    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
 
     // Tail call. still evaluating this when we stopped the world => keep closure alive
-    Closure* ctail2 = GC_allocate(sizeof(Closure) + 2*sizeof(void*));
+    Closure* ctail2 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
     ctail2->header = HEADER_CLOSURE(2);
     ctail2->n_values = 2;
     ctail2->max_values = 2;
@@ -226,41 +243,41 @@ char* gc_stackmap_test() {
     ctail2->values[0] = live[nlive-1];
     ctail2->values[1] = live[nlive-2];
     live[nlive++] = ctail2;
-    live[nlive++] = state->current_heap; // stack tailcall we're about to allocate
+    live[nlive++] = gc_state.next_alloc; // stack tailcall we're about to allocate
     GC_stack_tailcall(ctail2, push_into_tailrec);
 
     // allocated just before we stopped the world
-    live[nlive++] = newElmInt(state->stack_depth);
-    live[nlive++] = newElmInt(state->stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive++] = newElmInt(gc_state.stack_depth);
 
-
-    ElmValue* ignore_below = (ElmValue*)c1;
-    mark(ignore_below);
+    size_t* ignore_below = (size_t*)c1;
+    printf("-\n");
+    mark(&gc_state, ignore_below);
 
     if (verbose) {
         printf("Final heap state:\n");
-        print_heap(state);
+        print_heap(&gc_state);
         printf("\n");
         printf("GC final state:\n");
-        print_state(state);
+        print_state(&gc_state);
     }
 
-    u32 tested_size = 0;
+    size_t tested_size = 0;
     while (ndead--) {
         ElmValue* v = (ElmValue*)dead[ndead];
-        sprintf(alive_or_dead_msg, "%llx should be dead", (u64)v);
+        sprintf(alive_or_dead_msg, "%zx should be dead", (size_t)v);
         mu_assert(alive_or_dead_msg, !is_marked(v));
         tested_size += v->header.size;
     }
 
     while (nlive--) {
         ElmValue* v = (ElmValue*)live[nlive];
-        sprintf(alive_or_dead_msg, "%llx should be live", (u64)v);
+        sprintf(alive_or_dead_msg, "%zx should be live", (size_t)v);
         mu_assert(alive_or_dead_msg, is_marked(v));
         tested_size += v->header.size;
     }
 
-    u32 heap_size = state->current_heap - state->pages[0].data;
+    size_t heap_size = gc_state.next_alloc - gc_state.heap.start;
     mu_assert("Stack map test should account for all allocated values",
         tested_size == heap_size
     );
@@ -269,36 +286,12 @@ char* gc_stackmap_test() {
 }
 
 
-char* gc_page_struct_test() {
-    GcState* state = GC_init();
+char* gc_struct_test() {
+    GC_init();
 
-    size_t size_bitmap = sizeof(state->pages[0].bitmap);
-    size_t size_offsets = sizeof(state->pages[0].offsets);
-    size_t size_data = sizeof(state->pages[0].data);
-    size_t size_unused = sizeof(state->pages[0].unused);
+    mu_assert("GcHeap should be the size of 5 pointers", sizeof(GcHeap) == 5*sizeof(void*));
+    mu_assert("GcState should be the size of 9 pointers", sizeof(GcState) == 9*sizeof(void*));
 
-    if (verbose) {
-        printf("\n");
-        printf("GC_PAGE_BYTES = %d\n", GC_PAGE_BYTES);
-        printf("GC_BLOCK_BYTES = %d\n", GC_BLOCK_BYTES);
-        printf("GC_PAGE_BLOCKS = %ld\n", GC_PAGE_BLOCKS);
-        printf("GC_PAGE_SLOTS = %ld\n", GC_PAGE_SLOTS);
-        printf("\n");
-        printf("sizeof(bitmap) = %ld\n", size_bitmap);
-        printf("sizeof(offsets) = %ld\n", size_offsets);
-        printf("sizeof(data) = %ld\n", size_data);
-        printf("sizeof(unused) = %ld\n", size_unused);
-        printf("sizeof(GcPage) = %ld\n", sizeof(GcPage));
-        printf("\n");
-        printf("total overhead = %3.2f%%\n", 100.0-(100.0*size_data/GC_PAGE_BYTES));
-    }
-
-    mu_assert("Bitmap should have one bit for each int of data",
-        size_bitmap*32 == size_data     // no integer division here
-    );
-    mu_assert("GcPage should have correct size",
-        sizeof(GcPage) == GC_PAGE_BYTES
-    );
 
     return NULL;
 }
@@ -306,19 +299,18 @@ char* gc_page_struct_test() {
 
 char* gc_bitmap_test() {
     char str[] = "This is a test string that's an odd number of ints.....";
+    GC_init();
 
-    GcState* state = GC_init();
+    for (size_t i=0; i<10; i++) {
+        ElmValue *p1, *p2, *p3, *p4;
 
-    for (u32 i=0; i<10; i++) {
-        void *p1, *p2, *p3, *p4;
+        p1 = (ElmValue*)newElmInt(1);
+        p2 = (ElmValue*)newElmInt(0);
+        p3 = (ElmValue*)newElmString(sizeof(str), str);
+        p4 = (ElmValue*)newElmInt(0);
 
-        p1 = newElmInt(1);
-        p2 = newElmInt(0);
-        p3 = newElmString(sizeof(str), str);
-        p4 = newElmInt(0);
-
-        mark_value(p1);
-        mark_value(p3);
+        mark_words(&gc_state.heap, p1, p1->header.size);
+        mark_words(&gc_state.heap, p3, p1->header.size);
 
         mu_assert("p1 should be marked", is_marked(p1));
         mu_assert("p2 should NOT be marked", !is_marked(p2));
@@ -330,22 +322,22 @@ char* gc_bitmap_test() {
         printf("\n");
         printf("Bitmap test\n");
         printf("-----------\n");
-        print_heap(state);
-        print_state(state);
+        print_heap(&gc_state);
+        print_state(&gc_state);
         printf("\n");
     }
 
-    u32* bottom_of_heap = state->pages[0].data;
-    u32* top_of_heap = state->current_heap;
+    size_t* bottom_of_heap = gc_state.heap.start;
+    size_t* top_of_heap = gc_state.next_alloc;
 
-    u32* ptr = bottom_of_heap;
-    u64* bitmap = state->pages[0].bitmap;
+    size_t* ptr = bottom_of_heap;
+    size_t* bitmap = gc_state.heap.bitmap;
 
-    u32 w = 0;
+    size_t w = 0;
     while (ptr <= top_of_heap) {
-        u64 word = bitmap[w];
-        for (u32 b=0; b<64; b++) {
-            bool bitmap_bit = (word & ((u64)1 << b)) != 0;
+        size_t word = bitmap[w];
+        for (size_t b=0; b<64; b++) {
+            bool bitmap_bit = (word & ((size_t)1 << b)) != 0;
             mu_assert("is_marked should match the bitmap", is_marked(ptr) == bitmap_bit);
             ptr++;
         }
@@ -363,7 +355,7 @@ char* gc_test() {
         printf("--\n");
     }
 
-    mu_run_test(gc_page_struct_test);
+    mu_run_test(gc_struct_test);
     mu_run_test(gc_bitmap_test);
     mu_run_test(gc_stackmap_test);
     return NULL;

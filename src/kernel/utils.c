@@ -36,8 +36,8 @@ static u32 fieldset_search(FieldSet* fieldset, u32 search) {
         }
     }
 
-    fprintf(stderr, "Failed to find field %d in record fieldset at %llx\n",
-        search, (u64)fieldset
+    fprintf(stderr, "Failed to find field %d in record fieldset at %zx\n",
+        search, (size_t)fieldset
     );
     return 0;
 }
