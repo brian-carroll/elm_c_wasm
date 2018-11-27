@@ -47,13 +47,13 @@ typedef struct {
 #endif
 
 // Header size field has units corresponding to this many bytes:
-#define SIZE_UNIT 4
+#define SIZE_UNIT sizeof(size_t)
 
 #define HEADER_INT         (Header){ .tag=Tag_Int,     .size=sizeof(ElmInt)/SIZE_UNIT }
 #define HEADER_FLOAT       (Header){ .tag=Tag_Float,   .size=sizeof(ElmFloat)/SIZE_UNIT }
 #define HEADER_CHAR        (Header){ .tag=Tag_Char,    .size=sizeof(ElmChar)/SIZE_UNIT }
-#define HEADER_STRING(n32) (Header){ .tag=Tag_String,  .size=sizeof(ElmString)/SIZE_UNIT + n32 }
-#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .size=sizeof(Header)/SIZE_UNIT }
+#define HEADER_STRING(s)   (Header){ .tag=Tag_String,  .size=s }
+#define HEADER_NIL         (Header){ .tag=Tag_Nil,     .size=1 }
 #define HEADER_CONS        (Header){ .tag=Tag_Cons,    .size=sizeof(Cons)/SIZE_UNIT }
 #define HEADER_TUPLE2      (Header){ .tag=Tag_Tuple2,  .size=sizeof(Tuple2)/SIZE_UNIT }
 #define HEADER_TUPLE3      (Header){ .tag=Tag_Tuple3,  .size=sizeof(Tuple3)/SIZE_UNIT }

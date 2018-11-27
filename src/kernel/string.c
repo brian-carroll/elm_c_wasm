@@ -4,10 +4,12 @@
 
 
 // local utility function
-static u32 String_bytes(ElmString *s) {
-    u32 n_bytes_padded = (s->header.size - 1) * SIZE_UNIT;
-    u32 padding = 1 + s->bytes[n_bytes_padded-1];
-    return n_bytes_padded - padding;
+size_t String_bytes(ElmString *s) {
+    size_t total_bytes = (size_t)(s->header.size * SIZE_UNIT);
+    u8* struct_bytes = (u8*)s;
+    u8 last_byte = struct_bytes[total_bytes-1];
+    size_t len = (total_bytes - sizeof(Header)) - (size_t)(last_byte+1);
+    return len;
 }
 
 

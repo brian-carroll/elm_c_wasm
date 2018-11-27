@@ -57,28 +57,55 @@ ElmChar* newElmChar(u32 value) {
     return p;
 };
 
-// Strings are padded to the next 32-bit boundary.
-// Last byte of padding is a number 0-3 telling the size of the padding itself,
+// Strings are padded to the next 32/64-bit boundary.
+// Last byte of padding is a number telling the size of the padding itself,
 // so that we can find the exact byte length of the String.
 // Like OCaml, https://v1.realworldocaml.org/v1/en/html/memory-representation-of-values.html#string-values
-ElmString* newElmString(size_t n, char *str) {
-    size_t n_ints = n/4 + 1;
-    size_t n_bytes_padded = n_ints * 4;
 
-    ElmString *p = GC_malloc(sizeof(ElmString) + n_bytes_padded);
+ElmString* newElmString(size_t payload_bytes, char *str) {
+    size_t used_bytes = sizeof(Header) + payload_bytes + 1; // 1 byte for padding size
+    size_t aligned_words = (used_bytes + SIZE_UNIT-1) / SIZE_UNIT; // ceil
+    size_t aligned_bytes = aligned_words * SIZE_UNIT;
+
+    ElmString *p = GC_malloc(aligned_bytes);
     if (p == NULL) return pGcFull;
-    p->header = HEADER_STRING(n_ints);
 
-    u32* ints = (u32*)p->bytes;
-    u32 padding = (n_bytes_padded - n -1) << 24; // little-endian => high byte goes last
-    ints[n_ints-1] = padding;
+    // Insert zero padding, and last byte indicating size of padding
+    // Store padding size minus 1, so that if there's only 1 byte of padding,
+    // it's a zero. (Zero-terminated strings are handy for debug etc.)
+    size_t* words = (size_t*)p; // the ElmString as an array of words
+    size_t padding_bytes = aligned_bytes - (used_bytes-1);
+    size_t last_byte_value = padding_bytes-1;
+    words[aligned_words-1] = last_byte_value << (SIZE_UNIT-1)*8;
 
-    // Some String functions don't want to provide an initial value yet
-    if (str != NULL) {
-        memcpy(p->bytes, str, n);
+    // Write header _after_ padding to avoid overwriting if there's only one word
+    p->header = (Header){
+        .tag = Tag_String,
+        .size = (u32)aligned_words
+    };
+
+    // Copy the string body if provided
+    if (str != NULL)  {
+        // Header is 32 bits => ElmString body is 32-bit aligned
+        size_t payload_ints = payload_bytes / 4;
+        u32* str32 = (u32*)str;
+        u32* i_from = str32;
+        u32* i_to = (u32*)p->bytes;
+        while (i_from < str32 + payload_ints) {
+            *i_to++ = *i_from++;
+        }
+
+        // Last few bytes (<4)
+        char* c_from = (char*)i_from;
+        char* c_to = (char*)i_to;
+        while (c_from < str + payload_bytes) {
+            *c_to++ = *c_from++;
+        }
     }
+
     return p;
 }
+
 
 u32 custom_params(Custom* c) {
     u32 total_size = c->header.size * SIZE_UNIT;

@@ -171,7 +171,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             if (pa->header.size != pb->header.size) return 0;
             u32* a_ints = (u32*)pa->elm_string.bytes;
             u32* b_ints = (u32*)pb->elm_string.bytes;
-            for (u32 i=0; i < pa->header.size - 1; ++i) {
+            for (u32 i=0; i < pa->header.size; ++i) {
                 if (a_ints[i] != b_ints[i]) return 0;
             }
             return 1;
