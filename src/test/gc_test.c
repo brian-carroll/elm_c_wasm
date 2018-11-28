@@ -300,6 +300,8 @@ char* gc_struct_test() {
 }
 
 
+char bitmap_msg[100];
+
 char* gc_bitmap_test() {
     char str[] = "This is a test string that's an odd number of ints.....";
     GC_init();
@@ -339,9 +341,12 @@ char* gc_bitmap_test() {
     size_t w = 0;
     while (ptr <= top_of_heap) {
         size_t word = bitmap[w];
-        for (size_t b=0; b<64; b++) {
+        for (size_t b=0; b < GC_WORD_BITS; b++) {
             bool bitmap_bit = (word & ((size_t)1 << b)) != 0;
-            mu_assert("is_marked should match the bitmap", is_marked(ptr) == bitmap_bit);
+            sprintf(bitmap_msg, "is_marked (%d) should match the bitmap (%d)\naddr = %zx  word = %zd  bit = %zd",
+                is_marked(ptr), bitmap_bit, (size_t)ptr, w, b
+            );
+            mu_assert(bitmap_msg, is_marked(ptr) == bitmap_bit);
             ptr++;
         }
         w++;
