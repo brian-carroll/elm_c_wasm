@@ -8,6 +8,7 @@
 char* test_wasm_types() {
     if (verbose) {
         printf("sizeof(void*) = %d\n", (int)sizeof(void*));
+        printf("sizeof(size_t*) = %d\n", (int)sizeof(size_t));
         printf("sizeof(int) = %d\n", (int)sizeof(int));
         printf("\n");
         printf("sizeof(i8) = %d\n", (int)sizeof(i8));

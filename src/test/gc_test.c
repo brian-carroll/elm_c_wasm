@@ -125,7 +125,11 @@ void print_state(GcState* state) {
 
     printf("Bitmap:\n");
     for (size_t word=0; word <= last_word && word < bitmap_size; word++) {
-        printf("%2zx | %zx\n", word, gc_state.heap.bitmap[word]);
+        #ifdef TARGET_64BIT
+            printf("%2zx | %016zx\n", word, gc_state.heap.bitmap[word]);
+        #else
+            printf("%2zx | %08zx\n", word, gc_state.heap.bitmap[word]);
+        #endif
     }
 
     printf("\n");
@@ -251,7 +255,6 @@ char* gc_stackmap_test() {
     live[nlive++] = newElmInt(gc_state.stack_depth);
 
     size_t* ignore_below = (size_t*)c1;
-    printf("-\n");
     mark(&gc_state, ignore_below);
 
     if (verbose) {
