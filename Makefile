@@ -18,7 +18,7 @@ verbose: ./dist/bin/test
 
 dist: check www
 
-www: ./dist/www/test.html
+www: ./dist/www/test.js
 
 clean:
 	find dist -type f ! -name '.gitkeep' -exec rm {} \;
@@ -45,5 +45,5 @@ build.log: $(SOURCES) $(HEADERS)
 ./dist/bin/test: $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) $(SOURCES) -o $@ -lm
 
-./dist/www/test.html: $(SOURCES) $(HEADERS)
+./dist/www/test.js: $(SOURCES) $(HEADERS)
 	emcc $(CFLAGS) -s WASM=1 $(SOURCES) -o $@

@@ -2,7 +2,6 @@
 .vscode/
 
 # Generated files
-*.html
 *.js
 *.wasm
 *.wat
