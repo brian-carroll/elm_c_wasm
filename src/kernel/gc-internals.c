@@ -374,8 +374,7 @@ void compact(GcState* state, size_t* compact_start) {
 
             // Copy the child pointers, modifying to point to new addresses
             size_t** child_ptr_array = (size_t**)first_child_field;
-            size_t c=0;
-            for (; c < n_children; c++) {
+            for (size_t c=0; c < n_children; c++) {
                 size_t* child_old = child_ptr_array[c];
                 size_t* child_new =
                     (child_old < compact_start)
