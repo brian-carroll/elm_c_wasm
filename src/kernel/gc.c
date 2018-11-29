@@ -236,3 +236,34 @@ void GC_stack_pop(ElmValue* result, void* push) {
     gc_state.stack_map = p;
     gc_state.stack_depth--;
 }
+
+
+/*
+// Check compiled size of GC in Wasm
+// Only 4kB!!! :)
+// I don't have replay or controller yet, but wow
+// And this includes some fixed overhead that emcc generates
+//
+int main(int argc, char** argv) {
+
+    ElmValue** root = (ElmValue**)argv[0];
+    size_t word = (size_t)argc;
+    Closure* c = (Closure*)argv[1];
+    ElmValue* v = (ElmValue*)argv[2];
+
+    GC_init();
+    GC_register_root(root);
+    GC_malloc(word);
+    void* push = GC_stack_push();
+    GC_stack_tailcall(c, push);
+    GC_stack_pop(v, push);
+
+    GcHeap* heap = (GcHeap*)argv[3];
+    size_t* pword = (size_t*)argv[4];
+    GcState* state = (GcState*)argv[5];
+
+    set_heap_end(heap, pword);
+    mark(state, pword);
+    compact(state, pword);
+}
+*/

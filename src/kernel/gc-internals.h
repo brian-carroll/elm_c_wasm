@@ -41,13 +41,14 @@ enum {
 } GcStackCtor;
 
 
-void* find_children(ElmValue* v, size_t* n_children);
+size_t child_count(ElmValue* v);
 int set_heap_end(GcHeap* heap, size_t* new_break_ptr);
 size_t make_bitmask(size_t first_bit, size_t last_bit);
 bool mark_words(GcHeap* heap, void* p_void, size_t size);
 void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below);
 void mark_stack_map(GcState* state, size_t* ignore_below);
 void mark(GcState* state, size_t* ignore_below);
+void compact(GcState* state, size_t* compact_start);
 
 void collect(GcState*);
 

@@ -55,7 +55,7 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
 
     int has_error = brk(new_break_ptr);
     if (has_error) {
-        fprintf(stderr, "Failed to get heap memory. Error code %d\n", errno);
+        // fprintf(stderr, "Failed to get heap memory. Error code %d\n", errno);
         return errno;
     }
 
