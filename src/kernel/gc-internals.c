@@ -5,7 +5,6 @@
 #include "./types.h"
 #include "./gc-internals.h"
 
-
 static const size_t ALL_ONES = -1; // 0xfffff...
 
 
@@ -15,63 +14,40 @@ static const size_t ALL_ONES = -1; // 0xfffff...
 
    ==================================================== */
 
-// Find children of an Elm value
-// returns a pointer to first child, and writes to *n_children.
-// Would be nicer to treat both outputs the same way, but
-// that would make child_ptr_array a triple pointer. Ugh. Just no.
-void* find_children(ElmValue* v, size_t* n_children) {
-    void** child_ptr_array = NULL;
+size_t child_count(ElmValue* v) {
     switch (v->header.tag) {
         case Tag_Int:
         case Tag_Float:
         case Tag_Char:
         case Tag_String:
         case Tag_Nil:
-            child_ptr_array = NULL;
-            *n_children = 0;
-            break;
+            return 0;
 
         case Tag_Cons:
-            child_ptr_array = &v->cons.head;
-            *n_children = 2;
-            break;
-
         case Tag_Tuple2:
-            child_ptr_array = &v->tuple2.a;
-            *n_children = 2;
-            break;
+            return 2;
 
         case Tag_Tuple3:
-            child_ptr_array = &v->tuple3.a;
-            *n_children = 3;
-            break;
+            return 3;
 
         case Tag_Custom:
-            child_ptr_array = &v->custom.values[0];
-            *n_children = custom_params(&v->custom);
-            break;
+            return custom_params(&v->custom);
 
         case Tag_Record:
-            child_ptr_array = &v->record.values[0];
-            *n_children = v->record.fieldset->size;
-            break;
+            return v->record.fieldset->size;
 
         case Tag_Closure:
-            child_ptr_array = &v->closure.values[0];
-            *n_children = v->closure.n_values;
-            break;
+            return v->closure.n_values;
 
         case Tag_GcFull:
-            child_ptr_array = (void**)&v->gc_full.continuation;
-            *n_children = (v->gc_full.continuation != NULL) ? 1 : 0;
-            break;
+            return 1;
     }
-    return child_ptr_array;
+    return 0;
 }
 
 /* ====================================================
 
-            BITMAP & LOW-LEVEL FUNCTIONS
+                SYSTEM MEMORY
 
    ==================================================== */
 
@@ -109,6 +85,12 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
 }
 
 
+/* ====================================================
+
+                MARK
+
+   ==================================================== */
+
 size_t make_bitmask(size_t first_bit, size_t last_bit) {
     size_t mask = ALL_ONES;
     mask <<= GC_WORD_BITS -1 - last_bit;
@@ -116,13 +98,6 @@ size_t make_bitmask(size_t first_bit, size_t last_bit) {
     mask <<= first_bit;
     return mask;
 }
-
-
-/* ====================================================
-
-                MARK
-
-   ==================================================== */
 
 
 // Mark a value as live and return 'true' if previously marked
@@ -151,7 +126,7 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
             bitmap[first_word] |= bitmask;
         }
     } else {
-        size_t first_mask = make_bitmask(first_bit, 63);
+        size_t first_mask = make_bitmask(first_bit, GC_WORD_BITS-1);
         already_marked = !!(bitmap[first_word] & first_mask);
         if (!already_marked) {
             bitmap[first_word] |= first_mask;
@@ -168,15 +143,16 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
 
 
 void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
-    if ((size_t*)v < ignore_below) return;
+    size_t* first_word = (size_t*)v;
+    if (first_word < ignore_below) return;
 
     bool already_marked = mark_words(heap, v, v->header.size);
     if (already_marked) return;
 
-    size_t n_children;
-    void** child_ptr_array = find_children(v, &n_children);
+    size_t n_children = child_count(v);
+    size_t* first_child_field = first_word + v->header.size - n_children;
+    ElmValue** child_ptr_array = (ElmValue**)first_child_field;
 
-    if (child_ptr_array == NULL) return;
     for (size_t i=0; i < n_children; ++i) {
         ElmValue* child = child_ptr_array[i];
         mark_trace(heap, child, ignore_below);
@@ -265,74 +241,155 @@ void mark(GcState* state, size_t* ignore_below) {
 
    ==================================================== */
 
-// void* forwarding_address(void* old_address) {
-//     return NULL;
-// }
+const size_t max_mask = (size_t)1 << (GC_WORD_BITS-1);
+const size_t BLOCK_MASK = -GC_BLOCK_WORDS;
 
 
-// static void copy_value(u32* from, u32* to) {
-//     void** child_ptr_array;
-//     u32 n_children;
-//     ElmValue* v = (ElmValue*)from;
-//     child_ptr_array = find_children(v, &n_children);
+// Count live words between two heap pointers, using the bitmap
+size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last) {
+    size_t first_index = (size_t)(first - heap->start);
+    size_t first_word = first_index / GC_WORD_BITS;
+    size_t first_mask = (size_t)1 << (first_index % GC_WORD_BITS);
 
-//     if (!child_ptr_array || !n_children) {
-//         // Int, Float, Char, String
-//         for (u32 i=0; i < v->header.size; ++i) {
-//             *to++ = *from++;
-//         }
-//     } else {
-//         // container types
-//         while ((void**)from < child_ptr_array) {
-//             *to++ = *from++;
-//         }
-//         void** child_to = (void**)to;
-//         void** child_from = (void**)from;
-//         for (u32 i=0; i < n_children; ++i) {
-//             *child_to++ = forwarding_address(*child_from++);
-//         }
-//     }
-// }
+    size_t last_index = (size_t)(last - heap->start);
+    size_t last_word = last_index / GC_WORD_BITS;
+    size_t last_mask = (size_t)1 << (last_index % GC_WORD_BITS);
 
-// u32* compact() {
-//     u32* current = state.pages[0].data;
+    size_t count = 0;
+    size_t word = first_word;
+    size_t mask = first_mask;
 
-//     // skip initial live data, find first garbage patch
-//     while (is_marked(current)) {
-//         current = next_heap_object(current);
-//     }
-//     u32* to = current;
-
-//     while (current < state.current_heap) {
-//         while (!is_marked(current)) {
-//             current = next_heap_object(current);
-//         }
-
-//         u32* live_start = current;
-//         u32* next_garbage = live_start + size_marked(live_start);
-
-//         for (u32* from=live_start; from<next_garbage; ++from) {
-//             copy_value(from, to);
-//             to++;
-//         }
-
-//         current = to;
-//     }
-
-//     return state.current_heap;
-// }
+    while (word < last_word) {
+        while (mask < max_mask) {
+            if (heap->bitmap[word] & mask) {
+                count++;
+            }
+            mask <<= 1;
+        }
+        mask = 1;
+        word++;
+    }
+    while (mask < last_mask) {
+        if (heap->bitmap[word] & mask) {
+            count++;
+        }
+        mask <<= 1;
+    }
+    return count;
+}
 
 
+// Calculate where a value has moved to, return a pointer to the new location
+size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
+    size_t* old_block_start = (size_t*)((size_t)old_pointer & BLOCK_MASK);
+    size_t offset_in_block = bitmap_live_between(heap, old_block_start, old_pointer);
+    size_t offset_index = (old_block_start - heap->start) / GC_BLOCK_WORDS;
+    size_t* new_block_start = heap->offsets[offset_index];
+    size_t* new_pointer = new_block_start + offset_in_block;
+    return new_pointer;
+}
 
 
+void compact(GcState* state, size_t* compact_start) {
+
+    GcHeap* heap = &state->heap;
+    size_t* compact_end = state->next_alloc;
+
+    size_t* next_block_ptr = compact_start;
+    size_t* from = compact_start;
+
+    // Find starting point in bitmap
+    size_t heap_index = (size_t)(from - heap->start);
+    size_t bm_word = heap_index / GC_WORD_BITS;
+    size_t bm_bit = heap_index % GC_WORD_BITS;
+    size_t bm_mask = (size_t)1 << bm_bit;
+
+    // Find first garbage patch
+    size_t* next_garbage = compact_start;
+    while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
+        if (bm_mask < max_mask) {
+            bm_mask <<= 1;
+        } else {
+            bm_mask = 1;
+            bm_word++;
+        }
+        next_garbage++;
+    }
+    if (next_garbage >= compact_end) return;
+
+    size_t* to = next_garbage;
 
 
-/* ====================================================
+    // Iterate over live patches of data
+    while (from < compact_end) {
 
-                STACK MAP
+        // Move 'from' to start of a live patch (bitmap only, no heap operations)
+        while (!(heap->bitmap[bm_word] & bm_mask) && (from < compact_end)) {
+            if (bm_mask < max_mask) {
+                bm_mask <<= 1;
+            } else {
+                bm_mask = 1;
+                bm_word++;
+            }
+            from++;
+        }
+        if (from >= compact_end) return;
 
-   ==================================================== */
+        // Move 'next_garbage' to after the live patch (bitmap only, no heap operations)
+        while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
+            if (bm_mask < max_mask) {
+                bm_mask <<= 1;
+            } else {
+                bm_mask = 1;
+                bm_word++;
+            }
+            next_garbage++;
+        }
 
+        // Copy each value in the live patch (actual heap operations)
+        while (from < next_garbage) {
+
+            // Update offsets array if this is the first live value in a block
+            // (Offsets are used to calculate forwarding addresses later)
+            if (from >= next_block_ptr) {
+                size_t current_block_addr = (size_t)from & BLOCK_MASK; // may higher than next_block_ptr!
+                size_t heap_start_addr = (size_t)heap->start;
+                size_t current_block_idx =
+                    (current_block_addr - heap_start_addr) / GC_BLOCK_WORDS;
+                heap->offsets[current_block_idx] = to;
+                next_block_ptr = 
+                    heap->start + ((current_block_idx+1) * GC_BLOCK_WORDS);
+            }
+
+            // Find the children of this value, if any
+            ElmValue* v = (ElmValue*)from;
+            size_t n_children = child_count(v);
+            size_t* next_value = from + v->header.size;
+            size_t* first_child_field = next_value - n_children;
+
+            // Copy all the non-pointer data that comes before child pointers
+            while (from < first_child_field) {
+                *to++ = *from++;
+            }
+
+            // Copy the child pointers, modifying to point to new addresses
+            size_t** child_ptr_array = (size_t**)first_child_field;
+            size_t c=0;
+            for (; c < n_children; c++) {
+                size_t* child_old = child_ptr_array[c];
+                size_t* child_new =
+                    (child_old < compact_start)
+                        ? child_old
+                        : forwarding_address(heap, child_old);
+                *to++ = (size_t)child_new;
+            }
+
+            from = next_value;
+        }
+    }
+
+    state->next_alloc = to;
+}
 
 
 

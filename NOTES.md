@@ -31,8 +31,8 @@ GC next steps
 
 
 
-Dynamic allocation
-==================
+System calls for memory management
+==================================
 - `brk` moves the top of the data segment + heap.
 - This is how to ensure the heap is in the right place
 - GC_init needs to call `brk`
