@@ -24,87 +24,85 @@ bool is_marked(void* p) {
     return (gc_state.heap.bitmap[word] & mask) != 0;
 }
 
+void print_value(ElmValue* v) {
+    printf("| %12zx |  %c   |  %2x  | ", (size_t)v, is_marked(v) ? 'X' : ' ', v->header.size);
+    switch (v->header.tag) {
+        case Tag_Int:
+            printf("Int %d", v->elm_int.value);
+            break;
+        case Tag_Float:
+            printf("Float %f", v->elm_float.value);
+            break;
+        case Tag_Char:
+            printf("Char 0x%8x", v->elm_char.value);
+            break;
+        case Tag_String:
+            printf("String \"%s\"", v->elm_string.bytes);
+            break;
+        case Tag_Nil:
+            printf("Nil");
+            break;
+        case Tag_Cons:
+            printf("Cons head=%zx tail=%zx", (size_t)v->cons.head, (size_t)v->cons.tail);
+            break;
+        case Tag_Tuple2:
+            printf("Tuple2 a=%zx b=%zx", (size_t)v->tuple2.a, (size_t)v->tuple2.b);
+            break;
+        case Tag_Tuple3:
+            printf("Tuple3 a=%zx b=%zx c=%zx", (size_t)v->tuple3.a, (size_t)v->tuple3.b, (size_t)v->tuple3.c);
+            break;
+        case Tag_Custom:
+            // Assume that Custom type objects are stack map objects
+            // Mostly true in GC tests if not in 'real life'
+            switch (v->custom.ctor) {
+                case 0: printf("GcStackEmpty"); break;
+                case 1: printf("GcStackPush"); break;
+                case 2: printf("GcStackPop"); break;
+                case 3: printf("GcStackTailCall"); break;
+            }
+            printf(" values: ");
+            for (size_t i=0; i<custom_params(&v->custom); ++i) {
+                printf("%zx ", (size_t)v->custom.values[i]);
+            }
+            break;
+        case Tag_Record:
+            printf("Record fieldset=%zx values: ", (size_t)v->record.fieldset);
+            for (size_t i=0; i < v->record.fieldset->size; ++i) {
+                printf("%zx ", (size_t)v->record.values[i]);
+            }
+            break;
+        case Tag_Closure:
+            printf("Closure n_values=%d max_values=%d evaluator=%zx values: ",
+                v->closure.n_values, v->closure.max_values, (size_t)v->closure.evaluator
+            );
+            for (size_t i=0; i < v->closure.n_values; ++i) {
+                printf("%zx ", (size_t)v->record.values[i]);
+            }
+            break;
+        case Tag_GcFull:
+            printf("GcFull continuation=%zx", (size_t)v->gc_full.continuation);
+            break;
+    }
+    printf("\n");
+}
 
 void print_heap(GcState *state) {
-
-    size_t* from = (size_t*)gc_state.heap.start;
-    size_t* to = (size_t*)gc_state.next_alloc;
-
     printf("|   Address    | Mark | Size | Value\n");
     printf("| ------------ | ---- | ---- | -----\n");
 
-    size_t* p = from;
-    while (p < to) {
-        Header* h = (Header*)p;
-        if (h->size == 0) {
-            for (u32 i=0; i<16; i++) {
-                printf("| %12zx |  ?   |   ?  | %08x\n", (size_t)h, *(u32*)h);
-                h++;
+    size_t* next_value = state->heap.start;
+    for (size_t* p = state->heap.start; p < state->next_alloc; p++) {
+        if (p == next_value) {
+            ElmValue* v = (ElmValue*)p;
+            print_value(v);
+            if (v->header.size > 0 && v->header.size < 128) {
+                next_value += v->header.size;
+            } else {
+                next_value++;
             }
-            return;
+        } else {
+            printf("| %12zx |  %c   |      |\n", (size_t)p, is_marked(p) ? 'X' : ' ');
         }
-        p += (size_t)h->size;
-
-        ElmValue* v = (ElmValue*)h;
-        printf("| %12zx |  %c   |  %2d  | ", (size_t)v, is_marked(v) ? 'X' : ' ', v->header.size);
-        switch (h->tag) {
-            case Tag_Int:
-                printf("Int %d", v->elm_int.value);
-                break;
-            case Tag_Float:
-                printf("Float %f", v->elm_float.value);
-                break;
-            case Tag_Char:
-                printf("Char 0x%8x", v->elm_char.value);
-                break;
-            case Tag_String:
-                printf("String \"%s\"", v->elm_string.bytes);
-                break;
-            case Tag_Nil:
-                printf("Nil");
-                break;
-            case Tag_Cons:
-                printf("Cons head=%zx tail=%zx", (size_t)v->cons.head, (size_t)v->cons.tail);
-                break;
-            case Tag_Tuple2:
-                printf("Tuple2 a=%zx b=%zx", (size_t)v->tuple2.a, (size_t)v->tuple2.b);
-                break;
-            case Tag_Tuple3:
-                printf("Tuple3 a=%zx b=%zx c=%zx", (size_t)v->tuple3.a, (size_t)v->tuple3.b, (size_t)v->tuple3.c);
-                break;
-            case Tag_Custom:
-                // Assume that Custom type objects are stack map objects
-                // Mostly true in GC tests if not in 'real life'
-                switch (v->custom.ctor) {
-                    case 0: printf("GcStackEmpty"); break;
-                    case 1: printf("GcStackPush"); break;
-                    case 2: printf("GcStackPop"); break;
-                    case 3: printf("GcStackTailCall"); break;
-                }
-                printf(" values: ");
-                for (size_t i=0; i<custom_params(&v->custom); ++i) {
-                    printf("%zx ", (size_t)v->custom.values[i]);
-                }
-                break;
-            case Tag_Record:
-                printf("Record fieldset=%zx values: ", (size_t)v->record.fieldset);
-                for (size_t i=0; i < v->record.fieldset->size; ++i) {
-                    printf("%zx ", (size_t)v->record.values[i]);
-                }
-                break;
-            case Tag_Closure:
-                printf("Closure n_values=%d max_values=%d evaluator=%zx values: ",
-                    v->closure.n_values, v->closure.max_values, (size_t)v->closure.evaluator
-                );
-                for (size_t i=0; i < v->closure.n_values; ++i) {
-                    printf("%zx ", (size_t)v->record.values[i]);
-                }
-                break;
-            case Tag_GcFull:
-                printf("GcFull continuation=%zx", (size_t)v->gc_full.continuation);
-                break;
-        }
-        printf("\n");
     }
 }
 
@@ -284,6 +282,16 @@ char* gc_stackmap_test() {
     mu_assert("Stack map test should account for all allocated values",
         tested_size == heap_size
     );
+
+    printf("\n\ncompacting...\n\n");
+    compact(&gc_state, ignore_below);
+    printf("compaction done\n");
+
+    mark(&gc_state, ignore_below);
+
+    print_state(&gc_state);
+    print_heap(&gc_state);
+
 
     return NULL;
 }

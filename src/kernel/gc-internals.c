@@ -219,6 +219,9 @@ void mark_stack_map(GcState* state, size_t* ignore_below) {
 
 
 void mark(GcState* state, size_t* ignore_below) {
+    for (size_t* bm_word = state->heap.bitmap; bm_word < state->heap.system_end; bm_word++) {
+        *bm_word = 0;
+    }
     for (ElmValue* root_cell=state->roots; root_cell->header.tag==Tag_Cons; root_cell=root_cell->cons.tail) {
         mark_words(&state->heap, root_cell, root_cell->header.size);
 
@@ -296,10 +299,9 @@ void compact(GcState* state, size_t* compact_start) {
     size_t* compact_end = state->next_alloc;
 
     size_t* next_block_ptr = compact_start;
-    size_t* from = compact_start;
 
     // Find starting point in bitmap
-    size_t heap_index = (size_t)(from - heap->start);
+    size_t heap_index = (size_t)(compact_start - heap->start);
     size_t bm_word = heap_index / GC_WORD_BITS;
     size_t bm_bit = heap_index % GC_WORD_BITS;
     size_t bm_mask = (size_t)1 << bm_bit;
@@ -318,7 +320,7 @@ void compact(GcState* state, size_t* compact_start) {
     if (next_garbage >= compact_end) return;
 
     size_t* to = next_garbage;
-
+    size_t* from = to;
 
     // Iterate over live patches of data
     while (from < compact_end) {
@@ -336,6 +338,7 @@ void compact(GcState* state, size_t* compact_start) {
         if (from >= compact_end) return;
 
         // Move 'next_garbage' to after the live patch (bitmap only, no heap operations)
+        next_garbage = from;
         while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
             if (bm_mask < max_mask) {
                 bm_mask <<= 1;
@@ -388,6 +391,8 @@ void compact(GcState* state, size_t* compact_start) {
     }
 
     state->next_alloc = to;
+
+    // TODO: forward addresses for roots and stack map
 }
 
 
