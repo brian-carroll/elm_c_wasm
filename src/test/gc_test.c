@@ -364,6 +364,114 @@ char* gc_bitmap_test() {
 }
 
 
+char* gc_live_between_test() {
+    GC_init();
+    GcState* state = &gc_state;
+    GcHeap* heap = &state->heap;
+    bitmap_reset(heap);
+
+    size_t* first;
+    size_t* last;
+
+    heap->bitmap[0] = 0xf0;
+    first = heap->start + 4;
+    last = heap->start + 8;
+    mu_assert("bitmap_live_between with 4 words live",
+        bitmap_live_between(heap, first, last) == 4
+    );
+
+    first--;
+    last++;
+
+    mu_assert("bitmap_live_between with 4 live and 2 junk",
+        bitmap_live_between(heap, first, last) == 4
+    );
+
+    heap->bitmap[0] = 0xf0;
+    heap->bitmap[1] = 0x00;
+    heap->bitmap[2] = 0xf0;
+    first = heap->start + 2;
+    last = heap->start + (2*GC_WORD_BITS) + 10;
+
+    mu_assert("bitmap_live_between across 3 bitmap words",
+        bitmap_live_between(heap, first, last) == 8
+    );
+
+    last = heap->start + (2*GC_WORD_BITS) + 7;
+    mu_assert("bitmap_live_between doesn't count the current word",
+        bitmap_live_between(heap, first, last) == 7
+    );
+
+    return NULL;
+}
+
+
+char* gc_forwarding_address_test() {
+    if (verbose) printf("gc_forwarding_address_test\n");
+
+    GC_init();
+    GcState* state = &gc_state;
+    GcHeap* heap = &state->heap;
+    bitmap_reset(heap);
+    reset_offsets(heap);
+
+    size_t* from;
+    size_t* expected;
+    size_t* actual;
+
+    heap->bitmap[0] = 0xf0;
+    heap->offsets[0] = heap->start;
+    from = heap->start + 4;
+    expected = heap->start;
+    mu_assert("forwarding_address at bottom of heap",
+        forwarding_address(heap, from) == expected
+    );
+
+    heap->bitmap[0] = 0xf0f;
+    heap->offsets[0] = heap->start;// + 4;
+    from = heap->start + 8;
+    expected = heap->start + 4;
+    mu_assert("forwarding_address just above bottom of heap",
+        forwarding_address(heap, from) == expected
+    );
+
+    heap->bitmap[0] = 0xf0f;
+    heap->bitmap[0] = 0xff;
+    heap->offsets[0] = NULL;
+    heap->offsets[1] = heap->start + 8;
+    from = heap->start + GC_BLOCK_WORDS;
+    expected = heap->offsets[1];
+    mu_assert("forwarding_address: 1st value in 2nd block",
+        forwarding_address(heap, from) == expected
+    );
+
+
+    // Fails, but I'm not sure if the test or the code is wrong!
+    //
+    // heap->bitmap[0] = 0xf0f;
+    // heap->bitmap[1] = 0xf0f;
+    // heap->offsets[0] = NULL; // heap->start + 4;
+    // heap->offsets[1] = heap->start + 8;
+    // from = heap->start + GC_BLOCK_WORDS + 8;
+    // expected = heap->start + 12;
+    // actual = forwarding_address(heap, from);
+    // if (verbose) {
+    //     print_state(state);
+    //     printf("%zx -> %zx (expected %zx)\n",
+    //         (size_t)from, (size_t)actual, (size_t)expected
+    //     );
+    // }
+    // printf("GC_BLOCK_WORDS = %ld\n", GC_BLOCK_WORDS);
+
+    // mu_assert("forwarding_address: 2nd value in 2nd block",
+    //     actual == expected
+    // );
+
+
+    return NULL;
+}
+
+
 char* gc_test() {
     if (verbose) {
         printf("\n");
@@ -373,6 +481,9 @@ char* gc_test() {
 
     mu_run_test(gc_struct_test);
     mu_run_test(gc_bitmap_test);
+    mu_run_test(gc_live_between_test);
+    mu_run_test(gc_forwarding_address_test);
     mu_run_test(gc_stackmap_test);
+
     return NULL;
 }

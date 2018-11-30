@@ -11,7 +11,9 @@
 
 
 #define GC_WASM_PAGE_SIZE 65536
-#define GC_BLOCK_WORDS (512/sizeof(size_t))
+#define GC_BLOCK_BYTES 512
+#define GC_BLOCK_WORDS (GC_BLOCK_BYTES/sizeof(size_t))
+#define GC_BLOCK_MASK (-(GC_BLOCK_WORDS * sizeof(size_t)))
 #define GC_WORD_BITS (sizeof(size_t)*8)
 
 
@@ -40,6 +42,11 @@ enum {
     GcStackTailCall,
 } GcStackCtor;
 
+
+void bitmap_reset(GcHeap*);
+size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last);
+size_t* forwarding_address(GcHeap* heap, size_t* old_pointer);
+void reset_offsets(GcHeap* heap);
 
 size_t child_count(ElmValue* v);
 int set_heap_end(GcHeap* heap, size_t* new_break_ptr);

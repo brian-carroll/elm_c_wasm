@@ -218,10 +218,18 @@ void mark_stack_map(GcState* state, size_t* ignore_below) {
 }
 
 
-void mark(GcState* state, size_t* ignore_below) {
-    for (size_t* bm_word = state->heap.bitmap; bm_word < state->heap.system_end; bm_word++) {
+void bitmap_reset(GcHeap* heap) {
+    for (size_t* bm_word = heap->bitmap;
+        bm_word < heap->system_end;
+        bm_word++
+    ) {
         *bm_word = 0;
     }
+}
+
+
+void mark(GcState* state, size_t* ignore_below) {
+    bitmap_reset(&state->heap);
     for (ElmValue* root_cell=state->roots; root_cell->header.tag==Tag_Cons; root_cell=root_cell->cons.tail) {
         mark_words(&state->heap, root_cell, root_cell->header.size);
 
@@ -245,7 +253,6 @@ void mark(GcState* state, size_t* ignore_below) {
    ==================================================== */
 
 const size_t max_mask = (size_t)1 << (GC_WORD_BITS-1);
-const size_t BLOCK_MASK = -GC_BLOCK_WORDS;
 
 
 // Count live words between two heap pointers, using the bitmap
@@ -284,21 +291,28 @@ size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last) {
 
 // Calculate where a value has moved to, return a pointer to the new location
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
-    size_t* old_block_start = (size_t*)((size_t)old_pointer & BLOCK_MASK);
-    size_t offset_in_block = bitmap_live_between(heap, old_block_start, old_pointer);
+    size_t* old_block_start = (size_t*)((size_t)old_pointer & GC_BLOCK_MASK);
     size_t offset_index = (old_block_start - heap->start) / GC_BLOCK_WORDS;
     size_t* new_block_start = heap->offsets[offset_index];
+    size_t offset_in_block = bitmap_live_between(heap, new_block_start, old_pointer);
     size_t* new_pointer = new_block_start + offset_in_block;
     return new_pointer;
 }
 
 
-void compact(GcState* state, size_t* compact_start) {
+void reset_offsets(GcHeap* heap) {
+    size_t n_offsets = heap->bitmap - (size_t*)heap->offsets;
+    for (size_t i=0; i<n_offsets; i++) {
+        heap->offsets[i] = NULL;
+    }
+}
 
+
+void compact(GcState* state, size_t* compact_start) {
     GcHeap* heap = &state->heap;
     size_t* compact_end = state->next_alloc;
-
     size_t* next_block_ptr = compact_start;
+    reset_offsets(heap);
 
     // Find starting point in bitmap
     size_t heap_index = (size_t)(compact_start - heap->start);
@@ -307,19 +321,19 @@ void compact(GcState* state, size_t* compact_start) {
     size_t bm_mask = (size_t)1 << bm_bit;
 
     // Find first garbage patch
-    size_t* next_garbage = compact_start;
-    while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
+    size_t* first_move_to = compact_start;
+    while ((heap->bitmap[bm_word] & bm_mask) && (first_move_to < compact_end)) {
         if (bm_mask < max_mask) {
             bm_mask <<= 1;
         } else {
             bm_mask = 1;
             bm_word++;
         }
-        next_garbage++;
+        first_move_to++;
     }
-    if (next_garbage >= compact_end) return;
+    if (first_move_to >= compact_end) return;
 
-    size_t* to = next_garbage;
+    size_t* to = first_move_to;
     size_t* from = to;
 
     // Iterate over live patches of data
@@ -338,7 +352,7 @@ void compact(GcState* state, size_t* compact_start) {
         if (from >= compact_end) return;
 
         // Move 'next_garbage' to after the live patch (bitmap only, no heap operations)
-        next_garbage = from;
+        size_t* next_garbage = from;
         while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
             if (bm_mask < max_mask) {
                 bm_mask <<= 1;
@@ -355,7 +369,7 @@ void compact(GcState* state, size_t* compact_start) {
             // Update offsets array if this is the first live value in a block
             // (Offsets are used to calculate forwarding addresses later)
             if (from >= next_block_ptr) {
-                size_t current_block_addr = (size_t)from & BLOCK_MASK; // may higher than next_block_ptr!
+                size_t current_block_addr = (size_t)from & GC_BLOCK_MASK; // may be higher than next_block_ptr!
                 size_t heap_start_addr = (size_t)heap->start;
                 size_t current_block_idx =
                     (current_block_addr - heap_start_addr) / GC_BLOCK_WORDS;
@@ -380,7 +394,7 @@ void compact(GcState* state, size_t* compact_start) {
             for (size_t c=0; c < n_children; c++) {
                 size_t* child_old = child_ptr_array[c];
                 size_t* child_new =
-                    (child_old < compact_start)
+                    (child_old < first_move_to)
                         ? child_old
                         : forwarding_address(heap, child_old);
                 *to++ = (size_t)child_new;
@@ -392,7 +406,20 @@ void compact(GcState* state, size_t* compact_start) {
 
     state->next_alloc = to;
 
-    // TODO: forward addresses for roots and stack map
+    size_t* stack_map = (size_t*)state->stack_map;
+    if (stack_map > first_move_to) {
+        stack_map = forwarding_address(heap, stack_map);
+        state->stack_map = (Custom*)stack_map;
+    }
+
+    for (ElmValue* root_cell=state->roots; root_cell->header.tag==Tag_Cons; root_cell=root_cell->cons.tail) {
+        size_t** root_mutable_pointer = root_cell->cons.head;
+        size_t* live_heap_value = *root_mutable_pointer;
+        if (live_heap_value > first_move_to) {
+            live_heap_value = forwarding_address(heap, live_heap_value);
+            *root_mutable_pointer = live_heap_value;
+        }
+    }
 }
 
 

@@ -61,17 +61,21 @@
 
 GcState gc_state;
 
-void* stack_empty(); // pre-declaration
+static void* stack_empty(); // pre-declaration
 
 
 // Call exactly once on program startup
 int GC_init() {
 
     // Get current max address of program data
-    void* break_ptr = sbrk(0);
+    size_t* break_ptr = sbrk(0);
 
-    // Align to next 32 or 64-bit boundary
-    size_t break_aligned = ((size_t)break_ptr | (sizeof(size_t) -1)) + 1;
+    // Align to next block boundary
+    size_t break_aligned = (size_t)break_ptr;
+    if (break_aligned % GC_BLOCK_BYTES) {
+        break_aligned |= (GC_BLOCK_BYTES-1);
+        break_aligned++;
+    }
     size_t* heap_bottom = (size_t*)break_aligned;
 
     // Initialise state with zero heap size
@@ -99,7 +103,7 @@ int GC_init() {
     int err = set_heap_end(&gc_state.heap, top_of_next_page);
 
     if (!err) {
-        gc_state.stack_map = stack_empty();
+        stack_empty();
     }
 
     return err;
@@ -123,8 +127,9 @@ int GC_init() {
   It can later update the pointer to point at a different
   ElmValue on the heap, as the program executes.
   Whenever the GC does a collection, it checks this pointer
-  and preserves whatever heap value it is _currently_
-  pointing to.
+  and preserves whatever heap value it is currently
+  pointing to. If it moves the value, it will update the
+  pointer to reference the new location.
 */
 void GC_register_root(ElmValue** ptr_to_mutable_ptr) {
     gc_state.roots = (ElmValue*)newCons(
@@ -195,7 +200,7 @@ void* GC_malloc(size_t bytes) {
 const size_t head = 1;
 const size_t tail = 0; // StackPush only has a tail, no head
 
-void* stack_empty() {
+static void* stack_empty() {
     Custom* p = GC_malloc(sizeof(Custom));
     p->header = HEADER_CUSTOM(0);
     p->ctor = GcStackEmpty;
