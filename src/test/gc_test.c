@@ -73,7 +73,7 @@ void print_value(ElmValue* v) {
                 case 2: printf("GcStackPop"); break;
                 case 3: printf("GcStackTailCall"); break;
             }
-            printf(" values: ");
+            if (v->custom.ctor) printf(" values: ");
             for (size_t i=0; i<custom_params(&v->custom); ++i) {
                 printf("%zx ", (size_t)v->custom.values[i]);
             }
@@ -162,7 +162,8 @@ char* gc_mark_compact_test() {
 
     void* live[100];
     void* dead[100];
-    size_t nlive=0, ndead=0;
+    size_t nlive=0;
+    size_t ndead=0;
 
     if (verbose) {
         printf("GC initial state:\n");
@@ -193,9 +194,9 @@ char* gc_mark_compact_test() {
 
     // The currently-running function allocates some stuff.
     // This function won't have returned by end of test, so it needs these values.
-    live[nlive++] = newElmInt(gc_state.stack_depth);
-    live[nlive++] = newElmInt(gc_state.stack_depth);
-    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
 
     // Push down to level 2. This will complete. Need its return value
     Closure* c2 = Utils_clone(mock_closure);
@@ -204,26 +205,26 @@ char* gc_mark_compact_test() {
     live[nlive++] = push2;
 
     // Temporary values from level 2, not in return value
-    dead[ndead++] = newElmInt(gc_state.stack_depth);
-    dead[ndead++] = newElmInt(gc_state.stack_depth);
+    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
 
     // 3rd level function call. All dead, since we have the return value of a higher level call.
     void* push3 = GC_stack_push();
     dead[ndead++] = push3;
-    dead[ndead++] = newElmInt(gc_state.stack_depth);
-    dead[ndead++] = newElmInt(gc_state.stack_depth);
-    ElmInt* ret3 = newElmInt(gc_state.stack_depth);
+    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
+    ElmInt* ret3 = newElmInt(gc_state.stack_depth*100 + nlive + ndead);
     dead[ndead++] = ret3;
     dead[ndead++] = gc_state.next_alloc; // the pop we're about to allocate
     GC_stack_pop((ElmValue*)ret3, push3);
 
     // return value from level 2. Keep it to provide to level 1 on replay
-    ElmValue* ret2a = (ElmValue*)newElmInt(gc_state.stack_depth);
+    ElmValue* ret2a = (ElmValue*)newElmInt(gc_state.stack_depth*100 + nlive + ndead);
     ElmValue* ret2b = (ElmValue*)newCons(ret2a, &Nil);
-    ElmValue* ret2c = (ElmValue*)newElmInt(gc_state.stack_depth);
-    ElmValue* ret2d = (ElmValue*)newCons(ret2c, ret2b);
     live[nlive++] = ret2a;
     live[nlive++] = ret2b;
+    ElmValue* ret2c = (ElmValue*)newElmInt(gc_state.stack_depth*100 + nlive + ndead);
+    ElmValue* ret2d = (ElmValue*)newCons(ret2c, ret2b);
     live[nlive++] = ret2c;
     live[nlive++] = ret2d;
 
@@ -232,15 +233,15 @@ char* gc_mark_compact_test() {
     // Implementation treats them as live for consistency and ease of coding
     live[nlive++] = gc_state.next_alloc; // the pop we're about to allocate
     GC_stack_pop(ret2d, push2);
-    live[nlive++] = newElmInt(gc_state.stack_depth);
-    live[nlive++] = newElmInt(gc_state.stack_depth);
-    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
 
     // Call a function that makes a tail call
     void* push_into_tailrec = GC_stack_push();
     live[nlive++] = push_into_tailrec;
-    dead[ndead++] = newElmInt(gc_state.stack_depth);
-    dead[ndead++] = newElmInt(gc_state.stack_depth);
+    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
 
     // Tail call. Has completed when we stop the world => dead
     Closure* ctail1 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
@@ -255,8 +256,8 @@ char* gc_mark_compact_test() {
     GC_stack_tailcall(ctail1, push_into_tailrec);
 
     // arguments to the next tail call
-    live[nlive++] = newElmInt(gc_state.stack_depth);
-    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
 
     // Tail call. still evaluating this when we stopped the world => keep closure alive
     Closure* ctail2 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
@@ -271,8 +272,8 @@ char* gc_mark_compact_test() {
     GC_stack_tailcall(ctail2, push_into_tailrec);
 
     // allocated just before we stopped the world
-    live[nlive++] = newElmInt(gc_state.stack_depth);
-    live[nlive++] = newElmInt(gc_state.stack_depth);
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
 
     if (verbose) printf("Marking...\n");
     size_t* ignore_below = (size_t*)c1;
@@ -305,7 +306,7 @@ char* gc_mark_compact_test() {
         live_size + dead_size == heap_size
     );
 
-    if (verbose) printf("\n\nCompacting...\n\n");
+    if (verbose) printf("\n\nCompacting from %p\n\n", ignore_below);
     compact(&gc_state, ignore_below);
     if (verbose) printf("Finished compacting\n");
 
@@ -417,15 +418,15 @@ char* gc_live_between_test() {
     heap->bitmap[0] = 0xf0;
     first = heap->start + 4;
     last = heap->start + 8;
-    mu_assert("bitmap_live_between with 4 words live",
-        bitmap_live_between(heap, first, last) == 4
+    mu_assert("bitmap_dead_between with 4 words live",
+        bitmap_dead_between(heap, first, last) == 4
     );
 
     first--;
     last++;
 
-    mu_assert("bitmap_live_between with 4 live and 2 junk",
-        bitmap_live_between(heap, first, last) == 4
+    mu_assert("bitmap_dead_between with 4 live and 2 junk",
+        bitmap_dead_between(heap, first, last) == 4
     );
 
     heap->bitmap[0] = 0xf0;
@@ -434,77 +435,77 @@ char* gc_live_between_test() {
     first = heap->start + 2;
     last = heap->start + (2*GC_WORD_BITS) + 10;
 
-    mu_assert("bitmap_live_between across 3 bitmap words",
-        bitmap_live_between(heap, first, last) == 8
+    mu_assert("bitmap_dead_between across 3 bitmap words",
+        bitmap_dead_between(heap, first, last) == 8
     );
 
     last = heap->start + (2*GC_WORD_BITS) + 7;
-    mu_assert("bitmap_live_between doesn't count the current word",
-        bitmap_live_between(heap, first, last) == 7
+    mu_assert("bitmap_dead_between doesn't count the current word",
+        bitmap_dead_between(heap, first, last) == 7
     );
 
     return NULL;
 }
 
 
-char* gc_forwarding_address_test() {
-    if (verbose) printf("gc_forwarding_address_test\n");
+// char* gc_forwarding_address_test() {
+//     if (verbose) printf("gc_forwarding_address_test\n");
 
-    reset();
-    GcState* state = &gc_state;
-    GcHeap* heap = &state->heap;
+//     reset();
+//     GcState* state = &gc_state;
+//     GcHeap* heap = &state->heap;
 
-    size_t* from;
-    size_t* expected;
-    size_t* actual;
+//     size_t* from;
+//     size_t* expected;
+//     size_t* actual;
 
-    heap->bitmap[0] = 0xf0;
-    heap->offsets[0] = heap->start;
-    from = heap->start + 4;
-    expected = heap->start;
-    mu_assert("forwarding_address at bottom of heap",
-        forwarding_address(heap, from) == expected
-    );
+//     heap->bitmap[0] = 0xf0;
+//     heap->offsets[0] = heap->start;
+//     from = heap->start + 4;
+//     expected = heap->start;
+//     mu_assert("forwarding_address at bottom of heap",
+//         forwarding_address(heap, from) == expected
+//     );
 
-    heap->bitmap[0] = 0xf0f;
-    heap->offsets[0] = heap->start;// + 4;
-    from = heap->start + 8;
-    expected = heap->start + 4;
-    mu_assert("forwarding_address just above bottom of heap",
-        forwarding_address(heap, from) == expected
-    );
+//     heap->bitmap[0] = 0xf0f;
+//     heap->offsets[0] = heap->start;// + 4;
+//     from = heap->start + 8;
+//     expected = heap->start + 4;
+//     mu_assert("forwarding_address just above bottom of heap",
+//         forwarding_address(heap, from) == expected
+//     );
 
-    heap->bitmap[0] = 0xf0f;
-    heap->bitmap[0] = 0xff;
-    heap->offsets[0] = NULL;
-    heap->offsets[1] = heap->start + 8;
-    from = heap->start + GC_BLOCK_WORDS;
-    expected = heap->offsets[1];
-    mu_assert("forwarding_address: 1st value in 2nd block",
-        forwarding_address(heap, from) == expected
-    );
+//     heap->bitmap[0] = 0xf0f;
+//     heap->bitmap[0] = 0xff;
+//     heap->offsets[0] = NULL;
+//     heap->offsets[1] = heap->start + 8;
+//     from = heap->start + GC_BLOCK_WORDS;
+//     expected = heap->offsets[1];
+//     mu_assert("forwarding_address: 1st value in 2nd block",
+//         forwarding_address(heap, from) == expected
+//     );
 
-    heap->bitmap[0] = 0xf0f;
-    heap->bitmap[1] = 0xf0f;
-    heap->offsets[0] = NULL; // heap->start + 4;
-    heap->offsets[1] = heap->start + 8;
-    from = heap->start + GC_BLOCK_WORDS + 8;
-    expected = heap->start + 12;
-    actual = forwarding_address(heap, from);
-    if (verbose) {
-        print_state(state);
-        printf("%zx -> %zx (expected %zx)\n",
-            (size_t)from, (size_t)actual, (size_t)expected
-        );
-    }
+//     heap->bitmap[0] = 0xf0f;
+//     heap->bitmap[1] = 0xf0f;
+//     heap->offsets[0] = NULL; // heap->start + 4;
+//     heap->offsets[1] = heap->start + 8;
+//     from = heap->start + GC_BLOCK_WORDS + 8;
+//     expected = heap->start + 12;
+//     actual = forwarding_address(heap, from);
+//     if (verbose) {
+//         print_state(state);
+//         printf("%zx -> %zx (expected %zx)\n",
+//             (size_t)from, (size_t)actual, (size_t)expected
+//         );
+//     }
 
-    mu_assert("forwarding_address: 2nd value in 2nd block",
-        actual == expected
-    );
+//     mu_assert("forwarding_address: 2nd value in 2nd block",
+//         actual == expected
+//     );
 
 
-    return NULL;
-}
+//     return NULL;
+// }
 
 
 char* gc_test() {
@@ -514,10 +515,10 @@ char* gc_test() {
         printf("--\n");
     }
 
-    mu_run_test(gc_struct_test);
-    mu_run_test(gc_bitmap_test);
-    mu_run_test(gc_live_between_test);
-    mu_run_test(gc_forwarding_address_test);
+    // mu_run_test(gc_struct_test);
+    // mu_run_test(gc_bitmap_test);
+    // mu_run_test(gc_live_between_test);
+    // mu_run_test(gc_forwarding_address_test);
     mu_run_test(gc_mark_compact_test);
 
     return NULL;

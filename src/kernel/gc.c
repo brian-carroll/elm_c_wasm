@@ -85,7 +85,7 @@ int GC_init() {
             .end = heap_bottom,
             .system_end = heap_bottom,
             .bitmap = heap_bottom,
-            .offsets = (size_t**)heap_bottom,
+            .offsets = heap_bottom,
         },
         .next_alloc = heap_bottom,
         .roots = &Nil,

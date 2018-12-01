@@ -83,13 +83,10 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
     size_t bitmap_words = GC_DIV_ROUND_UP(bitmap_bytes, bytes_per_word);
     size_t offset_words = GC_DIV_ROUND_UP(offset_bytes, bytes_per_word);
 
-    size_t* bitmap = new_break_ptr - bitmap_words;
-    size_t* offsets = bitmap - offset_words;
-
-    heap->end = offsets;
+    heap->bitmap = new_break_ptr - bitmap_words;
+    heap->offsets = heap->bitmap - offset_words;
+    heap->end = heap->offsets;
     heap->system_end = new_break_ptr;
-    heap->bitmap = bitmap;
-    heap->offsets = (size_t**)offsets;
 
     return 0;
 }
@@ -270,7 +267,7 @@ const size_t max_mask = (size_t)1 << (GC_WORD_BITS-1);
 
 
 // Count live words between two heap pointers, using the bitmap
-size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last) {
+size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
     size_t first_index = (size_t)(first - heap->start);
     size_t first_word = first_index / GC_WORD_BITS;
     size_t first_mask = (size_t)1 << (first_index % GC_WORD_BITS);
@@ -285,7 +282,7 @@ size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last) {
 
     while (word < last_word) {
         while (mask < max_mask) {
-            if (heap->bitmap[word] & mask) {
+            if ((heap->bitmap[word] & mask) == 0) {
                 count++;
             }
             mask <<= 1;
@@ -294,7 +291,7 @@ size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last) {
         word++;
     }
     while (mask < last_mask) {
-        if (heap->bitmap[word] & mask) {
+        if ((heap->bitmap[word] & mask) == 0) {
             count++;
         }
         mask <<= 1;
@@ -303,30 +300,56 @@ size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last) {
 }
 
 
+// The offset is the (positive) amount by which a value is moved *down* during compaction
+// Slightly different from the book and papers but easier on my brain.
+void calc_offsets(GcHeap* heap, size_t* compact_start_block, size_t* compact_end) {
+    size_t ndead = 0;
+    size_t offset_index = (compact_start_block - heap->start) / GC_BLOCK_WORDS;
+    heap->offsets[offset_index] = ndead;
+
+    size_t* prev_block = compact_start_block;
+    size_t* current_block = prev_block + GC_BLOCK_WORDS;
+
+    while (current_block < compact_end) {
+        ndead += bitmap_dead_between(heap, prev_block, current_block);
+        heap->offsets[++offset_index] = ndead;
+        prev_block = current_block;
+        current_block += GC_BLOCK_WORDS;
+    }
+}
+
+
 // Calculate where a value has moved to, return a pointer to the new location
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
-    size_t* old_block_start = (size_t*)((size_t)old_pointer & GC_BLOCK_MASK);
-    size_t offset_index = (old_block_start - heap->start) / GC_BLOCK_WORDS;
-    size_t* new_block_start = heap->offsets[offset_index];
-    size_t offset_in_block = bitmap_live_between(heap, new_block_start, old_pointer);
-    size_t* new_pointer = new_block_start + offset_in_block;
+
+    size_t block_index = (old_pointer - heap->start) / GC_BLOCK_WORDS;
+    size_t block_offset = heap->offsets[block_index];
+
+    size_t* old_block_start = heap->start + (block_index * GC_BLOCK_WORDS);
+    size_t offset_in_block = bitmap_dead_between(heap, old_block_start, old_pointer);
+
+    size_t* new_pointer = old_pointer - block_offset - offset_in_block;
+
+    // printf("\n");
+    // printf("old_pointer %p\n", old_pointer);
+    // printf("old_block_start %p\n", old_block_start);
+    // printf("block_index %zd\n", block_index);
+    // printf("new_block_start %p\n", new_block_start);
+    // printf("offset_in_block %zd\n", offset_in_block);
+    // printf("new_pointer %p\n", new_pointer);
+    // printf("\n");
+
     return new_pointer;
 }
 
-
-void offsets_reset(GcHeap* heap) {
-    size_t n_offsets = heap->bitmap - (size_t*)heap->offsets;
-    for (size_t i=0; i<n_offsets; i++) {
-        heap->offsets[i] = NULL;
-    }
-}
 
 
 void compact(GcState* state, size_t* compact_start) {
     GcHeap* heap = &state->heap;
     size_t* compact_end = state->next_alloc;
-    size_t* next_block_ptr = compact_start;
-    offsets_reset(heap);
+    size_t* compact_start_block = (size_t*)((size_t)compact_start & GC_BLOCK_MASK);
+
+    calc_offsets(heap, compact_start_block, compact_end);
 
     // Find starting point in bitmap
     size_t heap_index = (size_t)(compact_start - heap->start);
@@ -348,9 +371,9 @@ void compact(GcState* state, size_t* compact_start) {
     if (first_move_to >= compact_end) return;
 
     size_t* to = first_move_to;
-    size_t* from = to;
 
     // Iterate over live patches of data
+    size_t* from = to;
     while (from < compact_end) {
 
         // Move 'from' to start of a live patch (bitmap only, no heap operations)
@@ -379,18 +402,8 @@ void compact(GcState* state, size_t* compact_start) {
 
         // Copy each value in the live patch (actual heap operations)
         while (from < next_garbage) {
-            // Update offsets array if this is the first live value in a block
-            // (Offsets are used to calculate forwarding addresses later)
-            if (from >= next_block_ptr) {
-                // Recalculate current block, in case we skipped one (e.g. long string)
-                size_t current_block_idx =
-                    (from - heap->start) / GC_BLOCK_WORDS;
-                heap->offsets[current_block_idx] = to;
-                next_block_ptr = 
-                    heap->start + ((current_block_idx+1) * GC_BLOCK_WORDS);
-            }
 
-            // Find the children of this value, if any
+            // Find how many children this value has
             ElmValue* v = (ElmValue*)from;
             size_t n_children = child_count(v);
             size_t* next_value = from + v->header.size;
@@ -420,7 +433,9 @@ void compact(GcState* state, size_t* compact_start) {
 
     size_t* stack_map = (size_t*)state->stack_map;
     if (stack_map > first_move_to) {
+        printf("stack_map old = %p\n", stack_map);
         stack_map = forwarding_address(heap, stack_map);
+        printf("stack_map new = %p\n", stack_map);
         state->stack_map = (Custom*)stack_map;
     }
 

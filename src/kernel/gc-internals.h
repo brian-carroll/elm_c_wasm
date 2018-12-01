@@ -21,7 +21,7 @@
 typedef struct {
     size_t* start;
     size_t* end; // end of usable heap area
-    size_t** offsets;
+    size_t* offsets;
     size_t* bitmap;
     size_t* system_end; // end of heap including GC reserved area (bitmap & offsets)
 } GcHeap;
@@ -45,7 +45,7 @@ enum {
 
 
 void bitmap_reset(GcHeap*);
-size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last);
+size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer);
 void offsets_reset(GcHeap* heap);
 
