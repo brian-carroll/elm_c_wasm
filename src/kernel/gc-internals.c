@@ -314,7 +314,7 @@ size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
 }
 
 
-void reset_offsets(GcHeap* heap) {
+void offsets_reset(GcHeap* heap) {
     size_t n_offsets = heap->bitmap - (size_t*)heap->offsets;
     for (size_t i=0; i<n_offsets; i++) {
         heap->offsets[i] = NULL;
@@ -326,7 +326,7 @@ void compact(GcState* state, size_t* compact_start) {
     GcHeap* heap = &state->heap;
     size_t* compact_end = state->next_alloc;
     size_t* next_block_ptr = compact_start;
-    reset_offsets(heap);
+    offsets_reset(heap);
 
     // Find starting point in bitmap
     size_t heap_index = (size_t)(compact_start - heap->start);

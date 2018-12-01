@@ -47,7 +47,7 @@ enum {
 void bitmap_reset(GcHeap*);
 size_t bitmap_live_between(GcHeap* heap, size_t* first, size_t* last);
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer);
-void reset_offsets(GcHeap* heap);
+void offsets_reset(GcHeap* heap);
 
 size_t child_count(ElmValue* v);
 int set_heap_end(GcHeap* heap, size_t* new_break_ptr);

@@ -12,8 +12,21 @@
 extern GcState gc_state;
 
 
+static void reset() {
+    memset(gc_state.heap.start, 0,
+        gc_state.heap.system_end - gc_state.heap.start
+    );
+    gc_state.next_alloc = gc_state.heap.start;
+    gc_state.roots = &Nil;
+    gc_state.stack_depth = 0;
 
-bool is_marked(void* p) {
+    Custom* p = GC_malloc(sizeof(Custom));
+    p->header = HEADER_CUSTOM(0);
+    p->ctor = GcStackEmpty;
+    gc_state.stack_map = p;
+}
+
+static bool is_marked(void* p) {
     size_t* pword = (size_t*)p;
     size_t slot = pword - gc_state.heap.start;
     if (slot >> (GC_WORD_BITS-1)) return true; // off heap => not garbage, stop tracing
@@ -139,6 +152,8 @@ char alive_or_dead_msg[30];
 ElmValue* root_mutable_pointer;
 
 char* gc_stackmap_test() {
+    reset();
+
     if (verbose) {
         printf("\n");
         printf("Stack map\n");
@@ -149,8 +164,6 @@ char* gc_stackmap_test() {
     void* dead[100];
     size_t nlive=0, ndead=0;
 
-
-    // GC_init();
     if (verbose) {
         printf("GC initial state:\n");
         print_state(&gc_state);
@@ -326,7 +339,7 @@ char bitmap_msg[100];
 
 char* gc_bitmap_test() {
     char str[] = "This is a test string that's an odd number of ints.....";
-    GC_init();
+    reset();
 
     for (size_t i=0; i<10; i++) {
         ElmValue *p1, *p2, *p3, *p4;
@@ -379,10 +392,9 @@ char* gc_bitmap_test() {
 
 
 char* gc_live_between_test() {
-    GC_init();
+    reset();
     GcState* state = &gc_state;
     GcHeap* heap = &state->heap;
-    bitmap_reset(heap);
 
     size_t* first;
     size_t* last;
@@ -423,11 +435,9 @@ char* gc_live_between_test() {
 char* gc_forwarding_address_test() {
     if (verbose) printf("gc_forwarding_address_test\n");
 
-    GC_init();
+    reset();
     GcState* state = &gc_state;
     GcHeap* heap = &state->heap;
-    bitmap_reset(heap);
-    reset_offsets(heap);
 
     size_t* from;
     size_t* expected;
