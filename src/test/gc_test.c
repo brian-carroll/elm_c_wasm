@@ -311,7 +311,7 @@ char* gc_mark_compact_test() {
     if (verbose) printf("Finished compacting\n");
 
 
-    if (verbose) printf("\n\nMarking...\n\n");
+    if (verbose) printf("\n\nMarking compacted heap...\n\n");
     mark(&gc_state, ignore_below);
     if (verbose) printf("\n\nFinished marking...\n\n");
 
@@ -330,6 +330,7 @@ char* gc_mark_compact_test() {
     );
 
 
+    // If 'mark' is able to trace correctly, forwarding addresses are OK
     size_t n_marked = 0;
     for (size_t* w = gc_state.heap.start; w < gc_state.next_alloc; w++) {
         n_marked += is_marked(w);

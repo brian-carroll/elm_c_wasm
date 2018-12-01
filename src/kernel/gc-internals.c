@@ -321,7 +321,6 @@ void calc_offsets(GcHeap* heap, size_t* compact_start_block, size_t* compact_end
 
 // Calculate where a value has moved to, return a pointer to the new location
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
-
     size_t block_index = (old_pointer - heap->start) / GC_BLOCK_WORDS;
     size_t block_offset = heap->offsets[block_index];
 
@@ -329,15 +328,6 @@ size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
     size_t offset_in_block = bitmap_dead_between(heap, old_block_start, old_pointer);
 
     size_t* new_pointer = old_pointer - block_offset - offset_in_block;
-
-    // printf("\n");
-    // printf("old_pointer %p\n", old_pointer);
-    // printf("old_block_start %p\n", old_block_start);
-    // printf("block_index %zd\n", block_index);
-    // printf("new_block_start %p\n", new_block_start);
-    // printf("offset_in_block %zd\n", offset_in_block);
-    // printf("new_pointer %p\n", new_pointer);
-    // printf("\n");
 
     return new_pointer;
 }
@@ -371,12 +361,13 @@ void compact(GcState* state, size_t* compact_start) {
     if (first_move_to >= compact_end) return;
 
     size_t* to = first_move_to;
+    size_t garbage_so_far = 0;
 
     // Iterate over live patches of data
     size_t* from = to;
     while (from < compact_end) {
 
-        // Move 'from' to start of a live patch (bitmap only, no heap operations)
+        // Next live patch (bitmap only)
         while (!(heap->bitmap[bm_word] & bm_mask) && (from < compact_end)) {
             if (bm_mask < max_mask) {
                 bm_mask <<= 1;
@@ -384,10 +375,12 @@ void compact(GcState* state, size_t* compact_start) {
                 bm_mask = 1;
                 bm_word++;
             }
+            garbage_so_far++;
             from++;
         }
+        size_t* live_patch_start = from;
 
-        // Move 'next_garbage' to after the live patch (bitmap only, no heap operations)
+        // Next garbage patch (bitmap only)
         size_t* next_garbage = from + 1;
         while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
             if (bm_mask < max_mask) {
@@ -399,7 +392,7 @@ void compact(GcState* state, size_t* compact_start) {
             next_garbage++;
         }
 
-        // Copy each value in the live patch (actual heap operations)
+        // Copy each value in the live patch
         while (from < next_garbage) {
 
             // Find how many children this value has
@@ -417,10 +410,17 @@ void compact(GcState* state, size_t* compact_start) {
             size_t** child_ptr_array = (size_t**)first_child_field;
             for (size_t c=0; c < n_children; c++) {
                 size_t* child_old = child_ptr_array[c];
-                size_t* child_new =
-                    (child_old < first_move_to)
-                        ? child_old
-                        : forwarding_address(heap, child_old);
+                size_t* child_new;
+                if (child_old < first_move_to) {
+                    // Child value has not been moved
+                    child_new = child_old;
+                } else if (child_old >= live_patch_start) {
+                    // Optimisation for related values in the same patch
+                    child_new = child_old - garbage_so_far;
+                } else {
+                    // Calculate where child was moved to (using bitmap and block offsets)
+                    child_new = forwarding_address(heap, child_old);
+                }
                 *to++ = (size_t)child_new;
             }
 
@@ -434,9 +434,7 @@ void compact(GcState* state, size_t* compact_start) {
 
     size_t* stack_map = (size_t*)state->stack_map;
     if (stack_map > first_move_to) {
-        printf("stack_map old = %p\n", stack_map);
         stack_map = forwarding_address(heap, stack_map);
-        printf("stack_map new = %p\n", stack_map);
         state->stack_map = (Custom*)stack_map;
     }
 
