@@ -281,7 +281,7 @@ size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
     size_t mask = first_mask;
 
     while (word < last_word) {
-        while (mask < max_mask) {
+        while (mask) {
             if ((heap->bitmap[word] & mask) == 0) {
                 count++;
             }
@@ -386,10 +386,9 @@ void compact(GcState* state, size_t* compact_start) {
             }
             from++;
         }
-        if (from >= compact_end) return;
 
         // Move 'next_garbage' to after the live patch (bitmap only, no heap operations)
-        size_t* next_garbage = from;
+        size_t* next_garbage = from + 1;
         while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
             if (bm_mask < max_mask) {
                 bm_mask <<= 1;
@@ -428,6 +427,8 @@ void compact(GcState* state, size_t* compact_start) {
             from = next_value;
         }
     }
+
+    // Compaction is finished. Update the GC state and roots.
 
     state->next_alloc = to;
 
