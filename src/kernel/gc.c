@@ -95,10 +95,10 @@ int GC_init() {
 
     // Ask the system for more memory
     size_t top_of_current_page =
-        (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_SIZE-1);
+        (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES-1);
 
     size_t* top_of_next_page =
-        (size_t*)(top_of_current_page + GC_WASM_PAGE_SIZE);
+        (size_t*)(top_of_current_page + GC_WASM_PAGE_BYTES + 1);
 
     int err = set_heap_end(&gc_state.heap, top_of_next_page);
 

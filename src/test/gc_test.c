@@ -108,13 +108,15 @@ void print_heap(GcState *state) {
 
 
 void print_state(GcState* state) {
-    printf("start=%zx\n", (size_t)gc_state.heap.start);
-    printf("end=%zx\n", (size_t)gc_state.heap.end);
-    printf("system_end=%zx\n", (size_t)gc_state.heap.system_end);
-    printf("next_alloc=%zx\n", (size_t)gc_state.next_alloc);
-    printf("roots=%zx\n", (size_t)gc_state.roots);
-    printf("stack_map=%zx\n", (size_t)gc_state.stack_map);
-    printf("stack_depth=%zd\n", gc_state.stack_depth);
+    printf("start = %zx\n", (size_t)gc_state.heap.start);
+    printf("end = %zx\n", (size_t)gc_state.heap.end);
+    printf("offsets = %zx\n", (size_t)gc_state.heap.offsets);
+    printf("bitmap = %zx\n", (size_t)gc_state.heap.bitmap);
+    printf("system_end = %zx\n", (size_t)gc_state.heap.system_end);
+    printf("next_alloc = %zx\n", (size_t)gc_state.next_alloc);
+    printf("roots = %zx\n", (size_t)gc_state.roots);
+    printf("stack_map = %zx\n", (size_t)gc_state.stack_map);
+    printf("stack_depth = %zd\n", gc_state.stack_depth);
 
     // find last non-zero word in the bitmap
     size_t bitmap_size = gc_state.heap.system_end - gc_state.heap.bitmap;
@@ -134,6 +136,7 @@ void print_state(GcState* state) {
 }
 
 char alive_or_dead_msg[30];
+ElmValue* root_mutable_pointer;
 
 char* gc_stackmap_test() {
     if (verbose) {
@@ -147,7 +150,7 @@ char* gc_stackmap_test() {
     size_t nlive=0, ndead=0;
 
 
-    GC_init();
+    // GC_init();
     if (verbose) {
         printf("GC initial state:\n");
         print_state(&gc_state);
@@ -163,8 +166,14 @@ char* gc_stackmap_test() {
     // Call the top-level function (an effect callback or incoming port)
     ElmValue* c1 = (ElmValue*)Utils_clone(mock_effect_callback);
     live[nlive++] = gc_state.next_alloc; // the root Cons cell we're about to allocate
-    GC_register_root(&c1); // Effect manager is keeping this Closure alive by connecting it to the GC root.
+    root_mutable_pointer = c1;
+    GC_register_root(&root_mutable_pointer); // Effect manager is keeping this Closure alive by connecting it to the GC root.
     live[nlive++] = c1;
+    if (verbose) {
+        printf("Kernel module registered root:\n  located at %zx\n  pointing at %zx\n",
+            (size_t)&root_mutable_pointer, (size_t)root_mutable_pointer
+        );
+    }
 
     void* push1 = GC_stack_push();
     live[nlive++] = push1;
@@ -252,8 +261,10 @@ char* gc_stackmap_test() {
     live[nlive++] = newElmInt(gc_state.stack_depth);
     live[nlive++] = newElmInt(gc_state.stack_depth);
 
+    if (verbose) printf("Marking...\n");
     size_t* ignore_below = (size_t*)c1;
     mark(&gc_state, ignore_below);
+    if (verbose) printf("Finished marking...\n");
 
     if (verbose) {
         printf("Final heap state:\n");
@@ -283,22 +294,25 @@ char* gc_stackmap_test() {
         tested_size == heap_size
     );
 
-    printf("\n\ncompacting...\n\n");
+    if (verbose) printf("\n\nCompacting...\n\n");
     compact(&gc_state, ignore_below);
-    printf("compaction done\n");
+    if (verbose) printf("Finished compacting\n");
 
+
+    if (verbose) printf("\n\nMarking...\n\n");
     mark(&gc_state, ignore_below);
+    if (verbose) printf("\n\nFinished marking...\n\n");
 
-    print_state(&gc_state);
-    print_heap(&gc_state);
-
+    if (verbose) {
+        print_state(&gc_state);
+        print_heap(&gc_state);
+    }
 
     return NULL;
 }
 
 
 char* gc_struct_test() {
-    GC_init();
 
     mu_assert("GcHeap should be the size of 5 pointers", sizeof(GcHeap) == 5*sizeof(void*));
     mu_assert("GcState should be the size of 9 pointers", sizeof(GcState) == 9*sizeof(void*));
@@ -445,27 +459,23 @@ char* gc_forwarding_address_test() {
         forwarding_address(heap, from) == expected
     );
 
+    heap->bitmap[0] = 0xf0f;
+    heap->bitmap[1] = 0xf0f;
+    heap->offsets[0] = NULL; // heap->start + 4;
+    heap->offsets[1] = heap->start + 8;
+    from = heap->start + GC_BLOCK_WORDS + 8;
+    expected = heap->start + 12;
+    actual = forwarding_address(heap, from);
+    if (verbose) {
+        print_state(state);
+        printf("%zx -> %zx (expected %zx)\n",
+            (size_t)from, (size_t)actual, (size_t)expected
+        );
+    }
 
-    // Fails, but I'm not sure if the test or the code is wrong!
-    //
-    // heap->bitmap[0] = 0xf0f;
-    // heap->bitmap[1] = 0xf0f;
-    // heap->offsets[0] = NULL; // heap->start + 4;
-    // heap->offsets[1] = heap->start + 8;
-    // from = heap->start + GC_BLOCK_WORDS + 8;
-    // expected = heap->start + 12;
-    // actual = forwarding_address(heap, from);
-    // if (verbose) {
-    //     print_state(state);
-    //     printf("%zx -> %zx (expected %zx)\n",
-    //         (size_t)from, (size_t)actual, (size_t)expected
-    //     );
-    // }
-    // printf("GC_BLOCK_WORDS = %ld\n", GC_BLOCK_WORDS);
-
-    // mu_assert("forwarding_address: 2nd value in 2nd block",
-    //     actual == expected
-    // );
+    mu_assert("forwarding_address: 2nd value in 2nd block",
+        actual == expected
+    );
 
 
     return NULL;

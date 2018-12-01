@@ -10,11 +10,12 @@
 #include <stdbool.h>
 
 
-#define GC_WASM_PAGE_SIZE 65536
-#define GC_BLOCK_BYTES 512
+#define GC_WASM_PAGE_BYTES 65536
+#define GC_BLOCK_BYTES 256
 #define GC_BLOCK_WORDS (GC_BLOCK_BYTES/sizeof(size_t))
 #define GC_BLOCK_MASK (-(GC_BLOCK_WORDS * sizeof(size_t)))
 #define GC_WORD_BITS (sizeof(size_t)*8)
+#define GC_DIV_ROUND_UP(num,den) ((num+den-1)/den)
 
 
 typedef struct {
