@@ -38,7 +38,7 @@ static bool is_marked(void* p) {
 }
 
 void print_value(ElmValue* v) {
-    printf("| %12zx |  %c   |  %2x  | ", (size_t)v, is_marked(v) ? 'X' : ' ', v->header.size);
+    printf("| %p |  %c   |  %2x  | ", v, is_marked(v) ? 'X' : ' ', v->header.size);
     switch (v->header.tag) {
         case Tag_Int:
             printf("Int %d", v->elm_int.value);
@@ -56,13 +56,13 @@ void print_value(ElmValue* v) {
             printf("Nil");
             break;
         case Tag_Cons:
-            printf("Cons head=%zx tail=%zx", (size_t)v->cons.head, (size_t)v->cons.tail);
+            printf("Cons head=%p tail=%p", v->cons.head, v->cons.tail);
             break;
         case Tag_Tuple2:
-            printf("Tuple2 a=%zx b=%zx", (size_t)v->tuple2.a, (size_t)v->tuple2.b);
+            printf("Tuple2 a=%p b=%p", v->tuple2.a, v->tuple2.b);
             break;
         case Tag_Tuple3:
-            printf("Tuple3 a=%zx b=%zx c=%zx", (size_t)v->tuple3.a, (size_t)v->tuple3.b, (size_t)v->tuple3.c);
+            printf("Tuple3 a=%p b=%p c=%p", v->tuple3.a, v->tuple3.b, v->tuple3.c);
             break;
         case Tag_Custom:
             // Assume that Custom type objects are stack map objects
@@ -75,25 +75,25 @@ void print_value(ElmValue* v) {
             }
             if (v->custom.ctor) printf(" values: ");
             for (size_t i=0; i<custom_params(&v->custom); ++i) {
-                printf("%zx ", (size_t)v->custom.values[i]);
+                printf("%p ", v->custom.values[i]);
             }
             break;
         case Tag_Record:
-            printf("Record fieldset=%zx values: ", (size_t)v->record.fieldset);
+            printf("Record fieldset=%p values: ", v->record.fieldset);
             for (size_t i=0; i < v->record.fieldset->size; ++i) {
-                printf("%zx ", (size_t)v->record.values[i]);
+                printf("%p ", v->record.values[i]);
             }
             break;
         case Tag_Closure:
-            printf("Closure n_values=%d max_values=%d evaluator=%zx values: ",
-                v->closure.n_values, v->closure.max_values, (size_t)v->closure.evaluator
+            printf("Closure n_values=%d max_values=%d evaluator=%p values: ",
+                v->closure.n_values, v->closure.max_values, v->closure.evaluator
             );
             for (size_t i=0; i < v->closure.n_values; ++i) {
-                printf("%zx ", (size_t)v->record.values[i]);
+                printf("%p ", v->record.values[i]);
             }
             break;
         case Tag_GcFull:
-            printf("GcFull continuation=%zx", (size_t)v->gc_full.continuation);
+            printf("GcFull continuation=%p", v->gc_full.continuation);
             break;
     }
     printf("\n");
@@ -114,21 +114,21 @@ void print_heap(GcState *state) {
                 next_value++;
             }
         } else {
-            printf("| %12zx |  %c   |      |\n", (size_t)p, is_marked(p) ? 'X' : ' ');
+            printf("| %p |  %c   |      |\n", p, is_marked(p) ? 'X' : ' ');
         }
     }
 }
 
 
 void print_state(GcState* state) {
-    printf("start = %zx\n", (size_t)gc_state.heap.start);
-    printf("end = %zx\n", (size_t)gc_state.heap.end);
-    printf("offsets = %zx\n", (size_t)gc_state.heap.offsets);
-    printf("bitmap = %zx\n", (size_t)gc_state.heap.bitmap);
-    printf("system_end = %zx\n", (size_t)gc_state.heap.system_end);
-    printf("next_alloc = %zx\n", (size_t)gc_state.next_alloc);
-    printf("roots = %zx\n", (size_t)gc_state.roots);
-    printf("stack_map = %zx\n", (size_t)gc_state.stack_map);
+    printf("start = %p\n", gc_state.heap.start);
+    printf("end = %p\n", gc_state.heap.end);
+    printf("offsets = %p\n", gc_state.heap.offsets);
+    printf("bitmap = %p\n", gc_state.heap.bitmap);
+    printf("system_end = %p\n", gc_state.heap.system_end);
+    printf("next_alloc = %p\n", gc_state.next_alloc);
+    printf("roots = %p\n", gc_state.roots);
+    printf("stack_map = %p\n", gc_state.stack_map);
     printf("stack_depth = %zd\n", gc_state.stack_depth);
 
     // find last non-zero word in the bitmap
@@ -184,8 +184,8 @@ char* gc_mark_compact_test() {
     GC_register_root(&root_mutable_pointer); // Effect manager is keeping this Closure alive by connecting it to the GC root.
     live[nlive++] = c1;
     if (verbose) {
-        printf("Kernel module registered root:\n  located at %zx\n  pointing at %zx\n",
-            (size_t)&root_mutable_pointer, (size_t)root_mutable_pointer
+        printf("Kernel module registered root:\n  located at %p\n  pointing at %p\n",
+            &root_mutable_pointer, root_mutable_pointer
         );
     }
 
@@ -394,8 +394,8 @@ char* gc_bitmap_test() {
         size_t word = bitmap[w];
         for (size_t b=0; b < GC_WORD_BITS; b++) {
             bool bitmap_bit = (word & ((size_t)1 << b)) != 0;
-            sprintf(bitmap_msg, "is_marked (%d) should match the bitmap (%d)\naddr = %zx  word = %zd  bit = %zd",
-                is_marked(ptr), bitmap_bit, (size_t)ptr, w, b
+            sprintf(bitmap_msg, "is_marked (%d) should match the bitmap (%d)\naddr = %p  word = %zd  bit = %zd",
+                is_marked(ptr), bitmap_bit, ptr, w, b
             );
             mu_assert(bitmap_msg, is_marked(ptr) == bitmap_bit);
             ptr++;
@@ -494,8 +494,8 @@ char* gc_live_between_test() {
 //     actual = forwarding_address(heap, from);
 //     if (verbose) {
 //         print_state(state);
-//         printf("%zx -> %zx (expected %zx)\n",
-//             (size_t)from, (size_t)actual, (size_t)expected
+//         printf("%p -> %p (expected %p)\n",
+//             from, actual, expected
 //         );
 //     }
 
