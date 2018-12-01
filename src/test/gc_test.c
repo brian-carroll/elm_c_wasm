@@ -151,7 +151,7 @@ void print_state(GcState* state) {
 char alive_or_dead_msg[30];
 ElmValue* root_mutable_pointer;
 
-char* gc_stackmap_test() {
+char* gc_mark_compact_test() {
     reset();
 
     if (verbose) {
@@ -280,31 +280,29 @@ char* gc_stackmap_test() {
     if (verbose) printf("Finished marking...\n");
 
     if (verbose) {
-        printf("Final heap state:\n");
         print_heap(&gc_state);
-        printf("\n");
-        printf("GC final state:\n");
         print_state(&gc_state);
     }
 
-    size_t tested_size = 0;
-    while (ndead--) {
-        ElmValue* v = (ElmValue*)dead[ndead];
-        sprintf(alive_or_dead_msg, "%zx should be dead", (size_t)v);
-        mu_assert(alive_or_dead_msg, !is_marked(v));
-        tested_size += v->header.size;
+    size_t dead_size = 0;
+    for (size_t i=0; i<ndead; i++) {
+        sprintf(alive_or_dead_msg, "%p should be dead", dead[i]);
+        mu_assert(alive_or_dead_msg, !is_marked(dead[i]));
+        ElmValue* v = (ElmValue*)dead[i];
+        dead_size += v->header.size;
     }
 
-    while (nlive--) {
-        ElmValue* v = (ElmValue*)live[nlive];
-        sprintf(alive_or_dead_msg, "%zx should be live", (size_t)v);
-        mu_assert(alive_or_dead_msg, is_marked(v));
-        tested_size += v->header.size;
+    size_t live_size = 0;
+    for (size_t i=0; i<nlive; i++) {
+        sprintf(alive_or_dead_msg, "%p should be live", live[i]);
+        mu_assert(alive_or_dead_msg, is_marked(live[i]));
+        ElmValue* v = (ElmValue*)live[i];
+        live_size += v->header.size;
     }
 
     size_t heap_size = gc_state.next_alloc - gc_state.heap.start;
     mu_assert("Stack map test should account for all allocated values",
-        tested_size == heap_size
+        live_size + dead_size == heap_size
     );
 
     if (verbose) printf("\n\nCompacting...\n\n");
@@ -317,9 +315,27 @@ char* gc_stackmap_test() {
     if (verbose) printf("\n\nFinished marking...\n\n");
 
     if (verbose) {
-        print_state(&gc_state);
+        printf("\n");
         print_heap(&gc_state);
+        print_state(&gc_state);
+
+        printf("next_alloc-start %zd\n", gc_state.next_alloc - gc_state.heap.start);
+        printf("live_size before compaction %zd\n", live_size);
+        printf("\n");
     }
+
+    mu_assert("Compacted heap should contain exactly the number of live values",
+        gc_state.next_alloc - gc_state.heap.start == live_size
+    );
+
+
+    size_t n_marked = 0;
+    for (size_t* w = gc_state.heap.start; w < gc_state.next_alloc; w++) {
+        n_marked += is_marked(w);
+    }
+    mu_assert("After compaction and re-marking, all values should be marked",
+        n_marked == live_size
+    );
 
     return NULL;
 }
@@ -329,7 +345,6 @@ char* gc_struct_test() {
 
     mu_assert("GcHeap should be the size of 5 pointers", sizeof(GcHeap) == 5*sizeof(void*));
     mu_assert("GcState should be the size of 9 pointers", sizeof(GcState) == 9*sizeof(void*));
-
 
     return NULL;
 }
@@ -503,7 +518,7 @@ char* gc_test() {
     mu_run_test(gc_bitmap_test);
     mu_run_test(gc_live_between_test);
     mu_run_test(gc_forwarding_address_test);
-    mu_run_test(gc_stackmap_test);
+    mu_run_test(gc_mark_compact_test);
 
     return NULL;
 }
