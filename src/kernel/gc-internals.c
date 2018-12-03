@@ -39,8 +39,18 @@ size_t child_count(ElmValue* v) {
         case Tag_Closure:
             return v->closure.n_values;
 
-        case Tag_GcFull:
+        case Tag_GcContinuation:
+            return v->gc_cont.continuation != NULL;
+
+        case Tag_GcStackEmpty:
+            return 0;
+
+        case Tag_GcStackPush:
             return 1;
+
+        case Tag_GcStackPop:
+        case Tag_GcStackTailCall:
+            return 2;
     }
     return 0;
 }
@@ -167,15 +177,10 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 }
 
 
-// The stack map works like a list, but with 3 variants of Cons
-// Use list terminology to make code more readable.
-extern const size_t head;
-extern const size_t tail;
-
 void mark_stack_map(GcState* state, size_t* ignore_below) {
     // Types are important for pointer arithmetic, be careful
-    Custom* stack_item = state->stack_map;
-    Custom* prev_stack_item = (Custom*)state->next_alloc;
+    GcStackMap* stack_item = state->stack_map;
+    GcStackMap* prev_stack_item = (GcStackMap*)state->next_alloc;
 
     size_t min_depth = state->stack_depth;
     size_t current_depth = state->stack_depth;
@@ -185,27 +190,27 @@ void mark_stack_map(GcState* state, size_t* ignore_below) {
     // These values may be needed in local variables of those functions
     while (1) {
         bool mark_allocated = false;
-        switch (stack_item->ctor) {
-            case GcStackPush:
+        switch (stack_item->header.tag) {
+            case Tag_GcStackPush:
                 // going backwards => entering a section that's shallower than before
                 new_depth = current_depth - 1;
                 if (new_depth < min_depth) {
                     min_depth = new_depth;
-                    mark_allocated = (prev_stack_item->ctor != GcStackTailCall);
+                    mark_allocated = (prev_stack_item->header.tag != Tag_GcStackTailCall);
                 }
                 break;
 
-            case GcStackPop:
+            case Tag_GcStackPop:
                 // going backwards => entering a section that's deeper than before
                 new_depth = current_depth + 1;
-            case GcStackTailCall:
+            case Tag_GcStackTailCall:
                 if (current_depth == min_depth) {
-                    mark_trace(&state->heap, stack_item->values[head], ignore_below); // returned value from deeper function to active function
+                    mark_trace(&state->heap, stack_item->data, ignore_below); // returned value from deeper function to active function
                     mark_allocated = true;
                 }
                 break;
 
-            case GcStackEmpty:
+            case Tag_GcStackEmpty:
                 mark_words(&state->heap, stack_item, stack_item->header.size);
                 return;
 
@@ -224,7 +229,7 @@ void mark_stack_map(GcState* state, size_t* ignore_below) {
 
         current_depth = new_depth;
         prev_stack_item = stack_item;
-        stack_item = stack_item->values[tail];
+        stack_item = stack_item->older;
     }
 }
 
@@ -435,7 +440,7 @@ void compact(GcState* state, size_t* compact_start) {
     size_t* stack_map = (size_t*)state->stack_map;
     if (stack_map > first_move_to) {
         stack_map = forwarding_address(heap, stack_map);
-        state->stack_map = (Custom*)stack_map;
+        state->stack_map = (GcStackMap*)stack_map;
     }
 
     for (ElmValue* root_cell=state->roots; root_cell->header.tag==Tag_Cons; root_cell=root_cell->cons.tail) {

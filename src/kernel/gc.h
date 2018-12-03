@@ -12,6 +12,6 @@ void* GC_malloc(size_t bytes);
 void* GC_stack_push();
 void GC_stack_tailcall(Closure* c, void* push);
 void GC_stack_pop(ElmValue* result, void* push);
-// void* GC_next_replay();
+void* GC_next_replay();
 
 #endif

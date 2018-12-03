@@ -20,9 +20,8 @@ static void reset() {
     gc_state.roots = &Nil;
     gc_state.stack_depth = 0;
 
-    Custom* p = GC_malloc(sizeof(Custom));
-    p->header = HEADER_CUSTOM(0);
-    p->ctor = GcStackEmpty;
+    GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    p->header = HEADER_GC_STACK_EMPTY;
     gc_state.stack_map = p;
 }
 
@@ -56,44 +55,54 @@ void print_value(ElmValue* v) {
             printf("Nil");
             break;
         case Tag_Cons:
-            printf("Cons head=%p tail=%p", v->cons.head, v->cons.tail);
+            printf("Cons head: %p tail: %p", v->cons.head, v->cons.tail);
             break;
         case Tag_Tuple2:
-            printf("Tuple2 a=%p b=%p", v->tuple2.a, v->tuple2.b);
+            printf("Tuple2 a: %p b: %p", v->tuple2.a, v->tuple2.b);
             break;
         case Tag_Tuple3:
-            printf("Tuple3 a=%p b=%p c=%p", v->tuple3.a, v->tuple3.b, v->tuple3.c);
+            printf("Tuple3 a: %p b: %p c: %p", v->tuple3.a, v->tuple3.b, v->tuple3.c);
             break;
         case Tag_Custom:
-            // Assume that Custom type objects are stack map objects
-            // Mostly true in GC tests if not in 'real life'
-            switch (v->custom.ctor) {
-                case 0: printf("GcStackEmpty"); break;
-                case 1: printf("GcStackPush"); break;
-                case 2: printf("GcStackPop"); break;
-                case 3: printf("GcStackTailCall"); break;
-            }
-            if (v->custom.ctor) printf(" values: ");
+            printf("Custom ctor: %d ", v->custom.ctor);
             for (size_t i=0; i<custom_params(&v->custom); ++i) {
                 printf("%p ", v->custom.values[i]);
             }
             break;
         case Tag_Record:
-            printf("Record fieldset=%p values: ", v->record.fieldset);
+            printf("Record fieldset: %p values: ", v->record.fieldset);
             for (size_t i=0; i < v->record.fieldset->size; ++i) {
                 printf("%p ", v->record.values[i]);
             }
             break;
         case Tag_Closure:
-            printf("Closure n_values=%d max_values=%d evaluator=%p values: ",
+            printf("Closure n_values: %d max_values: %d evaluator: %p values: ",
                 v->closure.n_values, v->closure.max_values, v->closure.evaluator
             );
             for (size_t i=0; i < v->closure.n_values; ++i) {
                 printf("%p ", v->record.values[i]);
             }
             break;
-        case Tag_GcFull:
-            printf("GcFull continuation=%p", v->gc_full.continuation);
+        case Tag_GcContinuation:
+            printf("GcContinuation %p", v->gc_cont.continuation);
+            break;
+        case Tag_GcStackPush:
+            printf("GcStackPush newer: %p older: %p",
+                v->gc_stackmap.newer, v->gc_stackmap.older
+            );
+            break;
+        case Tag_GcStackPop:
+            printf("GcStackPop newer: %p older: %p data: %p",
+                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
+            );
+            break;
+        case Tag_GcStackTailCall:
+            printf("GcStackTailCall newer: %p older: %p data: %p",
+                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
+            );
+            break;
+        case Tag_GcStackEmpty:
+            printf("GcStackEmpty");
             break;
     }
     printf("\n");
@@ -408,7 +417,7 @@ char* gc_bitmap_test() {
 }
 
 
-char* gc_live_between_test() {
+char* gc_dead_between_test() {
     reset();
     GcState* state = &gc_state;
     GcHeap* heap = &state->heap;
@@ -416,17 +425,17 @@ char* gc_live_between_test() {
     size_t* first;
     size_t* last;
 
-    heap->bitmap[0] = 0xf0;
+    heap->bitmap[0] = 0xf0f;
     first = heap->start + 4;
     last = heap->start + 8;
-    mu_assert("bitmap_dead_between with 4 words live",
+    mu_assert("bitmap_dead_between with 4 words dead",
         bitmap_dead_between(heap, first, last) == 4
     );
 
     first--;
     last++;
 
-    mu_assert("bitmap_dead_between with 4 live and 2 junk",
+    mu_assert("bitmap_dead_between with 4 dead and 2 live",
         bitmap_dead_between(heap, first, last) == 4
     );
 
@@ -437,76 +446,13 @@ char* gc_live_between_test() {
     last = heap->start + (2*GC_WORD_BITS) + 10;
 
     mu_assert("bitmap_dead_between across 3 bitmap words",
-        bitmap_dead_between(heap, first, last) == 8
-    );
-
-    last = heap->start + (2*GC_WORD_BITS) + 7;
-    mu_assert("bitmap_dead_between doesn't count the current word",
-        bitmap_dead_between(heap, first, last) == 7
+        bitmap_dead_between(heap, first, last)
+        == ((GC_WORD_BITS-2-4) + GC_WORD_BITS + 10-4)
     );
 
     return NULL;
 }
 
-
-// char* gc_forwarding_address_test() {
-//     if (verbose) printf("gc_forwarding_address_test\n");
-
-//     reset();
-//     GcState* state = &gc_state;
-//     GcHeap* heap = &state->heap;
-
-//     size_t* from;
-//     size_t* expected;
-//     size_t* actual;
-
-//     heap->bitmap[0] = 0xf0;
-//     heap->offsets[0] = heap->start;
-//     from = heap->start + 4;
-//     expected = heap->start;
-//     mu_assert("forwarding_address at bottom of heap",
-//         forwarding_address(heap, from) == expected
-//     );
-
-//     heap->bitmap[0] = 0xf0f;
-//     heap->offsets[0] = heap->start;// + 4;
-//     from = heap->start + 8;
-//     expected = heap->start + 4;
-//     mu_assert("forwarding_address just above bottom of heap",
-//         forwarding_address(heap, from) == expected
-//     );
-
-//     heap->bitmap[0] = 0xf0f;
-//     heap->bitmap[0] = 0xff;
-//     heap->offsets[0] = NULL;
-//     heap->offsets[1] = heap->start + 8;
-//     from = heap->start + GC_BLOCK_WORDS;
-//     expected = heap->offsets[1];
-//     mu_assert("forwarding_address: 1st value in 2nd block",
-//         forwarding_address(heap, from) == expected
-//     );
-
-//     heap->bitmap[0] = 0xf0f;
-//     heap->bitmap[1] = 0xf0f;
-//     heap->offsets[0] = NULL; // heap->start + 4;
-//     heap->offsets[1] = heap->start + 8;
-//     from = heap->start + GC_BLOCK_WORDS + 8;
-//     expected = heap->start + 12;
-//     actual = forwarding_address(heap, from);
-//     if (verbose) {
-//         print_state(state);
-//         printf("%p -> %p (expected %p)\n",
-//             from, actual, expected
-//         );
-//     }
-
-//     mu_assert("forwarding_address: 2nd value in 2nd block",
-//         actual == expected
-//     );
-
-
-//     return NULL;
-// }
 
 
 char* gc_test() {
@@ -516,10 +462,9 @@ char* gc_test() {
         printf("--\n");
     }
 
-    // mu_run_test(gc_struct_test);
-    // mu_run_test(gc_bitmap_test);
-    // mu_run_test(gc_live_between_test);
-    // mu_run_test(gc_forwarding_address_test);
+    mu_run_test(gc_struct_test);
+    mu_run_test(gc_bitmap_test);
+    mu_run_test(gc_dead_between_test);
     mu_run_test(gc_mark_compact_test);
 
     return NULL;

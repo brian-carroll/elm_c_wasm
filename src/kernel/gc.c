@@ -201,19 +201,16 @@ const size_t head = 1;
 const size_t tail = 0; // StackPush only has a tail, no head
 
 static void* stack_empty() {
-    Custom* p = GC_malloc(sizeof(Custom));
-    p->header = HEADER_CUSTOM(0);
-    p->ctor = GcStackEmpty;
-
+    GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    p->header = HEADER_GC_STACK_EMPTY;
     gc_state.stack_map = p;
     return p;
 }
 
 void* GC_stack_push() {
-    Custom* p = GC_malloc(sizeof(Custom) + sizeof(void*));
-    p->header = HEADER_CUSTOM(1);
-    p->ctor = GcStackPush;
-    p->values[tail] = gc_state.stack_map;
+    GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    p->header = HEADER_GC_STACK_PUSH;
+    p->older = gc_state.stack_map;
 
     gc_state.stack_map = p;
     gc_state.stack_depth++;
@@ -221,27 +218,39 @@ void* GC_stack_push() {
 }
 
 void GC_stack_tailcall(Closure* c, void* push) {
-    Custom* p = GC_malloc(sizeof(Custom) + 2*sizeof(void*));
-    p->header = HEADER_CUSTOM(2);
-    p->ctor = GcStackTailCall;
-    p->values[tail] = push;
-    p->values[head] = c;
+    GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    p->header = HEADER_GC_STACK_TC;
+    p->older = push;
+    p->data = c;
 
     gc_state.stack_map = p;
     // stack_depth stays the same
 }
 
 void GC_stack_pop(ElmValue* result, void* push) {
-    Custom* p = GC_malloc(sizeof(Custom) + 2*sizeof(void*));
-    p->header = HEADER_CUSTOM(2);
-    p->ctor = GcStackPop;
-    p->values[tail] = push;
-    p->values[head] = result;
+    GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    p->header = HEADER_GC_STACK_POP;
+    p->older = push;
+    p->data = result;
 
     gc_state.stack_map = p;
     gc_state.stack_depth--;
 }
 
+void* GC_next_replay() {
+    /*
+        if not replay mode, return NULL
+
+        replay pointer should be pointing at a stack push
+        find the previous stack item
+            StackPop -> return its head
+            StackTailcall -> return it and have 'apply' execute it
+            StackPush -> NULL (resume actual execution)
+
+
+    */
+    return NULL;
+}
 
 /*
 // Check compiled size of GC in Wasm

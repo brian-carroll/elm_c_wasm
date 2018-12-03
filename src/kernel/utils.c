@@ -71,7 +71,13 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     void** args;
     Closure *c;
 
-    if (c_old->max_values == n_applied) {
+    void* replay = GC_next_replay();
+    if (replay != NULL) {
+        c = replay;
+        if (c->header.tag != Tag_Closure) return replay;
+        if (c->n_values != c->max_values) return replay;
+        args = c->values;
+    } else if (c_old->max_values == n_applied) {
         // 'saturated' call. No need to allocate a new Closure.
         c = c_old;
         args = applied;
@@ -108,9 +114,9 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         result = (*c->evaluator)(args);
 
         switch (result->header.tag) {
-            case Tag_GcFull:
-                if (result->gc_full.continuation != NULL) {
-                    GC_stack_tailcall(result->gc_full.continuation, push);
+            case Tag_GcContinuation:
+                if (result->gc_cont.continuation != NULL) {
+                    GC_stack_tailcall(result->gc_cont.continuation, push);
                     result = pGcFull;
                 }
                 tail_call = false;
@@ -218,13 +224,13 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             // fprintf(stderr, "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which describes why it is this way and what the better version will look like.\n");
             return 0;
 
-        case Tag_GcFull: {}
+        case Tag_GcContinuation:
+        case Tag_GcStackEmpty:
+        case Tag_GcStackPush:
+        case Tag_GcStackPop:
+        case Tag_GcStackTailCall:
+            return 0;
     }
-
-    // C compiler requires all int values to be handled but also want warnings
-    // for missing cases above. Falling through and returning here solves this.
-    // fprintf(stderr, "Warning: Trying to apply '==' to an unknown value type (tag %d). Returning 'False'.\n", pa->header.tag);
-    return 0;
 }
 
 

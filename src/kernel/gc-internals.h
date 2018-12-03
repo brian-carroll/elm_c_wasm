@@ -31,17 +31,9 @@ typedef struct {
     GcHeap heap;
     size_t* next_alloc;
     ElmValue* roots;
-    Custom* stack_map;
+    GcStackMap* stack_map;
     size_t stack_depth;
 } GcState;
-
-
-enum {
-    GcStackEmpty,
-    GcStackPush,
-    GcStackPop,
-    GcStackTailCall,
-} GcStackCtor;
 
 
 void bitmap_reset(GcHeap*);

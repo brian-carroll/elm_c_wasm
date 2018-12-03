@@ -31,6 +31,34 @@ GC next steps
 
 
 
+Replay implementation
+=====================
+
+Setting replay mode should be done in mark_stack_map
+If it finds that the stack is empty, don't set replay
+
+
+
+### Deciding to replay
+
+when out of memory, prefer to grow. Go to replay mode if:
+- nursery is big
+- stack is not empty (of 'pure' code)
+- we haven't *just* finished replay
+    - Don't get into an infinite loop trying to allocate a long string.
+    - Remember where heap ended up after previous GC `last_gc = next_alloc`
+
+what is 'huge'? tuning param
+what happens if a new 'huge' object is allocated?
+
+if stack is not empty then who is allocating?
+kernel?
+
+
+
+
+
+
 System calls for memory management
 ==================================
 - `brk` moves the top of the data segment + heap.

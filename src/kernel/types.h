@@ -31,7 +31,12 @@ typedef enum {
     Tag_Custom,  // 8
     Tag_Record,  // 9
     Tag_Closure, // a
-    Tag_GcFull,  // b
+
+    Tag_GcContinuation,  // b
+    Tag_GcStackEmpty,    // c
+    Tag_GcStackPush,     // d
+    Tag_GcStackPop,      // e
+    Tag_GcStackTailCall, // f
 } Tag;
 
 
@@ -60,7 +65,12 @@ typedef struct {
 #define HEADER_CUSTOM(p)   (Header){ .tag=Tag_Custom,  .size=(sizeof(Custom) + p*sizeof(void*))/SIZE_UNIT }
 #define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=(sizeof(Record) + p*sizeof(void*))/SIZE_UNIT }
 #define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(sizeof(Closure) + p*sizeof(void*))/SIZE_UNIT }
-#define HEADER_GCFULL      (Header){ .tag=Tag_GcFull,  .size=sizeof(GcContinuation)/SIZE_UNIT }
+
+#define HEADER_GC_CONT        (Header){ .tag=Tag_GcContinuation,  .size=sizeof(GcContinuation)/SIZE_UNIT }
+#define HEADER_GC_STACK_EMPTY (Header){ .tag=Tag_GcStackEmpty,    .size=sizeof(GcStackMap)/SIZE_UNIT }
+#define HEADER_GC_STACK_PUSH  (Header){ .tag=Tag_GcStackPush,     .size=sizeof(GcStackMap)/SIZE_UNIT }
+#define HEADER_GC_STACK_POP   (Header){ .tag=Tag_GcStackPop,      .size=sizeof(GcStackMap)/SIZE_UNIT }
+#define HEADER_GC_STACK_TC    (Header){ .tag=Tag_GcStackTailCall, .size=sizeof(GcStackMap)/SIZE_UNIT }
 
 
 // LIST
@@ -191,6 +201,14 @@ typedef struct {
     Closure* continuation; // a partially complete tail recursion
 } GcContinuation;
 
+// Doubly-linked list for tracking stack pointers
+typedef struct {
+    Header header;
+    void* newer; // cheat! mutable field pointing at newer stuff
+    void* data;
+    void* older;
+} GcStackMap;
+
 
 // ANY ELM VALUE (for pointers in collections)
 typedef union {
@@ -205,7 +223,8 @@ typedef union {
     Custom custom;
     Record record;
     Closure closure;
-    GcContinuation gc_full;
+    GcContinuation gc_cont;
+    GcStackMap gc_stackmap;
 } ElmValue;
 
 

@@ -123,7 +123,7 @@ void Types_init() {
     False = (ElmValue)(Custom){ .header = HEADER_CUSTOM(0), .ctor = 0 };
 
     GcFull = (GcContinuation){
-        .header = HEADER_GCFULL,
+        .header = HEADER_GC_CONT,
         .continuation = NULL
     };
     pGcFull = &GcFull;
