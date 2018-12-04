@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "./types.h"
+#include "./utils.h"
 #include "./string.h"
 #include "./list.h"
 #include "./gc.h"
@@ -57,7 +58,7 @@ static void* access_eval(void* args[2]) {
 Closure Utils_access;
 
 
-ElmValue* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
+Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
     Record* r_new = Utils_clone(r);
     if (r_new == pGcFull) return pGcFull;
 
@@ -66,7 +67,7 @@ ElmValue* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
         r_new->values[field_pos] = values[i];
     }
 
-    return (ElmValue*)r_new;
+    return r_new;
 }
 
 
@@ -282,8 +283,117 @@ static void* append_eval(void* args[2]) {
 Closure Utils_append;
 
 
+
+static void* compare_help(ElmValue* x, ElmValue* y) {
+    switch (x->header.tag) {
+        case Tag_Int:
+            if (x->elm_int.value == y->elm_int.value) {
+                return &Utils_EQ;
+            } else if (x->elm_int.value < y->elm_int.value) {
+                return &Utils_LT;
+            } else {
+                return &Utils_GT;
+            }
+
+        case Tag_Float:
+            if (x->elm_float.value == y->elm_float.value) {
+                return &Utils_EQ;
+            } else if (x->elm_float.value < y->elm_float.value) {
+                return &Utils_LT;
+            } else {
+                return &Utils_GT;
+            }
+
+        case Tag_Char:
+            if (x->elm_char.value == y->elm_char.value) {
+                return &Utils_EQ;
+            } else if (x->elm_char.value < y->elm_char.value) {
+                return &Utils_LT;
+            } else {
+                return &Utils_GT;
+            }
+
+        case Tag_String:
+            // TODO
+            // iterate, decode char, compare, loop
+            // Probably call something from String lib
+            // foldl doesn't have early return so maybe write something that does?
+            return &Utils_EQ;
+
+        case Tag_Nil:
+            if (y->header.tag == Tag_Nil) {
+                return &Utils_EQ;
+            } else {
+                return &Utils_LT;
+            }
+
+        case Tag_Cons:
+            if (y->header.tag == Tag_Nil) {
+                return &Utils_GT;
+            } else {
+                while (true) {
+                    Custom* order_head = compare_help(x->cons.head, y->cons.head);
+                    if (order_head != &Utils_EQ) {
+                        return order_head;
+                    }
+                    x = x->cons.tail;
+                    y = y->cons.tail;
+                    if (x->header.tag == Tag_Nil || y->header.tag == Tag_Nil) {
+                        return compare_help(x, y);
+                    }
+                }
+            }
+
+        case Tag_Tuple2: {
+            Custom* ord;
+            ord = compare_help(x->tuple2.a, y->tuple2.a);
+            if (ord != &Utils_EQ) return ord;
+            ord = compare_help(x->tuple2.b, y->tuple2.b);
+            return ord;
+        }
+
+        case Tag_Tuple3: {
+            Custom* ord;
+            ord = compare_help(x->tuple3.a, y->tuple3.a);
+            if (ord != &Utils_EQ) return ord;
+            ord = compare_help(x->tuple3.b, y->tuple3.b);
+            if (ord != &Utils_EQ) return ord;
+            ord = compare_help(x->tuple3.c, y->tuple3.c);
+            return ord;
+        }
+
+        default:
+            return NULL;
+    }
+}
+
+
+static void* compare_eval(void* args[2]) {
+    ElmValue* x = args[0];
+    ElmValue* y = args[1];
+    return compare_help(x, y);
+}
+
+
+Closure Utils_compare;
+
+
 void Utils_init() {
     Utils_eq = F2(eq_eval);
     Utils_access = F2(access_eval);
     Utils_append = F2(append_eval);
+    Utils_compare = F2(compare_eval);
+
+    Utils_LT = (Custom){
+        .header = HEADER_CUSTOM(0),
+        .ctor = -1,
+    };
+    Utils_EQ = (Custom){
+        .header = HEADER_CUSTOM(0),
+        .ctor = 0,
+    };
+    Utils_GT = (Custom){
+        .header = HEADER_CUSTOM(0),
+        .ctor = 1,
+    };
 }

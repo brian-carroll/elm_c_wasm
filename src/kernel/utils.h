@@ -6,6 +6,11 @@
 Closure Utils_eq;
 Closure Utils_access;
 Closure Utils_append;
+Closure Utils_compare;
+
+Custom Utils_LT;
+Custom Utils_EQ;
+Custom Utils_GT;
 
 void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);

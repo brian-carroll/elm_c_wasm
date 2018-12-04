@@ -12,7 +12,7 @@
 extern GcState gc_state;
 
 
-static void reset() {
+void gc_test_reset() {
     memset(gc_state.heap.start, 0,
         gc_state.heap.system_end - gc_state.heap.start
     );
@@ -161,7 +161,7 @@ char alive_or_dead_msg[30];
 ElmValue* root_mutable_pointer;
 
 char* gc_mark_compact_test() {
-    reset();
+    gc_test_reset();
 
     if (verbose) {
         printf("\n");
@@ -365,7 +365,7 @@ char bitmap_msg[100];
 
 char* gc_bitmap_test() {
     char str[] = "This is a test string that's an odd number of ints.....";
-    reset();
+    gc_test_reset();
 
     for (size_t i=0; i<10; i++) {
         ElmValue *p1, *p2, *p3, *p4;
@@ -418,7 +418,7 @@ char* gc_bitmap_test() {
 
 
 char* gc_dead_between_test() {
-    reset();
+    gc_test_reset();
     GcState* state = &gc_state;
     GcHeap* heap = &state->heap;
 
@@ -454,6 +454,39 @@ char* gc_dead_between_test() {
 }
 
 
+/*
+Test replay
+- Set next_alloc so that collection happens exactly when we want it to
+    - No data underneath, space will be treated as garbage
+- Elm functions
+    - Top level function to interrupt (fib)
+    - 2nd level function to finish (<=)
+    - 2nd level tail-recursive function to interrupt (fibHelp)
+    - 3rd level function to finish (==, -)
+    - 3rd level function to interrupt (+)
+- Do a collection
+- Compact the whole heap down (TONS of garbage since we set it up that way)
+- Replay to completion and return a result
+
+
+Fibonacci
+---------
+
+fib : Int -> Int
+fib n =
+    if n <= 0 then
+        0
+    else
+        fibHelp n 1 0
+
+
+fibHelp : Int -> Int -> Int -> Int
+fibHelp iters prev1 prev2 =
+    if iters == 1 then
+        prev1
+    else
+        fibHelp (iters - 1) (prev1 + prev2) prev1
+*/
 
 char* gc_test() {
     if (verbose) {
