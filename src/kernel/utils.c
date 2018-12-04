@@ -367,15 +367,53 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
     }
 }
 
-
 static void* compare_eval(void* args[2]) {
     ElmValue* x = args[0];
     ElmValue* y = args[1];
     return compare_help(x, y);
 }
 
-
 Closure Utils_compare;
+
+
+
+// var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
+// var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
+// var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
+// var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
+
+
+
+static void* lt_eval(void* args[2]) {
+    ElmValue* x = args[0];
+    ElmValue* y = args[1];
+    return (compare_help(x, y) == &Utils_LT) ? &True : &False;
+}
+Closure Utils_lt;
+
+
+static void* le_eval(void* args[2]) {
+    ElmValue* x = args[0];
+    ElmValue* y = args[1];
+    return (compare_help(x, y) != &Utils_GT) ? &True : &False;
+}
+Closure Utils_le;
+
+
+static void* gt_eval(void* args[2]) {
+    ElmValue* x = args[0];
+    ElmValue* y = args[1];
+    return (compare_help(x, y) == &Utils_GT) ? &True : &False;
+}
+Closure Utils_gt;
+
+
+static void* ge_eval(void* args[2]) {
+    ElmValue* x = args[0];
+    ElmValue* y = args[1];
+    return (compare_help(x, y) != &Utils_LT) ? &True : &False;
+}
+Closure Utils_ge;
 
 
 void Utils_init() {
@@ -383,6 +421,10 @@ void Utils_init() {
     Utils_access = F2(access_eval);
     Utils_append = F2(append_eval);
     Utils_compare = F2(compare_eval);
+    Utils_lt = F2(lt_eval);
+    Utils_le = F2(le_eval);
+    Utils_gt = F2(gt_eval);
+    Utils_ge = F2(ge_eval);
 
     Utils_LT = (Custom){
         .header = HEADER_CUSTOM(0),

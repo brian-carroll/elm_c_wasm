@@ -501,6 +501,23 @@ char* test_compare() {
     mu_assert("Expect: [1,1,1, ... ,1] < [1,1,1, ... ,2]", A2(&Utils_compare, bigList1, bigList3) == &Utils_LT);
     mu_assert("Expect: [1,1,1, ... ,2] > [1,1,1, ... ,1]", A2(&Utils_compare, bigList3, bigList1) == &Utils_GT);
 
+    if (verbose) printf("Test <, <=, >, >=\n");
+    mu_assert("Utils_lt: 123 < 456 == True", A2(&Utils_lt, i123, i456) == &True);
+    mu_assert("Utils_lt: 456 < 123 == False", A2(&Utils_lt, i456, i123) == &False);
+    mu_assert("Utils_lt: 123 < 123 == False", A2(&Utils_lt, i123, i123a) == &False);
+
+    mu_assert("Utils_le: 123 <= 456 == True", A2(&Utils_le, i123, i456) == &True);
+    mu_assert("Utils_le: 456 <= 123 == False", A2(&Utils_le, i456, i123) == &False);
+    mu_assert("Utils_le: 123 <= 123 == True", A2(&Utils_le, i123, i123a) == &True);
+
+    mu_assert("Utils_gt: 123 > 456 == False", A2(&Utils_gt, i123, i456) == &False);
+    mu_assert("Utils_gt: 456 > 123 == True", A2(&Utils_gt, i456, i123) == &True);
+    mu_assert("Utils_gt: 123 > 123 == False", A2(&Utils_gt, i123, i123a) == &False);
+
+    mu_assert("Utils_ge: 123 >= 456 == False", A2(&Utils_ge, i123, i456) == &False);
+    mu_assert("Utils_ge: 456 >= 123 == True", A2(&Utils_ge, i456, i123) == &True);
+    mu_assert("Utils_ge: 123 >= 123 == True", A2(&Utils_ge, i123, i123a) == &True);
+
 
     return NULL;
 }

@@ -8,6 +8,11 @@ Closure Utils_access;
 Closure Utils_append;
 Closure Utils_compare;
 
+Closure Utils_lt;
+Closure Utils_le;
+Closure Utils_gt;
+Closure Utils_ge;
+
 Custom Utils_LT;
 Custom Utils_EQ;
 Custom Utils_GT;
