@@ -144,7 +144,24 @@ void GC_register_root(ElmValue** ptr_to_mutable_ptr) {
   Same interface as malloc in stdlib.h
 */
 void* GC_malloc(size_t bytes) {
-    size_t words = bytes / sizeof(size_t);
+    size_t words = GC_DIV_ROUND_UP(bytes, sizeof(size_t));
+
+    size_t* replay = gc_state.replay_ptr;
+    if (replay) {
+        #ifdef PRINT_ERRORS
+            u32 replay_words = (Header*)replay->size;
+            if (replay_words != words) {
+                fprintf("Replay error, %d != %zd\n", replay_words, words);
+            }
+        #endif
+        size_t* next_replay = replay + words;
+        if (next_replay >= gc_state.next_alloc) {
+            next_replay = NULL; // exit replay mode
+        }
+        gc_state.replay_ptr = next_replay;
+        return (void*)replay;
+    }
+
     size_t* old_heap = gc_state.next_alloc;
     size_t* new_heap = gc_state.next_alloc + words;
 
@@ -152,9 +169,7 @@ void* GC_malloc(size_t bytes) {
         gc_state.next_alloc = new_heap;
         return old_heap;
     } else {
-        // TODO: maybe grow instead?
-        // Use 'size' to make sure we get enough
-        collect(&gc_state);
+        heap_overflow(&gc_state);
         return gc_state.next_alloc;
     }
 }
@@ -193,13 +208,6 @@ void* GC_malloc(size_t bytes) {
     The functions below are called from the `apply` operator
 */
 
-
-
-// The stack map works like a list, but with 3 variants of Cons
-// Use list terminology to make code more readable.
-const size_t head = 1;
-const size_t tail = 0; // StackPush only has a tail, no head
-
 static void* stack_empty() {
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     p->header = HEADER_GC_STACK_EMPTY;
@@ -208,6 +216,7 @@ static void* stack_empty() {
 }
 
 void* GC_stack_push() {
+    if (stack_replay_update(&gc_state, Tag_GcStackPush)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     p->header = HEADER_GC_STACK_PUSH;
     p->older = gc_state.stack_map;
@@ -218,6 +227,7 @@ void* GC_stack_push() {
 }
 
 void GC_stack_tailcall(Closure* c, void* push) {
+    if (stack_replay_update(&gc_state, Tag_GcStackTailCall)) return;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     p->header = HEADER_GC_STACK_TC;
     p->older = push;
@@ -228,6 +238,7 @@ void GC_stack_tailcall(Closure* c, void* push) {
 }
 
 void GC_stack_pop(ElmValue* result, void* push) {
+    if (stack_replay_update(&gc_state, Tag_GcStackPop)) return;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     p->header = HEADER_GC_STACK_POP;
     p->older = push;
@@ -237,19 +248,38 @@ void GC_stack_pop(ElmValue* result, void* push) {
     gc_state.stack_depth--;
 }
 
+
 void* GC_next_replay() {
-    /*
-        if not replay mode, return NULL
+    GcStackMap* push = (GcStackMap*)gc_state.replay_ptr;
+    if (push == NULL) {
+        return NULL;
+    }
 
-        replay pointer should be pointing at a stack push
-        find the previous stack item
-            StackPop -> return its head
-            StackTailcall -> return it and have 'apply' execute it
-            StackPush -> NULL (resume actual execution)
+    #ifdef PRINT_ERRORS
+        if (push->header.tag != Tag_GcStackPush) {
+            fprintf("GC_next_replay: wrong tag. Expected %d but got %d", Tag_GcStackPush, push->header.tag);
+        }
+    #endif
 
+    GcStackMap* newer = push->newer;
+    GcStackMap* after_stackmap;
+    void* replay;
 
-    */
-    return NULL;
+    if (newer->header.tag == Tag_GcStackPush) {
+        replay = NULL; // cause 'apply' to re-execute this call, which was not finished
+        after_stackmap = push + 1;
+    } else {
+        replay = newer->data; // cached return value of this call from last time
+        after_stackmap = newer + 1;
+    }
+
+    size_t* replay_next = (size_t*)after_stackmap;
+    if (replay_next >= gc_state.next_alloc) {
+        replay_next = NULL; // exit replay mode
+    }
+
+    gc_state.replay_ptr = replay_next;
+    return replay;
 }
 
 /*

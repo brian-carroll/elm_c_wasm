@@ -65,7 +65,9 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
 
     int has_error = brk(new_break_ptr);
     if (has_error) {
-        // fprintf(stderr, "Failed to get heap memory. Error code %d\n", errno);
+        #ifdef PRINT_ERRORS
+            fprintf(stderr, "Failed to get heap memory. Error code %d\n", errno);
+        #endif
         return errno;
     }
 
@@ -457,9 +459,51 @@ void compact(GcState* state, size_t* compact_start) {
 
 /* ====================================================
 
+                REPLAY
+
+   ==================================================== */
+
+void reverse_stack_map(GcState* state) {
+    GcStackMap* newer_item = (GcStackMap*)state->next_alloc;
+
+    for (GcStackMap* stack_item = state->stack_map;
+        stack_item->header.tag != Tag_GcStackEmpty;
+        stack_item = stack_item->older
+    ) {
+        stack_item->newer = newer_item;
+        newer_item = stack_item;
+    }
+}
+
+
+// Called whenever a StackMap item is created
+// Return true if in replay mode, false if not
+// Also update GC state if in replay mode
+bool stack_replay_update(GcState* state, Tag tag) {
+    size_t* replay = state->replay_ptr;
+    if (replay == NULL) {
+        return false; // we're not in replay mode
+    }
+    #ifdef PRINT_ERRORS
+        Header* h = (Header*)replay;
+        if (h->tag != tag) {
+            fprintf(stderr, "stack_replay_update: wrong tag. Expected %d but got %d\n", tag, h->tag);
+        }
+    #endif
+    size_t* replay_next = replay + sizeof(GcStackMap)/SIZE_UNIT;
+    state->replay_ptr =
+        (replay_next < state->next_alloc)
+            ? replay_next
+            : NULL;
+    return true; // we're in replay mode
+}
+
+
+/* ====================================================
+
                 CONTROL
 
    ==================================================== */
 
-void collect(GcState* state) {
+void heap_overflow(GcState* state) {
 }

@@ -33,6 +33,7 @@ typedef struct {
     ElmValue* roots;
     GcStackMap* stack_map;
     size_t stack_depth;
+    size_t* replay_ptr;
 } GcState;
 
 
@@ -50,6 +51,8 @@ void mark_stack_map(GcState* state, size_t* ignore_below);
 void mark(GcState* state, size_t* ignore_below);
 void compact(GcState* state, size_t* compact_start);
 
-void collect(GcState*);
+bool stack_replay_update(GcState* state, Tag tag);
+
+void heap_overflow(GcState*);
 
 #endif

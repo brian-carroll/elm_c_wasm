@@ -355,7 +355,7 @@ char* gc_mark_compact_test() {
 char* gc_struct_test() {
 
     mu_assert("GcHeap should be the size of 5 pointers", sizeof(GcHeap) == 5*sizeof(void*));
-    mu_assert("GcState should be the size of 9 pointers", sizeof(GcState) == 9*sizeof(void*));
+    mu_assert("GcState should be the size of 10 pointers", sizeof(GcState) == 10*sizeof(void*));
 
     return NULL;
 }

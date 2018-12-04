@@ -36,9 +36,12 @@ static u32 fieldset_search(FieldSet* fieldset, u32 search) {
         }
     }
 
-    // fprintf(stderr, "Failed to find field %d in record fieldset at %zx\n",
-    //     search, (size_t)fieldset
-    // );
+    #ifdef PRINT_ERRORS
+        fprintf(stderr, "Failed to find field %d in record fieldset at %zx\n",
+            search, (size_t)fieldset
+        );
+    #endif
+
     return 0;
 }
 
@@ -221,7 +224,9 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
         case Tag_Closure:
             // C doesn't have exceptions, would have to call out to JS.
             // For now it's a warning rather than error and returns False
-            // fprintf(stderr, "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which describes why it is this way and what the better version will look like.\n");
+            #ifdef PRINT_ERRORS
+                fprintf(stderr, "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which describes why it is this way and what the better version will look like.\n");
+            #endif
             return 0;
 
         case Tag_GcContinuation:
@@ -267,7 +272,9 @@ static void* append_eval(void* args[2]) {
             return List_append_eval(args);
 
         default:
-            // fprintf(stderr, "Tried to Utils_append non-appendable\n");
+            #ifdef PRINT_ERRORS
+                fprintf(stderr, "Tried to Utils_append non-appendable\n");
+            #endif
             return args[0];
     }
 }
