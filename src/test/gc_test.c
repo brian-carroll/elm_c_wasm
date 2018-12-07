@@ -528,28 +528,19 @@ void* fib_eval(void* args[1]) {
 }
 
 
+ElmValue* gc_replay_test_catch() {
+    return A1(&fib, newElmInt(10));
+}
+
 char* gc_replay_test() {
     gc_test_reset();
     gc_state.next_alloc = gc_state.heap.end - 100;
-    ElmValue* result = A1(&fib, newElmInt(10));
-    print_heap(&gc_state);
-    print_state(&gc_state);
+    ElmValue* result = gc_replay_test_catch();
 
-    /*
-    next_alloc is just stopping when heap gets full
-
-    heap_overflow is an empty function so yeah...
-    - throw exception
-    - pass it up the stack
-        - macros all over the gaff for newElmInt and friends
-        - do-while, return
-    - catch it at the top
-    - do GC
-    - replay
-    */
-
-
-
+    if (verbose) {
+        print_heap(&gc_state);
+        print_state(&gc_state);
+    }
 
     mu_assert("Expect heap overflow",
         result->header.tag == Tag_GcException

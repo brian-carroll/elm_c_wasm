@@ -133,7 +133,7 @@ int main(int argc, char ** argv) {
                 gc = true;
                 break;
             default:
-                fprintf(stderr, "Usage: %s [-v]\n", argv[0]);
+                fprintf(stderr, "Usage: %s [-vatubsg]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
@@ -145,10 +145,10 @@ int main(int argc, char ** argv) {
         string,
         gc
     );
-    bool passed = result == NULL;
+    bool passed = (result == NULL);
 
     if (!passed) {
-        printf("%s\n", result);
+        printf("Failed: %s\n", result);
     } else {
         printf("\nALL TESTS PASSED\n");
     }
