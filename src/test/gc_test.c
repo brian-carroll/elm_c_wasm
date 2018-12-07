@@ -37,7 +37,7 @@ static bool is_marked(void* p) {
 }
 
 void print_value(ElmValue* v) {
-    printf("| %p |  %c   |  %2x  | ", v, is_marked(v) ? 'X' : ' ', v->header.size);
+    printf("| %p |  %c   |%5d | ", v, is_marked(v) ? 'X' : ' ', v->header.size);
     switch (v->header.tag) {
         case Tag_Int:
             printf("Int %d", v->elm_int.value);
@@ -83,8 +83,8 @@ void print_value(ElmValue* v) {
                 printf("%p ", v->record.values[i]);
             }
             break;
-        case Tag_GcContinuation:
-            printf("GcContinuation %p", v->gc_cont.continuation);
+        case Tag_GcException:
+            printf("GcException");
             break;
         case Tag_GcStackPush:
             printf("GcStackPush newer: %p older: %p",
@@ -109,13 +109,27 @@ void print_value(ElmValue* v) {
 }
 
 void print_heap(GcState *state) {
-    printf("|   Address    | Mark | Size | Value\n");
-    printf("| ------------ | ---- | ---- | -----\n");
+    printf("|    Address     | Mark | Size | Value\n");
+    printf("| -------------- | ---- | ---- | -----\n");
 
-    size_t* next_value = state->heap.start;
-    for (size_t* p = state->heap.start; p < state->next_alloc; p++) {
+    size_t* first_value = state->heap.start;
+    ElmValue* v = (ElmValue*)first_value;
+    if (v->header.tag == Tag_GcStackEmpty) {
+        print_value(v);
+        first_value += v->header.size;
+    }
+    // skip junk zeros used to force GC in tests
+    size_t* zeros = first_value;
+    while (*first_value == 0) first_value++;
+
+    if (first_value > zeros) {
+        printf("| %p |      |%5zd | (zeros)\n", zeros, first_value - zeros);
+    }
+
+    size_t* next_value = first_value;
+    for (size_t* p = first_value; p < state->next_alloc; p++) {
         if (p == next_value) {
-            ElmValue* v = (ElmValue*)p;
+            v = (ElmValue*)p;
             print_value(v);
             if (v->header.size > 0 && v->header.size < 128) {
                 next_value += v->header.size;
@@ -455,38 +469,95 @@ char* gc_dead_between_test() {
 
 
 /*
-Test replay
-- Set next_alloc so that collection happens exactly when we want it to
-    - No data underneath, space will be treated as garbage
-- Elm functions
-    - Top level function to interrupt (fib)
-    - 2nd level function to finish (<=)
-    - 2nd level tail-recursive function to interrupt (fibHelp)
-    - 3rd level function to finish (==, -)
-    - 3rd level function to interrupt (+)
-- Do a collection
-- Compact the whole heap down (TONS of garbage since we set it up that way)
-- Replay to completion and return a result
+fibHelp : Int -> Int -> Int -> Int
+fibHelp iters prev1 prev2 =
+    if iters <= 1 then
+        prev1
+    else
+        fibHelp (iters - 1) (prev1 + prev2) prev1
+*/
+ElmInt* literal_0;
+ElmInt* literal_1;
 
+Closure fibHelp;
+void* fibHelp_eval(void* args[3]) {
+    Closure* selfcall = GC_selfcall_alloc(&fibHelp, args);
+    if (selfcall == pGcFull) return pGcFull;
 
-Fibonacci
----------
+    ElmInt* result;
+    while (1) {
+        ElmInt* iters = selfcall->values[0];
+        ElmInt* prev1 = selfcall->values[1];
+        ElmInt* prev2 = selfcall->values[2];
+        if (A2(&Utils_le, iters, literal_1) == &True) {
+            result = prev1;
+            break;
+        } else {
+            ElmInt* next_iters = A2(&Basics_sub, iters, literal_1);
+            ElmInt* next_prev1 = A2(&Basics_add, prev1, prev2);
+            ElmInt* next_prev2 = prev1;
+            // Write to tailcall _last_ in case A2's throw
+            // We can pick up from this iteration after a GC exception
+            selfcall->values[0] = next_iters;
+            selfcall->values[1] = next_prev1;
+            selfcall->values[2] = next_prev2;
+        }
+    }
+    GC_selfcall_free(selfcall);
+    return result;
+}
 
+/*
 fib : Int -> Int
 fib n =
     if n <= 0 then
         0
     else
         fibHelp n 1 0
-
-
-fibHelp : Int -> Int -> Int -> Int
-fibHelp iters prev1 prev2 =
-    if iters == 1 then
-        prev1
-    else
-        fibHelp (iters - 1) (prev1 + prev2) prev1
 */
+Closure fib;
+void* fib_eval(void* args[1]) {
+    ElmInt* n = args[0];
+    ElmInt* literal_0 = newElmInt(0);
+    ElmInt* literal_1 = newElmInt(1);
+    if (A2(&Utils_le, n, literal_0) == &True) {
+        return literal_0;
+    } else {
+        return A3(&fibHelp, n, literal_1, literal_0);
+    }
+}
+
+
+char* gc_replay_test() {
+    gc_test_reset();
+    gc_state.next_alloc = gc_state.heap.end - 100;
+    ElmValue* result = A1(&fib, newElmInt(10));
+    print_heap(&gc_state);
+    print_state(&gc_state);
+
+    /*
+    next_alloc is just stopping when heap gets full
+
+    heap_overflow is an empty function so yeah...
+    - throw exception
+    - pass it up the stack
+        - macros all over the gaff for newElmInt and friends
+        - do-while, return
+    - catch it at the top
+    - do GC
+    - replay
+    */
+
+
+
+
+    mu_assert("Expect heap overflow",
+        result->header.tag == Tag_GcException
+    );
+
+    return NULL;
+}
+
 
 char* gc_test() {
     if (verbose) {
@@ -495,10 +566,16 @@ char* gc_test() {
         printf("--\n");
     }
 
+    fib = F1(fib_eval);
+    fibHelp = F3(fibHelp_eval);
+    literal_0 = newElmInt(0);
+    literal_1 = newElmInt(1);
+
     mu_run_test(gc_struct_test);
     mu_run_test(gc_bitmap_test);
     mu_run_test(gc_dead_between_test);
     mu_run_test(gc_mark_compact_test);
+    mu_run_test(gc_replay_test);
 
     return NULL;
 }

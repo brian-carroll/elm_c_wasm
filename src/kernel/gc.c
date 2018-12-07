@@ -131,11 +131,12 @@ int GC_init() {
   pointing to. If it moves the value, it will update the
   pointer to reference the new location.
 */
-void GC_register_root(ElmValue** ptr_to_mutable_ptr) {
+void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
     gc_state.roots = (ElmValue*)newCons(
         ptr_to_mutable_ptr,
         gc_state.roots
     );
+    return ptr_to_mutable_ptr; // anything but pGcFull
 }
 
 
@@ -151,7 +152,7 @@ void* GC_malloc(size_t bytes) {
         #ifdef PRINT_ERRORS
             u32 replay_words = (Header*)replay->size;
             if (replay_words != words) {
-                fprintf("Replay error, %d != %zd\n", replay_words, words);
+                fprintf("GC_malloc replay error. Requested size %zd doesn't match cached size %d\n", words, replay_words);
             }
         #endif
         size_t* next_replay = replay + words;
@@ -169,8 +170,7 @@ void* GC_malloc(size_t bytes) {
         gc_state.next_alloc = new_heap;
         return old_heap;
     } else {
-        heap_overflow(&gc_state);
-        return gc_state.next_alloc;
+        return pGcFull;
     }
 }
 
@@ -210,14 +210,36 @@ void* GC_malloc(size_t bytes) {
 
 static void* stack_empty() {
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    if (p == pGcFull) return pGcFull;
     p->header = HEADER_GC_STACK_EMPTY;
     gc_state.stack_map = p;
     return p;
 }
 
+static bool is_stack_replaying(GcState* state, Tag tag) {
+    size_t* replay = state->replay_ptr;
+    if (replay == NULL) {
+        return false;
+    }
+    #ifdef PRINT_ERRORS
+        Header* h = (Header*)replay;
+        if (h->tag != tag) {
+            fprintf(stderr, "is_stack_replaying: wrong tag. Expected %d but got %d\n", tag, h->tag);
+        }
+    #endif
+    size_t* replay_next = replay + sizeof(GcStackMap)/SIZE_UNIT;
+    state->replay_ptr =
+        (replay_next < state->next_alloc)
+            ? replay_next
+            : NULL;
+    return true;
+}
+
+
 void* GC_stack_push() {
-    if (stack_replay_update(&gc_state, Tag_GcStackPush)) return NULL;
+    if (is_stack_replaying(&gc_state, Tag_GcStackPush)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    if (p == pGcFull) return pGcFull;
     p->header = HEADER_GC_STACK_PUSH;
     p->older = gc_state.stack_map;
 
@@ -226,34 +248,101 @@ void* GC_stack_push() {
     return p;
 }
 
-void GC_stack_tailcall(Closure* c, void* push) {
-    if (stack_replay_update(&gc_state, Tag_GcStackTailCall)) return;
+void* GC_stack_tailcall(Closure* c, void* push) {
+    if (is_stack_replaying(&gc_state, Tag_GcStackTailCall)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    if (p == pGcFull) return pGcFull;
     p->header = HEADER_GC_STACK_TC;
     p->older = push;
     p->data = c;
 
     gc_state.stack_map = p;
     // stack_depth stays the same
+    return p;
 }
 
-void GC_stack_pop(ElmValue* result, void* push) {
-    if (stack_replay_update(&gc_state, Tag_GcStackPop)) return;
+void* GC_stack_pop(ElmValue* result, void* push) {
+    if (is_stack_replaying(&gc_state, Tag_GcStackPop)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    if (p == pGcFull) return pGcFull;
     p->header = HEADER_GC_STACK_POP;
     p->older = push;
     p->data = result;
 
     gc_state.stack_map = p;
     gc_state.stack_depth--;
+    return p;
+}
+
+
+// On entering a self-calling function, allocate space at the
+// _top_ (!) of the heap to handle possible GC exception.
+// Use it to store a thunk that we can use after GC to pick up
+// where we left off, skipping iterations already done.
+// Must be at top of heap so it can point _down_ at its args even
+// when the heap fills up
+//
+Closure* GC_selfcall_alloc(Closure* empty_closure, void* args[]) {
+    size_t* stackmap_words =
+        gc_state.heap.end - sizeof(GcStackMap)/sizeof(size_t);
+
+    size_t n_args = empty_closure->max_values;
+
+    size_t* thunk_words =
+        stackmap_words
+        - n_args
+        - (sizeof(Closure)/sizeof(size_t));
+
+    if (thunk_words < gc_state.next_alloc) {
+        return pGcFull;
+    }
+    gc_state.heap.end = thunk_words;
+    // *** TODO ***
+    // if the selfcall throws, heap.end will be in wrong place!
+
+    GcStackMap* stackmap_tc = (GcStackMap*)stackmap_words;
+    Closure* thunk = (Closure*)thunk_words;
+
+    size_t* empty_closure_words = (size_t*)empty_closure;
+    const size_t wmax = sizeof(Closure)/sizeof(size_t);
+    for (size_t w=0; w < wmax; w++) {
+        thunk_words[w] = empty_closure_words[w];
+    }
+    for (size_t arg=0; arg < n_args; arg++) {
+        size_t* child_ptr = args[arg];
+        size_t child_addr = (size_t)child_ptr;
+        thunk_words[wmax + arg] = child_addr;
+    }
+
+    stackmap_tc->header = HEADER_GC_STACK_TC;
+    stackmap_tc->older = gc_state.stack_map;
+    stackmap_tc->data = thunk;
+
+    gc_state.stack_map = stackmap_tc;
+
+    return thunk;
+}
+
+
+void GC_selfcall_free(Closure* selfcall) {
+    size_t* new_end =
+        gc_state.heap.end
+        + selfcall->header.size
+        + sizeof(GcStackMap)/sizeof(size_t);
+
+    #ifdef PRINT_ERRORS
+        if (new_end > gc_state.heap.offsets) {
+            fprintf(stderr, "GC_selfcall_free: freeing too much! %p > %p\n", new_end, gc_state.heap.offsets);
+        }
+    #endif
+
+    gc_state.heap.end = new_end;
 }
 
 
 void* GC_next_replay() {
     GcStackMap* push = (GcStackMap*)gc_state.replay_ptr;
-    if (push == NULL) {
-        return NULL;
-    }
+    if (push == NULL) return NULL; // we're not in replay mode
 
     #ifdef PRINT_ERRORS
         if (push->header.tag != Tag_GcStackPush) {
@@ -262,18 +351,24 @@ void* GC_next_replay() {
     #endif
 
     GcStackMap* newer = push->newer;
-    GcStackMap* after_stackmap;
     void* replay;
+    size_t* replay_next;
+    const size_t stackmap_size = sizeof(GcStackMap)/sizeof(size_t);
 
-    if (newer->header.tag == Tag_GcStackPush) {
-        replay = NULL; // cause 'apply' to re-execute this call, which was not finished
-        after_stackmap = push + 1;
-    } else {
-        replay = newer->data; // cached return value of this call from last time
-        after_stackmap = newer + 1;
+    if (newer->header.tag != Tag_GcStackPush) {
+        // Pop => replay result from previous execution
+        // Tailcall => resume last execution state (saved as a Closure)
+        // Continue replaying after the Pop or Tailcall cell
+        replay = newer->data;
+        replay_next = (size_t*)newer + stackmap_size;
+     } else {
+        // Push => this call never finished, we have no result to replay
+        // Tell 'apply' to execute the call again
+        // Next replay continues after the current Push cell
+        replay = NULL;
+        replay_next = (size_t*)push + stackmap_size;
     }
 
-    size_t* replay_next = (size_t*)after_stackmap;
     if (replay_next >= gc_state.next_alloc) {
         replay_next = NULL; // exit replay mode
     }

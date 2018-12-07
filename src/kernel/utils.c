@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include "./types.h"
 #include "./utils.h"
 #include "./string.h"
@@ -94,9 +93,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         size_t size_new = size_old + size_applied;
 
         c = GC_malloc(size_new);
-        if (c == NULL) {
-            return pGcFull;
-        }
+        if (c == pGcFull) return pGcFull;
 
         memcpy(c, c_old, size_old);
         memcpy(&c->values[n_old], applied, size_applied);
@@ -111,48 +108,29 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     }
 
     void* push = GC_stack_push();
+    if (push == pGcFull) return pGcFull;
 
-    ElmValue* result;
-    bool tail_call;
-    do {
-        result = (*c->evaluator)(args);
+    ElmValue* result = (*c->evaluator)(args);
+    if (result == pGcFull) return pGcFull;
 
-        switch (result->header.tag) {
-            case Tag_GcContinuation:
-                if (result->gc_cont.continuation != NULL) {
-                    GC_stack_tailcall(result->gc_cont.continuation, push);
-                    result = pGcFull;
-                }
-                tail_call = false;
-                break;
-
-            case Tag_Closure:
-                if (result->closure.n_values == result->closure.max_values) {
-                    GC_stack_tailcall(&result->closure, push);
-                    c = &result->closure;
-                    args = result->closure.values;
-                    tail_call = true;
-                } else {
-                    GC_stack_pop(result, push);
-                    tail_call = false;
-                }
-                break;
-
-            default:
-                GC_stack_pop(result, push);
-                tail_call = false;
-                break;
-        }
-    } while (tail_call);
+    void* pop = GC_stack_pop(result, push);
+    if (pop == pGcFull) return pGcFull;
 
     return result;
+}
+
+
+ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
+    Tuple2* t2 = newTuple2(pa, pb);
+    Cons* c = newCons(t2, *pstack);
+    return (ElmValue*)c;
 }
 
 
 static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
 
     if (depth > 100) {
-        *pstack = (ElmValue*)newCons(newTuple2(pa, pb), *pstack);
+        *pstack = eq_stack_push(pa, pb, pstack);
         return 1;
     }
 
@@ -230,7 +208,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
             #endif
             return 0;
 
-        case Tag_GcContinuation:
+        case Tag_GcException:
         case Tag_GcStackEmpty:
         case Tag_GcStackPush:
         case Tag_GcStackPop:
@@ -331,7 +309,7 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
             if (y->header.tag == Tag_Nil) {
                 return &Utils_GT;
             } else {
-                while (true) {
+                while (1) {
                     Custom* order_head = compare_help(x->cons.head, y->cons.head);
                     if (order_head != &Utils_EQ) {
                         return order_head;
@@ -374,14 +352,6 @@ static void* compare_eval(void* args[2]) {
 }
 
 Closure Utils_compare;
-
-
-
-// var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
-// var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
-// var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
-// var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
-
 
 
 static void* lt_eval(void* args[2]) {

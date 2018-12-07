@@ -32,7 +32,7 @@ typedef enum {
     Tag_Record,  // 9
     Tag_Closure, // a
 
-    Tag_GcContinuation,  // b
+    Tag_GcException,     // b
     Tag_GcStackEmpty,    // c
     Tag_GcStackPush,     // d
     Tag_GcStackPop,      // e
@@ -66,11 +66,33 @@ typedef struct {
 #define HEADER_RECORD(p)   (Header){ .tag=Tag_Record,  .size=(sizeof(Record) + p*sizeof(void*))/SIZE_UNIT }
 #define HEADER_CLOSURE(p)  (Header){ .tag=Tag_Closure, .size=(sizeof(Closure) + p*sizeof(void*))/SIZE_UNIT }
 
-#define HEADER_GC_CONT        (Header){ .tag=Tag_GcContinuation,  .size=sizeof(GcContinuation)/SIZE_UNIT }
+#define HEADER_GC_EXCEPTION   (Header){ .tag=Tag_GcException,     .size=sizeof(GcException)/SIZE_UNIT }
 #define HEADER_GC_STACK_EMPTY (Header){ .tag=Tag_GcStackEmpty,    .size=sizeof(GcStackMap)/SIZE_UNIT }
 #define HEADER_GC_STACK_PUSH  (Header){ .tag=Tag_GcStackPush,     .size=sizeof(GcStackMap)/SIZE_UNIT }
 #define HEADER_GC_STACK_POP   (Header){ .tag=Tag_GcStackPop,      .size=sizeof(GcStackMap)/SIZE_UNIT }
 #define HEADER_GC_STACK_TC    (Header){ .tag=Tag_GcStackTailCall, .size=sizeof(GcStackMap)/SIZE_UNIT }
+
+
+#define CAN_THROW(expr) ({ void* x=expr; if (((Header*)x)->tag==Tag_GcException) return x; x; })
+
+
+#define F1(f) (Closure) { \
+    .header = HEADER_CLOSURE(0), \
+    .evaluator = &f, \
+    .max_values = 1, \
+}
+
+#define F2(f) (Closure) { \
+    .header = HEADER_CLOSURE(0), \
+    .evaluator = &f, \
+    .max_values = 2, \
+}
+
+#define F3(f) (Closure) { \
+    .header = HEADER_CLOSURE(0), \
+    .evaluator = &f, \
+    .max_values = 3, \
+}
 
 
 // LIST
@@ -80,7 +102,8 @@ typedef struct {
     void* head;
     void* tail;
 } Cons;
-Cons* newCons(void* head, void* tail);
+Cons* ctorCons(void* head, void* tail);
+#define newCons(head, tail) CAN_THROW(ctorCons(head, tail))
 
 
 // TUPLES
@@ -90,7 +113,9 @@ typedef struct {
     void* a;
     void* b;
 } Tuple2;
-Tuple2* newTuple2(void* a, void* b);
+Tuple2* ctorTuple2(void* a, void* b);
+#define newTuple2(a, b) CAN_THROW(ctorTuple2(a, b))
+
 
 typedef struct {
     Header header;
@@ -98,7 +123,8 @@ typedef struct {
     void* b;
     void* c;
 } Tuple3;
-Tuple3* newTuple3(void* a, void* b, void* c);
+Tuple3* ctorTuple3(void* a, void* b, void* c);
+#define newTuple3(a, b, c) CAN_THROW(ctorTuple3(a, b, c))
 
 
 // NUMBERS
@@ -107,13 +133,15 @@ typedef struct {
     Header header;
     i32 value;
 } ElmInt;
-ElmInt* newElmInt(i32 value);
+ElmInt* ctorElmInt(i32 value);
+#define newElmInt(value) CAN_THROW(ctorElmInt(value))
 
 typedef struct {
     Header header;
     f64 value;
 } ElmFloat;
-ElmFloat* newElmFloat(f64 value);
+ElmFloat* ctorElmFloat(f64 value);
+#define newElmFloat(value) CAN_THROW(ctorElmFloat(value))
 
 typedef union {
     ElmInt i;
@@ -127,7 +155,8 @@ typedef struct {
     Header header;
     i32 value;
 } ElmChar;
-ElmChar* newElmChar(u32 value);
+ElmChar* ctorElmChar(u32 value);
+#define newElmChar(value) CAN_THROW(ctorElmChar(value))
 
 
 // STRING
@@ -136,14 +165,8 @@ typedef struct {
     Header header;
     u8 bytes[];
 } ElmString;
-ElmString* newElmString(size_t n, char *str);
-
-
-// Enums (unions with no params)
-/*
- Elm compiler generates constants in memory, structures can point to them
- Choose smallest required size.
-*/
+ElmString* ctorElmString(size_t n, char *str);
+#define newElmString(n, str) CAN_THROW(ctorElmString(n, str))
 
 
 // CUSTOM
@@ -186,20 +209,13 @@ typedef struct {
     void* values[];
 } Closure;
 
-#define F2(f) (Closure) { \
-    .header = HEADER_CLOSURE(0), \
-    .evaluator = &f, \
-    .max_values = 2, \
-}
-
 
 // GARBAGE COLLECTOR TYPES
 
-// A value used to implement an 'exception' when GC is full
+// A value used to implement an exception when GC is full
 typedef struct {
     Header header;
-    Closure* continuation; // a partially complete tail recursion
-} GcContinuation;
+} GcException;
 
 // Doubly-linked list for tracking stack pointers
 typedef struct {
@@ -223,14 +239,14 @@ typedef union {
     Custom custom;
     Record record;
     Closure closure;
-    GcContinuation gc_cont;
+    GcException gc_exception;
     GcStackMap gc_stackmap;
 } ElmValue;
 
 
 // STATIC CONSTANTS
 
-GcContinuation GcFull; // constant where continuation=NULL
+GcException GcFull;
 void* pGcFull;
 
 ElmValue Nil;

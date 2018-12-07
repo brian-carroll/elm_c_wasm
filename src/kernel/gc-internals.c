@@ -39,9 +39,7 @@ size_t child_count(ElmValue* v) {
         case Tag_Closure:
             return v->closure.n_values;
 
-        case Tag_GcContinuation:
-            return v->gc_cont.continuation != NULL;
-
+        case Tag_GcException:
         case Tag_GcStackEmpty:
             return 0;
 
@@ -180,7 +178,6 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 
 
 void mark_stack_map(GcState* state, size_t* ignore_below) {
-    // Types are important for pointer arithmetic, be careful
     GcStackMap* stack_item = state->stack_map;
     GcStackMap* prev_stack_item = (GcStackMap*)state->next_alloc;
 
@@ -473,29 +470,6 @@ void reverse_stack_map(GcState* state) {
         stack_item->newer = newer_item;
         newer_item = stack_item;
     }
-}
-
-
-// Called whenever a StackMap item is created
-// Return true if in replay mode, false if not
-// Also update GC state if in replay mode
-bool stack_replay_update(GcState* state, Tag tag) {
-    size_t* replay = state->replay_ptr;
-    if (replay == NULL) {
-        return false; // we're not in replay mode
-    }
-    #ifdef PRINT_ERRORS
-        Header* h = (Header*)replay;
-        if (h->tag != tag) {
-            fprintf(stderr, "stack_replay_update: wrong tag. Expected %d but got %d\n", tag, h->tag);
-        }
-    #endif
-    size_t* replay_next = replay + sizeof(GcStackMap)/SIZE_UNIT;
-    state->replay_ptr =
-        (replay_next < state->next_alloc)
-            ? replay_next
-            : NULL;
-    return true; // we're in replay mode
 }
 
 

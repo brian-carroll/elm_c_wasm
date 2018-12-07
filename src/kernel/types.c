@@ -5,7 +5,7 @@
 #include "gc.h"
 
 
-Cons* newCons(void* head, void* tail) {
+Cons* ctorCons(void* head, void* tail) {
     Cons *p = GC_malloc(sizeof(Cons));
     if (p == NULL) return pGcFull;
     p->header = HEADER_CONS;
@@ -14,7 +14,7 @@ Cons* newCons(void* head, void* tail) {
     return p;
 };
 
-Tuple2* newTuple2(void* a, void* b) {
+Tuple2* ctorTuple2(void* a, void* b) {
     Tuple2 *p = GC_malloc(sizeof(Tuple2));
     if (p == NULL) return pGcFull;
     p->header = HEADER_TUPLE2;
@@ -23,7 +23,7 @@ Tuple2* newTuple2(void* a, void* b) {
     return p;
 };
 
-Tuple3* newTuple3(void* a, void* b, void* c) {
+Tuple3* ctorTuple3(void* a, void* b, void* c) {
     Tuple3 *p = GC_malloc(sizeof(Tuple3));
     if (p == NULL) return pGcFull;
     p->header = HEADER_TUPLE3;
@@ -33,7 +33,7 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
     return p;
 };
 
-ElmInt* newElmInt(i32 value) {
+ElmInt* ctorElmInt(i32 value) {
     ElmInt *p = GC_malloc(sizeof(ElmInt));
     if (p == NULL) return pGcFull;
     p->header = HEADER_INT;
@@ -41,7 +41,7 @@ ElmInt* newElmInt(i32 value) {
     return p;
 };
 
-ElmFloat* newElmFloat(f64 value) {
+ElmFloat* ctorElmFloat(f64 value) {
     ElmFloat *p = GC_malloc(sizeof(ElmFloat));
     if (p == NULL) return pGcFull;
     p->header = HEADER_FLOAT;
@@ -49,7 +49,7 @@ ElmFloat* newElmFloat(f64 value) {
     return p;
 };
 
-ElmChar* newElmChar(u32 value) {
+ElmChar* ctorElmChar(u32 value) {
     ElmChar *p = GC_malloc(sizeof(ElmChar));
     if (p == NULL) return pGcFull;
     p->header = HEADER_CHAR;
@@ -62,7 +62,7 @@ ElmChar* newElmChar(u32 value) {
 // so that we can find the exact byte length of the String.
 // Like OCaml, https://v1.realworldocaml.org/v1/en/html/memory-representation-of-values.html#string-values
 
-ElmString* newElmString(size_t payload_bytes, char *str) {
+ElmString* ctorElmString(size_t payload_bytes, char *str) {
     size_t used_bytes = sizeof(Header) + payload_bytes + 1; // 1 byte for padding size
     size_t aligned_words = (used_bytes + SIZE_UNIT-1) / SIZE_UNIT; // ceil
     size_t aligned_bytes = aligned_words * SIZE_UNIT;
@@ -122,9 +122,8 @@ void Types_init() {
     True = (ElmValue)(Custom){ .header = HEADER_CUSTOM(0), .ctor = 1 };
     False = (ElmValue)(Custom){ .header = HEADER_CUSTOM(0), .ctor = 0 };
 
-    GcFull = (GcContinuation){
-        .header = HEADER_GC_CONT,
-        .continuation = NULL
+    GcFull = (GcException){
+        .header = HEADER_GC_EXCEPTION
     };
     pGcFull = &GcFull;
 }

@@ -20,16 +20,30 @@ Next steps
 
 GC next steps
 =============
-- Implement replay mode
-- Refactor GC state types
-    - figure out ElmValue, Header, u32, etc.
-    - try to use arrays where possible rather than pointer arithmetic
-- Implement compaction
-- Measure GC code size in Wasm
-    - Create example Elm program to generate a list or something
-    - Compile option to include only allocation, no collection.
-
-
+- Implement heap overflow exceptions for tail-recursion
+- Pre-allocate a Closure and a GcStackTailCall
+    - Has to be done inside the tail recursive function
+        - knows what arity Closure to allocate
+        - `apply` doesn't know if the funciton is tail recursive
+    - Ask GC to lower the heap->end
+- Then just return an exception as usual
+    - The exception itself doesn't have to contain the Closure => change that struct
+- Exception-handling after the `while`
+    - oh shit, I just made all the macros do a `return`
+    - make them do a break instead and put a do-while around all function bodies?
+        - need to remember for all kernel functions. Boo.
+    - It's either that or TCE becomes a trampoline, with a Closure allocation each time. Less optimised. Boo.
+    - Or have a macro that self-recursive functions redefine from return to break and then redefine back again.
+        - buggy as hell
+    - Or have two layers of eval function for all self recursive functions. top one catches the exception...
+    and does what? needs to be able to see the args, so they
+    need to be double pointers
+    deref the double pointers just inside the loop
+    rewrite them at the end when mutating
+    outer function can also be the one to allocate and free the closure and GcStackTailCall
+    - or allocate GcStackTailCall & Closure at the start and update the Closure's args at the end of the loop, deref them again on next iteration
+    cleanup at the bottom after the while, putting the heap end back where it should be.
+    On Pop, the stackmap will bypass the tailcall
 
 Replay implementation
 =====================

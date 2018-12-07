@@ -50,9 +50,6 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below);
 void mark_stack_map(GcState* state, size_t* ignore_below);
 void mark(GcState* state, size_t* ignore_below);
 void compact(GcState* state, size_t* compact_start);
-
-bool stack_replay_update(GcState* state, Tag tag);
-
 void heap_overflow(GcState*);
 
 #endif
