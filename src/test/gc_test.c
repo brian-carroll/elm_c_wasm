@@ -179,8 +179,10 @@ char* gc_mark_compact_test() {
 
     if (verbose) {
         printf("\n");
-        printf("Stack map\n");
-        printf("---------\n");
+        printf("########################################################################################\n");
+        printf("gc_mark_compact_test\n");
+        printf("--------------------\n");
+        printf("\n");
     }
 
     void* live[100];
@@ -400,8 +402,10 @@ char* gc_bitmap_test() {
 
     if (verbose) {
         printf("\n");
-        printf("Bitmap test\n");
-        printf("-----------\n");
+        printf("########################################################################################\n");
+        printf("gc_bitmap_test\n");
+        printf("--------------\n");
+        printf("\n");
         print_heap(&gc_state);
         print_state(&gc_state);
         printf("\n");
@@ -538,6 +542,11 @@ char* gc_replay_test() {
     ElmValue* result = gc_replay_test_catch();
 
     if (verbose) {
+        printf("\n");
+        printf("########################################################################################\n");
+        printf("gc_replay_test\n");
+        printf("--------------\n");
+        printf("\n");
         print_heap(&gc_state);
         print_state(&gc_state);
     }
