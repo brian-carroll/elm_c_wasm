@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -59,12 +60,18 @@ char* hex_ptr(void* ptr) {
 
 
 
-char* test_all() {
-    mu_run_test(types_test);
-    mu_run_test(utils_test);
-    mu_run_test(basics_test);
-    mu_run_test(string_test);
-    mu_run_test(gc_test);
+char* test_all(
+    bool types,
+    bool utils,
+    bool basics,
+    bool string,
+    bool gc
+) {
+    if (types)  mu_run_test(types_test);
+    if (utils)  mu_run_test(utils_test);
+    if (basics) mu_run_test(basics_test);
+    if (string) mu_run_test(string_test);
+    if (gc)     mu_run_test(gc_test);
 
     return NULL;
 }
@@ -72,7 +79,6 @@ char* test_all() {
 
 
 int main(int argc, char ** argv) {
-    int opt;
 
     GC_init();
     Types_init();
@@ -80,10 +86,51 @@ int main(int argc, char ** argv) {
     Utils_init();
     String_init();
 
-    while ((opt = getopt(argc, argv, "v")) != -1) {
+    static struct option long_options[] =
+    {
+        {"verbose", no_argument, NULL, 'v'},
+        {"all", no_argument, NULL, 'a'},
+        {"types", no_argument, NULL, 't'},
+        {"utils", no_argument, NULL, 'u'},
+        {"basics", no_argument, NULL, 'b'},
+        {"string", no_argument, NULL, 's'},
+        {"gc", no_argument, NULL, 'g'},
+        {NULL, 0, NULL, 0}
+    };
+
+    bool types = false;
+    bool utils = false;
+    bool basics = false;
+    bool string = false;
+    bool gc = false;
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "vatubsg", long_options, NULL)) != -1) {
         switch (opt) {
             case 'v':
                 verbose = true;
+                break;
+            case 'a':
+                types = true;
+                utils = true;
+                basics = true;
+                string = true;
+                gc = true;
+                break;
+            case 't':
+                types = true;
+                break;
+            case 'u':
+                utils = true;
+                break;
+            case 'b':
+                basics = true;
+                break;
+            case 's':
+                string = true;
+                break;
+            case 'g':
+                gc = true;
                 break;
             default:
                 fprintf(stderr, "Usage: %s [-v]\n", argv[0]);
@@ -91,7 +138,13 @@ int main(int argc, char ** argv) {
         }
     }
 
-    char* result = test_all();
+    char* result = test_all(
+        types,
+        utils,
+        basics,
+        string,
+        gc
+    );
     bool passed = result == NULL;
 
     if (!passed) {
@@ -101,5 +154,6 @@ int main(int argc, char ** argv) {
     }
     printf("Tests run: %d\n", tests_run);
 
-    return !passed;
+    int exit_code = passed ? EXIT_SUCCESS : EXIT_FAILURE;
+    exit(exit_code);
 }
