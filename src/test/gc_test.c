@@ -11,6 +11,23 @@
 
 extern GcState gc_state;
 
+#define MAX_STACKMAP_NAMES 100
+
+struct sn {
+    GcStackMap* stackmap;
+    char* name;
+} stackmap_names[MAX_STACKMAP_NAMES];
+
+
+char* find_func_name(GcStackMap* sm) {
+    char* name = "unknown";
+    for (int i=0; i<MAX_STACKMAP_NAMES; i++) {
+        if (stackmap_names[i].stackmap == sm) {
+            name = stackmap_names[i].name;
+        }
+    }
+    return name;
+}
 
 void gc_test_reset() {
     memset(gc_state.heap.start, 0,
@@ -87,13 +104,13 @@ void print_value(ElmValue* v) {
             printf("GcException");
             break;
         case Tag_GcStackPush:
-            printf("GcStackPush newer: %p older: %p",
-                v->gc_stackmap.newer, v->gc_stackmap.older
+            printf("GcStackPush %s newer: %p older: %p",
+                find_func_name(&v->gc_stackmap), v->gc_stackmap.newer, v->gc_stackmap.older
             );
             break;
         case Tag_GcStackPop:
-            printf("GcStackPop newer: %p older: %p data: %p",
-                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
+            printf("GcStackPop %s newer: %p older: %p data: %p",
+                find_func_name(&v->gc_stackmap), v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
             );
             break;
         case Tag_GcStackTailCall:
@@ -214,7 +231,7 @@ char* gc_mark_compact_test() {
         );
     }
 
-    void* push1 = GC_stack_push();
+    void* push1 = GC_stack_push(&c1->closure);
     live[nlive++] = push1;
 
     // The currently-running function allocates some stuff.
@@ -226,7 +243,7 @@ char* gc_mark_compact_test() {
     // Push down to level 2. This will complete. Need its return value
     Closure* c2 = Utils_clone(mock_closure);
     live[nlive++] = c2;
-    void* push2 = GC_stack_push();
+    void* push2 = GC_stack_push(c2);
     live[nlive++] = push2;
 
     // Temporary values from level 2, not in return value
@@ -234,14 +251,14 @@ char* gc_mark_compact_test() {
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
 
     // 3rd level function call. All dead, since we have the return value of a higher level call.
-    void* push3 = GC_stack_push();
+    void* push3 = GC_stack_push(c2);
     dead[ndead++] = push3;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
     ElmInt* ret3 = newElmInt(gc_state.stack_depth*100 + nlive + ndead);
     dead[ndead++] = ret3;
     dead[ndead++] = gc_state.next_alloc; // the pop we're about to allocate
-    GC_stack_pop((ElmValue*)ret3, push3);
+    GC_stack_pop((ElmValue*)ret3, push3, c2);
 
     // return value from level 2. Keep it to provide to level 1 on replay
     ElmValue* ret2a = (ElmValue*)newElmInt(gc_state.stack_depth*100 + nlive + ndead);
@@ -257,13 +274,13 @@ char* gc_mark_compact_test() {
     // We actually have a choice whether these are considered alive or dead.
     // Implementation treats them as live for consistency and ease of coding
     live[nlive++] = gc_state.next_alloc; // the pop we're about to allocate
-    GC_stack_pop(ret2d, push2);
+    GC_stack_pop(ret2d, push2, c2);
     live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
     live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
     live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
 
     // Call a function that makes a tail call
-    void* push_into_tailrec = GC_stack_push();
+    void* push_into_tailrec = GC_stack_push(c2);
     live[nlive++] = push_into_tailrec;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
@@ -273,7 +290,7 @@ char* gc_mark_compact_test() {
     ctail1->header = HEADER_CLOSURE(2);
     ctail1->n_values = 2;
     ctail1->max_values = 2;
-    ctail1->evaluator = NULL; // just a mock. would be a function pointer in real life
+    ctail1->evaluator = Basics_sub.evaluator;
     ctail1->values[0] = dead[ndead-1];
     ctail1->values[1] = dead[ndead-2];
     dead[ndead++] = ctail1;
@@ -289,7 +306,7 @@ char* gc_mark_compact_test() {
     ctail2->header = HEADER_CLOSURE(2);
     ctail2->n_values = 2;
     ctail2->max_values = 2;
-    ctail1->evaluator = NULL; // just a mock. would be a function pointer in real life
+    ctail1->evaluator = Basics_sub.evaluator;
     ctail2->values[0] = live[nlive-1];
     ctail2->values[1] = live[nlive-2];
     live[nlive++] = ctail2;
@@ -483,32 +500,33 @@ fibHelp iters prev1 prev2 =
 ElmInt* literal_0;
 ElmInt* literal_1;
 
-Closure fibHelp;
-void* fibHelp_eval(void* args[3]) {
-    Closure* selfcall = GC_selfcall_alloc(&fibHelp, args);
-    if (selfcall == pGcFull) return pGcFull;
-
-    ElmInt* result;
+void* fibHelp_tce(void* args[3], size_t** gc_tce_data) {
     while (1) {
-        ElmInt* iters = selfcall->values[0];
-        ElmInt* prev1 = selfcall->values[1];
-        ElmInt* prev2 = selfcall->values[2];
+        ElmInt* iters = args[0];
+        ElmInt* prev1 = args[1];
+        ElmInt* prev2 = args[2];
+
         if (A2(&Utils_le, iters, literal_1) == &True) {
-            result = prev1;
-            break;
+            return prev1;
         } else {
             ElmInt* next_iters = A2(&Basics_sub, iters, literal_1);
             ElmInt* next_prev1 = A2(&Basics_add, prev1, prev2);
             ElmInt* next_prev2 = prev1;
-            // Write to tailcall _last_ in case A2's throw
-            // We can pick up from this iteration after a GC exception
-            selfcall->values[0] = next_iters;
-            selfcall->values[1] = next_prev1;
-            selfcall->values[2] = next_prev2;
+
+            CAN_THROW(GC_tce_iteration(3, gc_tce_data));
+
+            // update args last, after everything that can throw
+            args[0] = next_iters;
+            args[1] = next_prev1;
+            args[2] = next_prev2;
         }
     }
-    GC_selfcall_free(selfcall);
-    return result;
+}
+
+
+Closure fibHelp;
+void* fibHelp_eval(void* args[3]) {
+    return GC_tce_eval(&fibHelp_tce, &fibHelp, args);
 }
 
 /*
@@ -522,8 +540,6 @@ fib n =
 Closure fib;
 void* fib_eval(void* args[1]) {
     ElmInt* n = args[0];
-    ElmInt* literal_0 = newElmInt(0);
-    ElmInt* literal_1 = newElmInt(1);
     if (A2(&Utils_le, n, literal_0) == &True) {
         return literal_0;
     } else {
@@ -536,17 +552,77 @@ ElmValue* gc_replay_test_catch() {
     return A1(&fib, newElmInt(10));
 }
 
-char* gc_replay_test() {
-    gc_test_reset();
-    gc_state.next_alloc = gc_state.heap.end - 100;
-    ElmValue* result = gc_replay_test_catch();
 
+int sn_idx = 0;
+
+struct fn {
+    void* evaluator;
+    char* name;
+};
+
+#define NUM_FUNC_NAMES 6
+struct fn func_map[NUM_FUNC_NAMES];
+
+void gc_test_stack_debug(GcStackMap* p, Closure* c_debug) {
+
+    char* name = "unknown";
+    for (int i=0; i<NUM_FUNC_NAMES; i++) {
+        if (func_map[i].evaluator == c_debug->evaluator) {
+            name = func_map[i].name;
+        }
+    }
+
+    // if (strcmp(name, "unknown") == 0) {
+    //     printf("can't find name for closure %p at stackmap %p\n",
+    //         c_debug, p
+    //     );
+    // } else {
+    //     printf("Closure %p at stackmap %p is %s\n",
+    //         c_debug, p, name
+    //     );
+    // }
+
+    if (sn_idx < MAX_STACKMAP_NAMES) {
+        stackmap_names[sn_idx++] = (struct sn){
+            .stackmap = p,
+            .name = name
+        };
+    }
+}
+
+
+
+char* gc_replay_test() {
     if (verbose) {
         printf("\n");
         printf("########################################################################################\n");
         printf("gc_replay_test\n");
         printf("--------------\n");
         printf("\n");
+    }
+    gc_test_reset();
+
+    fib = F1(fib_eval);
+    fibHelp = F3(fibHelp_eval);
+
+    func_map[0] = (struct fn){ fib.evaluator, "fib" };
+    func_map[1] = (struct fn){ fibHelp.evaluator, "fibHelp" };
+    func_map[2] = (struct fn){ Utils_le.evaluator, "Utils_le" };
+    func_map[3] = (struct fn){ Basics_add.evaluator, "Basics_add" };
+    func_map[4] = (struct fn){ Basics_sub.evaluator, "Basics_sub" };
+    func_map[5] = (struct fn){ Basics_mul.evaluator, "Basics_mul" };
+
+
+    gc_state.next_alloc = gc_state.heap.end - 220;
+    literal_0 = newElmInt(0);
+    literal_1 = newElmInt(1);
+
+    ElmValue* result = gc_replay_test_catch();
+
+    if (verbose) {
+        for (int i=0; i<NUM_FUNC_NAMES; i++) {
+            printf("%p : %s\n", func_map[i].evaluator, func_map[i].name);
+        }
         print_heap(&gc_state);
         print_state(&gc_state);
     }
@@ -565,11 +641,6 @@ char* gc_test() {
         printf("GC\n");
         printf("--\n");
     }
-
-    fib = F1(fib_eval);
-    fibHelp = F3(fibHelp_eval);
-    literal_0 = newElmInt(0);
-    literal_1 = newElmInt(1);
 
     mu_run_test(gc_struct_test);
     mu_run_test(gc_bitmap_test);

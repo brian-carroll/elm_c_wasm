@@ -45,6 +45,67 @@ GC next steps
     cleanup at the bottom after the while, putting the heap end back where it should be.
     On Pop, the stackmap will bypass the tailcall
 
+
+Problem:
+=======
+- pointing state.stackmap at pre-allocated tailcall is bad
+    - sub-calls create pushes that point upwards
+- Don't point stackmap at the tailcall until exception is thrown
+- Nested self-calls
+    - The outer one should actually be lowest in memory
+    - this is actually a bitch
+    - allocated values _during_ the call have to be _after_ the tailcall..................... I tink
+    - actually I can go right back to the feckin push
+- ok so what makes it really make sense for real?
+    - create a new tailcall & closure on every iteration
+    - goddammit
+    - don't fill out the boilerplate, just the args. Do boilerplate once when exception thrown.
+        - how do I know which one?
+        - keep track of it in outer eval function (double pointer)
+- what's the complication here?
+    - with nested self-calls maybe the second one is the long one
+    - so I have to keep everything allocated in this call.
+    - so those things need to be _after_ the tailcall
+        - so the tailcall can't be at the top of the heap
+    - but they also have to be before it, because some of them are part of the closure we want to point back to
+    - that can only be solved by making lots, not just one
+- but then again
+    - even if the inner self-call is the long one, it's still good to restart from the outer one
+    - as long as it was long the previous time too...
+
+- so if I create a tailcall for every iteration then there is TONS of garbage but it can be collected easily and quickly
+
+- top-level algo is mind-boggling but basically I have to have _working_ low-level stuff no matter what
+- I just feel like this thing is doing a lot of work that will never get used or only rarely
+- I have to be able to deal with the worst case
+
+_______________________________
+
+Idea
+- on entering the self-calling function, copy the args
+- mutate that copy during the iteration
+- when the exception happens, copy it up to a higher address, pre-allocated, and leave the mutated version as junk
+- if it doesn't happen, leave it as junk anyway.
+
+- that's no different from what I was doing before except for gc_state.stack_map
+
+
+
+GC algorithm thought
+====================
+- reserve 0.5MB for nursery
+- on each compression of the nursery, move the 'bottom of nursery' to top of compacted area and request more space to get back to 0.5MB. This is how we make sure we have enough room.
+- For everything lower than this, we assume it's pretty well packed down.
+- after update, scan the heap using bitmap_dead_between in chunks of 1MB or whatever. Calculate a cost function for each chunk.
+- Basically this is some threshold % of garbage, but it's cumulative going downwards
+
+
+
+
+
+
+
+
 Replay implementation
 =====================
 
@@ -103,7 +164,7 @@ Mutator API
 - GC_stack_push
 - GC_stack_pop
 - GC_stack_tailcall
-- GC_next_replay
+- GC_apply_replay
 
 Mutator API can use hidden state but always delegates to functions handling state explicitly
 

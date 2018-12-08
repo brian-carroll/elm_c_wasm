@@ -74,7 +74,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     void** args;
     Closure *c;
 
-    void* replay = GC_next_replay();
+    void* replay = GC_apply_replay();
     if (replay != NULL) {
         c = replay;
         if (c->header.tag != Tag_Closure) return replay;
@@ -92,8 +92,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         size_t size_applied = n_applied * sizeof(void*);
         size_t size_new = size_old + size_applied;
 
-        c = GC_malloc(size_new);
-        if (c == pGcFull) return pGcFull;
+        c = CAN_THROW(GC_malloc(size_new));
 
         memcpy(c, c_old, size_old);
         memcpy(&c->values[n_old], applied, size_applied);
@@ -107,14 +106,9 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         args = c->values;
     }
 
-    void* push = GC_stack_push();
-    if (push == pGcFull) return pGcFull;
-
-    ElmValue* result = (*c->evaluator)(args);
-    if (result == pGcFull) return pGcFull;
-
-    void* pop = GC_stack_pop(result, push);
-    if (pop == pGcFull) return pGcFull;
+    void* push = CAN_THROW(GC_stack_push(c));
+    ElmValue* result = CAN_THROW((*c->evaluator)(args));
+    CAN_THROW(GC_stack_pop(result, push, c));
 
     return result;
 }

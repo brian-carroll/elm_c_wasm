@@ -8,7 +8,7 @@ HEADERS := $(wildcard src/*/*.h)
 .PHONY: all check dist www clean watch
 
 # 'all' = default for `make` with no arguments
-all: check
+all: ./dist/bin/test
 
 check: ./dist/bin/test
 	./dist/bin/test

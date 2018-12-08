@@ -59,6 +59,9 @@
 #include "gc.h"
 #include "gc-internals.h"
 
+extern void gc_test_stack_debug(GcStackMap* sm, Closure* c);
+
+
 GcState gc_state;
 
 static void* stack_empty(); // pre-declaration
@@ -145,14 +148,21 @@ void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
   Same interface as malloc in stdlib.h
 */
 void* GC_malloc(size_t bytes) {
-    size_t words = GC_DIV_ROUND_UP(bytes, sizeof(size_t));
+    size_t words = bytes / sizeof(size_t);
+
+    #ifdef PRINT_ERRORS
+        if (bytes % sizeof(size_t)) {
+            fprintf(stderr, "GC_malloc: Request for %zd bytes is misaligned\n", bytes);
+        }
+    #endif
 
     size_t* replay = gc_state.replay_ptr;
-    if (replay) {
+    if (replay != NULL) {
+        // replay mode
         #ifdef PRINT_ERRORS
             u32 replay_words = (Header*)replay->size;
             if (replay_words != words) {
-                fprintf("GC_malloc replay error. Requested size %zd doesn't match cached size %d\n", words, replay_words);
+                fprintf(stderr, "GC_malloc: replay error. Requested size %zd doesn't match cached size %d\n", words, replay_words);
             }
         #endif
         size_t* next_replay = replay + words;
@@ -161,16 +171,17 @@ void* GC_malloc(size_t bytes) {
         }
         gc_state.replay_ptr = next_replay;
         return (void*)replay;
-    }
-
-    size_t* old_heap = gc_state.next_alloc;
-    size_t* new_heap = gc_state.next_alloc + words;
-
-    if (new_heap < gc_state.heap.end) {
-        gc_state.next_alloc = new_heap;
-        return old_heap;
     } else {
-        return pGcFull;
+        // normal mode
+        size_t* old_heap = gc_state.next_alloc;
+        size_t* new_heap = old_heap + words;
+
+        if (new_heap < gc_state.heap.end) {
+            gc_state.next_alloc = new_heap;
+            return old_heap;
+        } else {
+            return pGcFull;
+        }
     }
 }
 
@@ -236,10 +247,13 @@ static bool is_stack_replaying(GcState* state, Tag tag) {
 }
 
 
-void* GC_stack_push() {
+void* GC_stack_push(Closure* c_debug) {
     if (is_stack_replaying(&gc_state, Tag_GcStackPush)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     if (p == pGcFull) return pGcFull;
+
+    gc_test_stack_debug(p, c_debug);
+
     p->header = HEADER_GC_STACK_PUSH;
     p->older = gc_state.stack_map;
 
@@ -261,10 +275,13 @@ void* GC_stack_tailcall(Closure* c, void* push) {
     return p;
 }
 
-void* GC_stack_pop(ElmValue* result, void* push) {
+void* GC_stack_pop(ElmValue* result, void* push, Closure* c_debug) {
     if (is_stack_replaying(&gc_state, Tag_GcStackPop)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     if (p == pGcFull) return pGcFull;
+
+    gc_test_stack_debug(p, c_debug);
+
     p->header = HEADER_GC_STACK_POP;
     p->older = push;
     p->data = result;
@@ -275,78 +292,81 @@ void* GC_stack_pop(ElmValue* result, void* push) {
 }
 
 
-// On entering a self-calling function, allocate space at the
-// _top_ (!) of the heap to handle possible GC exception.
-// Use it to store a thunk that we can use after GC to pick up
-// where we left off, skipping iterations already done.
-// Must be at top of heap so it can point _down_ at its args even
-// when the heap fills up
-//
-Closure* GC_selfcall_alloc(Closure* empty_closure, void* args[]) {
-    size_t* stackmap_words =
-        gc_state.heap.end - sizeof(GcStackMap)/sizeof(size_t);
+// GC operations for one iteration of a tail call elminated Elm function
+// Allocates space for a Closure and GcStackMap so that during replay
+// we can skip previous iterations (and their garbage)
+// Creates lots of extra garbage in order to be able to clean it all up!
+void* GC_tce_iteration(size_t n_args, size_t** gc_tce_data) {
+    size_t closure_bytes = sizeof(Closure) + n_args*sizeof(void*);
+    size_t cont_bytes = closure_bytes + sizeof(GcStackMap);
 
-    size_t n_args = empty_closure->max_values;
+    void* tce_space = GC_malloc(cont_bytes);
+    if (tce_space == pGcFull) return pGcFull;
 
-    size_t* thunk_words =
-        stackmap_words
-        - n_args
-        - (sizeof(Closure)/sizeof(size_t));
+    GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
+    gc_state.stack_map = tailcall;
+    *gc_tce_data = tce_space;
 
-    if (thunk_words < gc_state.next_alloc) {
-        return pGcFull;
-    }
-    gc_state.heap.end = thunk_words;
-    // *** TODO ***
-    // if the selfcall throws, heap.end will be in wrong place!
-
-    GcStackMap* stackmap_tc = (GcStackMap*)stackmap_words;
-    Closure* thunk = (Closure*)thunk_words;
-
-    size_t* empty_closure_words = (size_t*)empty_closure;
-    const size_t wmax = sizeof(Closure)/sizeof(size_t);
-    for (size_t w=0; w < wmax; w++) {
-        thunk_words[w] = empty_closure_words[w];
-    }
-    for (size_t arg=0; arg < n_args; arg++) {
-        size_t* child_ptr = args[arg];
-        size_t child_addr = (size_t)child_ptr;
-        thunk_words[wmax + arg] = child_addr;
-    }
-
-    stackmap_tc->header = HEADER_GC_STACK_TC;
-    stackmap_tc->older = gc_state.stack_map;
-    stackmap_tc->data = thunk;
-
-    gc_state.stack_map = stackmap_tc;
-
-    return thunk;
+    return tce_space; // not pGcFull
 }
 
 
-void GC_selfcall_free(Closure* selfcall) {
-    size_t* new_end =
-        gc_state.heap.end
-        + selfcall->header.size
-        + sizeof(GcStackMap)/sizeof(size_t);
+// Evaluate a tail call elminated Elm function,
+// managing all of the GC related stuff for it
+void* GC_tce_eval(
+    void* (*tce_evaluator)(void*[], size_t**),
+    Closure* c,
+    void* args[]
+) {
+    GcStackMap* push = gc_state.stack_map;
+    size_t n_args = (size_t)c->max_values;
 
-    #ifdef PRINT_ERRORS
-        if (new_end > gc_state.heap.offsets) {
-            fprintf(stderr, "GC_selfcall_free: freeing too much! %p > %p\n", new_end, gc_state.heap.offsets);
-        }
-    #endif
+    void** args_mut = GC_malloc(n_args*sizeof(void*));
+    for (size_t i=0; i < n_args; i++) {
+        args_mut[i] = args[i];
+    }
 
-    gc_state.heap.end = new_end;
+    // Space allocated by tce_evaluator on every iteration
+    // i.e. tailcall and closure
+    size_t* gc_tce_data;
+
+    // Run the tail-call-eliminated evaluator
+    void* result = (*tce_evaluator)(args_mut, &gc_tce_data);
+    if (result != pGcFull) {
+        return result;
+    }
+
+    // Cleanup for GC exception
+    // Save the current args in a closure in the stack map
+    // Then we can replay later, skipping earlier iterations
+    // This space was already _allocated_ but not _written_
+    // by GC_tce_iteration, called from tce_evaluator
+
+    Closure* resume = (Closure*)gc_tce_data;
+    resume->header = HEADER_CLOSURE(n_args);
+    resume->n_values = n_args;
+    resume->max_values = n_args;
+    resume->evaluator = c->evaluator;
+    for (size_t i=0; i < n_args; i++) {
+        resume->values[i] = args_mut[i];
+    }
+
+    GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + c->header.size);
+    tailcall->header = HEADER_GC_STACK_TC;
+    tailcall->older = push;
+    tailcall->data = c;
+
+    return pGcFull;
 }
 
 
-void* GC_next_replay() {
+void* GC_apply_replay() {
     GcStackMap* push = (GcStackMap*)gc_state.replay_ptr;
     if (push == NULL) return NULL; // we're not in replay mode
 
     #ifdef PRINT_ERRORS
         if (push->header.tag != Tag_GcStackPush) {
-            fprintf("GC_next_replay: wrong tag. Expected %d but got %d", Tag_GcStackPush, push->header.tag);
+            fprintf("GC_apply_replay: wrong tag. Expected %d but got %d", Tag_GcStackPush, push->header.tag);
         }
     #endif
 
