@@ -1,10 +1,14 @@
 #include <string.h>
-#include <stdio.h>
 #include "./types.h"
 #include "./utils.h"
 #include "./string.h"
 #include "./list.h"
 #include "./gc.h"
+
+#ifdef DEBUG
+    #include <stdio.h>
+    extern void gc_test_stack_debug(GcStackMap* sm, Closure* c);
+#endif
 
 
 void* Utils_clone(void* x) {
@@ -36,7 +40,7 @@ static u32 fieldset_search(FieldSet* fieldset, u32 search) {
         }
     }
 
-    #ifdef PRINT_ERRORS
+    #ifdef DEBUG
         fprintf(stderr, "Failed to find field %d in record fieldset at %zx\n",
             search, (size_t)fieldset
         );
@@ -106,9 +110,18 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         args = c->values;
     }
 
-    void* push = CAN_THROW(GC_stack_push(c));
+    void* push = CAN_THROW(GC_stack_push());
     ElmValue* result = CAN_THROW((*c->evaluator)(args));
-    CAN_THROW(GC_stack_pop(result, push, c));
+    void* pop = CAN_THROW(GC_stack_pop(result, push));
+
+    #ifdef DEBUG
+        // Directly associate each stackmap object with its closure for easier debug
+        // Function names can also be mapped in test code
+        gc_test_stack_debug(push, c);
+        gc_test_stack_debug(pop, c);
+    #else
+        (void)pop; // suppress compiler warning about unused variable in non-DEBUG mode
+    #endif
 
     return result;
 }
@@ -197,7 +210,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
         case Tag_Closure:
             // C doesn't have exceptions, would have to call out to JS.
             // For now it's a warning rather than error and returns False
-            #ifdef PRINT_ERRORS
+            #ifdef DEBUG
                 fprintf(stderr, "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which describes why it is this way and what the better version will look like.\n");
             #endif
             return 0;
@@ -245,7 +258,7 @@ static void* append_eval(void* args[2]) {
             return List_append_eval(args);
 
         default:
-            #ifdef PRINT_ERRORS
+            #ifdef DEBUG
                 fprintf(stderr, "Tried to Utils_append non-appendable\n");
             #endif
             return args[0];

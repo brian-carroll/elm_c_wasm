@@ -1,9 +1,12 @@
-#include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <errno.h>
 #include "./types.h"
 #include "./gc-internals.h"
+#ifdef DEBUG
+    #include <stdio.h>
+#endif
+
 
 static const size_t ALL_ONES = -1; // 0xfffff...
 
@@ -63,7 +66,7 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
 
     int has_error = brk(new_break_ptr);
     if (has_error) {
-        #ifdef PRINT_ERRORS
+        #ifdef DEBUG
             fprintf(stderr, "Failed to get heap memory. Error code %d\n", errno);
         #endif
         return errno;

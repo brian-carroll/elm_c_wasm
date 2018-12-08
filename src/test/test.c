@@ -4,17 +4,20 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include "../kernel/types.h"
-#include "../kernel/utils.h"
-#include "../kernel/basics.h"
-#include "../kernel/string.h"
-#include "../kernel/gc.h"
+
 #include "./test.h"
 #include "./types_test.h"
 #include "./utils_test.h"
 #include "./basics_test.h"
 #include "./string_test.h"
 #include "./gc_test.h"
+
+// Init functions
+#include "../kernel/types.h"
+#include "../kernel/utils.h"
+#include "../kernel/basics.h"
+#include "../kernel/string.h"
+#include "../kernel/gc.h"
 
 #ifdef __EMSCRIPTEN__
     int verbose = true;

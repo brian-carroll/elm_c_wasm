@@ -49,8 +49,6 @@
         - Kermany and Petrank, 2006
         - Abuaiadh et al, 2004
 */
-
-#include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -58,8 +56,9 @@
 #include "types.h"
 #include "gc.h"
 #include "gc-internals.h"
-
-extern void gc_test_stack_debug(GcStackMap* sm, Closure* c);
+#ifdef DEBUG
+    #include <stdio.h>
+#endif
 
 
 GcState gc_state;
@@ -150,7 +149,7 @@ void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
 void* GC_malloc(size_t bytes) {
     size_t words = bytes / sizeof(size_t);
 
-    #ifdef PRINT_ERRORS
+    #ifdef DEBUG
         if (bytes % sizeof(size_t)) {
             fprintf(stderr, "GC_malloc: Request for %zd bytes is misaligned\n", bytes);
         }
@@ -159,8 +158,8 @@ void* GC_malloc(size_t bytes) {
     size_t* replay = gc_state.replay_ptr;
     if (replay != NULL) {
         // replay mode
-        #ifdef PRINT_ERRORS
-            u32 replay_words = (Header*)replay->size;
+        #ifdef DEBUG
+            u32 replay_words = ((Header*)replay)->size;
             if (replay_words != words) {
                 fprintf(stderr, "GC_malloc: replay error. Requested size %zd doesn't match cached size %d\n", words, replay_words);
             }
@@ -232,7 +231,7 @@ static bool is_stack_replaying(GcState* state, Tag tag) {
     if (replay == NULL) {
         return false;
     }
-    #ifdef PRINT_ERRORS
+    #ifdef DEBUG
         Header* h = (Header*)replay;
         if (h->tag != tag) {
             fprintf(stderr, "is_stack_replaying: wrong tag. Expected %d but got %d\n", tag, h->tag);
@@ -247,18 +246,30 @@ static bool is_stack_replaying(GcState* state, Tag tag) {
 }
 
 
-void* GC_stack_push(Closure* c_debug) {
+void* GC_stack_push() {
     if (is_stack_replaying(&gc_state, Tag_GcStackPush)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     if (p == pGcFull) return pGcFull;
-
-    gc_test_stack_debug(p, c_debug);
 
     p->header = HEADER_GC_STACK_PUSH;
     p->older = gc_state.stack_map;
 
     gc_state.stack_map = p;
     gc_state.stack_depth++;
+    return p;
+}
+
+void* GC_stack_pop(ElmValue* result, void* push) {
+    if (is_stack_replaying(&gc_state, Tag_GcStackPop)) return NULL;
+    GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+    if (p == pGcFull) return pGcFull;
+
+    p->header = HEADER_GC_STACK_POP;
+    p->older = push;
+    p->data = result;
+
+    gc_state.stack_map = p;
+    gc_state.stack_depth--;
     return p;
 }
 
@@ -272,22 +283,6 @@ void* GC_stack_tailcall(Closure* c, void* push) {
 
     gc_state.stack_map = p;
     // stack_depth stays the same
-    return p;
-}
-
-void* GC_stack_pop(ElmValue* result, void* push, Closure* c_debug) {
-    if (is_stack_replaying(&gc_state, Tag_GcStackPop)) return NULL;
-    GcStackMap* p = GC_malloc(sizeof(GcStackMap));
-    if (p == pGcFull) return pGcFull;
-
-    gc_test_stack_debug(p, c_debug);
-
-    p->header = HEADER_GC_STACK_POP;
-    p->older = push;
-    p->data = result;
-
-    gc_state.stack_map = p;
-    gc_state.stack_depth--;
     return p;
 }
 
@@ -364,9 +359,9 @@ void* GC_apply_replay() {
     GcStackMap* push = (GcStackMap*)gc_state.replay_ptr;
     if (push == NULL) return NULL; // we're not in replay mode
 
-    #ifdef PRINT_ERRORS
+    #ifdef DEBUG
         if (push->header.tag != Tag_GcStackPush) {
-            fprintf("GC_apply_replay: wrong tag. Expected %d but got %d", Tag_GcStackPush, push->header.tag);
+            fprintf(stderr, "GC_apply_replay: wrong tag. Expected %d but got %d", Tag_GcStackPush, push->header.tag);
         }
     #endif
 

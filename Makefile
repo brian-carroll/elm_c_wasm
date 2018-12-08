@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -O1
+CFLAGS=-Wall -O1 -DDEBUG
 
 SOURCES := $(wildcard src/*/*.c)
 HEADERS := $(wildcard src/*/*.h)

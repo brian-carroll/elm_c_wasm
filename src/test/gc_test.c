@@ -231,7 +231,7 @@ char* gc_mark_compact_test() {
         );
     }
 
-    void* push1 = GC_stack_push(&c1->closure);
+    void* push1 = GC_stack_push();
     live[nlive++] = push1;
 
     // The currently-running function allocates some stuff.
@@ -243,7 +243,7 @@ char* gc_mark_compact_test() {
     // Push down to level 2. This will complete. Need its return value
     Closure* c2 = Utils_clone(mock_closure);
     live[nlive++] = c2;
-    void* push2 = GC_stack_push(c2);
+    void* push2 = GC_stack_push();
     live[nlive++] = push2;
 
     // Temporary values from level 2, not in return value
@@ -251,14 +251,14 @@ char* gc_mark_compact_test() {
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
 
     // 3rd level function call. All dead, since we have the return value of a higher level call.
-    void* push3 = GC_stack_push(c2);
+    void* push3 = GC_stack_push();
     dead[ndead++] = push3;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
     ElmInt* ret3 = newElmInt(gc_state.stack_depth*100 + nlive + ndead);
     dead[ndead++] = ret3;
     dead[ndead++] = gc_state.next_alloc; // the pop we're about to allocate
-    GC_stack_pop((ElmValue*)ret3, push3, c2);
+    GC_stack_pop((ElmValue*)ret3, push3);
 
     // return value from level 2. Keep it to provide to level 1 on replay
     ElmValue* ret2a = (ElmValue*)newElmInt(gc_state.stack_depth*100 + nlive + ndead);
@@ -274,13 +274,13 @@ char* gc_mark_compact_test() {
     // We actually have a choice whether these are considered alive or dead.
     // Implementation treats them as live for consistency and ease of coding
     live[nlive++] = gc_state.next_alloc; // the pop we're about to allocate
-    GC_stack_pop(ret2d, push2, c2);
+    GC_stack_pop(ret2d, push2);
     live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
     live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
     live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
 
     // Call a function that makes a tail call
-    void* push_into_tailrec = GC_stack_push(c2);
+    void* push_into_tailrec = GC_stack_push();
     live[nlive++] = push_into_tailrec;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
     dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
