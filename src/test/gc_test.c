@@ -617,6 +617,7 @@ char* gc_replay_test() {
     literal_0 = newElmInt(0);
     literal_1 = newElmInt(1);
 
+    // wrapper function to prevent GC exception exiting the test
     ElmValue* result = gc_replay_test_catch();
 
     if (verbose) {

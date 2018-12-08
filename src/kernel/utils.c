@@ -111,14 +111,15 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     }
 
     void* push = CAN_THROW(GC_stack_push());
-    ElmValue* result = CAN_THROW((*c->evaluator)(args));
-    void* pop = CAN_THROW(GC_stack_pop(result, push));
-
     #ifdef DEBUG
-        // Directly associate each stackmap object with its closure for easier debug
-        // Function names can also be mapped in test code
-        gc_test_stack_debug(push, c);
-        gc_test_stack_debug(pop, c);
+        gc_test_stack_debug(push, c); // help to show function names in debug output
+    #endif
+
+    ElmValue* result = CAN_THROW((*c->evaluator)(args));
+
+    void* pop = CAN_THROW(GC_stack_pop(result, push));
+    #ifdef DEBUG
+        gc_test_stack_debug(pop, c); // help to show function names in debug output
     #else
         (void)pop; // suppress compiler warning about unused variable in non-DEBUG mode
     #endif
