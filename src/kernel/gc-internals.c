@@ -388,7 +388,7 @@ void compact(GcState* state, size_t* compact_start) {
         size_t* live_patch_start = from;
 
         // Next garbage patch (bitmap only)
-        size_t* next_garbage = from + 1;
+        size_t* next_garbage = from;
         while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
             if (bm_mask < max_mask) {
                 bm_mask <<= 1;
