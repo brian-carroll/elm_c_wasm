@@ -1,5 +1,7 @@
 # Editor config
 .vscode/
+.vs/
+.codelite/
 
 # Generated files
 *.js
@@ -11,6 +13,14 @@
 a.out
 dist/
 junk.c
+
+# Codelite IDE generated files
+Debug/
+Release/
+*.project
+*.workspace
+elm_c_wasm.mk
+elm_c_wasm.txt
 
 # Generated report
 opt.md
