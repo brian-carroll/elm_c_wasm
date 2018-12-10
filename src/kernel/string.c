@@ -23,8 +23,11 @@ void* String_append_eval(void* args[2]) {
 
     ElmString* s = newElmString(na + nb, NULL);
     if (s == pGcFull) return pGcFull;
-    GC_memcpy(s->bytes, a->bytes, na);
-    GC_memcpy(&s->bytes[na], b->bytes, nb);
+
+    // May not be aligned on word boundaries
+    // TODO: see if this can be optimised more
+    memcpy(s->bytes, a->bytes, na);
+    memcpy(&s->bytes[na], b->bytes, nb);
 
     return s;
 }
