@@ -11,19 +11,35 @@
 
 extern GcState gc_state;
 
-#define MAX_STACKMAP_NAMES 100
+struct fn {
+    void* evaluator;
+    char* name;
+};
+#define NUM_FUNC_NAMES 6
+struct fn func_map[NUM_FUNC_NAMES];
 
+#define MAX_STACKMAP_NAMES 100
 struct sn {
     GcStackMap* stackmap;
     char* name;
 } stackmap_names[MAX_STACKMAP_NAMES];
 
 
-char* find_func_name(GcStackMap* sm) {
+char* find_stackmap_func_name(GcStackMap* sm) {
     char* name = "unknown";
     for (int i=0; i<MAX_STACKMAP_NAMES; i++) {
         if (stackmap_names[i].stackmap == sm) {
             name = stackmap_names[i].name;
+        }
+    }
+    return name;
+}
+
+char* find_closure_func_name(Closure* c) {
+    char* name = "unknown";
+    for (int i=0; i<NUM_FUNC_NAMES; i++) {
+        if (func_map[i].evaluator == c->evaluator) {
+            name = func_map[i].name;
         }
     }
     return name;
@@ -93,8 +109,9 @@ void print_value(ElmValue* v) {
             }
             break;
         case Tag_Closure:
-            printf("Closure n_values: %d max_values: %d evaluator: %p values: ",
-                v->closure.n_values, v->closure.max_values, v->closure.evaluator
+            printf("Closure (%s) n_values: %d max_values: %d values: ",
+                find_closure_func_name(&v->closure),
+                v->closure.n_values, v->closure.max_values
             );
             for (size_t i=0; i < v->closure.n_values; ++i) {
                 printf("%p ", v->record.values[i]);
@@ -104,13 +121,15 @@ void print_value(ElmValue* v) {
             printf("GcException");
             break;
         case Tag_GcStackPush:
-            printf("GcStackPush %s newer: %p older: %p",
-                find_func_name(&v->gc_stackmap), v->gc_stackmap.newer, v->gc_stackmap.older
+            printf("GcStackPush (%s) newer: %p older: %p",
+                find_stackmap_func_name(&v->gc_stackmap),
+                v->gc_stackmap.newer, v->gc_stackmap.older
             );
             break;
         case Tag_GcStackPop:
-            printf("GcStackPop %s newer: %p older: %p data: %p",
-                find_func_name(&v->gc_stackmap), v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
+            printf("GcStackPop (%s) newer: %p older: %p data: %p",
+                find_stackmap_func_name(&v->gc_stackmap),
+                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
             );
             break;
         case Tag_GcStackTailCall:
@@ -176,14 +195,14 @@ void print_state(GcState* state) {
     size_t last_word = bitmap_size;
     while (gc_state.heap.bitmap[--last_word] == 0 && last_word != 0) { }
 
-    printf("Bitmap:\n");
-    for (size_t word=0; word <= last_word && word < bitmap_size; word++) {
-        #ifdef TARGET_64BIT
-            printf("%2zx | %016zx\n", word, gc_state.heap.bitmap[word]);
-        #else
-            printf("%2zx | %08zx\n", word, gc_state.heap.bitmap[word]);
-        #endif
-    }
+    // printf("Bitmap:\n");
+    // for (size_t word=0; word <= last_word && word < bitmap_size; word++) {
+    //     #ifdef TARGET_64BIT
+    //         printf("%2zx | %016zx\n", word, gc_state.heap.bitmap[word]);
+    //     #else
+    //         printf("%2zx | %08zx\n", word, gc_state.heap.bitmap[word]);
+    //     #endif
+    // }
 
     printf("\n");
 }
@@ -323,8 +342,8 @@ char* gc_mark_compact_test() {
     if (verbose) printf("Finished marking...\n");
 
     if (verbose) {
-        print_heap(&gc_state);
-        print_state(&gc_state);
+        // print_heap(&gc_state);
+        // print_state(&gc_state);
     }
 
     size_t dead_size = 0;
@@ -359,8 +378,8 @@ char* gc_mark_compact_test() {
 
     if (verbose) {
         printf("\n");
-        print_heap(&gc_state);
-        print_state(&gc_state);
+        // print_heap(&gc_state);
+        // print_state(&gc_state);
 
         printf("next_alloc-start %zd\n", gc_state.next_alloc - gc_state.heap.start);
         printf("live_size before compaction %zd\n", live_size);
@@ -423,8 +442,8 @@ char* gc_bitmap_test() {
         printf("gc_bitmap_test\n");
         printf("--------------\n");
         printf("\n");
-        print_heap(&gc_state);
-        print_state(&gc_state);
+        // print_heap(&gc_state);
+        // print_state(&gc_state);
         printf("\n");
     }
 
@@ -447,6 +466,65 @@ char* gc_bitmap_test() {
         }
         w++;
     }
+
+    return NULL;
+}
+
+char gc_bitmap_next_test_str[100];
+
+char* gc_bitmap_next_test() {
+    if (verbose) {
+        printf("\n");
+        printf("gc_bitmap_next_test\n");
+        printf("\n");
+    }
+    gc_test_reset();
+
+    size_t word;
+    size_t mask;
+
+    int assertion = 1;
+
+    word = 0;
+    mask = 1;
+    sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx", assertion++, word, mask);
+    bitmap_next_test_wrapper(&word, &mask);
+    mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 2);
+
+    word = 0;
+    mask = 2;
+    sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx", assertion++, word, mask);
+    bitmap_next_test_wrapper(&word, &mask);
+    mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 4);
+
+    word = 1;
+    mask = 1;
+    sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx", assertion++, word, mask);
+    bitmap_next_test_wrapper(&word, &mask);
+    mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 2);
+
+    word = 1;
+    mask = 2;
+    sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx", assertion++, word, mask);
+    bitmap_next_test_wrapper(&word, &mask);
+    mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 4);
+
+    word = 0;
+    char* format_str;
+    #ifdef TARGET_64BIT
+        mask = 0x8000000000000000;
+        format_str = "bitmap_next assertion %d from word %zd mask %016zx";
+    #else
+        mask = 0x80000000;
+        format_str = "bitmap_next assertion %d from word %zd mask %08zx";
+    #endif
+
+    mu_assert("bitmap_next: highest bit is correctly set in test", (mask << 1) == 0);
+    assertion++;
+
+    sprintf(gc_bitmap_next_test_str, format_str, assertion++, word, mask);
+    bitmap_next_test_wrapper(&word, &mask);
+    mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 1);
 
     return NULL;
 }
@@ -497,19 +575,20 @@ fibHelp iters prev1 prev2 =
     else
         fibHelp (iters - 1) (prev1 + prev2) prev1
 */
-ElmInt* literal_0;
-ElmInt* literal_1;
+ElmInt literal_0;
+ElmInt literal_1;
+ElmInt literal_n;
 
-void* fibHelp_tce(void* args[3], size_t** gc_tce_data) {
+void* fibHelp_tce(void* args[3], void** gc_tce_data) {
     while (1) {
         ElmInt* iters = args[0];
         ElmInt* prev1 = args[1];
         ElmInt* prev2 = args[2];
 
-        if (A2(&Utils_le, iters, literal_1) == &True) {
+        if (A2(&Utils_le, iters, &literal_1) == &True) {
             return prev1;
         } else {
-            ElmInt* next_iters = A2(&Basics_sub, iters, literal_1);
+            ElmInt* next_iters = A2(&Basics_sub, iters, &literal_1);
             ElmInt* next_prev1 = A2(&Basics_add, prev1, prev2);
             ElmInt* next_prev2 = prev1;
 
@@ -540,45 +619,32 @@ fib n =
 Closure fib;
 void* fib_eval(void* args[1]) {
     ElmInt* n = args[0];
-    if (A2(&Utils_le, n, literal_0) == &True) {
-        return literal_0;
+    if (A2(&Utils_le, n, &literal_0) == &True) {
+        return &literal_0;
     } else {
-        return A3(&fibHelp, n, literal_1, literal_0);
+        return A3(&fibHelp, n, &literal_1, &literal_0);
     }
 }
 
 
 ElmValue* gc_replay_test_catch() {
-    return A1(&fib, newElmInt(10));
+    return A1(&fib, &literal_n);
 }
 
 
 int sn_idx = 0;
 
-struct fn {
-    void* evaluator;
-    char* name;
-};
+void gc_test_stack_debug(GcStackMap* p, Closure* c) {
 
-#define NUM_FUNC_NAMES 6
-struct fn func_map[NUM_FUNC_NAMES];
-
-void gc_test_stack_debug(GcStackMap* p, Closure* c_debug) {
-
-    char* name = "unknown";
-    for (int i=0; i<NUM_FUNC_NAMES; i++) {
-        if (func_map[i].evaluator == c_debug->evaluator) {
-            name = func_map[i].name;
-        }
-    }
+    char* name = find_closure_func_name(c);
 
     // if (strcmp(name, "unknown") == 0) {
     //     printf("can't find name for closure %p at stackmap %p\n",
-    //         c_debug, p
+    //         c, p
     //     );
     // } else {
     //     printf("Closure %p at stackmap %p is %s\n",
-    //         c_debug, p, name
+    //         c, p, name
     //     );
     // }
 
@@ -612,10 +678,22 @@ char* gc_replay_test() {
     func_map[4] = (struct fn){ Basics_sub.evaluator, "Basics_sub" };
     func_map[5] = (struct fn){ Basics_mul.evaluator, "Basics_mul" };
 
+     // pretend memory is nearly full
+    size_t* ignore_below = gc_state.heap.end - 220;
+    gc_state.next_alloc = ignore_below;
 
-    gc_state.next_alloc = gc_state.heap.end - 220;
-    literal_0 = newElmInt(0);
-    literal_1 = newElmInt(1);
+    literal_0 = (ElmInt){
+        .header = HEADER_INT,
+        .value = 0
+    };
+    literal_1 = (ElmInt){
+        .header = HEADER_INT,
+        .value = 1
+    };
+    literal_n = (ElmInt){
+        .header = HEADER_INT,
+        .value = 10
+    };
 
     // wrapper function to prevent GC exception exiting the test
     ElmValue* result = gc_replay_test_catch();
@@ -624,13 +702,35 @@ char* gc_replay_test() {
         for (int i=0; i<NUM_FUNC_NAMES; i++) {
             printf("%p : %s\n", func_map[i].evaluator, func_map[i].name);
         }
-        print_heap(&gc_state);
-        print_state(&gc_state);
     }
 
     mu_assert("Expect heap overflow",
         result->header.tag == Tag_GcException
     );
+
+
+    if (verbose) printf("\n\nMarking interrupted heap...\n\n");
+    mark(&gc_state, ignore_below);
+
+    if (verbose) {
+        printf("\n\nFinished marking...\n\n");
+
+        print_heap(&gc_state);
+        print_state(&gc_state);
+    }
+
+    if (verbose) printf("\n\nCompacting from %p\n\n", ignore_below);
+    compact(&gc_state, ignore_below);
+    if (verbose) printf("Finished compacting\n");
+
+    if (verbose) printf("\n\nMarking compacted heap...\n\n");
+    mark(&gc_state, ignore_below);
+    if (verbose) {
+        printf("\n\nFinished marking...\n\n");
+
+        print_heap(&gc_state);
+        print_state(&gc_state);
+    }
 
     return NULL;
 }
@@ -647,6 +747,7 @@ char* gc_test() {
     mu_run_test(gc_bitmap_test);
     mu_run_test(gc_dead_between_test);
     mu_run_test(gc_mark_compact_test);
+    mu_run_test(gc_bitmap_next_test);
     mu_run_test(gc_replay_test);
 
     return NULL;

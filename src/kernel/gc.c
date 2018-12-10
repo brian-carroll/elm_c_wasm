@@ -185,6 +185,25 @@ void* GC_malloc(size_t bytes) {
 }
 
 
+void* GC_memcpy(void* dest, void* src, size_t bytes) {
+    size_t words = bytes / sizeof(size_t);
+
+    #ifdef DEBUG
+        if (bytes % sizeof(size_t)) {
+            fprintf(stderr, "GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
+        }
+    #endif
+
+    size_t* src_words = (size_t*)src;
+    size_t* dest_words = (size_t*)dest;
+
+    for (size_t i=0; i<words; i++) {
+        dest_words[i] = src_words[i];
+    }
+    return dest; // C standard lib returns this. Normally ignored.
+}
+
+
 
 /*          STACK MAP
 
@@ -291,7 +310,7 @@ void* GC_stack_tailcall(Closure* c, void* push) {
 // Allocates space for a Closure and GcStackMap so that during replay
 // we can skip previous iterations (and their garbage)
 // Creates lots of extra garbage in order to be able to clean it all up!
-void* GC_tce_iteration(size_t n_args, size_t** gc_tce_data) {
+void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
     size_t closure_bytes = sizeof(Closure) + n_args*sizeof(void*);
     size_t cont_bytes = closure_bytes + sizeof(GcStackMap);
 
@@ -309,47 +328,47 @@ void* GC_tce_iteration(size_t n_args, size_t** gc_tce_data) {
 // Evaluate a tail call elminated Elm function,
 // managing all of the GC related stuff for it
 void* GC_tce_eval(
-    void* (*tce_evaluator)(void*[], size_t**),
-    Closure* c,
+    void* (*tce_evaluator)(void*[], void**),
+    Closure* c_empty,
     void* args[]
 ) {
     GcStackMap* push = gc_state.stack_map;
-    size_t n_args = (size_t)c->max_values;
+    size_t n_args = (size_t)c_empty->max_values;
+    size_t closure_bytes = sizeof(Closure) + n_args*sizeof(void*);
 
-    void** args_mut = GC_malloc(n_args*sizeof(void*));
-    for (size_t i=0; i < n_args; i++) {
-        args_mut[i] = args[i];
-    }
+    // Copy the closure and mutate the args during iteration
+    // then let it become garbage
+    Closure* c_mutable = CAN_THROW(GC_malloc(closure_bytes));
+    *c_mutable = (Closure){
+        .header = HEADER_CLOSURE(n_args),
+        .n_values = n_args,
+        .max_values = n_args,
+        .evaluator = c_empty->evaluator,
+    };
+    GC_memcpy(c_mutable->values, args, n_args*sizeof(void*));
 
-    // Space allocated by tce_evaluator on every iteration
-    // i.e. tailcall and closure
-    size_t* gc_tce_data;
+    // Pointer to new space allocated by tce_evaluator on every iteration
+    // to place tailcall and closure in case of exception
+    void* gc_tce_data;
 
     // Run the tail-call-eliminated evaluator
-    void* result = (*tce_evaluator)(args_mut, &gc_tce_data);
+    void* result = (*tce_evaluator)(c_mutable->values, &gc_tce_data);
     if (result != pGcFull) {
         return result;
     }
 
-    // Cleanup for GC exception
+    // GC Exception handling
     // Save the current args in a closure in the stack map
     // Then we can replay later, skipping earlier iterations
     // This space was already _allocated_ but not _written_
     // by GC_tce_iteration, called from tce_evaluator
+    Closure* c_replay = (Closure*)gc_tce_data;
+    GC_memcpy(c_replay, c_mutable, closure_bytes);
 
-    Closure* resume = (Closure*)gc_tce_data;
-    resume->header = HEADER_CLOSURE(n_args);
-    resume->n_values = n_args;
-    resume->max_values = n_args;
-    resume->evaluator = c->evaluator;
-    for (size_t i=0; i < n_args; i++) {
-        resume->values[i] = args_mut[i];
-    }
-
-    GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + c->header.size);
+    GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + closure_bytes);
     tailcall->header = HEADER_GC_STACK_TC;
     tailcall->older = push;
-    tailcall->data = c;
+    tailcall->data = c_replay;
 
     return pGcFull;
 }

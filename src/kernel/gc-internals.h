@@ -49,6 +49,8 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size);
 void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below);
 void mark_stack_map(GcState* state, size_t* ignore_below);
 void mark(GcState* state, size_t* ignore_below);
+
+void bitmap_next_test_wrapper(size_t* word, size_t* mask);
 void compact(GcState* state, size_t* compact_start);
 void heap_overflow(GcState*);
 

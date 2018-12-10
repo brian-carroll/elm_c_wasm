@@ -8,14 +8,15 @@ int GC_init();
 
 void* GC_register_root(ElmValue** root);
 void* GC_malloc(size_t bytes);
+void* GC_memcpy(void* dest, void* src, size_t bytes);
 
 void* GC_stack_push();
 void* GC_stack_pop(ElmValue* result, void* push);
 void* GC_stack_tailcall(Closure* c, void* push);
 
-void* GC_tce_iteration(size_t n_args, size_t** gc_tce_data);
+void* GC_tce_iteration(size_t n_args, void** gc_tce_data);
 void* GC_tce_eval(
-    void* (*tce_evaluator)(void*[], size_t**),
+    void* (*tce_evaluator)(void*[], void**),
     Closure* c,
     void* args[]
 );

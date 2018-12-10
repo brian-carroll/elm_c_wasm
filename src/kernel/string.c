@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "types.h"
+#include "gc.h"
 
 
 // local utility function
@@ -22,8 +23,8 @@ void* String_append_eval(void* args[2]) {
 
     ElmString* s = newElmString(na + nb, NULL);
     if (s == pGcFull) return pGcFull;
-    memcpy(s->bytes, a->bytes, na);
-    memcpy(&s->bytes[na], b->bytes, nb);
+    GC_memcpy(s->bytes, a->bytes, na);
+    GC_memcpy(&s->bytes[na], b->bytes, nb);
 
     return s;
 }

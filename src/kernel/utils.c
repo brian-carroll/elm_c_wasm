@@ -19,7 +19,7 @@ void* Utils_clone(void* x) {
     size_t n_bytes = SIZE_UNIT * (size_t)h->size;
     ElmValue* x_new = GC_malloc(n_bytes);
     if (x_new == NULL) return pGcFull;
-    memcpy(x_new, x, n_bytes);
+    GC_memcpy(x_new, x, n_bytes);
     return x_new;
 }
 
@@ -98,8 +98,8 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
 
         c = CAN_THROW(GC_malloc(size_new));
 
-        memcpy(c, c_old, size_old);
-        memcpy(&c->values[n_old], applied, size_applied);
+        GC_memcpy(c, c_old, size_old);
+        GC_memcpy(&c->values[n_old], applied, size_applied);
         c->header = HEADER_CLOSURE(n_new);
         c->n_values = n_new;
 
