@@ -193,16 +193,18 @@ void print_state(GcState* state) {
     // find last non-zero word in the bitmap
     size_t bitmap_size = gc_state.heap.system_end - gc_state.heap.bitmap;
     size_t last_word = bitmap_size;
-    while (gc_state.heap.bitmap[--last_word] == 0 && last_word != 0) { }
 
-    // printf("Bitmap:\n");
-    // for (size_t word=0; word <= last_word && word < bitmap_size; word++) {
-    //     #ifdef TARGET_64BIT
-    //         printf("%2zx | %016zx\n", word, gc_state.heap.bitmap[word]);
-    //     #else
-    //         printf("%2zx | %08zx\n", word, gc_state.heap.bitmap[word]);
-    //     #endif
-    // }
+    printf("Bitmap (size %zd):\n", bitmap_size);
+    for (size_t word=0; word <= last_word && word < bitmap_size; word++) {
+        size_t value = gc_state.heap.bitmap[word];
+        if (value) {
+            #ifdef TARGET_64BIT
+                printf("%3zd | %016zx\n", word, value);
+            #else
+                printf("%3zd | %08zx\n", word, value);
+            #endif
+        }
+    }
 
     printf("\n");
 }
