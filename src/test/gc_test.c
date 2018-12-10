@@ -138,7 +138,7 @@ void print_value(ElmValue* v) {
             );
             break;
         case Tag_GcStackEmpty:
-            printf("GcStackEmpty");
+            printf("GcStackEmpty newer: %p", v->gc_stackmap.newer);
             break;
     }
     printf("\n");
@@ -725,6 +725,12 @@ char* gc_replay_test() {
     compact(&gc_state, ignore_below);
     if (verbose) printf("Finished compacting\n");
 
+
+    if (verbose) printf("\n\nReversing stack map...\n\n");
+    reverse_stack_map(&gc_state);
+    if (verbose) printf("Finished reversing\n");
+
+
     if (verbose) printf("\n\nMarking compacted heap...\n\n");
     mark(&gc_state, ignore_below);
     if (verbose) {
@@ -742,6 +748,26 @@ char* gc_replay_test() {
         ) == 0
     );
 
+
+
+    if (verbose) printf("Setup for replay\n");
+    GcStackMap* empty = (GcStackMap*)gc_state.heap.start;
+    gc_state.replay_ptr = empty->newer;
+
+    if (verbose) printf("Replay\n");
+    ElmValue* result_replay = gc_replay_test_catch();
+
+    if (verbose) {
+        printf("\n\nFinished replay...\n\n");
+
+        print_heap(&gc_state);
+        print_state(&gc_state);
+
+        printf("result:\n");
+        print_value(result_replay);
+    }
+
+
     return NULL;
 }
 
@@ -753,11 +779,11 @@ char* gc_test() {
         printf("--\n");
     }
 
-    mu_run_test(gc_struct_test);
-    mu_run_test(gc_bitmap_test);
-    mu_run_test(gc_dead_between_test);
-    mu_run_test(gc_mark_compact_test);
-    mu_run_test(gc_bitmap_next_test);
+    // mu_run_test(gc_struct_test);
+    // mu_run_test(gc_bitmap_test);
+    // mu_run_test(gc_dead_between_test);
+    // mu_run_test(gc_mark_compact_test);
+    // mu_run_test(gc_bitmap_next_test);
     mu_run_test(gc_replay_test);
 
     return NULL;

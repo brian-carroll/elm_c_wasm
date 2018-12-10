@@ -540,13 +540,17 @@ void compact(GcState* state, size_t* compact_start) {
 void reverse_stack_map(GcState* state) {
     GcStackMap* newer_item = (GcStackMap*)state->next_alloc;
 
-    for (GcStackMap* stack_item = state->stack_map;
+    GcStackMap* stack_item;
+    for (stack_item = state->stack_map;
         stack_item->header.tag != Tag_GcStackEmpty;
         stack_item = stack_item->older
     ) {
         stack_item->newer = newer_item;
         newer_item = stack_item;
     }
+
+    // GcStackEmpty
+    stack_item->newer = newer_item;
 }
 
 

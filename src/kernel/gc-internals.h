@@ -54,4 +54,6 @@ void bitmap_next_test_wrapper(size_t* word, size_t* mask);
 void compact(GcState* state, size_t* compact_start);
 void heap_overflow(GcState*);
 
+void reverse_stack_map(GcState* state);
+
 #endif
