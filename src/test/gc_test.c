@@ -734,6 +734,14 @@ char* gc_replay_test() {
         print_state(&gc_state);
     }
 
+    mu_assert("Compacted heap should be traceable by 'mark'",
+        bitmap_dead_between(
+            &gc_state.heap,
+            ignore_below,
+            gc_state.next_alloc
+        ) == 0
+    );
+
     return NULL;
 }
 
