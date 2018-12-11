@@ -46,9 +46,11 @@ char* find_closure_func_name(Closure* c) {
 
 void gc_test_reset() {
     GcState* state = &gc_state;
-    memset(state->heap.start, 0,
-        state->heap.system_end - state->heap.start
-    );
+    size_t* bm_word = state->heap.start;
+    while (bm_word < state->heap.system_end) {
+        *bm_word = 0;
+        bm_word++;
+    }
     state->next_alloc = state->heap.start;
     state->roots = &Nil;
     state->stack_depth = 0;
