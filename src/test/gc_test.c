@@ -45,27 +45,29 @@ char* find_closure_func_name(Closure* c) {
 }
 
 void gc_test_reset() {
-    memset(gc_state.heap.start, 0,
-        gc_state.heap.system_end - gc_state.heap.start
+    GcState* state = &gc_state;
+    memset(state->heap.start, 0,
+        state->heap.system_end - state->heap.start
     );
-    gc_state.next_alloc = gc_state.heap.start;
-    gc_state.roots = &Nil;
-    gc_state.stack_depth = 0;
+    state->next_alloc = state->heap.start;
+    state->roots = &Nil;
+    state->stack_depth = 0;
 
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     p->header = HEADER_GC_STACK_EMPTY;
-    gc_state.stack_map = p;
+    state->stack_map = p;
 }
 
 static bool is_marked(void* p) {
+    GcState* state = &gc_state;
     size_t* pword = (size_t*)p;
-    size_t slot = pword - gc_state.heap.start;
+    size_t slot = pword - state->heap.start;
     if (slot >> (GC_WORD_BITS-1)) return true; // off heap => not garbage, stop tracing
     size_t word = slot / GC_WORD_BITS;
     size_t bit = slot % GC_WORD_BITS;
     size_t mask = (size_t)1 << bit;
 
-    return (gc_state.heap.bitmap[word] & mask) != 0;
+    return (state->heap.bitmap[word] & mask) != 0;
 }
 
 void print_value(ElmValue* v) {
@@ -179,23 +181,23 @@ void print_heap(GcState *state) {
 
 
 void print_state(GcState* state) {
-    printf("start = %p\n", gc_state.heap.start);
-    printf("end = %p\n", gc_state.heap.end);
-    printf("offsets = %p\n", gc_state.heap.offsets);
-    printf("bitmap = %p\n", gc_state.heap.bitmap);
-    printf("system_end = %p\n", gc_state.heap.system_end);
-    printf("next_alloc = %p\n", gc_state.next_alloc);
-    printf("roots = %p\n", gc_state.roots);
-    printf("stack_map = %p\n", gc_state.stack_map);
-    printf("stack_depth = %zd\n", gc_state.stack_depth);
+    printf("start = %p\n", state->heap.start);
+    printf("end = %p\n", state->heap.end);
+    printf("offsets = %p\n", state->heap.offsets);
+    printf("bitmap = %p\n", state->heap.bitmap);
+    printf("system_end = %p\n", state->heap.system_end);
+    printf("next_alloc = %p\n", state->next_alloc);
+    printf("roots = %p\n", state->roots);
+    printf("stack_map = %p\n", state->stack_map);
+    printf("stack_depth = %zd\n", state->stack_depth);
 
     // find last non-zero word in the bitmap
-    size_t bitmap_size = gc_state.heap.system_end - gc_state.heap.bitmap;
+    size_t bitmap_size = state->heap.system_end - state->heap.bitmap;
     size_t last_word = bitmap_size;
 
     printf("Bitmap (size %zd):\n", bitmap_size);
     for (size_t word=0; word <= last_word && word < bitmap_size; word++) {
-        size_t value = gc_state.heap.bitmap[word];
+        size_t value = state->heap.bitmap[word];
         if (value) {
             #ifdef TARGET_64BIT
                 printf("%3zd | %016zx\n", word, value);
@@ -212,6 +214,7 @@ char alive_or_dead_msg[30];
 ElmValue* root_mutable_pointer;
 
 char* gc_mark_compact_test() {
+    GcState* state = &gc_state;
     gc_test_reset();
 
     if (verbose) {
@@ -237,11 +240,11 @@ char* gc_mark_compact_test() {
     Closure* mock_effect_callback = &Basics_add; // Basics_add is not really an effect callback. It's just a Closure value.
     Closure* mock_closure = &Basics_mul;
 
-    live[nlive++] = gc_state.heap.start; // stack_empty
+    live[nlive++] = state->heap.start; // stack_empty
 
     // Call the top-level function (an effect callback or incoming port)
     ElmValue* c1 = (ElmValue*)Utils_clone(mock_effect_callback);
-    live[nlive++] = gc_state.next_alloc; // the root Cons cell we're about to allocate
+    live[nlive++] = state->next_alloc; // the root Cons cell we're about to allocate
     root_mutable_pointer = c1;
     GC_register_root(&root_mutable_pointer); // Effect manager is keeping this Closure alive by connecting it to the GC root.
     live[nlive++] = c1;
@@ -256,9 +259,9 @@ char* gc_mark_compact_test() {
 
     // The currently-running function allocates some stuff.
     // This function won't have returned by end of test, so it needs these values.
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
 
     // Push down to level 2. This will complete. Need its return value
     Closure* c2 = Utils_clone(mock_closure);
@@ -267,25 +270,25 @@ char* gc_mark_compact_test() {
     live[nlive++] = push2;
 
     // Temporary values from level 2, not in return value
-    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
-    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
 
     // 3rd level function call. All dead, since we have the return value of a higher level call.
     void* push3 = GC_stack_push();
     dead[ndead++] = push3;
-    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
-    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
-    ElmInt* ret3 = newElmInt(gc_state.stack_depth*100 + nlive + ndead);
+    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
+    ElmInt* ret3 = newElmInt(state->stack_depth*100 + nlive + ndead);
     dead[ndead++] = ret3;
-    dead[ndead++] = gc_state.next_alloc; // the pop we're about to allocate
+    dead[ndead++] = state->next_alloc; // the pop we're about to allocate
     GC_stack_pop((ElmValue*)ret3, push3);
 
     // return value from level 2. Keep it to provide to level 1 on replay
-    ElmValue* ret2a = (ElmValue*)newElmInt(gc_state.stack_depth*100 + nlive + ndead);
+    ElmValue* ret2a = (ElmValue*)newElmInt(state->stack_depth*100 + nlive + ndead);
     ElmValue* ret2b = (ElmValue*)newCons(ret2a, &Nil);
     live[nlive++] = ret2a;
     live[nlive++] = ret2b;
-    ElmValue* ret2c = (ElmValue*)newElmInt(gc_state.stack_depth*100 + nlive + ndead);
+    ElmValue* ret2c = (ElmValue*)newElmInt(state->stack_depth*100 + nlive + ndead);
     ElmValue* ret2d = (ElmValue*)newCons(ret2c, ret2b);
     live[nlive++] = ret2c;
     live[nlive++] = ret2d;
@@ -293,17 +296,17 @@ char* gc_mark_compact_test() {
     // Pop back up to top-level function and allocate a few more things.
     // We actually have a choice whether these are considered alive or dead.
     // Implementation treats them as live for consistency and ease of coding
-    live[nlive++] = gc_state.next_alloc; // the pop we're about to allocate
+    live[nlive++] = state->next_alloc; // the pop we're about to allocate
     GC_stack_pop(ret2d, push2);
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
 
     // Call a function that makes a tail call
     void* push_into_tailrec = GC_stack_push();
     live[nlive++] = push_into_tailrec;
-    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
-    dead[ndead] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
 
     // Tail call. Has completed when we stop the world => dead
     Closure* ctail1 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
@@ -314,12 +317,12 @@ char* gc_mark_compact_test() {
     ctail1->values[0] = dead[ndead-1];
     ctail1->values[1] = dead[ndead-2];
     dead[ndead++] = ctail1;
-    dead[ndead++] = gc_state.next_alloc; // tailcall we're about to allocate
+    dead[ndead++] = state->next_alloc; // tailcall we're about to allocate
     GC_stack_tailcall(ctail1, push_into_tailrec);
 
     // arguments to the next tail call
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
 
     // Tail call. still evaluating this when we stopped the world => keep closure alive
     Closure* ctail2 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
@@ -330,12 +333,12 @@ char* gc_mark_compact_test() {
     ctail2->values[0] = live[nlive-1];
     ctail2->values[1] = live[nlive-2];
     live[nlive++] = ctail2;
-    live[nlive++] = gc_state.next_alloc; // stack tailcall we're about to allocate
+    live[nlive++] = state->next_alloc; // stack tailcall we're about to allocate
     GC_stack_tailcall(ctail2, push_into_tailrec);
 
     // allocated just before we stopped the world
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(gc_state.stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
 
     if (verbose) printf("Marking...\n");
     size_t* ignore_below = (size_t*)c1;
@@ -363,7 +366,7 @@ char* gc_mark_compact_test() {
         live_size += v->header.size;
     }
 
-    size_t heap_size = gc_state.next_alloc - gc_state.heap.start;
+    size_t heap_size = state->next_alloc - state->heap.start;
     mu_assert("Stack map test should account for all allocated values",
         live_size + dead_size == heap_size
     );
@@ -382,19 +385,19 @@ char* gc_mark_compact_test() {
         // print_heap(&gc_state);
         // print_state(&gc_state);
 
-        printf("next_alloc-start %zd\n", gc_state.next_alloc - gc_state.heap.start);
+        printf("next_alloc-start %zd\n", state->next_alloc - state->heap.start);
         printf("live_size before compaction %zd\n", live_size);
         printf("\n");
     }
 
     mu_assert("Compacted heap should contain exactly the number of live values",
-        gc_state.next_alloc - gc_state.heap.start == live_size
+        state->next_alloc - state->heap.start == live_size
     );
 
 
     // If 'mark' is able to trace correctly, forwarding addresses are OK
     size_t n_marked = 0;
-    for (size_t* w = gc_state.heap.start; w < gc_state.next_alloc; w++) {
+    for (size_t* w = state->heap.start; w < state->next_alloc; w++) {
         n_marked += is_marked(w);
     }
     mu_assert("After compaction and re-marking, all values should be marked",
@@ -417,6 +420,7 @@ char* gc_struct_test() {
 char bitmap_msg[100];
 
 char* gc_bitmap_test() {
+    GcState* state = &gc_state;
     char str[] = "This is a test string that's an odd number of ints.....";
     gc_test_reset();
 
@@ -428,8 +432,8 @@ char* gc_bitmap_test() {
         p3 = (ElmValue*)newElmString(sizeof(str), str);
         p4 = (ElmValue*)newElmInt(0);
 
-        mark_words(&gc_state.heap, p1, p1->header.size);
-        mark_words(&gc_state.heap, p3, p3->header.size);
+        mark_words(&state->heap, p1, p1->header.size);
+        mark_words(&state->heap, p3, p3->header.size);
 
         mu_assert("p1 should be marked", is_marked(p1));
         mu_assert("p2 should NOT be marked", !is_marked(p2));
@@ -448,11 +452,11 @@ char* gc_bitmap_test() {
         printf("\n");
     }
 
-    size_t* bottom_of_heap = gc_state.heap.start;
-    size_t* top_of_heap = gc_state.next_alloc;
+    size_t* bottom_of_heap = state->heap.start;
+    size_t* top_of_heap = state->next_alloc;
 
     size_t* ptr = bottom_of_heap;
-    size_t* bitmap = gc_state.heap.bitmap;
+    size_t* bitmap = state->heap.bitmap;
 
     size_t w = 0;
     while (ptr <= top_of_heap) {
@@ -660,6 +664,7 @@ void gc_test_stack_debug(GcStackMap* p, Closure* c) {
 
 
 char* gc_replay_test() {
+    GcState* state = &gc_state;
     if (verbose) {
         printf("\n");
         printf("########################################################################################\n");
@@ -680,8 +685,8 @@ char* gc_replay_test() {
     func_map[5] = (struct fn){ Basics_mul.evaluator, "Basics_mul" };
 
      // pretend memory is nearly full
-    size_t* ignore_below = gc_state.heap.end - 220;
-    gc_state.next_alloc = ignore_below;
+    size_t* ignore_below = state->heap.end - 220;
+    state->next_alloc = ignore_below;
 
     literal_0 = (ElmInt){
         .header = HEADER_INT,
@@ -741,17 +746,17 @@ char* gc_replay_test() {
 
     mu_assert("Compacted heap should be traceable by 'mark'",
         bitmap_dead_between(
-            &gc_state.heap,
+            &state->heap,
             ignore_below,
-            gc_state.next_alloc
+            state->next_alloc
         ) == 0
     );
 
 
     /*
     if (verbose) printf("Setup for replay\n");
-    GcStackMap* empty = (GcStackMap*)gc_state.heap.start;
-    gc_state.replay_ptr = empty->newer;
+    GcStackMap* empty = (GcStackMap*)state->heap.start;
+    state->replay_ptr = empty->newer;
 
     if (verbose) printf("Replay\n");
     ElmValue* result_replay = gc_replay_test_catch();
