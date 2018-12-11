@@ -19,8 +19,8 @@ Debug/
 Release/
 *.project
 *.workspace
-elm_c_wasm.mk
-elm_c_wasm.txt
+src/*.mk
+src/*.txt
 
 # Generated report
 opt.md

@@ -65,9 +65,16 @@ GcState gc_state;
 
 static void* stack_empty(); // pre-declaration
 
+#ifdef _WIN32
+static void* sbrk(size_t size) {
+    return malloc(GC_WASM_PAGE_BYTES*5 + size);
+}
+#endif
+
 
 // Call exactly once on program startup
 int GC_init() {
+    GcState* state = &gc_state; // local reference for debugger to see
 
     // Get current max address of program data
     size_t* break_ptr = sbrk(0);
@@ -81,7 +88,7 @@ int GC_init() {
     size_t* heap_bottom = (size_t*)break_aligned;
 
     // Initialise state with zero heap size
-    gc_state = (GcState){
+    *state = (GcState){
         .heap = (GcHeap){
             .start = heap_bottom,
             .end = heap_bottom,
@@ -102,7 +109,7 @@ int GC_init() {
     size_t* top_of_next_page =
         (size_t*)(top_of_current_page + GC_WASM_PAGE_BYTES + 1);
 
-    int err = set_heap_end(&gc_state.heap, top_of_next_page);
+    int err = set_heap_end(&state->heap, top_of_next_page);
 
     if (!err) {
         stack_empty();
@@ -134,9 +141,10 @@ int GC_init() {
   pointer to reference the new location.
 */
 void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
-    gc_state.roots = (ElmValue*)newCons(
+    GcState* state = &gc_state;
+    state->roots = (ElmValue*)newCons(
         ptr_to_mutable_ptr,
-        gc_state.roots
+        state->roots
     );
     return ptr_to_mutable_ptr; // anything but pGcFull
 }
@@ -147,6 +155,7 @@ void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
   Same interface as malloc in stdlib.h
 */
 void* GC_malloc(size_t bytes) {
+    GcState* state = &gc_state;
     size_t words = bytes / sizeof(size_t);
 
     #ifdef DEBUG
@@ -154,8 +163,7 @@ void* GC_malloc(size_t bytes) {
             fprintf(stderr, "GC_malloc: Request for %zd bytes is misaligned\n", bytes);
         }
     #endif
-
-    size_t* replay = gc_state.replay_ptr;
+    size_t* replay = state->replay_ptr;
     if (replay != NULL) {
         // replay mode
         #ifdef DEBUG
@@ -165,18 +173,18 @@ void* GC_malloc(size_t bytes) {
             }
         #endif
         size_t* next_replay = replay + words;
-        if (next_replay >= gc_state.next_alloc) {
+        if (next_replay >= state->next_alloc) {
             next_replay = NULL; // exit replay mode
         }
-        gc_state.replay_ptr = next_replay;
+        state->replay_ptr = next_replay;
         return (void*)replay;
     } else {
         // normal mode
-        size_t* old_heap = gc_state.next_alloc;
+        size_t* old_heap = state->next_alloc;
         size_t* new_heap = old_heap + words;
 
-        if (new_heap < gc_state.heap.end) {
-            gc_state.next_alloc = new_heap;
+        if (new_heap < state->heap.end) {
+            state->next_alloc = new_heap;
             return old_heap;
         } else {
             return pGcFull;
@@ -238,10 +246,11 @@ void* GC_memcpy(void* dest, void* src, size_t bytes) {
 */
 
 static void* stack_empty() {
+    GcState* state = &gc_state;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     if (p == pGcFull) return pGcFull;
     p->header = HEADER_GC_STACK_EMPTY;
-    gc_state.stack_map = p;
+    state->stack_map = p;
     return p;
 }
 
@@ -266,20 +275,22 @@ static bool is_stack_replaying(GcState* state, Tag tag) {
 
 
 void* GC_stack_push() {
-    if (is_stack_replaying(&gc_state, Tag_GcStackPush)) return NULL;
+    GcState* state = &gc_state;
+    if (is_stack_replaying(state, Tag_GcStackPush)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     if (p == pGcFull) return pGcFull;
 
     p->header = HEADER_GC_STACK_PUSH;
-    p->older = gc_state.stack_map;
+    p->older = state->stack_map;
 
-    gc_state.stack_map = p;
-    gc_state.stack_depth++;
+    state->stack_map = p;
+    state->stack_depth++;
     return p;
 }
 
 void* GC_stack_pop(ElmValue* result, void* push) {
-    if (is_stack_replaying(&gc_state, Tag_GcStackPop)) return NULL;
+    GcState* state = &gc_state;
+    if (is_stack_replaying(state, Tag_GcStackPop)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     if (p == pGcFull) return pGcFull;
 
@@ -287,20 +298,21 @@ void* GC_stack_pop(ElmValue* result, void* push) {
     p->older = push;
     p->data = result;
 
-    gc_state.stack_map = p;
-    gc_state.stack_depth--;
+    state->stack_map = p;
+    state->stack_depth--;
     return p;
 }
 
 void* GC_stack_tailcall(Closure* c, void* push) {
-    if (is_stack_replaying(&gc_state, Tag_GcStackTailCall)) return NULL;
+    GcState* state = &gc_state;
+    if (is_stack_replaying(state, Tag_GcStackTailCall)) return NULL;
     GcStackMap* p = GC_malloc(sizeof(GcStackMap));
     if (p == pGcFull) return pGcFull;
     p->header = HEADER_GC_STACK_TC;
     p->older = push;
     p->data = c;
 
-    gc_state.stack_map = p;
+    state->stack_map = p;
     // stack_depth stays the same
     return p;
 }
@@ -311,6 +323,7 @@ void* GC_stack_tailcall(Closure* c, void* push) {
 // we can skip previous iterations (and their garbage)
 // Creates lots of extra garbage in order to be able to clean it all up!
 void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
+    GcState* state = &gc_state;
     size_t closure_bytes = sizeof(Closure) + n_args*sizeof(void*);
     size_t cont_bytes = closure_bytes + sizeof(GcStackMap);
 
@@ -318,7 +331,7 @@ void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
     if (tce_space == pGcFull) return pGcFull;
 
     GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
-    gc_state.stack_map = tailcall;
+    state->stack_map = tailcall;
     *gc_tce_data = tce_space;
 
     return tce_space; // not pGcFull
@@ -332,7 +345,8 @@ void* GC_tce_eval(
     Closure* c_empty,
     void* args[]
 ) {
-    GcStackMap* push = gc_state.stack_map;
+    GcState* state = &gc_state;
+    GcStackMap* push = state->stack_map;
     size_t n_args = (size_t)c_empty->max_values;
     size_t closure_bytes = sizeof(Closure) + n_args*sizeof(void*);
 
@@ -375,7 +389,8 @@ void* GC_tce_eval(
 
 
 void* GC_apply_replay() {
-    GcStackMap* push = (GcStackMap*)gc_state.replay_ptr;
+    GcState* state = &gc_state;
+    GcStackMap* push = (GcStackMap*)state->replay_ptr;
     if (push == NULL) return NULL; // we're not in replay mode
 
     #ifdef DEBUG
@@ -403,11 +418,11 @@ void* GC_apply_replay() {
         replay_next = (size_t*)push + stackmap_size;
     }
 
-    if (replay_next >= gc_state.next_alloc) {
+    if (replay_next >= state->next_alloc) {
         replay_next = NULL; // exit replay mode
     }
 
-    gc_state.replay_ptr = replay_next;
+    state->replay_ptr = replay_next;
     return replay;
 }
 

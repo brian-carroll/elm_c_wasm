@@ -7,6 +7,12 @@
     #include <stdio.h>
 #endif
 
+#ifdef _WIN32
+static int brk(void* ptr) {
+    return 0;
+}
+#endif
+
 
 static const size_t ALL_ONES = -1; // 0xfffff...
 
@@ -283,8 +289,12 @@ void mark(GcState* state, size_t* ignore_below) {
 
 const size_t max_mask = (size_t)1 << (GC_WORD_BITS-1);
 
-
-inline void bitmap_next(size_t* word, size_t* mask) {
+#ifdef _WIN32
+    // TODO: look into inline for Windows/MinGW
+    void bitmap_next(size_t* word, size_t* mask) {
+#else
+    inline void bitmap_next(size_t* word, size_t* mask) {
+#endif
     *mask <<= 1;
     if (*mask == 0) {
         *word = *word + 1;

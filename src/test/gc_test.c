@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -430,7 +429,7 @@ char* gc_bitmap_test() {
         p4 = (ElmValue*)newElmInt(0);
 
         mark_words(&gc_state.heap, p1, p1->header.size);
-        mark_words(&gc_state.heap, p3, p1->header.size);
+        mark_words(&gc_state.heap, p3, p3->header.size);
 
         mu_assert("p1 should be marked", is_marked(p1));
         mu_assert("p2 should NOT be marked", !is_marked(p2));
@@ -444,8 +443,8 @@ char* gc_bitmap_test() {
         printf("gc_bitmap_test\n");
         printf("--------------\n");
         printf("\n");
-        // print_heap(&gc_state);
-        // print_state(&gc_state);
+        print_heap(&gc_state);
+        print_state(&gc_state);
         printf("\n");
     }
 
@@ -749,7 +748,7 @@ char* gc_replay_test() {
     );
 
 
-
+    /*
     if (verbose) printf("Setup for replay\n");
     GcStackMap* empty = (GcStackMap*)gc_state.heap.start;
     gc_state.replay_ptr = empty->newer;
@@ -766,6 +765,7 @@ char* gc_replay_test() {
         printf("result:\n");
         print_value(result_replay);
     }
+    */
 
 
     return NULL;
@@ -779,12 +779,12 @@ char* gc_test() {
         printf("--\n");
     }
 
-    // mu_run_test(gc_struct_test);
-    // mu_run_test(gc_bitmap_test);
-    // mu_run_test(gc_dead_between_test);
-    // mu_run_test(gc_mark_compact_test);
-    // mu_run_test(gc_bitmap_next_test);
-    mu_run_test(gc_replay_test);
+     mu_run_test(gc_struct_test);
+     mu_run_test(gc_bitmap_test);
+     mu_run_test(gc_dead_between_test);
+     mu_run_test(gc_mark_compact_test);
+     mu_run_test(gc_bitmap_next_test);
+     mu_run_test(gc_replay_test);
 
     return NULL;
 }

@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include "../kernel/types.h"
@@ -41,9 +40,9 @@ char* test_wasm_types() {
 
 char* test_elm_constants() {
     if (verbose) {
-        printf("Unit size=%ld addr=%s hex=%s\n", sizeof(Unit), hex_ptr(&Unit), hex(&Unit, sizeof(Unit)));
-        printf("True size=%ld addr=%s hex=%s\n", sizeof(True), hex_ptr(&True), hex(&True, sizeof(True)));
-        printf("False size=%ld addr=%s hex=%s\n", sizeof(False), hex_ptr(&False), hex(&False, sizeof(False)));
+        printf("Unit size=%zd addr=%s hex=%s\n", sizeof(Unit), hex_ptr(&Unit), hex(&Unit, sizeof(Unit)));
+        printf("True size=%zd addr=%s hex=%s\n", sizeof(True), hex_ptr(&True), hex(&True, sizeof(True)));
+        printf("False size=%zd addr=%s hex=%s\n", sizeof(False), hex_ptr(&False), hex(&False, sizeof(False)));
         printf("\n");
     }
 
@@ -102,7 +101,7 @@ char* test_header_layout() {
 }
 
 char* test_nil() {
-    if (verbose) printf("Nil sizeof=%ld addr=%s tag=%d, hex=%s\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag, hex(&Nil, sizeof(Nil)));
+    if (verbose) printf("Nil sizeof=%zd addr=%s tag=%d, hex=%s\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag, hex(&Nil, sizeof(Nil)));
     mu_assert("Nil should be the same size as ElmValue", sizeof(Nil) == sizeof(ElmValue));
     mu_assert("Nil should have the right tag field", Nil.header.tag == Tag_Nil);
     mu_assert("Nil should have the right size field", Nil.header.size == 1);
@@ -111,7 +110,7 @@ char* test_nil() {
 
 char* test_cons() {
     Cons *c = newCons(&Unit, &Nil); // [()]
-    if (verbose) printf("Cons size=%ld addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
+    if (verbose) printf("Cons size=%zd addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
         sizeof(Cons), hex_ptr(c), (int)c->header.size,
         hex_ptr(c->head), hex_ptr(c->tail),
         hex(c, sizeof(Cons))
@@ -143,7 +142,7 @@ char* test_tuples() {
 
 
     Tuple2 *t2 = newTuple2(&i1, &i2);
-    if (verbose) printf("Tuple2 sizeof=%ld header.size=%d hex=%s\n",
+    if (verbose) printf("Tuple2 sizeof=%zd header.size=%d hex=%s\n",
         sizeof(Tuple2), t2->header.size, hex(t2, sizeof(Tuple2))
     );
     #ifdef TARGET_64BIT
@@ -164,7 +163,7 @@ char* test_tuples() {
 
 
     Tuple3 *t3 = newTuple3(&i1, &i2, &i3);
-    if (verbose) printf("Tuple3 size=%ld header.size=%d hex=%s\n",
+    if (verbose) printf("Tuple3 size=%zd header.size=%d hex=%s\n",
         sizeof(Tuple3), t3->header.size, hex(t3, sizeof(Tuple3))
     );
 
@@ -191,7 +190,7 @@ char* test_tuples() {
 char* test_int() {
     ElmInt *i = newElmInt(123);
 
-    if (verbose) printf("ElmInt size=%ld addr=%s tag=%d value=%d\n",
+    if (verbose) printf("ElmInt size=%zd addr=%s tag=%d value=%d\n",
         sizeof(ElmInt), hex_ptr(i), (int)i->header.tag, i->value
     );
     mu_assert(
@@ -211,7 +210,7 @@ char* test_int() {
 
 char* test_float() {
     ElmFloat *f = newElmFloat(123.456789);
-    if (verbose) printf("Float size=%ld addr=%s tag=%d value=%f\n",
+    if (verbose) printf("Float size=%zd addr=%s tag=%d value=%f\n",
         sizeof(ElmFloat), hex_ptr(f), (int)f->header.tag, f->value
     );
 
@@ -234,7 +233,7 @@ char* test_float() {
 
 char* test_char() {
     ElmChar *ch = newElmChar('A');
-    if (verbose) printf("Char size=%ld addr=%s tag=%d value=%c\n",
+    if (verbose) printf("Char size=%zd addr=%s tag=%d value=%c\n",
         sizeof(ElmChar), hex_ptr(ch), (int)ch->header.tag, ch->value
     );
 
@@ -270,8 +269,8 @@ char* test_strings() {
     ElmString* strN = newElmString(45, "The quick brown fox jumped over the lazy dog.");
 
     if (verbose) {
-        printf("sizeof(ElmString) = %ld\n", sizeof(ElmString));
-        printf("&str4->bytes - str4 = %ld\n", (long)(&str4->bytes) - (long)(str4));
+        printf("sizeof(ElmString) = %zd\n", sizeof(ElmString));
+        printf("&str4->bytes - str4 = %zd\n", (void*)&str4->bytes - (void*)str4);
         printf("\n");
         printf("str0: tag=%d, size=%d, hex=%s\n", str0->header.tag, str0->header.size, hex(str0, str0->header.size * SIZE_UNIT));
         printf("str1: tag=%d, size=%d, hex=%s\n", str1->header.tag, str1->header.size, hex(str1, str1->header.size * SIZE_UNIT));

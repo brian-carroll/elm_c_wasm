@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -101,11 +100,17 @@ int main(int argc, char ** argv) {
         {NULL, 0, NULL, 0}
     };
 
+
     bool types = false;
-    bool utils = false;
     bool basics = false;
     bool string = false;
+    bool utils = false;
     bool gc = false;
+    
+    #ifdef _WIN32
+    gc = true;
+    verbose = true;
+    #endif
 
     int opt;
     while ((opt = getopt_long(argc, argv, "vatubsg", long_options, NULL)) != -1) {
