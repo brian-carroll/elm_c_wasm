@@ -73,7 +73,7 @@ typedef struct {
 #define HEADER_GC_STACK_TC    (Header){ .tag=Tag_GcStackTailCall, .size=sizeof(GcStackMap)/SIZE_UNIT }
 
 
-#define CAN_THROW(expr) ({ void* x=expr; if (((Header*)x)->tag==Tag_GcException) return x; x; })
+#define CAN_THROW(expr) ({ void* x=expr; if (x==pGcFull) return x; x; })
 
 
 #define F1(f) (Closure) { \
