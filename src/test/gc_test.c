@@ -132,12 +132,12 @@ void print_value(ElmValue* v) {
         case Tag_GcStackPop:
             printf("GcStackPop (%s) newer: %p older: %p data: %p",
                 find_stackmap_func_name(&v->gc_stackmap),
-                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
+                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.replay
             );
             break;
         case Tag_GcStackTailCall:
             printf("GcStackTailCall newer: %p older: %p data: %p",
-                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.data
+                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.replay
             );
             break;
         case Tag_GcStackEmpty:
@@ -710,12 +710,14 @@ char* gc_replay_test() {
         for (int i=0; i<NUM_FUNC_NAMES; i++) {
             printf("%p : %s\n", func_map[i].evaluator, func_map[i].name);
         }
+        printf("stack depth = %zd\n", state->stack_depth);
     }
 
     mu_assert("Expect heap overflow",
         result->header.tag == Tag_GcException
     );
 
+    state->stack_depth = 0;
 
     if (verbose) printf("\n\nMarking interrupted heap...\n\n");
     mark(&gc_state, ignore_below);
@@ -755,12 +757,12 @@ char* gc_replay_test() {
     );
 
 
-    /*
+
     if (verbose) printf("Setup for replay\n");
     GcStackMap* empty = (GcStackMap*)state->heap.start;
     state->replay_ptr = empty->newer;
 
-    if (verbose) printf("Replay\n");
+    if (verbose) printf("Replay from replay_ptr = %p\n", state->replay_ptr);
     ElmValue* result_replay = gc_replay_test_catch();
 
     if (verbose) {
@@ -772,7 +774,7 @@ char* gc_replay_test() {
         printf("result:\n");
         print_value(result_replay);
     }
-    */
+
 
 
     return NULL;
@@ -786,11 +788,11 @@ char* gc_test() {
         printf("--\n");
     }
 
-     mu_run_test(gc_struct_test);
-     mu_run_test(gc_bitmap_test);
-     mu_run_test(gc_dead_between_test);
-     mu_run_test(gc_mark_compact_test);
-     mu_run_test(gc_bitmap_next_test);
+//     mu_run_test(gc_struct_test);
+//     mu_run_test(gc_bitmap_test);
+//     mu_run_test(gc_dead_between_test);
+//     mu_run_test(gc_mark_compact_test);
+//     mu_run_test(gc_bitmap_next_test);
      mu_run_test(gc_replay_test);
 
     return NULL;

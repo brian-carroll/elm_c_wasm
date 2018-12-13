@@ -9,7 +9,7 @@
 
 #ifdef _WIN32
 static int brk(void* ptr) {
-    return 0;
+    return 0; // OK
 }
 #endif
 
@@ -224,7 +224,7 @@ void mark_stack_map(GcState* state, size_t* ignore_below) {
                 new_depth = current_depth + 1;
             case Tag_GcStackTailCall:
                 if (current_depth == min_depth) {
-                    mark_trace(&state->heap, stack_item->data, ignore_below); // returned value from deeper function to active function
+                    mark_trace(&state->heap, stack_item->replay, ignore_below); // returned value from deeper function to active function
                     mark_allocated = true;
                 }
                 break;

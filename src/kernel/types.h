@@ -221,7 +221,7 @@ typedef struct {
 typedef struct {
     Header header;
     void* newer; // cheat! mutable field pointing at newer stuff
-    void* data;
+    void* replay;
     void* older;
 } GcStackMap;
 
