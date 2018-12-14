@@ -27,27 +27,71 @@ i32 ipow(i32 base, i32 ex) {
     return result;
 }
 
-#define BASICS_NUMBER_BINOP(funcname, f_op, i_op) \
-static void* funcname(void* args[2]) {  \
-    Number *pa = args[0];   \
-    Number *pb = args[1];   \
-    if (pa->f.header.tag == Tag_Float) {    \
-        f64 fa = pa->f.value;   \
-        f64 fb = pb->f.value;   \
-        f64 f = f_op;    \
-        return newElmFloat(f);  \
-    } else {    \
-        i32 ia = pa->i.value;   \
-        i32 ib = pb->i.value;   \
-        i32 i = i_op;    \
-        return newElmInt(i);    \
-    }   \
+static void* add_eval(void* args[2]) {
+    Number *pa = args[0];
+    Number *pb = args[1];
+    if (pa->f.header.tag == Tag_Float) {
+        f64 fa = pa->f.value;
+        f64 fb = pb->f.value;
+        f64 f = fa + fb;
+        return newElmFloat(f);
+    } else {
+        i32 ia = pa->i.value;
+        i32 ib = pb->i.value;
+        i32 i = ia + ib;
+        return newElmInt(i);
+    }
 }
 
-BASICS_NUMBER_BINOP(eval_add, fa + fb, ia + ib)
-BASICS_NUMBER_BINOP(eval_sub, fa - fb, ia - ib)
-BASICS_NUMBER_BINOP(eval_mul, fa * fb, ia * ib)
-BASICS_NUMBER_BINOP(eval_pow, pow(fa, fb), ipow(ia,ib))
+static void* sub_eval(void* args[2]) {
+    Number *pa = args[0];
+    Number *pb = args[1];
+    if (pa->f.header.tag == Tag_Float) {
+        f64 fa = pa->f.value;
+        f64 fb = pb->f.value;
+        f64 f = fa - fb;
+        return newElmFloat(f);
+    } else {
+        i32 ia = pa->i.value;
+        i32 ib = pb->i.value;
+        i32 i = ia - ib;
+        return newElmInt(i);
+    }
+}
+
+static void* mul_eval(void* args[2]) {
+    Number *pa = args[0];
+    Number *pb = args[1];
+    if (pa->f.header.tag == Tag_Float) {
+        f64 fa = pa->f.value;
+        f64 fb = pb->f.value;
+        f64 f = fa * fb;
+        return newElmFloat(f);
+    } else {
+        i32 ia = pa->i.value;
+        i32 ib = pb->i.value;
+        i32 i = ia * ib;
+        return newElmInt(i);
+    }
+}
+
+
+static void* pow_eval(void* args[2]) {
+    Number *pa = args[0];
+    Number *pb = args[1];
+    if (pa->f.header.tag == Tag_Float) {
+        f64 fa = pa->f.value;
+        f64 fb = pb->f.value;
+        f64 f = pow(fa, fb);
+        return newElmFloat(f);
+    } else {
+        i32 ia = pa->i.value;
+        i32 ib = pb->i.value;
+        i32 i = ipow(ia, ib);
+        return newElmInt(i);
+    }
+}
+
 
 Closure Basics_add;
 Closure Basics_sub;
@@ -55,8 +99,8 @@ Closure Basics_mul;
 Closure Basics_pow;
 
 void Basics_init() {
-    Basics_add = F2(eval_add);
-    Basics_sub = F2(eval_sub);
-    Basics_mul = F2(eval_mul);
-    Basics_pow = F2(eval_pow);
+    Basics_add = F2(add_eval);
+    Basics_sub = F2(sub_eval);
+    Basics_mul = F2(mul_eval);
+    Basics_pow = F2(pow_eval);
 }
