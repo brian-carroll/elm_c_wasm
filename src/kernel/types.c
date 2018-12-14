@@ -4,27 +4,27 @@
 #include "gc.h"
 
 
+// see also newCons in header file
 Cons* ctorCons(void* head, void* tail) {
-    Cons *p = GC_malloc(sizeof(Cons));
-    if (p == NULL) return pGcFull;
+    Cons *p = CAN_THROW(GC_malloc(sizeof(Cons)));
     p->header = HEADER_CONS;
     p->head = head;
     p->tail = tail;
     return p;
 };
 
+// see also newTuple2 in header file
 Tuple2* ctorTuple2(void* a, void* b) {
-    Tuple2 *p = GC_malloc(sizeof(Tuple2));
-    if (p == NULL) return pGcFull;
+    Tuple2 *p = CAN_THROW(GC_malloc(sizeof(Tuple2)));
     p->header = HEADER_TUPLE2;
     p->a = a;
     p->b = b;
     return p;
 };
 
+// see also newTuple3 in header file
 Tuple3* ctorTuple3(void* a, void* b, void* c) {
-    Tuple3 *p = GC_malloc(sizeof(Tuple3));
-    if (p == NULL) return pGcFull;
+    Tuple3 *p = CAN_THROW(GC_malloc(sizeof(Tuple3)));
     p->header = HEADER_TUPLE3;
     p->a = a;
     p->b = b;
@@ -32,25 +32,25 @@ Tuple3* ctorTuple3(void* a, void* b, void* c) {
     return p;
 };
 
+// see also newElmInt in header file
 ElmInt* ctorElmInt(i32 value) {
-    ElmInt *p = GC_malloc(sizeof(ElmInt));
-    if (p == NULL) return pGcFull;
+    ElmInt *p = CAN_THROW(GC_malloc(sizeof(ElmInt)));
     p->header = HEADER_INT;
     p->value = value;
     return p;
 };
 
+// see also newElmFloat in header file
 ElmFloat* ctorElmFloat(f64 value) {
-    ElmFloat *p = GC_malloc(sizeof(ElmFloat));
-    if (p == NULL) return pGcFull;
+    ElmFloat *p = CAN_THROW(GC_malloc(sizeof(ElmFloat)));
     p->header = HEADER_FLOAT;
     p->value = value;
     return p;
 };
 
+// see also newElmChar in header file
 ElmChar* ctorElmChar(u32 value) {
-    ElmChar *p = GC_malloc(sizeof(ElmChar));
-    if (p == NULL) return pGcFull;
+    ElmChar *p = CAN_THROW(GC_malloc(sizeof(ElmChar)));
     p->header = HEADER_CHAR;
     p->value = value;
     return p;
@@ -61,13 +61,13 @@ ElmChar* ctorElmChar(u32 value) {
 // so that we can find the exact byte length of the String.
 // Like OCaml, https://v1.realworldocaml.org/v1/en/html/memory-representation-of-values.html#string-values
 
+// see also newElmString in header file
 ElmString* ctorElmString(size_t payload_bytes, char *str) {
     size_t used_bytes = sizeof(Header) + payload_bytes + 1; // 1 byte for padding size
     size_t aligned_words = (used_bytes + SIZE_UNIT-1) / SIZE_UNIT; // ceil
     size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
-    ElmString *p = GC_malloc(aligned_bytes);
-    if (p == NULL) return pGcFull;
+    ElmString *p = CAN_THROW(GC_malloc(aligned_bytes));
 
     // Insert zero padding, and last byte indicating size of padding
     // Store padding size minus 1, so that if there's only 1 byte of padding,
