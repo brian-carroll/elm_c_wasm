@@ -717,7 +717,7 @@ char* gc_replay_test() {
         result->header.tag == Tag_GcException
     );
 
-    state->stack_depth = 0;
+    state->stack_depth = 1;
 
     if (verbose) printf("\n\nMarking interrupted heap...\n\n");
     mark(&gc_state, ignore_below);
@@ -775,7 +775,16 @@ char* gc_replay_test() {
         print_value(result_replay);
     }
 
+    i32 answers[29] = {
+        0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377,
+        610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657,
+        46368, 75025, 121393, 196418, 317811
+    };
+    i32 answer = answers[literal_n.value];
 
+    mu_assert("should return the correct result after replay",
+        result_replay->elm_int.value == answer
+    );
 
     return NULL;
 }

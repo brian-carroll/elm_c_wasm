@@ -190,7 +190,9 @@ void* GC_malloc(size_t bytes) {
             next_replay = NULL; // exit replay mode
         }
         state->replay_ptr = next_replay;
-        printf("GC_malloc: replay_ptr = %p\n", state->replay_ptr);
+        #ifdef DEBUG
+            printf("GC_malloc: replay_ptr = %p\n", state->replay_ptr);
+        #endif
         return (void*)replay;
     } else {
         // normal mode
@@ -364,7 +366,9 @@ void* GC_tce_eval(
         // In replay mode, reuse the Closure we created earlier,
         // retrieved from replay a moment ago in Utils_apply
         // It's our own private copy, we can mutate it without harm
-        c_mutable = c_orig;
+        // Only way to get it is to look just below 'args'
+        // c_orig is not from the same Closure, it's off-heap
+        c_mutable = (Closure*)(args - sizeof(Closure)/sizeof(void*));
     } else {
         c_mutable = CAN_THROW(GC_malloc(closure_bytes));
         *c_mutable = (Closure){
@@ -426,7 +430,7 @@ static void* next_heap_value(void* current) {
     values without actually re-calculating them.
     Only need to re-execute functions that were live when the
     exception was thrown.
-    This should be fast and create very little garbage.
+    This is fast and creates no garbage until we exit replay mode.
     This function is called from the normal 'Utils_apply'.
 */
 
@@ -441,10 +445,30 @@ typedef enum {
     BugScenario                 // Heap doesn't make sense given that a replaying function has called Utils_apply.
 } ReplayScenario;
 
+#ifdef DEBUG
+char* scenario_to_string(ReplayScenario scenario) {
+    switch (scenario) {
+        case Finished:                   return "Finished";
+        case Unfinished_Sat_Normal:      return "Unfinished_Sat_Normal";
+        case Unfinished_Sat_Tail:        return "Unfinished_Sat_Tail";
+        case Unfinished_Curried_Normal:  return "Unfinished_Curried_Normal";
+        case Unfinished_Curried_Tail:    return "Unfinished_Curried_Tail";
+        case Partial_Application:        return "Partial_Application";
+        case Apply_Alloc_Failed:         return "Apply_Alloc_Failed";
+        case BugScenario:                return "BugScenario";
+    }
+    return "";
+}
+#endif
+
+
 void* GC_apply_replay() {
     GcState* state = &gc_state;
     Header* replay_header = (Header*)state->replay_ptr;
     if (replay_header == NULL) return NULL;
+    #ifdef DEBUG
+        printf("GC_apply_replay: replay_ptr = %p, tag = %x\n", state->replay_ptr, replay_header->tag);
+    #endif
 
     /*
     Work out which of several scenarios we're in.
@@ -467,22 +491,35 @@ void* GC_apply_replay() {
     Closure* closure;
     size_t* after_closure;
 
-    if (state->replay_ptr >= state->next_alloc) {
-        scenario = Apply_Alloc_Failed;  
+    do {
+        if (state->replay_ptr >= state->next_alloc) {
+            scenario = Apply_Alloc_Failed;  
+            break;
+        }
+        if (replay_header->tag == Tag_Closure) {
+            // Replay points to a Closure that was allocated last time in Utils_apply
+            // It was a partially-applied Closure that had some more values applied
+            closure = (Closure*)state->replay_ptr;
+            if (closure->n_values != closure->max_values) {
+                // Closure did not get enough new values to be saturated
+                scenario = Partial_Application;
+                break;
+            }
 
-    } else if (replay_header->tag == Tag_Closure) {
-        // Replay points to a Closure that was allocated last time in Utils_apply
-        // It was a partially-applied Closure that had some more values applied
-        closure = (Closure*)state->replay_ptr;
-        after_closure = next_heap_value(closure);
+            after_closure = next_heap_value(closure);
+            if (after_closure >= state->next_alloc) {
+                scenario = Apply_Alloc_Failed;
+                break;
+            }
 
-        if (closure->n_values != closure->max_values) {
-            // Closure did not get enough new values to be saturated
-            scenario = Partial_Application;
-        } else {
             // Closure got saturated and started executing
             push = (GcStackMap*)after_closure;
             newer = push->newer;
+
+            if ((size_t*)newer >= state->next_alloc) {
+                scenario = Apply_Alloc_Failed;
+                break;
+            }
 
             switch (newer->header.tag) {
                 case Tag_GcStackPop:
@@ -504,39 +541,43 @@ void* GC_apply_replay() {
                     #endif
                     break;
             }
+
+        } else if (replay_header->tag == Tag_GcStackPush) {
+            // This was a saturated call (all args applied at once)
+            push = (GcStackMap*)state->replay_ptr;
+            newer = push->newer;
+            if ((size_t*)newer >= state->next_alloc) {
+                scenario = Apply_Alloc_Failed;
+                break;
+            }
+            switch (newer->header.tag) {
+                case Tag_GcStackPop:
+                    scenario = Finished;
+                    break;
+
+                case Tag_GcStackPush:
+                    scenario = Unfinished_Sat_Normal;
+                    break;
+
+                case Tag_GcStackTailCall:
+                    scenario = Unfinished_Sat_Tail;
+                    break;
+
+                default:
+                    scenario = BugScenario;
+                    #ifdef DEBUG
+                        fprintf(stderr, "GC_apply_replay: expected stack map value at %p\n", newer);
+                    #endif
+                    break;
+            }
+
+        } else {
+            scenario = BugScenario;
+            #ifdef DEBUG
+                fprintf(stderr, "GC_apply_replay: expected Closure or Push at %p\n", replay_header);
+            #endif
         }
-
-    } else if (replay_header->tag == Tag_GcStackPush) {
-        // This was a saturated call (all args applied at once)
-        push = (GcStackMap*)state->replay_ptr;
-        newer = push->newer;
-        switch (newer->header.tag) {
-            case Tag_GcStackPop:
-                scenario = Finished;
-                break;
-
-            case Tag_GcStackPush:
-                scenario = Unfinished_Sat_Normal;
-                break;
-
-            case Tag_GcStackTailCall:
-                scenario = Unfinished_Sat_Tail;
-                break;
-
-            default:
-                scenario = BugScenario;
-                #ifdef DEBUG
-                    fprintf(stderr, "GC_apply_replay: expected stack map value at %p\n", newer);
-                #endif
-                break;
-        }
-
-    } else {
-        scenario = BugScenario;
-        #ifdef DEBUG
-            fprintf(stderr, "GC_apply_replay: expected Closure or Push at %p\n", replay_header);
-        #endif
-    }
+    } while (0);
 
     /*
     Decide what to do based on which scenario we're in.
@@ -616,6 +657,15 @@ void* GC_apply_replay() {
             replay_next = EXIT_REPLAY_MODE;
             break;
     }
+    
+   #ifdef DEBUG
+        printf("GC_apply_replay:\n");
+        printf("    scenario = %s\n", scenario_to_string(scenario));
+        printf("    replay = %p\n", replay);
+        printf("    stackmap_next = %p\n", stackmap_next);
+        printf("    stack_depth_increment = %zd\n", stack_depth_increment);
+        printf("    replay_next = %p\n", replay_next);
+   #endif
 
     // Update the state
     // Don't do the memory access unless value is changed
