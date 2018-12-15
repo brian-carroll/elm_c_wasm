@@ -78,20 +78,15 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     void** args;
     Closure *c;
     
-    printf("\nUtils_apply: apply closure at %p\n", c_old);
-
     void* replay = GC_apply_replay();
     if (replay != NULL) {
         c = replay;
         if (c->header.tag != Tag_Closure) {
-            printf("Utils_apply: replay %p\n", replay);
             return replay;
         }
         if (c->n_values != c->max_values) {
-            printf("Utils_apply: replay partially applied Closure at %p\n", replay);
             return replay;
         }
-        printf("Utils_apply: executing replayed closure at %p\n", c);
         args = c->values;
     } else if (c_old->max_values == n_applied) {
         // 'saturated' call. No need to allocate a new Closure.

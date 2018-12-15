@@ -690,32 +690,57 @@ void* GC_apply_replay() {
     return replay;
 }
 
-/*
+#ifdef GC_SIZE_CHECK
 // Check compiled size of GC in Wasm
-// Only 4kB!!! :)
+// Only 6.4kB!!! :)
 // I don't have replay or controller yet, but wow
 // And this includes some fixed overhead that emcc generates
 //
+void* dummy_tce_eval(void* args[3], void** gc_tce_data) {
+    size_t dummy = (size_t)args + (size_t)gc_tce_data;
+    return (void*)dummy;
+}
 int main(int argc, char** argv) {
+    // Dummy code to prevent dead code elimination
 
+    GcState* state = &gc_state;
+
+    // Create variables of particular types, with values
+    // coming from outside world so compiler can't eliminate.
+    // We don't need to run this, just compile it,
+    // so segfaults are not an issue!
     ElmValue** root = (ElmValue**)argv[0];
     size_t word = (size_t)argc;
+    size_t* pword = (size_t*)argv[3];
     Closure* c = (Closure*)argv[1];
     ElmValue* v = (ElmValue*)argv[2];
+    void* dest = argv[4];
+    void* src = argv[5];
+    void** pointer_array = (void**)argv;
 
     GC_init();
     GC_register_root(root);
     GC_malloc(word);
+    GC_memcpy(dest, src, word);
+
     void* push = GC_stack_push();
-    GC_stack_tailcall(c, push);
+    // GC_stack_tailcall(c, push);
     GC_stack_pop(v, push);
 
-    GcHeap* heap = (GcHeap*)argv[3];
-    size_t* pword = (size_t*)argv[4];
-    GcState* state = (GcState*)argv[5];
 
-    set_heap_end(heap, pword);
     mark(state, pword);
     compact(state, pword);
+    reverse_stack_map(state);
+
+    GC_tce_iteration(word, pointer_array);
+    GC_tce_eval(
+        &dummy_tce_eval,
+        c,
+        pointer_array
+    );
+
+    GC_apply_replay();
+
+    return 0;
 }
-*/
+#endif
