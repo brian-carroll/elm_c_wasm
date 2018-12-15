@@ -490,7 +490,7 @@ void* GC_apply_replay() {
     GcStackMap* push;
     GcStackMap* newer;
     Closure* closure;
-    size_t* after_closure;
+    size_t* after_closure = NULL;
 
 
     // Each time we advance to next heap value, need to check if we've passed end of heap.
