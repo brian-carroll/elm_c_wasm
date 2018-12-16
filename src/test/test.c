@@ -106,8 +106,8 @@ int main(int argc, char ** argv) {
     bool string = false;
     bool utils = false;
     bool gc = false;
-    
-    #ifdef _WIN32
+
+    #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     gc = true;
     verbose = true;
     #endif
