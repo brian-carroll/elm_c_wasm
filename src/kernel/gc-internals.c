@@ -133,12 +133,13 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
     // If value is outside the heap (constant), then consider it
     // "already marked" (=> children won't be traced)
     if (p < heap->start) return true;
+    if (size == 0) return true;
 
     size_t first_index = (size_t)(p - heap->start);
     size_t first_word = first_index / GC_WORD_BITS;
     size_t first_bit = first_index % GC_WORD_BITS;
 
-    size_t last_index = first_index + size - 1;
+    size_t last_index = first_index + (size-1); // requires size>0
     size_t last_word = last_index / GC_WORD_BITS;
     size_t last_bit = last_index % GC_WORD_BITS;
 
