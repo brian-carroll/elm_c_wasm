@@ -13,10 +13,10 @@ HEADERS := $(wildcard $(SRC)/*/*.h)
 all: $(DIST)/bin/test
 
 check: $(DIST)/bin/test
-	./dist/bin/test
+	$(DIST)/bin/test
 
 verbose: $(DIST)/bin/test
-	./dist/bin/test -v
+	$(DIST)/bin/test -v
 
 dist: check www
 
@@ -27,7 +27,7 @@ gc-size:
 	ls -lh $(DIST)/www/gc.wasm
 
 clean:
-	find dist -type f ! -name '.gitkeep' -exec rm {} \;
+	find $(DIST) -type f ! -name '.gitkeep' -exec rm {} \;
 
 watch:
 	(while true ; do make build.log; sleep 1; done) | grep -v make
