@@ -119,7 +119,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
         gc_test_stack_debug(push, c); // help to show function names in debug output
         
         printf("Utils_apply evaluating:\n");
-        printf("     closure = %p\n", c);
+        printf("    closure = %p\n", c);
         for (size_t a=0; a<c->max_values; a++) {
             printf("    arg[%zd] = %p (%x)\n", a, args[a], ((Header*)(args[a]))->tag);
         }
