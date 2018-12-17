@@ -9,27 +9,27 @@ size_t String_bytes(ElmString *s);
 
 char* string_bytes_test() {
     if (verbose) printf("## String_bytes\n");
-    ElmString* str0 = newElmString(0, "");
+    ElmString* str0 = NEW_ELM_STRING(0, "");
     size_t len0 = String_bytes(str0);
     mu_assert("Expect correct byte length for string length 0", len0 == 0);
-    mu_assert("Expect correct byte length for string length 1", String_bytes(newElmString(1, "1")) == 1);
-    mu_assert("Expect correct byte length for string length 3", String_bytes(newElmString(3, "123")) == 3);
-    mu_assert("Expect correct byte length for string length 4", String_bytes(newElmString(4, "1234")) == 4);
-    mu_assert("Expect correct byte length for string length 5", String_bytes(newElmString(5, "12345")) == 5);
-    mu_assert("Expect correct byte length for string length 7", String_bytes(newElmString(7, "123457")) == 7);
-    mu_assert("Expect correct byte length for string length 8", String_bytes(newElmString(8, "1234578")) == 8);
-    mu_assert("Expect correct byte length for string length 9", String_bytes(newElmString(9, "12345789")) == 9);
-    mu_assert("Expect correct byte length for string length 10", String_bytes(newElmString(10, "12345789a")) == 10);
-    mu_assert("Expect correct byte length for string length 11", String_bytes(newElmString(11, "12345789ab")) == 11);
-    mu_assert("Expect correct byte length for string length 12", String_bytes(newElmString(12, "12345789abc")) == 12);
+    mu_assert("Expect correct byte length for string length 1", String_bytes(NEW_ELM_STRING(1, "1")) == 1);
+    mu_assert("Expect correct byte length for string length 3", String_bytes(NEW_ELM_STRING(3, "123")) == 3);
+    mu_assert("Expect correct byte length for string length 4", String_bytes(NEW_ELM_STRING(4, "1234")) == 4);
+    mu_assert("Expect correct byte length for string length 5", String_bytes(NEW_ELM_STRING(5, "12345")) == 5);
+    mu_assert("Expect correct byte length for string length 7", String_bytes(NEW_ELM_STRING(7, "123457")) == 7);
+    mu_assert("Expect correct byte length for string length 8", String_bytes(NEW_ELM_STRING(8, "1234578")) == 8);
+    mu_assert("Expect correct byte length for string length 9", String_bytes(NEW_ELM_STRING(9, "12345789")) == 9);
+    mu_assert("Expect correct byte length for string length 10", String_bytes(NEW_ELM_STRING(10, "12345789a")) == 10);
+    mu_assert("Expect correct byte length for string length 11", String_bytes(NEW_ELM_STRING(11, "12345789ab")) == 11);
+    mu_assert("Expect correct byte length for string length 12", String_bytes(NEW_ELM_STRING(12, "12345789abc")) == 12);
     if (verbose) printf("OK\n");
     return NULL;
 }
 
 
 char* string_append_test() {
-    ElmString* h = newElmString(5, "hello");
-    ElmString* w = newElmString(6, " world");
+    ElmString* h = NEW_ELM_STRING(5, "hello");
+    ElmString* w = NEW_ELM_STRING(6, " world");
     ElmString* hw = A2(&String_append, h, w);
 
     if (verbose) {

@@ -261,9 +261,9 @@ char* gc_mark_compact_test() {
 
     // The currently-running function allocates some stuff.
     // This function won't have returned by end of test, so it needs these values.
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
 
     // Push down to level 2. This will complete. Need its return value
     Closure* c2 = Utils_clone(mock_closure);
@@ -272,26 +272,26 @@ char* gc_mark_compact_test() {
     live[nlive++] = push2;
 
     // Temporary values from level 2, not in return value
-    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
-    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); ndead++;
 
     // 3rd level function call. All dead, since we have the return value of a higher level call.
     void* push3 = GC_stack_push();
     dead[ndead++] = push3;
-    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
-    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
-    ElmInt* ret3 = newElmInt(state->stack_depth*100 + nlive + ndead);
+    dead[ndead] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); ndead++;
+    ElmInt* ret3 = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead);
     dead[ndead++] = ret3;
     dead[ndead++] = state->next_alloc; // the pop we're about to allocate
     GC_stack_pop((ElmValue*)ret3, push3);
 
     // return value from level 2. Keep it to provide to level 1 on replay
-    ElmValue* ret2a = (ElmValue*)newElmInt(state->stack_depth*100 + nlive + ndead);
-    ElmValue* ret2b = (ElmValue*)newCons(ret2a, &Nil);
+    ElmValue* ret2a = (ElmValue*)NEW_ELM_INT(state->stack_depth*100 + nlive + ndead);
+    ElmValue* ret2b = (ElmValue*)NEW_CONS(ret2a, &Nil);
     live[nlive++] = ret2a;
     live[nlive++] = ret2b;
-    ElmValue* ret2c = (ElmValue*)newElmInt(state->stack_depth*100 + nlive + ndead);
-    ElmValue* ret2d = (ElmValue*)newCons(ret2c, ret2b);
+    ElmValue* ret2c = (ElmValue*)NEW_ELM_INT(state->stack_depth*100 + nlive + ndead);
+    ElmValue* ret2d = (ElmValue*)NEW_CONS(ret2c, ret2b);
     live[nlive++] = ret2c;
     live[nlive++] = ret2d;
 
@@ -300,15 +300,15 @@ char* gc_mark_compact_test() {
     // Implementation treats them as live for consistency and ease of coding
     live[nlive++] = state->next_alloc; // the pop we're about to allocate
     GC_stack_pop(ret2d, push2);
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
 
     // Call a function that makes a tail call
     void* push_into_tailrec = GC_stack_push();
     live[nlive++] = push_into_tailrec;
-    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
-    dead[ndead] = newElmInt(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); ndead++;
+    dead[ndead] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); ndead++;
 
     // Tail call. Has completed when we stop the world => dead
     Closure* ctail1 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
@@ -323,8 +323,8 @@ char* gc_mark_compact_test() {
     GC_stack_tailcall(ctail1, push_into_tailrec);
 
     // arguments to the next tail call
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
 
     // Tail call. still evaluating this when we stopped the world => keep closure alive
     Closure* ctail2 = GC_malloc(sizeof(Closure) + 2*sizeof(void*));
@@ -339,8 +339,8 @@ char* gc_mark_compact_test() {
     GC_stack_tailcall(ctail2, push_into_tailrec);
 
     // allocated just before we stopped the world
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
-    live[nlive] = newElmInt(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
+    live[nlive] = NEW_ELM_INT(state->stack_depth*100 + nlive + ndead); nlive++;
 
     if (verbose) printf("Marking...\n");
     size_t* ignore_below = (size_t*)c1;
@@ -429,10 +429,10 @@ char* gc_bitmap_test() {
     for (size_t i=0; i<10; i++) {
         ElmValue *p1, *p2, *p3, *p4;
 
-        p1 = (ElmValue*)newElmInt(1);
-        p2 = (ElmValue*)newElmInt(0);
-        p3 = (ElmValue*)newElmString(sizeof(str), str);
-        p4 = (ElmValue*)newElmInt(0);
+        p1 = (ElmValue*)NEW_ELM_INT(1);
+        p2 = (ElmValue*)NEW_ELM_INT(0);
+        p3 = (ElmValue*)NEW_ELM_STRING(sizeof(str), str);
+        p4 = (ElmValue*)NEW_ELM_INT(0);
 
         mark_words(&state->heap, p1, p1->header.size);
         mark_words(&state->heap, p3, p3->header.size);

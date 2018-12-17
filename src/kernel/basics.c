@@ -34,12 +34,12 @@ static void* add_eval(void* args[2]) {
         f64 fa = pa->f.value;
         f64 fb = pb->f.value;
         f64 f = fa + fb;
-        return newElmFloat(f);
+        return NEW_ELM_FLOAT(f);
     } else {
         i32 ia = pa->i.value;
         i32 ib = pb->i.value;
         i32 i = ia + ib;
-        return newElmInt(i);
+        return NEW_ELM_INT(i);
     }
 }
 
@@ -50,12 +50,12 @@ static void* sub_eval(void* args[2]) {
         f64 fa = pa->f.value;
         f64 fb = pb->f.value;
         f64 f = fa - fb;
-        return newElmFloat(f);
+        return NEW_ELM_FLOAT(f);
     } else {
         i32 ia = pa->i.value;
         i32 ib = pb->i.value;
         i32 i = ia - ib;
-        return newElmInt(i);
+        return NEW_ELM_INT(i);
     }
 }
 
@@ -66,12 +66,12 @@ static void* mul_eval(void* args[2]) {
         f64 fa = pa->f.value;
         f64 fb = pb->f.value;
         f64 f = fa * fb;
-        return newElmFloat(f);
+        return NEW_ELM_FLOAT(f);
     } else {
         i32 ia = pa->i.value;
         i32 ib = pb->i.value;
         i32 i = ia * ib;
-        return newElmInt(i);
+        return NEW_ELM_INT(i);
     }
 }
 
@@ -83,12 +83,12 @@ static void* pow_eval(void* args[2]) {
         f64 fa = pa->f.value;
         f64 fb = pb->f.value;
         f64 f = pow(fa, fb);
-        return newElmFloat(f);
+        return NEW_ELM_FLOAT(f);
     } else {
         i32 ia = pa->i.value;
         i32 ib = pb->i.value;
         i32 i = ipow(ia, ib);
-        return newElmInt(i);
+        return NEW_ELM_INT(i);
     }
 }
 

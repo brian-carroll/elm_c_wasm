@@ -18,17 +18,17 @@ int test_int_val(ElmInt* actual, i32 expected) {
 
 char* test_number_binops() {
 
-    ElmInt* i1 = newElmInt(1);
-    ElmInt* i2 = newElmInt(2);
-    ElmInt* im = newElmInt(-1);
-    ElmInt* ibig1 = newElmInt(123456);
-    ElmInt* ibig2 = newElmInt(654321);
-    ElmInt* imbig1 = newElmInt(-123456);
-    ElmInt* imbig2 = newElmInt(-654321);
+    ElmInt* i1 = NEW_ELM_INT(1);
+    ElmInt* i2 = NEW_ELM_INT(2);
+    ElmInt* im = NEW_ELM_INT(-1);
+    ElmInt* ibig1 = NEW_ELM_INT(123456);
+    ElmInt* ibig2 = NEW_ELM_INT(654321);
+    ElmInt* imbig1 = NEW_ELM_INT(-123456);
+    ElmInt* imbig2 = NEW_ELM_INT(-654321);
 
-    ElmFloat* f1 = newElmFloat(1.0);
-    ElmFloat* f2 = newElmFloat(3.14);
-    ElmFloat* fm = newElmFloat(-123.456);
+    ElmFloat* f1 = NEW_ELM_FLOAT(1.0);
+    ElmFloat* f2 = NEW_ELM_FLOAT(3.14);
+    ElmFloat* fm = NEW_ELM_FLOAT(-123.456);
 
     // ADD
 
@@ -74,7 +74,7 @@ char* test_number_binops() {
     mu_assert("Expect: 2^1=2", test_int_val(A2(&Basics_pow, i2, i1), 2));
     mu_assert("Expect: -1^2=1", test_int_val(A2(&Basics_pow, im, i2), 1));
     mu_assert("Expect: 2^-1=0", test_int_val(A2(&Basics_pow, i2, im), 0));
-    mu_assert("Expect: 2^0=1", test_int_val(A2(&Basics_pow, i2, newElmInt(0)), 1));
+    mu_assert("Expect: 2^0=1", test_int_val(A2(&Basics_pow, i2, NEW_ELM_INT(0)), 1));
     mu_assert("Expect: 1^123456=1", test_int_val(A2(&Basics_pow, i1, ibig1), 1));
     mu_assert("Expect: 1^-123456=1", test_int_val(A2(&Basics_pow, i1, imbig1), 1));
     mu_assert("Expect: 1^-654321=1", test_int_val(A2(&Basics_pow, i1, imbig2), 1));

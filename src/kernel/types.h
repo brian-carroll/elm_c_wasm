@@ -103,7 +103,7 @@ typedef struct {
     void* tail;
 } Cons;
 Cons* ctorCons(void* head, void* tail);
-#define newCons(head, tail) CAN_THROW(ctorCons(head, tail))
+#define NEW_CONS(head, tail) CAN_THROW(ctorCons(head, tail))
 
 
 // TUPLES
@@ -114,7 +114,7 @@ typedef struct {
     void* b;
 } Tuple2;
 Tuple2* ctorTuple2(void* a, void* b);
-#define newTuple2(a, b) CAN_THROW(ctorTuple2(a, b))
+#define NEW_TUPLE2(a, b) CAN_THROW(ctorTuple2(a, b))
 
 
 typedef struct {
@@ -124,7 +124,7 @@ typedef struct {
     void* c;
 } Tuple3;
 Tuple3* ctorTuple3(void* a, void* b, void* c);
-#define newTuple3(a, b, c) CAN_THROW(ctorTuple3(a, b, c))
+#define NEW_TUPLE3(a, b, c) CAN_THROW(ctorTuple3(a, b, c))
 
 
 // NUMBERS
@@ -134,14 +134,14 @@ typedef struct {
     i32 value;
 } ElmInt;
 ElmInt* ctorElmInt(i32 value);
-#define newElmInt(value) CAN_THROW(ctorElmInt(value))
+#define NEW_ELM_INT(value) CAN_THROW(ctorElmInt(value))
 
 typedef struct {
     Header header;
     f64 value;
 } ElmFloat;
 ElmFloat* ctorElmFloat(f64 value);
-#define newElmFloat(value) CAN_THROW(ctorElmFloat(value))
+#define NEW_ELM_FLOAT(value) CAN_THROW(ctorElmFloat(value))
 
 typedef union {
     ElmInt i;
@@ -156,7 +156,7 @@ typedef struct {
     i32 value;
 } ElmChar;
 ElmChar* ctorElmChar(u32 value);
-#define newElmChar(value) CAN_THROW(ctorElmChar(value))
+#define NEW_ELM_CHAR(value) CAN_THROW(ctorElmChar(value))
 
 
 // STRING
@@ -166,7 +166,7 @@ typedef struct {
     u8 bytes[];
 } ElmString;
 ElmString* ctorElmString(size_t n, char *str);
-#define newElmString(n, str) CAN_THROW(ctorElmString(n, str))
+#define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 
 
 // CUSTOM

@@ -21,7 +21,7 @@ void* String_append_eval(void* args[2]) {
     u32 na = String_bytes(a);
     u32 nb = String_bytes(b);
 
-    ElmString* s = newElmString(na + nb, NULL);
+    ElmString* s = NEW_ELM_STRING(na + nb, NULL);
     if (s == pGcFull) return pGcFull;
 
     // May not be aligned on word boundaries

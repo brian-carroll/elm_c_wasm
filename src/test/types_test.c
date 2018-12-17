@@ -109,7 +109,7 @@ char* test_nil() {
 }
 
 char* test_cons() {
-    Cons *c = newCons(&Unit, &Nil); // [()]
+    Cons *c = NEW_CONS(&Unit, &Nil); // [()]
     if (verbose) printf("Cons size=%zd addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
         sizeof(Cons), hex_ptr(c), (int)c->header.size,
         hex_ptr(c->head), hex_ptr(c->tail),
@@ -127,7 +127,7 @@ char* test_cons() {
             sizeof(Cons) == sizeof(Header) + 2*sizeof(void*)
         );
     #endif
-    mu_assert("newCons should insert correct size field", c->header.size == 3);
+    mu_assert("NEW_CONS should insert correct size field", c->header.size == 3);
 
     mu_assert("[()] should have 'head' pointing to Unit", c->head == &Unit);
     mu_assert("[()] should have 'tail' pointing to Nil", c->tail == &Nil);
@@ -136,12 +136,12 @@ char* test_cons() {
 }
 
 char* test_tuples() {
-    ElmInt *i1 = newElmInt(1);
-    ElmInt *i2 = newElmInt(2);
-    ElmInt *i3 = newElmInt(3);
+    ElmInt *i1 = NEW_ELM_INT(1);
+    ElmInt *i2 = NEW_ELM_INT(2);
+    ElmInt *i3 = NEW_ELM_INT(3);
 
 
-    Tuple2 *t2 = newTuple2(&i1, &i2);
+    Tuple2 *t2 = NEW_TUPLE2(&i1, &i2);
     if (verbose) printf("Tuple2 sizeof=%zd header.size=%d hex=%s\n",
         sizeof(Tuple2), t2->header.size, hex(t2, sizeof(Tuple2))
     );
@@ -156,13 +156,13 @@ char* test_tuples() {
                 sizeof(Tuple2) == sizeof(Header) + 2*sizeof(void*)
         );
     #endif
-    mu_assert("newTuple2 should insert correct size field", t2->header.size == 3);
+    mu_assert("NEW_TUPLE2 should insert correct size field", t2->header.size == 3);
     mu_assert("Tuple2 should have correct tag field", t2->header.tag == Tag_Tuple2);
     mu_assert("(1,2) should have 'a' pointing to 1", t2->a == &i1);
     mu_assert("(1,2) should have 'b' pointing to 2", t2->b == &i2);
 
 
-    Tuple3 *t3 = newTuple3(&i1, &i2, &i3);
+    Tuple3 *t3 = NEW_TUPLE3(&i1, &i2, &i3);
     if (verbose) printf("Tuple3 size=%zd header.size=%d hex=%s\n",
         sizeof(Tuple3), t3->header.size, hex(t3, sizeof(Tuple3))
     );
@@ -178,7 +178,7 @@ char* test_tuples() {
                 sizeof(Tuple3) == sizeof(Header) + 3*sizeof(void*)
         );
     #endif
-    mu_assert("newTuple3 should insert correct size field", t3->header.size == 4);
+    mu_assert("NEW_TUPLE3 should insert correct size field", t3->header.size == 4);
     mu_assert("Tuple3 should have correct tag field", t3->header.tag == Tag_Tuple3);
     mu_assert("(1,2,3) should have 'a' pointing to 1", t3->a == &i1);
     mu_assert("(1,2,3) should have 'b' pointing to 2", t3->b == &i2);
@@ -188,7 +188,7 @@ char* test_tuples() {
 }
 
 char* test_int() {
-    ElmInt *i = newElmInt(123);
+    ElmInt *i = NEW_ELM_INT(123);
 
     if (verbose) printf("ElmInt size=%zd addr=%s tag=%d value=%d\n",
         sizeof(ElmInt), hex_ptr(i), (int)i->header.tag, i->value
@@ -197,25 +197,25 @@ char* test_int() {
         "ElmInt type should be just wide enough for a header and an i32",
         sizeof(ElmInt) == sizeof(Header) + sizeof(i32)
     );
-    mu_assert("newElmInt should insert correct tag field", i->header.tag == Tag_Int);
-    mu_assert("newElmInt 123 should insert value of 123", i->value == 123);
+    mu_assert("NEW_ELM_INT should insert correct tag field", i->header.tag == Tag_Int);
+    mu_assert("NEW_ELM_INT 123 should insert value of 123", i->value == 123);
     #ifdef TARGET_64BIT
-        mu_assert("newElmInt should insert correct size field", i->header.size == 1);
+        mu_assert("NEW_ELM_INT should insert correct size field", i->header.size == 1);
     #else
-        mu_assert("newElmInt should insert correct size field", i->header.size == 2);
+        mu_assert("NEW_ELM_INT should insert correct size field", i->header.size == 2);
     #endif
 
     return NULL;
 }
 
 char* test_float() {
-    ElmFloat *f = newElmFloat(123.456789);
+    ElmFloat *f = NEW_ELM_FLOAT(123.456789);
     if (verbose) printf("Float size=%zd addr=%s tag=%d value=%f\n",
         sizeof(ElmFloat), hex_ptr(f), (int)f->header.tag, f->value
     );
 
-    mu_assert("newElmFloat should insert correct tag field", f->header.tag == Tag_Float);
-    mu_assert("newElmFloat should insert correct value", f->value == 123.456789);
+    mu_assert("NEW_ELM_FLOAT should insert correct tag field", f->header.tag == Tag_Float);
+    mu_assert("NEW_ELM_FLOAT should insert correct value", f->value == 123.456789);
 
     // f64 always gets aligned to 64-bit boundary, even for Wasm target
     mu_assert(
@@ -223,16 +223,16 @@ char* test_float() {
         sizeof(ElmFloat) == sizeof(Header) + 4 + sizeof(f64)
     );
     #ifdef TARGET_64BIT
-        mu_assert("newElmFloat should insert correct size field", f->header.size == 2);
+        mu_assert("NEW_ELM_FLOAT should insert correct size field", f->header.size == 2);
     #else
-        mu_assert("newElmFloat should insert correct size field", f->header.size == 4);
+        mu_assert("NEW_ELM_FLOAT should insert correct size field", f->header.size == 4);
     #endif
 
     return NULL;
 }
 
 char* test_char() {
-    ElmChar *ch = newElmChar('A');
+    ElmChar *ch = NEW_ELM_CHAR('A');
     if (verbose) printf("Char size=%zd addr=%s tag=%d value=%c\n",
         sizeof(ElmChar), hex_ptr(ch), (int)ch->header.tag, ch->value
     );
@@ -244,9 +244,9 @@ char* test_char() {
     mu_assert("ElmChar should have correct tag field", ch->header.tag == Tag_Char);
     mu_assert("ElmChar 'A' should have correct value", ch->value == 'A');
     #ifdef TARGET_64BIT
-        mu_assert("newElmChar should insert correct size field", ch->header.size == 1);
+        mu_assert("NEW_ELM_CHAR should insert correct size field", ch->header.size == 1);
     #else
-        mu_assert("newElmChar should insert correct size field", ch->header.size == 2);
+        mu_assert("NEW_ELM_CHAR should insert correct size field", ch->header.size == 2);
     #endif
 
 
@@ -255,18 +255,18 @@ char* test_char() {
 
 
 char* test_strings() {
-    ElmString* str0 = newElmString(0, "");
-    ElmString* str1 = newElmString(1, "1");
-    ElmString* str2 = newElmString(2, "12");
-    ElmString* str3 = newElmString(3, "123");
-    ElmString* str4 = newElmString(4, "1234");
-    ElmString* str5 = newElmString(5, "12345");
-    ElmString* str7 = newElmString(7, "1234567");
-    ElmString* str8 = newElmString(8, "12345678");
-    ElmString* str9 = newElmString(9, "123456789");
+    ElmString* str0 = NEW_ELM_STRING(0, "");
+    ElmString* str1 = NEW_ELM_STRING(1, "1");
+    ElmString* str2 = NEW_ELM_STRING(2, "12");
+    ElmString* str3 = NEW_ELM_STRING(3, "123");
+    ElmString* str4 = NEW_ELM_STRING(4, "1234");
+    ElmString* str5 = NEW_ELM_STRING(5, "12345");
+    ElmString* str7 = NEW_ELM_STRING(7, "1234567");
+    ElmString* str8 = NEW_ELM_STRING(8, "12345678");
+    ElmString* str9 = NEW_ELM_STRING(9, "123456789");
 
 
-    ElmString* strN = newElmString(45, "The quick brown fox jumped over the lazy dog.");
+    ElmString* strN = NEW_ELM_STRING(45, "The quick brown fox jumped over the lazy dog.");
 
     if (verbose) {
         printf("sizeof(ElmString) = %zd\n", sizeof(ElmString));
@@ -332,7 +332,7 @@ char* test_strings() {
         mu_assert("45-byte string should have correct size field", strN->header.size == 13);
     #endif
 
-    mu_assert("newElmString should insert the correct type tag", str9->header.tag == Tag_String);
+    mu_assert("NEW_ELM_STRING should insert the correct type tag", str9->header.tag == Tag_String);
 
     return NULL;
 }

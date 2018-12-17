@@ -4,7 +4,7 @@
 #include "gc.h"
 
 
-// see also newCons in header file
+// see also NEW_CONS in header file
 Cons* ctorCons(void* head, void* tail) {
     Cons *p = CAN_THROW(GC_malloc(sizeof(Cons)));
     p->header = HEADER_CONS;
@@ -13,7 +13,7 @@ Cons* ctorCons(void* head, void* tail) {
     return p;
 };
 
-// see also newTuple2 in header file
+// see also NEW_TUPLE2 in header file
 Tuple2* ctorTuple2(void* a, void* b) {
     Tuple2 *p = CAN_THROW(GC_malloc(sizeof(Tuple2)));
     p->header = HEADER_TUPLE2;
@@ -22,7 +22,7 @@ Tuple2* ctorTuple2(void* a, void* b) {
     return p;
 };
 
-// see also newTuple3 in header file
+// see also NEW_TUPLE3 in header file
 Tuple3* ctorTuple3(void* a, void* b, void* c) {
     Tuple3 *p = CAN_THROW(GC_malloc(sizeof(Tuple3)));
     p->header = HEADER_TUPLE3;
@@ -32,7 +32,7 @@ Tuple3* ctorTuple3(void* a, void* b, void* c) {
     return p;
 };
 
-// see also newElmInt in header file
+// see also NEW_ELM_INT in header file
 ElmInt* ctorElmInt(i32 value) {
     ElmInt *p = CAN_THROW(GC_malloc(sizeof(ElmInt)));
     p->header = HEADER_INT;
@@ -40,7 +40,7 @@ ElmInt* ctorElmInt(i32 value) {
     return p;
 };
 
-// see also newElmFloat in header file
+// see also NEW_ELM_FLOAT in header file
 ElmFloat* ctorElmFloat(f64 value) {
     ElmFloat *p = CAN_THROW(GC_malloc(sizeof(ElmFloat)));
     p->header = HEADER_FLOAT;
@@ -48,7 +48,7 @@ ElmFloat* ctorElmFloat(f64 value) {
     return p;
 };
 
-// see also newElmChar in header file
+// see also NEW_ELM_CHAR in header file
 ElmChar* ctorElmChar(u32 value) {
     ElmChar *p = CAN_THROW(GC_malloc(sizeof(ElmChar)));
     p->header = HEADER_CHAR;
@@ -61,7 +61,7 @@ ElmChar* ctorElmChar(u32 value) {
 // so that we can find the exact byte length of the String.
 // Like OCaml, https://v1.realworldocaml.org/v1/en/html/memory-representation-of-values.html#string-values
 
-// see also newElmString in header file
+// see also NEW_ELM_STRING in header file
 ElmString* ctorElmString(size_t payload_bytes, char *str) {
     size_t used_bytes = sizeof(Header) + payload_bytes + 1; // 1 byte for padding size
     size_t aligned_words = (used_bytes + SIZE_UNIT-1) / SIZE_UNIT; // ceil

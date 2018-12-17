@@ -148,7 +148,7 @@ int GC_init() {
 */
 void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
     GcState* state = &gc_state;
-    state->roots = (ElmValue*)newCons(
+    state->roots = (ElmValue*)NEW_CONS(
         ptr_to_mutable_ptr,
         state->roots
     );
