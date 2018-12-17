@@ -7,7 +7,7 @@
 
 #ifdef DEBUG
     #include <stdio.h>
-    extern void gc_test_stack_debug(GcStackMap* sm, Closure* c);
+    extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #endif
 
 
@@ -116,7 +116,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
 
     void* push = CAN_THROW(GC_stack_push());
     #ifdef DEBUG
-        gc_test_stack_debug(push, c); // help to show function names in debug output
+        gc_debug_stack_trace(push, c);
         
         printf("Utils_apply evaluating:\n");
         printf("    closure = %p\n", c);
@@ -132,9 +132,9 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
 
     void* pop = CAN_THROW(GC_stack_pop(result, push));
     #ifdef DEBUG
-        gc_test_stack_debug(pop, c); // help to show function names in debug output
+        gc_debug_stack_trace(pop, c);
     #else
-        (void)pop; // suppress compiler warning about unused variable in non-DEBUG mode
+        (void)pop; // suppress "unused variable" warning
     #endif
 
     return result;

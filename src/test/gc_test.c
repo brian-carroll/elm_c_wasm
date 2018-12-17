@@ -641,7 +641,7 @@ ElmValue* gc_replay_test_catch() {
 
 int sn_idx = 0;
 
-void gc_test_stack_debug(GcStackMap* p, Closure* c) {
+void gc_debug_stack_trace(GcStackMap* p, Closure* c) {
 
     char* name = find_closure_func_name(c);
 
