@@ -490,7 +490,7 @@ void* GC_apply_replay() {
     GcStackMap* push;
     GcStackMap* newer;
     Closure* closure;
-    size_t* after_closure = NULL;
+    size_t* after_closure;
 
 
     // Each time we advance to next heap value, need to check if we've passed end of heap.
@@ -504,13 +504,14 @@ void* GC_apply_replay() {
             // Replay points to a Closure that was allocated last time in Utils_apply
             // It was a partially-applied Closure that had some more values applied
             closure = (Closure*)state->replay_ptr;
+            after_closure = next_heap_value(closure);
+
             if (closure->n_values != closure->max_values) {
                 // Closure did not get enough new values to be saturated
                 scenario = Partial_Application;
                 break;
             }
 
-            after_closure = next_heap_value(closure);
             if (after_closure >= state->next_alloc) {
                 scenario = Apply_Alloc_Failed;
                 break;

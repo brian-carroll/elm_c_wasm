@@ -621,7 +621,7 @@ fib n =
     if n <= 0 then
         0
     else
-        fibHelp n 1 0
+        (fibHelp n) 1 0
 */
 Closure fib;
 void* fib_eval(void* args[1]) {
@@ -629,7 +629,9 @@ void* fib_eval(void* args[1]) {
     if (A2(&Utils_le, n, &literal_0) == &True) {
         return &literal_0;
     } else {
-        return A3(&fibHelp, n, &literal_1, &literal_0);
+        // Use currying just to execute more branches of GC code
+        Closure* curried = A1(&fibHelp, n);
+        return A2(curried, &literal_1, &literal_0);
     }
 }
 

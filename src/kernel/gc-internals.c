@@ -221,10 +221,9 @@ void mark_stack_map(GcState* state, size_t* ignore_below) {
                 break;
 
             case Tag_GcStackPop:
-                // going backwards => entering a section that's deeper than before
-                new_depth = current_depth + 1;
             case Tag_GcStackTailCall:
-                if (current_depth == min_depth) {
+                new_depth = current_depth + (stack_item->header.tag == Tag_GcStackPop);
+                if (new_depth == min_depth) {
                     mark_trace(&state->heap, stack_item->replay, ignore_below); // returned value from deeper function to active function
                     mark_allocated = true;
                 }
