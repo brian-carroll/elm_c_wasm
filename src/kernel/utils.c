@@ -13,12 +13,11 @@
 
 void* Utils_clone(void* x) {
     Header* h = (Header*)x;
-    if (h->tag == Tag_Nil || (h->tag == Tag_Custom && h->size == 1)) {
+    if (h->tag == Tag_Nil || (h->tag == Tag_Custom && custom_params(x) == 1)) {
         return x;
     }
     size_t n_bytes = SIZE_UNIT * (size_t)h->size;
-    ElmValue* x_new = GC_malloc(n_bytes);
-    if (x_new == NULL) return pGcFull;
+    ElmValue* x_new = CAN_THROW(GC_malloc(n_bytes));
     GC_memcpy(x_new, x, n_bytes);
     return x_new;
 }
