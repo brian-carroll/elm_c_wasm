@@ -287,18 +287,14 @@ void mark(GcState* state, size_t* ignore_below) {
 
    ==================================================== */
 
-const size_t max_mask = (size_t)1 << (GC_WORD_BITS-1);
-
-#ifdef _WIN32
-    // TODO: look into inline for Windows/MinGW
-    void bitmap_next(size_t* word, size_t* mask) {
-#else
-    inline void bitmap_next(size_t* word, size_t* mask) {
+#ifndef _WIN32
+inline
 #endif
+void bitmap_next(size_t* word, size_t* mask) {
     *mask <<= 1;
     if (*mask == 0) {
         *word = *word + 1;
-        *mask = (size_t)1;
+        *mask = 1;
     }
 }
 
