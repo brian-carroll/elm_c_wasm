@@ -31,15 +31,18 @@
     - Not so much in 2019 so far, but my interest is reviving a bit at the moment and I have more time on my hands.
     - I meant to write some blog posts and see if I could get some interest from the community, but I ended up only writing one. It was on [first class functions][blogpost].
     - I got a bit overwhelmed with the amount of work necessary to get to compile a "hello world" Elm program to Wasm. Because of dead code elimination, you can't get anything out of the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
-    - I think I need a way of building this stuff gradually, but I haven't figure it out yet. I probably need a way to make a program that's partly JS and partly Wasm. Maybe start off with user code in Wasm and all kernel code in JS.
+    - I think I need an approach to get to "hello world" without having to build so much stuff up front. But I haven't figured out how yet. Maybe I can start off with user Elm code in Wasm and all kernel code in JS.
 
 # Notes
+
+## Effects
+TODO
 
 ## GC
 - I've built a prototype Garbage Collector so that I could run some Elm programs (well, hand-compiled ones since I don't have a compiler yet!)
 - It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
 - *The GC fits into less than 7kB of binary Wasm!*
-
+- I have a plan for how kernel code in C/Wasm can do mutations but still use this immutable GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
 
 ## Closures
 I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](./src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
