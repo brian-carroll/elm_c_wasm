@@ -3,9 +3,9 @@
 - Uses C as an intermediate language
     - Elm Compiler would output C code instead of JavaScript. That would be further compiled to Wasm in a second step
     - Other components of the runtime such as Elm Kernel code, garbage collector, etc. would also be in C (this repo)
-    - This approach means we don't have to write kernel code in WebAssembly (I've tried, it's horrible). And it's a lot easier to debug the compiler if its output is C rather than WebAssembly. C is much more readable.
+    - This approach means we don't have to write kernel code in WebAssembly (I've tried, it's horrible). Also it's a lot easier to debug the compiler if its output is C rather than WebAssembly.
 - We can't build on top of of the things the come for free in JavaScript, like first-class functions, objects, etc. We have to implement some of those things in C. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
-- Gradually build Elm's core libraries in C and write some tests to mimic generated code from user programs.
+- The idea is to gradually build Elm's core libraries in C and write some tests to mimic generated code from user programs.
 
 # Project Status
 - Kernel code / core libs
