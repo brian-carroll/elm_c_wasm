@@ -1,7 +1,7 @@
 # Project goals
 - An experiment to try to implement Elm in WebAssembly
 - Uses C as an intermediate language
-    - Elm Compiler would output C code instead of JavaScript. That would be further compiled to Wasm in a second step
+    - Elm Compiler would output C code instead of JavaScript, to be further compiled to Wasm in a second step
     - Other components of the runtime such as Elm Kernel code, garbage collector, etc. would also be in C (this repo)
     - This approach means we don't have to write kernel code in WebAssembly (I've tried, it's horrible). Also it's a lot easier to debug the compiler if its output is C rather than WebAssembly.
 - We can't build on top of of the things the come for free in JavaScript, like first-class functions, objects, etc. We have to implement some of those things in C. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
@@ -12,7 +12,7 @@
     - [x] C data structures for Int, Float, Char, String, List, Tuple, Custom types, Records, Functions
     - [x] Function application and currying
     - [x] Extensible record updates and accessors
-    - [x] A working Garbage collector (no idea what the performance is like though)
+    - [x] A prototype Garbage Collector, 7kB download size 😊 No idea what the performance is like! See [gc.c](/src/kernel/gc.c)
     - [x] Numerical operators from the `Basics` library
     - [ ] List package
     - [ ] Tackle String encoding questions
@@ -34,7 +34,7 @@
 # Notes
 
 ## GC
-- I've built a basic Garbage Collector so that I could run some Elm programs (well, hand-compiled ones since I don't have a compiler yet!)
+- I've built a prototype Garbage Collector so that I could run some Elm programs (well, hand-compiled ones since I don't have a compiler yet!)
 - It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
 - *The GC fits into less than 7kB of binary Wasm!*
 
