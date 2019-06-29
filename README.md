@@ -21,8 +21,10 @@
     - [ ] `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
 
 - Elm compiler modifications
-    - [x] intial experiments modifying the Elm compiler to generate Wasm (decided not to go this way)
+    - [x] Intial experiments [forking][compiler] the Elm compiler to generate Wasm (decided not to go this way)
     - [ ] Modify Elm compiler to generate C
+
+[compiler]: https://github.com/brian-carroll/elm-compiler/tree/wasm
 
 - My activity levels and motivation
     - I did lots of work on this during the second half of 2018
