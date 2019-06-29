@@ -4,7 +4,7 @@
     - Elm Compiler would output C code instead of JavaScript, to be further compiled to Wasm in a second step
     - Other components of the runtime such as Elm Kernel code, garbage collector, etc. would also be in C (this repo)
     - This approach makes it much easier to write Kernel code and to debug the output of the Elm compiler.
-- We can't build on top of of the things the come for free in JavaScript, like first-class functions, objects, etc. We have to implement some of those things in C. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
+- C doesn't have first-class functions or high-level data structures like objects. We have to implement some of those things in C. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
 - The idea is to gradually build Elm's core libraries in C and write some tests to mimic generated code from user programs.
 
 # Project Status
