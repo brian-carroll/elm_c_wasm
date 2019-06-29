@@ -14,9 +14,9 @@
     - [x] Extensible record updates and accessors
     - [x] A prototype Garbage Collector, 7kB download size 😊 No idea what the performance is like! See [gc.c](/src/kernel/gc.c)
     - [x] Numerical operators from the `Basics` library
-    - [ ] List package
-    - [ ] Tackle String encoding questions
-    - [ ] Write String package
+    - [ ] List module
+    - [ ] Tackle String encoding questions, UTF-8, UTF-16, browser/JS interop, etc.
+    - [ ] Write String module
     - [ ] JSON & ports (we need to do all effects in JS, not Wasm, which probably means using ports heavily)
     - [ ] `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
 
