@@ -17,7 +17,7 @@
     - [ ] List module
     - [ ] Tackle String encoding questions, UTF-8, UTF-16, browser/JS interop, etc.
     - [ ] Write String module
-    - [ ] JSON & ports (we need to do all effects in JS, not Wasm, which probably means using ports heavily)
+    - [ ] JSON & ports (currently most effects are not available in Wasm, which probably means using ports heavily)
     - [ ] `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
 
 - Elm compiler modifications
