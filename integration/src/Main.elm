@@ -6,35 +6,33 @@ import Html.Events exposing (onClick)
 
 
 type alias Model =
-    { count : Int }
+    Int
 
 
 initialModel : Model
 initialModel =
-    { count = 0 }
+    0
 
 
-type Msg
-    = Increment
-    | Decrement
+type alias Msg =
+    Int
 
 
 update : Msg -> Model -> Model
 update msg model =
-    case msg of
-        Increment ->
-            { model | count = model.count + 1 }
+    if msg > 0 then
+        model + 1
 
-        Decrement ->
-            { model | count = model.count - 1 }
+    else
+        model - 1
 
 
 view : Model -> Html Msg
 view model =
     div []
-        [ button [ onClick Increment ] [ text "+1" ]
-        , div [] [ text <| String.fromInt model.count ]
-        , button [ onClick Decrement ] [ text "-1" ]
+        [ button [ onClick 1 ] [ text "+1" ]
+        , div [] [ text <| String.fromInt model ]
+        , button [ onClick (-1) ] [ text "-1" ]
         ]
 
 
