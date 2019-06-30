@@ -5,15 +5,26 @@
     - All user code in Wasm
     - Some of kernel in JS, some in Wasm (start with 100% JS)
 
-* Platform/runtime
-  - Goals
-    - be able to create a `Program`
-    - figure out some of the tricky stuff to do with effects and JS interop
-  - Translate Scheduler.js and Platform.js to C & Elm
-    - Maybe Elm isn't the best way to go. Might be better in C.
-    - The only constraint I really need is that new must point to old. Other than that I can mutate values.
-  - Scheduler & Tasks
-  - Ports, Effect Managers, HTTP, vdom
+# Get unstuck: Wasm `update` function
+
+- Patch Wasm into compiled elm.js
+  - Let the Elm compiler produce its usual elm.js output
+  - Create a Wasm version of `update`, with a JS wrapper
+  - Insert a line of JS into elm.js to overwrite the value of `author$project$Main$update` just before it gets used in the definition of `var author$project$Main$main`
+  - Do all of this in a Node script as part of the build process
+  - Later get the Elm compiler to do it
+
+# Platform/runtime
+
+- Goals
+  - be able to create a `Program`
+  - figure out some of the tricky stuff to do with effects and JS interop
+- Translate Scheduler.js and Platform.js to C & Elm
+  - Maybe Elm isn't the best way to go. Might be better in C.
+  - The only constraint I really need is that new must point to old. Other than that I can mutate values.
+- Scheduler & Tasks
+- Ports, Effect Managers, HTTP, vdom
+
 * Other core libs
   - JSON (required for all the effects stuff)
 * More handwritten prototypes of stuff that will be code generated
