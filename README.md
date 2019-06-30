@@ -1,50 +1,89 @@
 # Project goals
+
 - An experiment to try to implement Elm in WebAssembly
 - Uses C as an intermediate language
-    - Elm Compiler would output C code instead of JavaScript, to be further compiled to Wasm in a second step
-    - Other components of the runtime such as Elm Kernel code, garbage collector, etc. would also be in C (this repo)
-    - This approach makes it much easier to write Kernel code and to debug the output of the Elm compiler.
+  - Elm Compiler would output C code instead of JavaScript, to be further compiled to Wasm in a second step
+  - Other components of the runtime such as Elm Kernel code, garbage collector, etc. would also be in C (this repo)
+  - This approach makes it much easier to write Kernel code and to debug the output of the Elm compiler.
 - C doesn't have first-class functions or high-level data structures like JavaScript does. It's a lower-level platform, so we have to implement some of those things. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
 - The idea is to gradually build Elm's core libraries in C and write some tests to mimic 'compiled' code from Elm programs.
 
-# Project Status
+# Progress
+
 - Kernel code / core libs
-    - [x] C data structures for Int, Float, Char, String, List, Tuple, Custom types, Records, Functions
-    - [x] Function application and currying
-    - [x] Extensible record updates and accessors
-    - [x] A prototype Garbage Collector, 7kB download size 😊 No idea what the performance is like! See [gc.c](/src/kernel/gc.c)
-    - [x] Numerical operators from the `Basics` library
-    - [ ] List module
-    - [ ] Tackle String encoding questions, UTF-8, UTF-16, browser/JS interop, etc.
-    - [ ] Write String module
-    - [ ] JSON & ports (currently most effects are not available in Wasm, which probably means using ports heavily)
-    - [ ] `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
+
+  - [x] Implement C data structures for all Elm value types: `Int`, `Float`, `Char`, `String`, `List`, tuples, custom types, records, functions
+  - [x] Function application and currying
+  - [x] Extensible record updates and accessors
+  - [x] A prototype Garbage Collector (7kB download size 😊 No idea what the performance is like! See [gc.c](/src/kernel/gc.c))
+  - [x] Numerical operators from the `Basics` library (`+`, `-`, `*`, `/`)
+  - [ ] List module
+  - [ ] Tackle String encoding questions, UTF-8, UTF-16, browser/JS interop, etc.
+  - [ ] Write String module
+  - [ ] JSON & ports (currently most effects are not available in Wasm, which probably means using ports heavily)
+  - [ ] `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
 
 - Elm compiler modifications
-    - [x] Intial experiments [forking][compiler] the Elm compiler to generate Wasm (decided not to go this way)
-    - [ ] Modify Elm compiler to generate C
+  - [x] Initial experiments [forking][compiler] the Elm compiler to generate Wasm (decided to abandon this direction)
+  - [ ] Modify Elm compiler to generate C
 
 [compiler]: https://github.com/brian-carroll/elm-compiler/tree/wasm
 
-- My activity levels and motivation
-    - I did lots of work on this during the second half of 2018
-    - Not so much in 2019 so far, but my interest is reviving a bit at the moment and I have more time on my hands.
-    - I meant to write some blog posts and see if I could get some interest from the community, but I ended up only writing one. It was on [first class functions][blogpost].
-    - I got a bit overwhelmed with the amount of work necessary to get to compile a "hello world" Elm program to Wasm. Because of dead code elimination, you can't get anything out of the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
-    - I think I need an approach to get to "hello world" without having to build so much stuff up front. But I haven't figured out how yet. Maybe I can start off with user Elm code in Wasm and all kernel code in JS.
+- My activity levels!
+  - I did lots of work on this during 2018, particularly the 2nd half
+  - Other things in my life got busy in the first half of 2019, but my interest is reviving at the moment and I have more time on my hands again!
+  - I meant to write some blog posts and see if I could get some interest from the community, but I ended up only writing one. It was on [first class functions][blogpost].
+
+# Big picture stuff
+
+- Effects
+  - Wasm MVP has no Web APIs like DOM, XHR, etc., so most effect managers must be JS only for Wasm MVP
+  - Unclear how to interface with browser APIs from C, I guess some header files you `#include` and call functions on.
+- Browser GC
+
+  - Wasm spec talks about data types like arrays, objects, opaque references.
+  - Unclear what this looks like from C. I guess some header files with functions you can call. Will a pointer to an array look like a pointer or like an integer? Seems like they'd have to prevent dereferencing so I guess you treat it as an integer ID and all the functions that operate on that type take this ID as an arg.
+
+- Custom GC
+
+  - Impact of GC optimizations based on immutability
+    - Want some way to allow Kernel to mutate things despite GC being optimized for immutability.
+    - Solution: Keep all mutations outside of the heap. If an Effect Manager needs to dynamically allocate something and mutate it, it can first create new immutable value on the heap, then just mutate an off-heap pointer to point at new instead of old. This is like the way `model` updates already work in elm.js.
+    - Process IDs being references may be a bit of a pain. Ideally they'd be integers. But only really used for `kill`, which isn't fully implemented even in JS.
+
+- Kernel is now in multiple languages
+  - Quite a bit of maintenance
+  - Would it be good to put more of the code in Elm?
 
 # Notes
 
+## Mixing JS and Wasm in compiled output
+
+- I'd been getting a bit overwhelmed with the amount of work necessary to get to compile a "hello world" Elm program to Wasm. Because of dead code elimination, you can't get any output from the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
+- I need a way for the Elm program to end up as a mix of JS and Wasm. That way I can keep the kernel in JS initially, with the Elm code compiled to Wasm. Afterwards I'll see about gradually replacing the kernel with Wasm. Maybe that's not even needed?
+- The barrier here is the fact that everything crossing the JS/Wasm boundary has to be serialized and de-serialized (as JSON strings)
+- How does that work for `Cmd`?
+  - Underlying union has a variant for Process_map containing a function, but this variant appears to never be used?!
+  - `Cmd Msg` going from `update` to the runtime will have a `Msg` constructor function inside it
+- JS calling `update`
+  - Need to export a curried version of `update` so that JS `A2` works
+  - Exporting an Elm function from Wasm to JS
+    - Do all the currying in JS land. Inner function calls into Wasm.
+    - Wasm export
+
 ## Effects
+
 TODO
 
 ## GC
+
 - I've built a prototype Garbage Collector so that I could run some Elm programs (well, hand-compiled ones since I don't have a compiler yet!)
 - It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
-- *The GC fits into less than 7kB of binary Wasm!*
+- _The GC fits into less than 7kB of binary Wasm!_
 - I have a plan for how kernel code in C/Wasm can do mutations but still use this immutable GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
 
 ## Closures
+
 I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](./src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
 
 In a nutshell, the Closure data structure is a value that can be passed around an Elm program. It stores up any arguments that are partially applied to it, until it is "full". It also contains a function pointer, so that when the last argument is applied, that function can be called. A working example of all of this can be found in `test_apply` in [utils_test.c](./src/test/utils_test.c).
@@ -53,62 +92,73 @@ The version in the blog post used the same number of bytes regardless of the num
 
 [blogpost]: https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
 
-
 ## Extensible Records
-- A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). 
+
+- A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access).
 - In this project they are split into two C structures, `Record` and `FieldSet`, defined in [types.h](./src/kernel/types.h)
 - The `Record` stores the values only. The field names are stored in a `FieldSet`, shared by all values of the same Record type.
 - Field names are represented as integers. The compiler will convert every field name in the project to a unique integer, using the same kind of optimisation the Elm 0.19 compiler uses to map field names to short combinations of letters.
 
 - Record accessor functions
-    - Elm has special functions for accessing records, prefixed by a dot, like `.name`. The important thing is that this function can be applied to _any_ Record type that contains a field called `name`.
-    - Implemented using a Kernel function that takes the field ID as an Elm Int, and the record itself
-    ```elm
-        recordAccess : Int -> r -> a
-        recordAccess fieldId record =
-            -- Kernel C code
-            -- 1. Find the position of the `fieldId` in the record's FieldSet
-            -- 2. Look up the same position in `record`
-            -- 3. Return the value found
-    ```
-    - An accessor function for a particular field is created by partially applying the field ID in the generated code. In Elm syntax it would look something like the following:
-    ```elm
-        .name : { r | name : a } -> a
-        .name = recordAccess 123  -- where 123 represents the field called 'name'
-    ```
-    - Field lookups are implemented as a binary search, which requires the fields to be pre-sorted by the Elm compiler
-    - `recordAccess` is not safe if the field does not actually exist in the record, but it's not available to user Elm code, it can only be emitted by the compiler.
+
+  - Elm has special functions for accessing records, prefixed by a dot, like `.name`. The important thing is that this function can be applied to _any_ Record type that contains a field called `name`.
+  - Implemented using a Kernel function that takes the field ID as an Elm Int, and the record itself
+
+  ```elm
+      recordAccess : Int -> r -> a
+      recordAccess fieldId record =
+          -- Kernel C code
+          -- 1. Find the position of the `fieldId` in the record's FieldSet
+          -- 2. Look up the same position in `record`
+          -- 3. Return the value found
+  ```
+
+  - An accessor function for a particular field is created by partially applying the field ID in the generated code. In Elm syntax it would look something like the following:
+
+  ```elm
+      .name : { r | name : a } -> a
+      .name = recordAccess 123  -- where 123 represents the field called 'name'
+  ```
+
+  - Field lookups are implemented as a binary search, which requires the fields to be pre-sorted by the Elm compiler
+  - `recordAccess` is not safe if the field does not actually exist in the record, but it's not available to user Elm code, it can only be emitted by the compiler.
 
 - Record update
-    - `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
-    - This Elm syntax is implemented using a C function `record_update`, found in [utils.c](./src/kernel/utils.c)
-    - First it clones the original record
-    - Then for each field to be updated
-        - Finds the index of the field in the record's FieldSet
-        - Changes the value at the same index in the Record
-
+  - `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
+  - This Elm syntax is implemented using a C function `record_update`, found in [utils.c](./src/kernel/utils.c)
+  - First it clones the original record
+  - Then for each field to be updated
+    - Finds the index of the field in the record's FieldSet
+    - Changes the value at the same index in the Record
 
 ## SuperTypes / constrained type variables
+
 TODO
 
 ## Boxed vs unboxed numbers
+
 TODO
 
 ## Headers
+
 TODO
 
 ## Padding & alignment
+
 TODO
 
 ## Memory: stack, heap, static, registers
+
 TODO
 
 ## Dropping type info
+
 TODO
 
 ## Alternatives to C
 
 ### Rust
+
 I really wanted to use Rust. It's just generally a better language. Hey, it's even heavily influenced by Haskell and ML, just like Elm!
 
 But using Rust to implement Elm was difficult enough that I got frustrated and demotivated and stopped working on this project for a few weeks. This project is a hobby for me, so if I'm not enjoying it then it won't happen. And at some point it was either drop the project or switch to C.
@@ -134,5 +184,3 @@ That all worked reasonably well. I got an example Elm program working, which imp
 However as soon as I had my first real piece of debugging work to do, I realised it was pretty painful. That seems kind of obvious, but I'd thought the DSL would help a lot more than it did. Wasm is just so low-level I couldn't keep enough of it in my mind at one time to be useful for debugging.
 
 However I really learned a lot about WebAssembly by doing this.
-
-
