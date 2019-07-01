@@ -5,7 +5,6 @@ emcc src/update.c \
   -O3 \
   $EM_DEBUG \
   -o build/update.js \
-  -s ASSERTIONS=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME='createEmscriptenModule' \
   -s EXPORTED_FUNCTIONS='["update"]' \
