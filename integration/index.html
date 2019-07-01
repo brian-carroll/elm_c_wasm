@@ -1,33 +1,8 @@
 <html>
   <head>
-    <script src="./dist/elm.js"></script>
+    <script src="./dist/bundle.js"></script>
   </head>
   <body>
     <main></main>
-    <script>
-      // Code borrowed from ellie-app.com
-      function onReady(cb) {
-        function completed() {
-          document.removeEventListener('DOMContentLoaded', completed);
-          window.removeEventListener('load', completed);
-          cb();
-        }
-        if (
-          document.readyState === 'complete' ||
-          (document.readyState !== 'loading' &&
-            !document.documentElement.doScroll)
-        ) {
-          setTimeout(completed);
-        } else {
-          document.addEventListener('DOMContentLoaded', completed);
-          window.addEventListener('load', completed);
-        }
-      }
-    </script>
-    <script>
-      onReady(function() {
-        var app = Elm.Main.init({ node: document.querySelector('main') });
-      });
-    </script>
   </body>
 </html>
