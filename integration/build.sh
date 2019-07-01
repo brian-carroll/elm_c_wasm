@@ -1,6 +1,9 @@
+# EM_DEBUG="-g"
+ELM_OPTIMIZE='--optimize'
+
 emcc src/update.c \
   -O3 \
-  -g \
+  $EM_DEBUG \
   -o build/update.js \
   -s ASSERTIONS=1 \
   -s MODULARIZE=1 \
@@ -10,7 +13,7 @@ emcc src/update.c \
   && echo "emcc success" \
   &
 
-elm make src/Main.elm --output build/elm.js > /dev/null \
+elm make src/Main.elm $ELM_OPTIMIZE --output build/elm.js > /dev/null \
   && echo "elm success" \
   &
 
@@ -30,6 +33,12 @@ $(head -n $before_lines build/elm.js)
 $(cat src/patch.js)
 $(tail +$line_no build/elm.js)
 "
+if [ -n "$ELM_OPTIMIZE" ] && which google-closure-compiler > /dev/null
+then
+  echo "Minifying Elm"
+  elm_code=$(echo "$elm_code" | google-closure-compiler)
+fi
+
 emscripten_code=$(cat build/update.js)
 init_code=$(cat src/init.js)
 
