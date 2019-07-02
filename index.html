@@ -1,0 +1,60 @@
+<html>
+  <head>
+    <style>
+      h1 {
+        margin-bottom: 50px;
+      }
+      #container {
+        padding: 30px;
+      }
+      table {
+        border: solid darkgray 2px;
+        border-collapse: collapse;
+      }
+      td {
+        border: solid black 1px;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Elm-Wasm demo pages</h1>
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <a href="update-int/index.html">Proof of concept</a>
+            </td>
+            <td>
+              Simplest possible app to get the integration set up between Elm
+              and Wasm
+              <ul>
+                <li>
+                  Basic up/down counter (copied from
+                  <a href="https://ellie-app.com/new">Ellie</a> default app)
+                </li>
+                <li>
+                  Only the <code>update</code> function is C compiled to Wasm,
+                  everything else is Elm compiled to JS
+                </li>
+                <li>
+                  Use Emscripten to compile C &rarr; JS + Wasm
+                </li>
+                <li>
+                  Use a Bash build script to patch the Elm and Emscripten JS
+                  code together. (Something a future Elm compiler could do)
+                </li>
+                <li>
+                  Use the simplest possible types for integrating with C:
+                  <code>Model</code> and <code>Msg</code> types are both
+                  <code>Int</code>
+                </li>
+              </ul>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>
