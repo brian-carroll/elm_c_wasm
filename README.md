@@ -8,6 +8,11 @@
 - C doesn't have first-class functions or high-level data structures like JavaScript does. It's a lower-level platform, so we have to implement some of those things. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
 - The idea is to gradually build Elm's core libraries in C and write some tests to mimic 'compiled' code from Elm programs.
 
+# Demos
+
+https://brian-carroll.github.io/elm_c_wasm/
+
+
 # Progress
 
 - Kernel code / core libs
