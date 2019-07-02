@@ -48,3 +48,8 @@ $elm_code
 $init_code
 });
 " > dist/bundle.js
+
+deploy_dir=../../../gh-pages/update-int
+mkdir -p $deploy_dir/dist
+cp dist/* $deploy_dir/dist
+cp index.html $deploy_dir
