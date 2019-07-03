@@ -1,5 +1,5 @@
 # EM_DEBUG="-g"
-ELM_OPTIMIZE='--optimize'
+# ELM_OPTIMIZE='--optimize'
 
 emcc src/update.c \
   -O3 \
