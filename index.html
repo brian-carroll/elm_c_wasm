@@ -28,31 +28,30 @@
         <tbody>
           <tr>
             <td>
-              <a href="update-int/index.html">Proof of concept</a>
+              <a href="update-int/index.html">Test environment</a>
             </td>
             <td>
-              Simplest possible app to get the integration set up between Elm
-              and Wasm
+              Set up a test environment to allow an Elm program to be
+              implemented partly in JS and partly in Wasm. Gives me a starting
+              point to make incremental progress.
               <ul>
                 <li>
-                  Basic up/down counter (copied from
-                  <a href="https://ellie-app.com/new">Ellie</a> default app)
+                  Basic up/down counter example, using <code>Int</code> for both
+                  <code>Model</code> and <code>Msg</code> types
                 </li>
                 <li>
-                  Only the <code>update</code> function is C compiled to Wasm,
-                  everything else is Elm compiled to JS
+                  Only the <code>update</code> function is running in Wasm, the
+                  rest is running in JS
                 </li>
                 <li>
-                  Use Emscripten to compile C &rarr; JS + Wasm
+                  Wasm <code>update</code> function is "hand compiled". I
+                  manually wrote the C code that I think a future Elm compiler
+                  could generate, then compiled that to Wasm.
                 </li>
                 <li>
-                  Use a Bash build script to patch the Elm and Emscripten JS
-                  code together. (Something a future Elm compiler could do)
-                </li>
-                <li>
-                  Use the simplest possible types for integrating with C:
-                  <code>Model</code> and <code>Msg</code> types are both
-                  <code>Int</code>
+                  The Wasm is inserted into the Elm program by running the
+                  generated JS through a Bash script. This would eventually be
+                  done by the code generator in the Elm compiler.
                 </li>
               </ul>
             </td>
