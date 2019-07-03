@@ -100,15 +100,27 @@ int main(int argc, char ** argv) {
         {NULL, 0, NULL, 0}
     };
 
-
+    // By default in Bash shell, just do what's specified
     bool types = false;
     bool basics = false;
     bool string = false;
     bool utils = false;
     bool gc = false;
 
-    #if defined(_WIN32) || defined(__EMSCRIPTEN__)
+    // Running in a Windows CMD shell
+    // Prob via Codelite IDE. Dunno how to set up CLI args there yet!
+    // Set this up for whatever I'm working on
+    #if defined(_WIN32)
     gc = true;
+    verbose = true;
+    #endif
+
+    // In the browser. No CLI. Set reasonable defaults.
+    #if defined(__EMSCRIPTEN__)
+    types = true;
+    utils = true;
+    basics = true;
+    string = true;
     verbose = true;
     #endif
 

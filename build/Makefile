@@ -1,9 +1,10 @@
 CC=gcc
 CFLAGS=-Wall -O1 -DDEBUG
 
-
-SRC := ../src
-DIST := ../dist
+ROOT := ..
+SRC := $(ROOT)/src
+DIST := $(ROOT)/dist
+DEPLOY := $(ROOT)/../gh-pages/unit-tests
 SOURCES := $(wildcard $(SRC)/*/*.c)
 HEADERS := $(wildcard $(SRC)/*/*.h)
 
@@ -20,7 +21,7 @@ verbose: $(DIST)/bin/test
 
 dist: check www
 
-www: $(DIST)/www/test.js
+www: $(DIST)/www/test.html
 
 gc-size:
 	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/www/gc.js
@@ -35,6 +36,12 @@ watch:
 
 build.log: $(SOURCES) $(HEADERS)
 	make check | tee build.log
+
+gh-pages: www
+	mkdir -p $(DEPLOY)/dist/www
+	cp $(ROOT)/index.html $(DEPLOY)
+	cp $(DIST)/www/test.js $(DEPLOY)/dist/www
+	cp $(DIST)/www/test.wasm $(DEPLOY)/dist/www
 
 
 # Makefile squiggles:
@@ -51,5 +58,5 @@ build.log: $(SOURCES) $(HEADERS)
 $(DIST)/bin/test: $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) $(SOURCES) -o $@ -lm
 
-$(DIST)/www/test.js: $(SOURCES) $(HEADERS)
-	emcc $(CFLAGS) -s WASM=1 $(SOURCES) -o $@
+$(DIST)/www/test.html: $(SOURCES) $(HEADERS)
+	emcc $(CFLAGS) -s ASSERTIONS=1 $(SOURCES) -o $@
