@@ -18,12 +18,7 @@
 #include "../kernel/string.h"
 #include "../kernel/gc.h"
 
-#ifdef __EMSCRIPTEN__
-int verbose = true;
-#else
 int verbose = false;
-#endif
-
 int tests_run = 0;
 int assertions_made = 0;
 
@@ -115,15 +110,6 @@ int main(int argc, char **argv)
 // Set this up for whatever I'm working on
 #if defined(_WIN32)
     gc = true;
-    verbose = true;
-#endif
-
-// In the browser. No CLI. Set reasonable defaults.
-#if defined(__EMSCRIPTEN__)
-    types = true;
-    utils = true;
-    basics = true;
-    string = true;
     verbose = true;
 #endif
 
