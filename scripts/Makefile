@@ -5,8 +5,8 @@ ROOT := ..
 SRC := $(ROOT)/src
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages/unit-tests
-SOURCES := $(wildcard $(SRC)/*/*.c)
-HEADERS := $(wildcard $(SRC)/*/*.h)
+SOURCES := $(shell find $(SRC) -name '*.c')
+HEADERS := $(shell find $(SRC) -name '*.h')
 
 .PHONY: all check dist www gc-size clean watch
 
