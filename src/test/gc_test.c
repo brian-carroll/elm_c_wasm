@@ -132,7 +132,7 @@ void print_value(ElmValue *v)
                v->closure.n_values, v->closure.max_values);
         for (size_t i = 0; i < v->closure.n_values; ++i)
         {
-            printf("%p ", v->record.values[i]);
+            printf("%p ", v->closure.values[i]);
         }
         break;
     case Tag_GcException:
@@ -144,12 +144,12 @@ void print_value(ElmValue *v)
                v->gc_stackmap.newer, v->gc_stackmap.older);
         break;
     case Tag_GcStackPop:
-        printf("GcStackPop (%s) newer: %p older: %p data: %p",
+        printf("GcStackPop (%s) newer: %p older: %p replay: %p",
                find_stackmap_func_name(&v->gc_stackmap),
                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.replay);
         break;
     case Tag_GcStackTailCall:
-        printf("GcStackTailCall newer: %p older: %p data: %p",
+        printf("GcStackTailCall newer: %p older: %p replay: %p",
                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.replay);
         break;
     case Tag_GcStackEmpty:
@@ -161,8 +161,14 @@ void print_value(ElmValue *v)
 
 void print_heap(GcState *state)
 {
+#ifdef TARGET_64BIT
     printf("|    Address     | Mark | Size | Value\n");
     printf("| -------------- | ---- | ---- | -----\n");
+
+#else
+    printf("| Address  | Mark | Size | Value\n");
+    printf("| -------- | ---- | ---- | -----\n");
+#endif
 
     size_t *first_value = state->heap.start;
     ElmValue *v = (ElmValue *)first_value;
@@ -747,8 +753,9 @@ char *gc_replay_test()
     func_map[4] = (struct fn){Basics_sub.evaluator, "Basics_sub"};
     func_map[5] = (struct fn){Basics_mul.evaluator, "Basics_mul"};
 
-    // pretend memory is nearly full
-    size_t *ignore_below = state->heap.end - 220;
+    size_t *ignore_below = state->heap.start + 1024; // nice empty heap
+    // size_t *ignore_below = state->heap.end - 220;    // pretend memory is nearly full
+
     state->next_alloc = ignore_below;
 
     literal_0 = (ElmInt){
@@ -771,10 +778,15 @@ char *gc_replay_test()
             printf("%p : %s\n", func_map[i].evaluator, func_map[i].name);
         }
         printf("stack depth = %zd\n", state->stack_depth);
+        printf("True = %p\n", &True);
+        printf("False = %p\n", &False);
+        printf("Int 0 = %p\n", &literal_0);
+        printf("Int 1 = %p\n", &literal_1);
+        printf("Int %d = %p\n", literal_n.value, &literal_n);
     }
 
-    mu_assert("Expect heap overflow",
-              result->header.tag == Tag_GcException);
+    // mu_assert("Expect heap overflow",
+    //           result->header.tag == Tag_GcException);
 
     state->stack_depth = 1;
 
