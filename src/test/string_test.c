@@ -7,9 +7,11 @@
 
 size_t String_bytes(ElmString *s);
 
-char* string_bytes_test() {
-    if (verbose) printf("## String_bytes\n");
-    ElmString* str0 = NEW_ELM_STRING(0, "");
+char *string_bytes_test()
+{
+    if (verbose)
+        printf("## String_bytes\n");
+    ElmString *str0 = NEW_ELM_STRING(0, "");
     size_t len0 = String_bytes(str0);
     mu_assert("Expect correct byte length for string length 0", len0 == 0);
     mu_assert("Expect correct byte length for string length 1", String_bytes(NEW_ELM_STRING(1, "1")) == 1);
@@ -22,17 +24,19 @@ char* string_bytes_test() {
     mu_assert("Expect correct byte length for string length 10", String_bytes(NEW_ELM_STRING(10, "12345789a")) == 10);
     mu_assert("Expect correct byte length for string length 11", String_bytes(NEW_ELM_STRING(11, "12345789ab")) == 11);
     mu_assert("Expect correct byte length for string length 12", String_bytes(NEW_ELM_STRING(12, "12345789abc")) == 12);
-    if (verbose) printf("OK\n");
+    if (verbose)
+        printf("OK\n");
     return NULL;
 }
 
+char *string_append_test()
+{
+    ElmString *h = NEW_ELM_STRING(5, "hello");
+    ElmString *w = NEW_ELM_STRING(6, " world");
+    ElmString *hw = A2(&String_append, h, w);
 
-char* string_append_test() {
-    ElmString* h = NEW_ELM_STRING(5, "hello");
-    ElmString* w = NEW_ELM_STRING(6, " world");
-    ElmString* hw = A2(&String_append, h, w);
-
-    if (verbose) {
+    if (verbose)
+    {
         printf("## String_append\n");
         printf("\"%s\" ++ \"%s\" == \"%s\"\n", h->bytes, w->bytes, hw->bytes);
         printf("hello: %s\n", hex(h, sizeof(ElmString) + 8));
@@ -41,15 +45,15 @@ char* string_append_test() {
     }
 
     mu_assert("Expect: \"hello\" ++ \" world\" == \"hello world\"",
-        strcmp((const char*)hw->bytes, "hello world") == 0
-    );
+              strcmp((const char *)hw->bytes, "hello world") == 0);
 
     return NULL;
 }
 
-
-char* string_test() {
-    if (verbose) {
+char *string_test()
+{
+    if (verbose)
+    {
         printf("\n");
         printf("String\n");
         printf("------\n");
