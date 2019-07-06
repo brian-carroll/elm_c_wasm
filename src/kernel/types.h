@@ -51,6 +51,12 @@ typedef struct
 #define TARGET_64BIT
 #endif
 
+#if defined(_WIN32)
+#define INLINE
+#else
+#define INLINE inline
+#endif
+
 // Header size field has units corresponding to this many bytes:
 #define SIZE_UNIT sizeof(size_t)
 

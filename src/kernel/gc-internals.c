@@ -303,11 +303,7 @@ void mark(GcState *state, size_t *ignore_below)
 
    ==================================================== */
 
-#ifndef _WIN32
-inline
-#endif
-    void
-    bitmap_next(size_t *word, size_t *mask)
+INLINE void bitmap_next(size_t *word, size_t *mask)
 {
     *mask <<= 1;
     if (*mask == 0)

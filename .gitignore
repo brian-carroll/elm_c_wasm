@@ -9,7 +9,9 @@
 *.o
 *.d
 *.log
+*.gch
 a.out
+build/
 dist/
 junk.c
 
