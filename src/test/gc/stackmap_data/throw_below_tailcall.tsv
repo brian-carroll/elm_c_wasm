@@ -1,0 +1,18 @@
+idx	stackmap	depth	backlink	mark	replay
+0	empty	0			
+1	push	1		TRUE	
+2	allocate	1		FALSE	
+3	push	2		FALSE	
+4	allocate	2		FALSE	
+5	push	3		FALSE	
+6	allocate	3		FALSE	
+7	pop	2	5	FALSE	FALSE
+8	allocate	2		FALSE	
+9	pop	1	3	FALSE	FALSE
+10	allocate	1		FALSE	
+11	tailcall	1	1	TRUE	TRUE
+12	allocate	1		TRUE	
+13	push	2		TRUE	
+14	allocate	2		TRUE	
+15	push	3		TRUE	
+16	allocate	3		TRUE	
