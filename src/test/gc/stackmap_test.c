@@ -6,6 +6,8 @@
 #include "../../kernel/gc.h"
 #include "../../kernel/gc-internals.h"
 
+extern GcState gc_state;
+
 const int MAX_LINES = 50;
 
 struct heap_item_spec
@@ -27,15 +29,17 @@ void parse_heap_item_spec(char *line, struct heap_item_spec *spec)
     int backlink = 0;
     char mark[6];
     char replay[6];
-    sscanf(
+    int cols = sscanf(
         line,
-        "%d\t%s\t%d\t%d\t%s\t%s",
+        "%d\t%s\t%d\t%s\t%d\t%s",
         &idx,
         tag,
         &depth,
-        &backlink,
         mark,
+        &backlink,
         replay);
+
+    printf("read %d columns at row index %d\n", cols, idx);
 
     if (!strcmp(tag, "empty"))
     {
@@ -120,6 +124,20 @@ int find_idx_from_pointer(void *p, struct heap_item_spec heap_spec[])
     return -1;
 }
 
+bool addr_is_marked(void *p)
+{
+    GcState *state = &gc_state;
+    size_t *pword = (size_t *)p;
+    size_t slot = pword - state->heap.start;
+    if (slot >> (GC_WORD_BITS - 1))
+        return true; // off heap => not garbage, stop tracing
+    size_t word = slot / GC_WORD_BITS;
+    size_t bit = slot % GC_WORD_BITS;
+    size_t mask = (size_t)1 << bit;
+
+    return (state->heap.bitmap[word] & mask) != 0;
+}
+
 void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
 {
     struct heap_item_spec *spec = &heap_spec[idx];
@@ -144,11 +162,19 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
     };
     char addr[16];
     char link[16];
+    char mark[3];
     sprintf(addr, "           ");
     sprintf(link, "           "); // not only NULL case, also non-stackmap
+    sprintf(mark, "  ");
+
     if (spec->addr)
     {
         format_addr(spec->addr, addr);
+
+        bool mark_bit = addr_is_marked(spec->addr);
+        sprintf(mark, "%c%c",
+                mark_bit ? 'X' : ' ',
+                mark_bit == spec->mark ? ' ' : '!');
 
         switch (spec->tag)
         {
@@ -176,9 +202,10 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
     else
         sprintf(backlink, "   ");
 
-    printf("%14s  %14s  |  %3d  %15s  %3d    %3s    %c      %c\n",
+    printf("%14s  %14s  %2s  |  %3d  %15s  %3d    %3s    %c      %c\n",
            addr,
            link,
+           mark,
            //------
            spec->idx,
            tag_names[spec->tag],
@@ -191,17 +218,15 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
 void print_heap_spec(struct heap_item_spec heap_spec[])
 {
     printf("\n");
-    printf("         ACTUAL                 |                     SPEC\n");
-    printf("                                |\n");
-    printf("    address          link       |  idx   tag             depth  link  mark  replay\n");
-    printf("--------------  --------------  |  ---  ---------------  -----  ----  ----  ------\n");
+    printf("         ACTUAL                     |                     SPEC\n");
+    printf("                                    |\n");
+    printf("    address          link      mark |  idx   tag             depth  link  mark  replay\n");
+    printf("--------------  -------------- ---- |  ---  ---------------  -----  ----  ----  ------\n");
     for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
     {
         print_heap_spec_item(heap_spec, i);
     }
 }
-
-extern GcState gc_state;
 
 struct heap_item_spec *populate_heap_from_spec(struct heap_item_spec *spec)
 {
@@ -278,6 +303,9 @@ int main(int argc, char **argv)
     printf("populating the heap...\n");
     populate_heap_from_spec(heap_spec);
     printf("heap populated\n");
+    print_heap_spec(heap_spec);
+    printf("marking stack map\n");
+    mark_stack_map(&gc_state, gc_state.heap.start);
     print_heap_spec(heap_spec);
 
     exit(EXIT_SUCCESS);
