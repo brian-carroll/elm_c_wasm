@@ -6,6 +6,8 @@
 #include "../../kernel/gc.h"
 #include "../../kernel/gc-internals.h"
 
+const int MAX_LINES = 50;
+
 struct heap_item_spec
 {
     int idx;
@@ -85,13 +87,8 @@ void parse_heap_spec_file(char *filename, struct heap_item_spec heap_spec[])
     int i = -1;
     while ((read = getline(&line, &len, fp)) != -1)
     {
-        if (i == -1)
-        {
-            i++;
-            continue;
-        }
-        struct heap_item_spec *item = &heap_spec[i];
-        parse_heap_item_spec(line, item);
+        if (i > -1) // skip header line
+            parse_heap_item_spec(line, &heap_spec[i]);
         i++;
     }
     heap_spec[i].idx = -1; // EOF marker
@@ -113,7 +110,7 @@ void format_addr(void *addr, char s[15])
 
 int find_idx_from_pointer(void *p, struct heap_item_spec heap_spec[])
 {
-    for (int i = 0; (heap_spec[i].idx >= 0) && (i < 50); i++)
+    for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
     {
         if (p == heap_spec[i].addr)
         {
@@ -173,16 +170,22 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
         }
     }
 
-    printf("%14s  %14s  |  %3d  %15s  %3d    %3d   %5s  %5s\n",
+    char backlink[4];
+    if (item->backlink)
+        sprintf(backlink, "%3d", item->backlink);
+    else
+        sprintf(backlink, "   ");
+
+    printf("%14s  %14s  |  %3d  %15s  %3d    %3s    %c      %c\n",
            addr,
            link,
            //------
            item->idx,
            tag_names[item->tag],
            item->depth,
-           item->backlink,
-           item->mark ? "TRUE " : "FALSE",
-           item->replay ? "TRUE " : "FALSE");
+           backlink,
+           item->mark ? 'X' : ' ',
+           item->replay ? 'X' : ' ');
 }
 
 void print_heap_spec(struct heap_item_spec heap_spec[])
@@ -192,7 +195,7 @@ void print_heap_spec(struct heap_item_spec heap_spec[])
     printf("                                |\n");
     printf("    address          link       |  idx   tag             depth  link  mark  replay\n");
     printf("--------------  --------------  |  ---  ---------------  -----  ----  ----  ------\n");
-    for (int i = 0; (heap_spec[i].idx >= 0) && (i < 50); i++)
+    for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
     {
         print_heap_spec_item(heap_spec, i);
     }
@@ -255,7 +258,7 @@ struct heap_item_spec *populate_heap_from_spec(struct heap_item_spec *item)
 
 int main(int argc, char **argv)
 {
-    struct heap_item_spec heap_spec[50];
+    struct heap_item_spec heap_spec[MAX_LINES];
     char *filename;
 
     GC_init();
