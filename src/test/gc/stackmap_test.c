@@ -111,6 +111,18 @@ void format_addr(void *addr, char s[15])
             ((u64)addr & 0x00000000ffff));
 }
 
+int find_idx_from_pointer(void *p, struct heap_item_spec heap_spec[])
+{
+    for (int i = 0; (heap_spec[i].idx >= 0) && (i < 50); i++)
+    {
+        if (p == heap_spec[i].addr)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
 {
     struct heap_item_spec *item = &heap_spec[idx];
@@ -149,6 +161,14 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
         {
             GcStackMap *stackmap = (GcStackMap *)item->addr;
             format_addr(stackmap->older, link);
+            if (item->backlink)
+            {
+                int actual_backlink = find_idx_from_pointer(stackmap->older, heap_spec);
+                if (actual_backlink != item->backlink)
+                    fprintf(stderr,
+                            "Heap incorrectly populated. %d should link back to %d, not %d\n",
+                            item->idx, item->backlink, actual_backlink);
+            }
         }
         }
     }
