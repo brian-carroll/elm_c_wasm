@@ -136,6 +136,9 @@ void parse_heap_spec_file(HeapSpec *spec)
     }
     spec->length = i;
 
+    if (verbose)
+        printf("\n");
+
     fclose(fp);
     if (line)
     {
@@ -428,14 +431,11 @@ int test_stackmap()
     return failed_specs;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
-    char *filename;
-    int n_failed = 0;
-
     GC_init();
     Types_init();
 
-    n_failed = test_stackmap();
+    int n_failed = test_stackmap();
     exit(n_failed ? EXIT_FAILURE : EXIT_SUCCESS);
 }
