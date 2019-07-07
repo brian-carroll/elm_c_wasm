@@ -39,7 +39,7 @@ void parse_heap_item_spec(char *line, struct heap_item_spec *spec)
         &backlink,
         replay);
 
-    printf("read %d columns at row index %d\n", cols, idx);
+    printf("row idx %d: read %d columns\n", idx, cols);
 
     if (!strcmp(tag, "empty"))
     {
@@ -60,6 +60,10 @@ void parse_heap_item_spec(char *line, struct heap_item_spec *spec)
     else if (!strcmp(tag, "tailcall"))
     {
         spec->tag = Tag_GcStackTailCall;
+    }
+    else if (!strcmp(tag, "exception"))
+    {
+        spec->tag = Tag_GcException;
     }
     else
     {
@@ -202,7 +206,7 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
     else
         sprintf(backlink, "   ");
 
-    printf("%14s  %14s  %2s  |  %3d  %15s  %3d    %3s    %c      %c\n",
+    printf("%14s  %14s  %2s  |  %3d  %15s  %3d     %c    %3s      %c\n",
            addr,
            link,
            mark,
@@ -210,8 +214,8 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
            spec->idx,
            tag_names[spec->tag],
            spec->depth,
-           backlink,
            spec->mark ? 'X' : ' ',
+           backlink,
            spec->replay ? 'X' : ' ');
 }
 
@@ -220,7 +224,7 @@ void print_heap_spec(struct heap_item_spec heap_spec[])
     printf("\n");
     printf("         ACTUAL                     |                     SPEC\n");
     printf("                                    |\n");
-    printf("    address          link      mark |  idx   tag             depth  link  mark  replay\n");
+    printf("    address          link      mark |  idx   tag             depth  mark  link  replay\n");
     printf("--------------  -------------- ---- |  ---  ---------------  -----  ----  ----  ------\n");
     for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
     {
@@ -244,28 +248,37 @@ struct heap_item_spec *populate_heap_from_spec(struct heap_item_spec *spec)
         }
         case Tag_GcStackPush:
         {
-            spec->addr = GC_stack_push();
-            push = spec->addr;
-            spec = populate_heap_from_spec(spec + 1);
-            spec->addr = GC_stack_pop(last_alloc, push);
+            bool isTailcall;
+            push = GC_stack_push();
+            spec->addr = push;
             spec++;
+            do
+            {
+                spec = populate_heap_from_spec(spec);
+                if (spec->tag == Tag_GcException)
+                    return spec;
+                isTailcall = spec->tag == Tag_GcStackTailCall;
+                if (isTailcall)
+                {
+                    size_t n_args = 2;
+                    size_t size = sizeof(Closure) + n_args * sizeof(void *);
+                    Closure *c = GC_malloc(size);
+                    spec->addr = GC_stack_tailcall(c, push);
+                }
+                else
+                {
+                    spec->addr = GC_stack_pop(last_alloc, push);
+                }
+                spec++;
+            } while (isTailcall);
             break;
         }
         case Tag_GcStackPop:
-        {
-            if (spec->depth <= 0)
-                fprintf(stderr, "popping from depth %d\n", spec->depth);
             return spec;
-        }
+
         case Tag_GcStackTailCall:
-        {
-            size_t n_args = 2;
-            size_t size = sizeof(Closure) + n_args * sizeof(void *);
-            Closure *c = GC_malloc(size);
-            spec->addr = GC_stack_tailcall(c, push);
-            spec++;
-            break;
-        }
+            return spec;
+
         case Tag_Float:
         {
             spec->addr = ctorElmFloat(123.456);
@@ -273,6 +286,8 @@ struct heap_item_spec *populate_heap_from_spec(struct heap_item_spec *spec)
             spec++;
             break;
         }
+        case Tag_GcException:
+            return spec;
         default:
             fprintf(stderr, "Can't populate heap with unhandled tag 0x%x", spec->tag);
             exit(EXIT_FAILURE);

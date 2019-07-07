@@ -10,3 +10,4 @@ idx	stackmap	depth	mark	backlink	replay
 8	allocate	2	TRUE		
 9	push	3	TRUE		
 10	allocate	3	TRUE		
+11	exception	3

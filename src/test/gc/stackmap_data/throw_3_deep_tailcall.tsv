@@ -12,3 +12,4 @@ idx	stackmap	depth	mark	backlink	replay
 10	allocate	3	FALSE		
 11	tailcall	3	TRUE	5	TRUE
 12	allocate	3	TRUE		
+13	exception	3
