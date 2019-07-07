@@ -15,6 +15,6 @@ idx	stackmap	depth	mark	backlink	replay
 13	pop	1	FALSE	3	FALSE
 14	allocate	1	FALSE		
 15	tailcall	1	FALSE	1	FALSE
-16	allocate	1	FALSE		
+16	allocate	1	TRUE	
 17	tailcall	1	FALSE	1	FALSE
 18	pop	0	TRUE	1	TRUE

@@ -209,64 +209,44 @@ void mark_trace(GcHeap *heap, ElmValue *v, size_t *ignore_below)
     }
 }
 
+// Scan the stack map, marking values allocated in live function calls.
+// Conversely, don't mark values allocated in function calls that have finished.
+// We only need the return values since they're pure functions.
 void mark_stack_map(GcState *state, size_t *ignore_below)
 {
-    GcStackMap *stack_item = state->stack_map;
-    GcStackMap *prev_stack_item = (GcStackMap *)state->next_alloc;
-
-    size_t min_depth = state->stack_depth;
-    size_t current_depth = state->stack_depth;
-    size_t new_depth = state->stack_depth;
-
-    // Mark all values allocated by running functions, which we need to replay & resume
-    // These values may be needed in local variables of those functions
-    while (1)
+    GcStackMap *oldest_in_live_section = state->stack_map;
+    GcStackMap *newest_in_live_section = (GcStackMap *)state->next_alloc;
+    do
     {
-        bool mark_allocated = false;
-        switch (stack_item->header.tag)
+        // Iterate backwards in stack history to find start of this live section
+        Tag tag;
+        do
         {
-        case Tag_GcStackPush:
-            // going backwards => entering a section that's shallower than before
-            new_depth = current_depth - 1;
-            if (new_depth < min_depth)
-            {
-                min_depth = new_depth;
-                mark_allocated = (prev_stack_item->header.tag != Tag_GcStackTailCall);
-            }
-            break;
+            tag = oldest_in_live_section->header.tag;
+            if (tag == Tag_GcStackPop || tag == Tag_GcStackTailCall || tag == Tag_GcStackEmpty)
+                break;
+            oldest_in_live_section = oldest_in_live_section->older;
+        } while ((size_t *)oldest_in_live_section >= ignore_below); // safeguard against infinite loop
 
-        case Tag_GcStackPop:
-        case Tag_GcStackTailCall:
-            new_depth = current_depth + (stack_item->header.tag == Tag_GcStackPop);
-            if (new_depth == min_depth)
-            {
-                mark_trace(&state->heap, stack_item->replay, ignore_below); // returned value from deeper function to active function
-                mark_allocated = true;
-            }
-            break;
+        // Mark everything in this live section
+        size_t live_section_words =
+            (size_t *)newest_in_live_section + newest_in_live_section->header.size - (size_t *)oldest_in_live_section;
+        mark_words(&state->heap, oldest_in_live_section, live_section_words);
 
-        case Tag_GcStackEmpty:
-            mark_words(&state->heap, stack_item, stack_item->header.size);
+        // Check if we've gone all the way back to the start of the stack map
+        if (tag == Tag_GcStackEmpty)
             return;
 
-        default:
-            return;
-        }
+        // Next oldest section of heap contains allocations from a completed function call
+        // Just keep the return value. We'll replay it later instead of executing the call.
+        mark_trace(&state->heap, oldest_in_live_section->replay, ignore_below);
 
-        mark_words(&state->heap, stack_item, stack_item->header.size);
-
-        // Mark all values allocated in this section of the stack
-        if (mark_allocated)
-        {
-            size_t *first_allocated = (size_t *)stack_item + stack_item->header.size;
-            size_t words_allocated = (size_t *)prev_stack_item - first_allocated;
-            mark_words(&state->heap, first_allocated, words_allocated);
-        }
-
-        current_depth = new_depth;
-        prev_stack_item = stack_item;
-        stack_item = stack_item->older;
-    }
+        // Skip over anything allocated inside the completed function call
+        // It's garbage - all we need is the return value to replay later
+        GcStackMap *push = oldest_in_live_section->older;
+        oldest_in_live_section = push;
+        newest_in_live_section = push;
+    } while ((size_t *)oldest_in_live_section >= ignore_below); // safeguard against infinite loop
 }
 
 void bitmap_reset(GcHeap *heap)

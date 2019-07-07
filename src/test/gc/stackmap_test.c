@@ -72,8 +72,8 @@ void parse_heap_spec_line(char *line, HeapSpec *spec, int spec_idx)
         append_error(spec, err);
     }
 
-    if (verbose)
-        printf("row idx %d: read %d columns\n", idx, cols);
+    // if (verbose)
+    //     printf("row idx %d: read %d columns\n", idx, cols);
 
     if (!strcmp(tag, "empty"))
     {
@@ -136,8 +136,8 @@ void parse_heap_spec_file(HeapSpec *spec)
     }
     spec->length = i;
 
-    if (verbose)
-        printf("\n");
+    // if (verbose)
+    //     printf("\n");
 
     fclose(fp);
     if (line)
@@ -284,6 +284,24 @@ void validate_heap(HeapSpec *spec)
     }
 }
 
+void gc_test_reset()
+{
+    GcState *state = &gc_state;
+    size_t *bm_word = state->heap.start;
+    while (bm_word < state->heap.system_end)
+    {
+        *bm_word = 0;
+        bm_word++;
+    }
+    state->next_alloc = state->heap.start;
+    state->roots = &Nil;
+    state->stack_depth = 0;
+
+    GcStackMap *p = GC_malloc(sizeof(GcStackMap));
+    p->header = HEADER_GC_STACK_EMPTY;
+    state->stack_map = p;
+}
+
 HeapSpecLine *populate_heap_from_spec(HeapSpecLine *line, HeapSpec *spec)
 {
     static void *last_alloc = NULL;
@@ -363,6 +381,7 @@ void test_stackmap_spec(HeapSpec *spec)
     if (verbose)
         printf("spec parsed, populating the heap...\n");
 
+    gc_test_reset();
     populate_heap_from_spec(spec->lines, spec);
 
     if (verbose)
