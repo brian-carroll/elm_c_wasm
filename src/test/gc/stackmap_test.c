@@ -7,11 +7,12 @@
 #include "../../kernel/gc-internals.h"
 
 extern GcState gc_state;
-bool verbose = false;
+bool verbose = true;
 
-#define MAX_LINES 50
+#define MAX_SPEC_LINES 50
+#define MAX_ERROR_LEN (8 * 1024)
 
-struct heap_item_spec
+typedef struct
 {
     int idx;
     Tag tag;
@@ -20,9 +21,30 @@ struct heap_item_spec
     bool mark;
     bool replay;
     void *addr;
-};
+} HeapSpecLine;
 
-void parse_heap_item_spec(char *line, struct heap_item_spec *spec)
+typedef struct
+{
+    char *filename;
+    HeapSpecLine lines[MAX_SPEC_LINES];
+    int length;
+    char *err_buf;
+    int err_idx;
+} HeapSpec;
+
+void append_error(char *err, HeapSpec *spec)
+{
+    int len = strlen(err);
+    int new_len = spec->err_idx + len;
+    if (new_len < MAX_ERROR_LEN)
+    {
+        char *destination = &spec->err_buf[spec->err_idx];
+        strcpy(destination, err);
+        spec->err_idx += len;
+    }
+}
+
+void parse_heap_spec_line(char *line, HeapSpecLine *line_spec)
 {
     int idx;
     char tag[10];
@@ -45,27 +67,27 @@ void parse_heap_item_spec(char *line, struct heap_item_spec *spec)
 
     if (!strcmp(tag, "empty"))
     {
-        spec->tag = Tag_GcStackEmpty;
+        line_spec->tag = Tag_GcStackEmpty;
     }
     else if (!strcmp(tag, "push"))
     {
-        spec->tag = Tag_GcStackPush;
+        line_spec->tag = Tag_GcStackPush;
     }
     else if (!strcmp(tag, "pop"))
     {
-        spec->tag = Tag_GcStackPop;
+        line_spec->tag = Tag_GcStackPop;
     }
     else if (!strcmp(tag, "allocate"))
     {
-        spec->tag = Tag_Float;
+        line_spec->tag = Tag_Float;
     }
     else if (!strcmp(tag, "tailcall"))
     {
-        spec->tag = Tag_GcStackTailCall;
+        line_spec->tag = Tag_GcStackTailCall;
     }
     else if (!strcmp(tag, "exception"))
     {
-        spec->tag = Tag_GcException;
+        line_spec->tag = Tag_GcException;
     }
     else
     {
@@ -73,20 +95,22 @@ void parse_heap_item_spec(char *line, struct heap_item_spec *spec)
         exit(EXIT_FAILURE);
     }
 
-    spec->idx = idx;
-    spec->depth = depth;
-    spec->backlink = backlink;
-    spec->mark = strcmp(mark, "TRUE") == 0;
-    spec->replay = strcmp(replay, "TRUE") == 0;
-    spec->addr = NULL;
+    line_spec->idx = idx;
+    line_spec->depth = depth;
+    line_spec->backlink = backlink;
+    line_spec->mark = strcmp(mark, "TRUE") == 0;
+    line_spec->replay = strcmp(replay, "TRUE") == 0;
+    line_spec->addr = NULL;
 }
 
-void parse_heap_spec_file(char *filename, struct heap_item_spec heap_spec[])
+void parse_heap_spec_file(char *filename, HeapSpec *spec)
 {
     FILE *fp;
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
+
+    spec->filename = filename;
 
     fp = fopen(filename, "r");
     if (fp == NULL)
@@ -98,10 +122,10 @@ void parse_heap_spec_file(char *filename, struct heap_item_spec heap_spec[])
     while ((read = getline(&line, &len, fp)) != -1)
     {
         if (i > -1) // skip header line
-            parse_heap_item_spec(line, &heap_spec[i]);
+            parse_heap_spec_line(line, &spec->lines[i]);
         i++;
     }
-    heap_spec[i].idx = -1; // EOF marker
+    spec->length = i;
 
     fclose(fp);
     if (line)
@@ -118,11 +142,11 @@ void format_addr(void *addr, char s[15])
             ((u64)addr & 0x00000000ffff));
 }
 
-int find_idx_from_pointer(void *p, struct heap_item_spec heap_spec[])
+int find_idx_from_pointer(void *p, HeapSpec *spec)
 {
-    for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
+    for (int i = 0; i < spec->length; i++)
     {
-        if (p == heap_spec[i].addr)
+        if (p == spec->lines[i].addr)
             return i;
     }
     return -1;
@@ -142,9 +166,9 @@ bool addr_is_marked(void *p)
     return (state->heap.bitmap[word] & mask) != 0;
 }
 
-void validate_heap_item(struct heap_item_spec heap_spec[], int idx)
+void validate_heap_item(HeapSpec *spec, int idx)
 {
-    struct heap_item_spec *spec = &heap_spec[idx];
+    HeapSpecLine *line = &spec->lines[idx];
     char *tag_names[16] = {
         "Int            ",
         "Float          ",
@@ -168,45 +192,45 @@ void validate_heap_item(struct heap_item_spec heap_spec[], int idx)
     char link[16];
     char mark[3];
     sprintf(addr, "           ");
-    sprintf(link, "           "); // default when addr is NULL or spec not a stackmap
+    sprintf(link, "           "); // default when addr is NULL or line not a stackmap
     sprintf(mark, "  ");
 
-    if (spec->addr)
+    if (line->addr)
     {
-        format_addr(spec->addr, addr);
+        format_addr(line->addr, addr);
 
-        bool mark_bit = addr_is_marked(spec->addr);
-        bool mark_has_error = mark_bit != spec->mark;
+        bool mark_bit = addr_is_marked(line->addr);
+        bool mark_has_error = mark_bit != line->mark;
         sprintf(mark, "%c%c",
                 mark_bit ? 'X' : ' ',
                 mark_has_error ? '!' : ' ');
         if (mark_has_error)
             fprintf(stderr, "Heap index %d should%s be marked\n",
-                    idx, spec->mark ? "" : " not");
+                    idx, line->mark ? "" : " not");
 
-        switch (spec->tag)
+        switch (line->tag)
         {
         case Tag_GcStackPush:
         case Tag_GcStackPop:
         case Tag_GcStackTailCall:
         {
-            GcStackMap *stackmap = (GcStackMap *)spec->addr;
+            GcStackMap *stackmap = (GcStackMap *)line->addr;
             format_addr(stackmap->older, link);
-            if (spec->backlink)
+            if (line->backlink)
             {
-                int actual_backlink = find_idx_from_pointer(stackmap->older, heap_spec);
-                if (actual_backlink != spec->backlink)
+                int actual_backlink = find_idx_from_pointer(stackmap->older, spec);
+                if (actual_backlink != line->backlink)
                     fprintf(stderr,
                             "Heap incorrectly populated. %d should link back to %d, not %d\n",
-                            spec->idx, spec->backlink, actual_backlink);
+                            line->idx, line->backlink, actual_backlink);
             }
         }
         }
     }
 
     char backlink[4];
-    if (spec->backlink)
-        sprintf(backlink, "%3d", spec->backlink);
+    if (line->backlink)
+        sprintf(backlink, "%3d", line->backlink);
     else
         sprintf(backlink, "   ");
 
@@ -216,15 +240,15 @@ void validate_heap_item(struct heap_item_spec heap_spec[], int idx)
                link,
                mark,
                //------
-               spec->idx,
-               tag_names[spec->tag],
-               spec->depth,
-               spec->mark ? 'X' : ' ',
+               line->idx,
+               tag_names[line->tag],
+               line->depth,
+               line->mark ? 'X' : ' ',
                backlink,
-               spec->replay ? 'X' : ' ');
+               line->replay ? 'X' : ' ');
 }
 
-void validate_heap(struct heap_item_spec heap_spec[])
+void validate_heap(HeapSpec *spec)
 {
     if (verbose)
     {
@@ -234,89 +258,92 @@ void validate_heap(struct heap_item_spec heap_spec[])
         printf("    address          link      mark |  idx   tag             depth  mark  link  replay\n");
         printf("--------------  -------------- ---- |  ---  ---------------  -----  ----  ----  ------\n");
     }
-    for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
+    for (int i = 0; i < spec->length; i++)
     {
-        validate_heap_item(heap_spec, i);
+        validate_heap_item(spec, i);
     }
 }
 
-struct heap_item_spec *populate_heap_from_spec(struct heap_item_spec *spec)
+HeapSpecLine *populate_heap_from_spec(HeapSpecLine *line, HeapSpecLine *last_line)
 {
     static void *last_alloc = NULL;
     void *push = NULL;
-    while (spec->idx >= 0)
+    while (line <= last_line)
     {
-        switch (spec->tag)
+        switch (line->tag)
         {
         case Tag_GcStackEmpty:
         {
-            spec->addr = gc_state.stack_map;
-            spec++;
+            line->addr = gc_state.stack_map;
+            line++;
             break;
         }
         case Tag_GcStackPush:
         {
             bool isTailcall;
             push = GC_stack_push();
-            spec->addr = push;
-            spec++;
+            line->addr = push;
+            line++;
             do
             {
-                spec = populate_heap_from_spec(spec);
-                if (spec->tag == Tag_GcException)
-                    return spec;
-                isTailcall = spec->tag == Tag_GcStackTailCall;
+                line = populate_heap_from_spec(line, last_line);
+                if (line->tag == Tag_GcException)
+                    return line;
+                isTailcall = line->tag == Tag_GcStackTailCall;
                 if (isTailcall)
                 {
                     size_t n_args = 2;
                     size_t size = sizeof(Closure) + n_args * sizeof(void *);
                     Closure *c = GC_malloc(size);
-                    spec->addr = GC_stack_tailcall(c, push);
+                    line->addr = GC_stack_tailcall(c, push);
                 }
                 else
                 {
-                    spec->addr = GC_stack_pop(last_alloc, push);
+                    line->addr = GC_stack_pop(last_alloc, push);
                 }
-                spec++;
+                line++;
             } while (isTailcall);
             break;
         }
         case Tag_GcStackPop:
-            return spec;
+            return line;
 
         case Tag_GcStackTailCall:
-            return spec;
+            return line;
 
         case Tag_Float:
         {
-            spec->addr = ctorElmFloat(123.456);
-            last_alloc = spec->addr;
-            spec++;
+            line->addr = ctorElmFloat(123.456);
+            last_alloc = line->addr;
+            line++;
             break;
         }
         case Tag_GcException:
-            return spec;
+            return line;
         default:
-            fprintf(stderr, "Can't populate heap with unhandled tag 0x%x", spec->tag);
+            fprintf(stderr, "Can't populate heap with unhandled tag 0x%x", line->tag);
             exit(EXIT_FAILURE);
         } // switch
     }     // loop
-    return spec;
+    return line;
 }
 
-void test_stackmap(char *filename)
+char *test_stackmap_spec(char *filename, char *err_buf)
 {
-    struct heap_item_spec heap_spec[MAX_LINES];
+    HeapSpec spec;
+
+    memset(&spec, 0, sizeof(spec));
+    spec.err_buf = err_buf;
 
     if (verbose)
-        printf("Reading heap spec '%s'\n", filename);
+        printf("Reading heap spec '%s'\n\n", filename);
 
-    parse_heap_spec_file(filename, heap_spec);
+    parse_heap_spec_file(filename, &spec);
 
     if (verbose)
         printf("spec parsed, populating the heap...\n");
 
-    populate_heap_from_spec(heap_spec);
+    populate_heap_from_spec(spec.lines, &spec.lines[spec.length - 1]);
 
     if (verbose)
         printf("heap populated, marking stack map...\n");
@@ -326,30 +353,59 @@ void test_stackmap(char *filename)
     if (verbose)
         printf("stack map marked, validating heap...\n");
 
-    validate_heap(heap_spec);
+    sscanf(spec.err_buf, "%s:\n", filename);
+    int start_idx = strlen(spec.err_buf);
+    spec.err_idx = start_idx;
+
+    validate_heap(&spec);
+
+    if (spec.err_idx > start_idx)
+        return spec.err_buf;
+    else
+        return NULL;
+}
+
+char *test_stackmap()
+{
+    char *spec_filenames[] = {
+        "stackmap_data/full_completion.tsv",
+        "stackmap_data/throw_3_deep_completed.tsv",
+        "stackmap_data/throw_below_tailcall.tsv",
+        "stackmap_data/throw_3_calls_deep.tsv",
+        "stackmap_data/throw_3_deep_tailcall.tsv",
+        "stackmap_data/throw_one_call_deep.tsv",
+        NULL,
+    };
+    char err_buf[MAX_ERROR_LEN];
+    char *err;
+    for (int i = 0; spec_filenames[i] != NULL; i++)
+    {
+        memset(err_buf, 0, MAX_ERROR_LEN);
+        err = test_stackmap_spec(spec_filenames[i], err_buf);
+        if (err != NULL)
+            return err;
+        if (verbose)
+            printf("\n\n---------------------\n\n");
+    }
+    return NULL;
 }
 
 int main(int argc, char **argv)
 {
     char *filename;
-    char stderr_buf[BUFSIZ];
-    int exit_code;
-
-    setbuf(stderr, stderr_buf);
+    char *err;
 
     GC_init();
     Types_init();
 
-    if (argc != 2)
+    err = test_stackmap();
+    if (err)
     {
-        fprintf(stderr, "Expect exactly one argument, the file to read. Got %d\n", argc - 1);
+        fputs(err, stderr);
         exit(EXIT_FAILURE);
     }
-    filename = argv[1];
-
-    test_stackmap(filename);
-    fflush(stderr);
-
-    exit_code = strlen(stderr_buf) ? EXIT_FAILURE : EXIT_SUCCESS;
-    exit(exit_code);
+    else
+    {
+        exit(EXIT_SUCCESS);
+    }
 }
