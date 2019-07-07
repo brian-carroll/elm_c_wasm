@@ -7,8 +7,9 @@
 #include "../../kernel/gc-internals.h"
 
 extern GcState gc_state;
+bool verbose = false;
 
-const int MAX_LINES = 50;
+#define MAX_LINES 50
 
 struct heap_item_spec
 {
@@ -39,7 +40,8 @@ void parse_heap_item_spec(char *line, struct heap_item_spec *spec)
         &backlink,
         replay);
 
-    printf("row idx %d: read %d columns\n", idx, cols);
+    if (verbose)
+        printf("row idx %d: read %d columns\n", idx, cols);
 
     if (!strcmp(tag, "empty"))
     {
@@ -121,9 +123,7 @@ int find_idx_from_pointer(void *p, struct heap_item_spec heap_spec[])
     for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
     {
         if (p == heap_spec[i].addr)
-        {
             return i;
-        }
     }
     return -1;
 }
@@ -142,7 +142,7 @@ bool addr_is_marked(void *p)
     return (state->heap.bitmap[word] & mask) != 0;
 }
 
-void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
+void validate_heap_item(struct heap_item_spec heap_spec[], int idx)
 {
     struct heap_item_spec *spec = &heap_spec[idx];
     char *tag_names[16] = {
@@ -168,7 +168,7 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
     char link[16];
     char mark[3];
     sprintf(addr, "           ");
-    sprintf(link, "           "); // not only NULL case, also non-stackmap
+    sprintf(link, "           "); // default when addr is NULL or spec not a stackmap
     sprintf(mark, "  ");
 
     if (spec->addr)
@@ -176,9 +176,13 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
         format_addr(spec->addr, addr);
 
         bool mark_bit = addr_is_marked(spec->addr);
+        bool mark_has_error = mark_bit != spec->mark;
         sprintf(mark, "%c%c",
                 mark_bit ? 'X' : ' ',
-                mark_bit == spec->mark ? ' ' : '!');
+                mark_has_error ? '!' : ' ');
+        if (mark_has_error)
+            fprintf(stderr, "Heap index %d should%s be marked\n",
+                    idx, spec->mark ? "" : " not");
 
         switch (spec->tag)
         {
@@ -206,29 +210,33 @@ void print_heap_spec_item(struct heap_item_spec heap_spec[], int idx)
     else
         sprintf(backlink, "   ");
 
-    printf("%14s  %14s  %2s  |  %3d  %15s  %3d     %c    %3s      %c\n",
-           addr,
-           link,
-           mark,
-           //------
-           spec->idx,
-           tag_names[spec->tag],
-           spec->depth,
-           spec->mark ? 'X' : ' ',
-           backlink,
-           spec->replay ? 'X' : ' ');
+    if (verbose)
+        printf("%14s  %14s  %2s  |  %3d  %15s  %3d     %c    %3s      %c\n",
+               addr,
+               link,
+               mark,
+               //------
+               spec->idx,
+               tag_names[spec->tag],
+               spec->depth,
+               spec->mark ? 'X' : ' ',
+               backlink,
+               spec->replay ? 'X' : ' ');
 }
 
-void print_heap_spec(struct heap_item_spec heap_spec[])
+void validate_heap(struct heap_item_spec heap_spec[])
 {
-    printf("\n");
-    printf("         ACTUAL                     |                     SPEC\n");
-    printf("                                    |\n");
-    printf("    address          link      mark |  idx   tag             depth  mark  link  replay\n");
-    printf("--------------  -------------- ---- |  ---  ---------------  -----  ----  ----  ------\n");
+    if (verbose)
+    {
+        printf("\n");
+        printf("         ACTUAL                     |                     SPEC\n");
+        printf("                                    |\n");
+        printf("    address          link      mark |  idx   tag             depth  mark  link  replay\n");
+        printf("--------------  -------------- ---- |  ---  ---------------  -----  ----  ----  ------\n");
+    }
     for (int i = 0; (heap_spec[i].idx >= 0) && (i < MAX_LINES); i++)
     {
-        print_heap_spec_item(heap_spec, i);
+        validate_heap_item(heap_spec, i);
     }
 }
 
@@ -296,10 +304,38 @@ struct heap_item_spec *populate_heap_from_spec(struct heap_item_spec *spec)
     return spec;
 }
 
-int main(int argc, char **argv)
+void test_stackmap(char *filename)
 {
     struct heap_item_spec heap_spec[MAX_LINES];
+
+    if (verbose)
+        printf("Reading heap spec '%s'\n", filename);
+
+    parse_heap_spec_file(filename, heap_spec);
+
+    if (verbose)
+        printf("spec parsed, populating the heap...\n");
+
+    populate_heap_from_spec(heap_spec);
+
+    if (verbose)
+        printf("heap populated, marking stack map...\n");
+
+    mark_stack_map(&gc_state, gc_state.heap.start);
+
+    if (verbose)
+        printf("stack map marked, validating heap...\n");
+
+    validate_heap(heap_spec);
+}
+
+int main(int argc, char **argv)
+{
     char *filename;
+    char stderr_buf[BUFSIZ];
+    int exit_code;
+
+    setbuf(stderr, stderr_buf);
 
     GC_init();
     Types_init();
@@ -309,19 +345,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "Expect exactly one argument, the file to read. Got %d\n", argc - 1);
         exit(EXIT_FAILURE);
     }
-    printf("Reading %s ...\n", argv[1]);
     filename = argv[1];
 
-    parse_heap_spec_file(filename, heap_spec);
-    printf("spec parsed\n");
-    print_heap_spec(heap_spec);
-    printf("populating the heap...\n");
-    populate_heap_from_spec(heap_spec);
-    printf("heap populated\n");
-    print_heap_spec(heap_spec);
-    printf("marking stack map\n");
-    mark_stack_map(&gc_state, gc_state.heap.start);
-    print_heap_spec(heap_spec);
+    test_stackmap(filename);
+    fflush(stderr);
 
-    exit(EXIT_SUCCESS);
+    exit_code = strlen(stderr_buf) ? EXIT_FAILURE : EXIT_SUCCESS;
+    exit(exit_code);
 }
