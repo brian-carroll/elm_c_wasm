@@ -209,9 +209,23 @@ void mark_trace(GcHeap *heap, ElmValue *v, size_t *ignore_below)
     }
 }
 
+// Trace all Elm value between two memory addresses
+void mark_trace_values_between(void *start, void *end, GcHeap *heap, size_t *ignore_below)
+{
+    ElmValue *v = start;
+    ElmValue *endval = end;
+    while (v < endval)
+    {
+        mark_trace(heap, v, ignore_below);
+        v = (ElmValue *)((size_t *)v + v->header.size);
+    }
+}
+
 // Scan the stack map, marking values allocated in live function calls.
 // Conversely, don't mark values allocated in function calls that have finished.
 // We only need the return values since they're pure functions.
+// *Most* of the work could be done with a simple trace from the stack map root,
+// but that would miss allocated values not yet returned from live calls.
 void mark_stack_map(GcState *state, size_t *ignore_below)
 {
     GcStackMap *oldest_in_live_section = state->stack_map;
@@ -228,21 +242,15 @@ void mark_stack_map(GcState *state, size_t *ignore_below)
             oldest_in_live_section = oldest_in_live_section->older;
         } while ((size_t *)oldest_in_live_section >= ignore_below); // safeguard against infinite loop
 
-        // Mark everything in this live section
-        size_t live_section_words =
-            (size_t *)newest_in_live_section + newest_in_live_section->header.size - (size_t *)oldest_in_live_section;
-        mark_words(&state->heap, oldest_in_live_section, live_section_words);
+        // Trace everything in this live section
+        // including stack map items, and therefore any returned values from completed calls
+        mark_trace_values_between(oldest_in_live_section, newest_in_live_section, &state->heap, ignore_below);
 
         // Check if we've gone all the way back to the start of the stack map
         if (tag == Tag_GcStackEmpty)
             return;
 
-        // Next oldest section of heap contains allocations from a completed function call
-        // Just keep the return value. We'll replay it later instead of executing the call.
-        mark_trace(&state->heap, oldest_in_live_section->replay, ignore_below);
-
-        // Skip over anything allocated inside the completed function call
-        // It's garbage - all we need is the return value to replay later
+        // Skip over anything allocated inside the completed function call, follow link to next live section
         GcStackMap *push = oldest_in_live_section->older;
         oldest_in_live_section = push;
         newest_in_live_section = push;
