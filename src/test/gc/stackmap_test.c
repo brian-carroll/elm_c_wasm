@@ -5,11 +5,14 @@
 #include "../../kernel/types.h"
 #include "../../kernel/gc.h"
 #include "../../kernel/gc-internals.h"
+#include "../gc_test.h"
+#include "../test.h"
 
 extern GcState gc_state;
-bool verbose = true;
+extern int verbose;
 
 #define MAX_SPEC_LINES 50
+#define MAX_LINE_LEN 200
 #define MAX_ERROR_LEN (8 * 1024)
 #define MAX_SINGLE_ERR_LEN 256
 
@@ -72,8 +75,8 @@ void parse_heap_spec_line(char *line, HeapSpec *spec, int spec_idx)
         append_error(spec, err);
     }
 
-    // if (verbose)
-    //     printf("row idx %d: read %d columns\n", idx, cols);
+    if (verbose)
+        printf("row idx %d: read %d columns\n", idx, cols);
 
     if (!strcmp(tag, "empty"))
     {
@@ -116,19 +119,19 @@ void parse_heap_spec_line(char *line, HeapSpec *spec, int spec_idx)
 void parse_heap_spec_file(HeapSpec *spec)
 {
     FILE *fp;
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
+    char line[MAX_LINE_LEN];
     char err[MAX_SINGLE_ERR_LEN];
 
     fp = fopen(spec->filename, "r");
     if (fp == NULL)
     {
         sprintf(err, "Could not read %s\n", spec->filename);
+        fputs(err, stderr);
         append_error(spec, err);
     }
     int i = -1;
-    while ((read = getline(&line, &len, fp)) != -1)
+    puts("before while\n");
+    while (fgets(line, MAX_LINE_LEN - 1, fp) != NULL)
     {
         if (i > -1) // skip header line
             parse_heap_spec_line(line, spec, i);
@@ -140,10 +143,6 @@ void parse_heap_spec_file(HeapSpec *spec)
     //     printf("\n");
 
     fclose(fp);
-    if (line)
-    {
-        free(line);
-    }
 }
 
 void format_addr(void *addr, char s[15])
@@ -244,7 +243,11 @@ void validate_heap_item(HeapSpec *spec, int idx)
                     append_error(spec, err);
                 }
             }
+            break;
         }
+
+        default:
+            break;
         }
 
         char backlink[4];
@@ -284,23 +287,23 @@ void validate_heap(HeapSpec *spec)
     }
 }
 
-void gc_test_reset()
-{
-    GcState *state = &gc_state;
-    size_t *bm_word = state->heap.start;
-    while (bm_word < state->heap.system_end)
-    {
-        *bm_word = 0;
-        bm_word++;
-    }
-    state->next_alloc = state->heap.start;
-    state->roots = &Nil;
-    state->stack_depth = 0;
+// void gc_test_reset()
+// {
+//     GcState *state = &gc_state;
+//     size_t *bm_word = state->heap.start;
+//     while (bm_word < state->heap.system_end)
+//     {
+//         *bm_word = 0;
+//         bm_word++;
+//     }
+//     state->next_alloc = state->heap.start;
+//     state->roots = &Nil;
+//     state->stack_depth = 0;
 
-    GcStackMap *p = GC_malloc(sizeof(GcStackMap));
-    p->header = HEADER_GC_STACK_EMPTY;
-    state->stack_map = p;
-}
+//     GcStackMap *p = GC_malloc(sizeof(GcStackMap));
+//     p->header = HEADER_GC_STACK_EMPTY;
+//     state->stack_map = p;
+// }
 
 HeapSpecLine *populate_heap_from_spec(HeapSpecLine *line, HeapSpec *spec)
 {
@@ -397,16 +400,22 @@ void test_stackmap_spec(HeapSpec *spec)
 
 #define NUM_SPEC_FILES 6
 
-int test_stackmap()
+char *test_stackmap()
 {
     int failed_specs = 0;
+    /*
+        THESE NEED TO BE COMPILED INTO THE BINARY FOR WASM!
+        or else put into the dist/ directory by makefile
+        but then need to load them via js or something
+     */
+
     char *spec_filenames[NUM_SPEC_FILES] = {
-        "stackmap_data/full_completion.tsv",
-        "stackmap_data/throw_3_deep_completed.tsv",
-        "stackmap_data/throw_below_tailcall.tsv",
-        "stackmap_data/throw_3_calls_deep.tsv",
-        "stackmap_data/throw_3_deep_tailcall.tsv",
-        "stackmap_data/throw_one_call_deep.tsv",
+        "../src/test/gc/stackmap_data/full_completion.tsv",
+        "../src/test/gc/stackmap_data/throw_3_deep_completed.tsv",
+        "../src/test/gc/stackmap_data/throw_below_tailcall.tsv",
+        "../src/test/gc/stackmap_data/throw_3_calls_deep.tsv",
+        "../src/test/gc/stackmap_data/throw_3_deep_tailcall.tsv",
+        "../src/test/gc/stackmap_data/throw_one_call_deep.tsv",
     };
     HeapSpec specs[NUM_SPEC_FILES];
     memset(specs, 0, NUM_SPEC_FILES * sizeof(HeapSpec));
@@ -447,14 +456,14 @@ int test_stackmap()
                             specs[i].err_buf);
             }
     }
-    return failed_specs;
+    return failed_specs ? "GC stackmap should match all 6 specs" : NULL;
 }
 
-int main(void)
-{
-    GC_init();
-    Types_init();
+// int main(void)
+// {
+//     GC_init();
+//     Types_init();
 
-    int n_failed = test_stackmap();
-    exit(n_failed ? EXIT_FAILURE : EXIT_SUCCESS);
-}
+//     int n_failed = test_stackmap();
+//     exit(n_failed ? EXIT_FAILURE : EXIT_SUCCESS);
+// }

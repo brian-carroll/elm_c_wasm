@@ -7,6 +7,7 @@
 #include "../kernel/gc.h"
 #include "../kernel/gc-internals.h"
 #include "./test.h"
+#include "./gc/stackmap_test.h"
 
 extern GcState gc_state;
 
@@ -769,7 +770,8 @@ char *gc_replay_test()
         .value = 10};
 
     // wrapper function to prevent GC exception exiting the test
-    ElmValue *result = gc_replay_test_catch();
+    // ElmValue *result =
+    gc_replay_test_catch();
 
     if (verbose)
     {
@@ -877,7 +879,8 @@ char *gc_test()
     //     mu_run_test(gc_dead_between_test);
     //     mu_run_test(gc_mark_compact_test);
     //     mu_run_test(gc_bitmap_next_test);
-    mu_run_test(gc_replay_test);
+    // mu_run_test(gc_replay_test);
+    mu_run_test(test_stackmap);
 
     return NULL;
 }
