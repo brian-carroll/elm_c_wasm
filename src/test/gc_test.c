@@ -754,8 +754,8 @@ char *gc_replay_test()
     func_map[4] = (struct fn){Basics_sub.evaluator, "Basics_sub"};
     func_map[5] = (struct fn){Basics_mul.evaluator, "Basics_mul"};
 
-    size_t *ignore_below = state->heap.start + 1024; // nice empty heap
-    // size_t *ignore_below = state->heap.end - 220;    // pretend memory is nearly full
+    // size_t *ignore_below = state->heap.start + 1024; // nice empty heap
+    size_t *ignore_below = state->heap.end - 220; // pretend memory is nearly full
 
     state->next_alloc = ignore_below;
 
@@ -770,8 +770,7 @@ char *gc_replay_test()
         .value = 10};
 
     // wrapper function to prevent GC exception exiting the test
-    // ElmValue *result =
-    gc_replay_test_catch();
+    ElmValue *result = gc_replay_test_catch();
 
     if (verbose)
     {
@@ -787,8 +786,8 @@ char *gc_replay_test()
         printf("Int %d = %p\n", literal_n.value, &literal_n);
     }
 
-    // mu_assert("Expect heap overflow",
-    //           result->header.tag == Tag_GcException);
+    mu_assert("Expect heap overflow",
+              result->header.tag == Tag_GcException);
 
     state->stack_depth = 1;
 
@@ -879,7 +878,7 @@ char *gc_test()
     //     mu_run_test(gc_dead_between_test);
     //     mu_run_test(gc_mark_compact_test);
     //     mu_run_test(gc_bitmap_next_test);
-    // mu_run_test(gc_replay_test);
+    mu_run_test(gc_replay_test);
     mu_run_test(test_stackmap);
 
     return NULL;

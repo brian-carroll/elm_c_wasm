@@ -217,7 +217,9 @@ void mark_trace_values_between(void *start, void *end, GcHeap *heap, size_t *ign
     while (v < endval)
     {
         mark_trace(heap, v, ignore_below);
-        v = (ElmValue *)((size_t *)v + v->header.size);
+        // guard against getting stuck on zeroed memory (shouldn't happen)
+        size_t size_words = v->header.size ? v->header.size : 1;
+        v = (ElmValue *)((size_t *)v + size_words);
     }
 }
 
@@ -273,7 +275,9 @@ void mark(GcState *state, size_t *ignore_below)
     bitmap_reset(&state->heap);
 
     // Mark values freshly allocated in still-running function calls
+    printf("start marking stack map\n");
     mark_stack_map(state, ignore_below);
+    printf("finished marking stack map\n");
 
     // Mark GC roots (mutable values in Elm effect managers, including the program's `model`)
     for (ElmValue *root_cell = state->roots; root_cell->header.tag == Tag_Cons; root_cell = root_cell->cons.tail)
