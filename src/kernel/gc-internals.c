@@ -269,7 +269,13 @@ void bitmap_reset(GcHeap *heap)
 
 void mark(GcState *state, size_t *ignore_below)
 {
+    // Clear all mark bits
     bitmap_reset(&state->heap);
+
+    // Mark values freshly allocated in still-running function calls
+    mark_stack_map(state, ignore_below);
+
+    // Mark GC roots (mutable values in Elm effect managers, including the program's `model`)
     for (ElmValue *root_cell = state->roots; root_cell->header.tag == Tag_Cons; root_cell = root_cell->cons.tail)
     {
         mark_words(&state->heap, root_cell, root_cell->header.size);
@@ -282,7 +288,6 @@ void mark(GcState *state, size_t *ignore_below)
         ElmValue *live_heap_value = *root_mutable_pointer;
         mark_trace(&state->heap, live_heap_value, ignore_below);
     }
-    mark_stack_map(state, ignore_below);
 }
 
 /* ====================================================
