@@ -754,8 +754,12 @@ char *gc_replay_test()
     func_map[4] = (struct fn){Basics_sub.evaluator, "Basics_sub"};
     func_map[5] = (struct fn){Basics_mul.evaluator, "Basics_mul"};
 
-    // size_t *ignore_below = state->heap.start + 1024; // nice empty heap
-    size_t *ignore_below = state->heap.end - 220; // pretend memory is nearly full
+#ifdef TARGET_64BIT
+    size_t not_quite_enough_space = 220; // in 64-bit words
+#else
+    size_t not_quite_enough_space = 300; // in 32-bit words
+#endif
+    size_t *ignore_below = state->heap.end - not_quite_enough_space;
 
     state->next_alloc = ignore_below;
 
