@@ -176,6 +176,25 @@ char *test_apply(void)
 
     if (verbose)
     {
+        printf(
+            "\n"
+            "## Function application\n"
+            "\n"
+            "Example Elm function exercising most code paths in `apply`:\n"
+            "    outerScopeValue : Int\n"
+            "    outerScopeValue =\n"
+            "        1\n"
+            "\n"
+            "    closure arg1 arg2 =\n"
+            "        outerScopeValue + arg1 + arg2\n"
+            "\n"
+            "    curried = \n"
+            "        closure 2\n"
+            "\n"
+            "    answer =\n"
+            "        curried 3\n"
+            "\n");
+
         printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
                hex_ptr(&outerScopeValue), (int)outerScopeValue.header.tag, outerScopeValue.value,
                hex(&outerScopeValue, sizeof(ElmInt)));
