@@ -194,9 +194,6 @@ void *GC_malloc(size_t bytes)
             next_replay = NULL; // exit replay mode
         }
         state->replay_ptr = next_replay;
-#ifdef DEBUG
-        printf("GC_malloc: replay_ptr = %p\n", state->replay_ptr);
-#endif
         return (void *)replay;
     }
     else
@@ -701,14 +698,14 @@ void *GC_apply_replay()
         break;
     }
 
-#ifdef DEBUG
-    printf("GC_apply_replay:\n");
-    printf("    scenario = %s\n", scenario_to_string(scenario));
-    printf("    replay = %p\n", replay);
-    printf("    stackmap_next = %p\n", stackmap_next);
-    printf("    stack_depth_increment = %zd\n", stack_depth_increment);
-    printf("    replay_next = %p\n", replay_next);
-#endif
+    // #ifdef DEBUG
+    // printf("GC_apply_replay:\n");
+    // printf("    scenario = %s\n", scenario_to_string(scenario));
+    // printf("    replay = %p\n", replay);
+    // printf("    stackmap_next = %p\n", stackmap_next);
+    // printf("    stack_depth_increment = %zd\n", stack_depth_increment);
+    // printf("    replay_next = %p\n", replay_next);
+    // #endif
 
     // Update the state
     // Don't do the memory access unless value is changed

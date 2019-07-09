@@ -754,15 +754,6 @@ char *gc_replay_test()
     func_map[4] = (struct fn){Basics_sub.evaluator, "Basics_sub"};
     func_map[5] = (struct fn){Basics_mul.evaluator, "Basics_mul"};
 
-#ifdef TARGET_64BIT
-    size_t not_quite_enough_space = 220; // in 64-bit words
-#else
-    size_t not_quite_enough_space = 300; // in 32-bit words
-#endif
-    size_t *ignore_below = state->heap.end - not_quite_enough_space;
-
-    state->next_alloc = ignore_below;
-
     literal_0 = (ElmInt){
         .header = HEADER_INT,
         .value = 0};
@@ -773,35 +764,51 @@ char *gc_replay_test()
         .header = HEADER_INT,
         .value = 10};
 
+#ifdef TARGET_64BIT
+    size_t not_quite_enough_space = 220;
+#else
+    size_t not_quite_enough_space = 300;
+#endif
+    size_t *ignore_below = state->heap.end - not_quite_enough_space;
+    state->next_alloc = ignore_below;
+
+    if (verbose)
+        printf("Set allocation pointer to leave only %zu (%zu-bit) words of heap space\n",
+               not_quite_enough_space, (sizeof(void *)) * 8);
+
     // wrapper function to prevent GC exception exiting the test
     ElmValue *result = gc_replay_test_catch();
 
+    mu_assert("Expect GC exception when 'fib' called with insufficient heap space",
+              result->header.tag == Tag_GcException);
+
     if (verbose)
     {
-        for (int i = 0; i < NUM_FUNC_NAMES; i++)
-        {
-            printf("%p : %s\n", func_map[i].evaluator, func_map[i].name);
-        }
+        printf("\n");
         printf("stack depth = %zd\n", state->stack_depth);
+        printf("\n");
+        printf("Function addresses:\n");
+        for (int i = 0; i < NUM_FUNC_NAMES; i++)
+            printf("%p : %s\n", func_map[i].evaluator, func_map[i].name);
+
+        printf("\n");
+        printf("Value addresses:\n");
         printf("True = %p\n", &True);
         printf("False = %p\n", &False);
         printf("Int 0 = %p\n", &literal_0);
         printf("Int 1 = %p\n", &literal_1);
         printf("Int %d = %p\n", literal_n.value, &literal_n);
+        printf("\n");
     }
 
-    mu_assert("Expect heap overflow",
-              result->header.tag == Tag_GcException);
-
-    state->stack_depth = 1;
-
     if (verbose)
-        printf("\n\nMarking interrupted heap...\n\n");
+        printf("Marking interrupted heap...\n\n");
+
     mark(&gc_state, ignore_below);
 
     if (verbose)
     {
-        printf("\n\nFinished marking...\n\n");
+        printf("Finished marking...\n\n");
 
         print_heap(&gc_state);
         print_state(&gc_state);
@@ -809,23 +816,30 @@ char *gc_replay_test()
 
     if (verbose)
         printf("\n\nCompacting from %p\n\n", ignore_below);
+
     compact(&gc_state, ignore_below);
+
     if (verbose)
+    {
         printf("Finished compacting\n");
+        print_state(&gc_state);
+        printf("Reversing stack map linked list to prepare for replay\n\n");
+    }
 
-    if (verbose)
-        printf("\n\nReversing stack map...\n\n");
     reverse_stack_map(&gc_state);
-    if (verbose)
-        printf("Finished reversing\n");
 
     if (verbose)
-        printf("\n\nMarking compacted heap...\n\n");
+    {
+        printf("Finished reversing\n");
+        print_state(&gc_state);
+        printf("Marking compacted heap (for visualisation, not actually needed)\n\n");
+    }
+
     mark(&gc_state, ignore_below);
+
     if (verbose)
     {
         printf("\n\nFinished marking...\n\n");
-
         print_heap(&gc_state);
         print_state(&gc_state);
     }
@@ -836,23 +850,26 @@ char *gc_replay_test()
                   ignore_below,
                   state->next_alloc) == 0);
 
-    if (verbose)
-        printf("Setup for replay\n");
     GcStackMap *empty = (GcStackMap *)state->heap.start;
     state->replay_ptr = empty->newer;
+    state->stack_depth = 0;
 
     if (verbose)
-        printf("Replay from replay_ptr = %p\n", state->replay_ptr);
+    {
+        printf("\nSetting replay pointer to start of stackmap: %p\n", state->replay_ptr);
+        printf("Replaying interrupted functions to restore stack state, then continuing execution...\n");
+    }
+
     ElmValue *result_replay = gc_replay_test_catch();
 
     if (verbose)
     {
-        printf("\n\nFinished replay...\n\n");
+        printf("\nFinished replay and 2nd execution run...\n");
 
         print_heap(&gc_state);
         print_state(&gc_state);
 
-        printf("result:\n");
+        printf("Aaaand the %dth Fibonacci number is ...drumroll please...\n", literal_n.value);
         print_value(result_replay);
     }
 
@@ -883,7 +900,7 @@ char *gc_test()
     //     mu_run_test(gc_mark_compact_test);
     //     mu_run_test(gc_bitmap_next_test);
     mu_run_test(gc_replay_test);
-    mu_run_test(test_stackmap);
+    mu_run_test(stackmap_mark_test);
 
     return NULL;
 }

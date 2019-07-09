@@ -10,6 +10,7 @@
 *.d
 *.log
 *.gch
+*.inc
 a.out
 build/
 dist/
