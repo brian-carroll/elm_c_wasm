@@ -122,6 +122,44 @@
               </ul>
             </td>
           </tr>
+
+          <!----------------------------------->
+
+          <tr>
+            <td style="text-align: center">
+              <a href="unit-tests/index.html?argv=--gc+--verbose"
+                >GC unit tests</a
+              >
+              <br />
+              <br />
+              (
+              <a
+                href="https://github.com/brian-carroll/elm_c_wasm/tree/master/src/test/gc_test.c"
+              >
+                source code
+              </a>
+              )
+            </td>
+            <td>
+              Unit tests on an experimental Garbage Collector for Elm in C/Wasm
+              <ul>
+                <li>
+                  Mark-sweep compacting collector<br />
+                  See section 3.4 of
+                  <a href="http://gchandbook.org/"
+                    >"The Garbage Collection Handbook"</a
+                  >
+                  by Jones, Hosking, and Moss
+                </li>
+                <li>
+                  Designed for immutable data and controlled effects
+                </li>
+                <li>
+                  Currently fits in 6kB .wasm file, though not complete yet!
+                </li>
+              </ul>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
