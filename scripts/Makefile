@@ -4,7 +4,7 @@ CFLAGS=-Wall -O1
 ROOT := ..
 SRC := $(ROOT)/src
 DIST := $(ROOT)/dist
-DEPLOY := $(ROOT)/../gh-pages/unit-tests
+DEPLOY := $(ROOT)/../gh-pages
 SOURCES := $(shell find $(SRC) -name '*.c')
 HEADERS := $(shell find $(SRC) -name '*.h')
 DATA_TSV := $(shell find $(SRC) -name '*.tsv')
@@ -59,9 +59,10 @@ build.log: $(SOURCES) $(HEADERS)
 
 gh-pages: www
 	mkdir -p $(DEPLOY)/dist/www
-	cp $(ROOT)/index.html $(DEPLOY)
-	cp $(DIST)/www/test.js $(DEPLOY)/dist/www
-	cp $(DIST)/www/test.wasm $(DEPLOY)/dist/www
+	cp $(ROOT)/demos/index.html $(DEPLOY)
+	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
+	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www
+	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
 
 
 # Makefile squiggles:

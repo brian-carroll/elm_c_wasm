@@ -426,6 +426,7 @@ char *stackmap_mark_test()
     {
         printf("\n\n\n");
         printf("########################################################################################\n");
+        printf("\n");
         printf("stackmap_mark_test\n");
         printf("------------------\n");
         printf("\n");

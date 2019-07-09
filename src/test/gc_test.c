@@ -736,11 +736,35 @@ char *gc_replay_test()
     GcState *state = &gc_state;
     if (verbose)
     {
-        printf("\n");
-        printf("########################################################################################\n");
-        printf("gc_replay_test\n");
-        printf("--------------\n");
-        printf("\n");
+        printf(
+            "\n"
+            "########################################################################################\n"
+            "\n"
+            "gc_replay_test\n"
+            "--------------\n"
+            "\n"
+            "- Set up heap to be 'nearly full'\n"
+            "- Call an Elm function that doesn't have enough heap space to finish\n"
+            "- Expect a GC exception to be thrown (interrupting execution and unravelling the call stack)\n"
+            "- Collect garbage (mark & compact)\n"
+            "- Expect compacted heap to be consistent ('mark' succeeds)\n"
+            "- Restore the state of the stack with new pointer locations & resume execution\n"
+            "- Expect execution to complete & return the correct result\n"
+            "\n"
+            "fib : Int -> Int\n"
+            "fib n =\n"
+            "    if n <= 0 then\n"
+            "        0\n"
+            "    else\n"
+            "        (fibHelp n) 1 0\n"
+            "\n"
+            "fibHelp : Int -> Int -> Int -> Int\n"
+            "fibHelp iters prev1 prev2 =\n"
+            "    if iters <= 1 then\n"
+            "        prev1\n"
+            "    else\n"
+            "        fibHelp (iters - 1) (prev1 + prev2) prev1\n"
+            "\n");
     }
     gc_test_reset();
 
@@ -832,23 +856,22 @@ char *gc_replay_test()
     {
         printf("Finished reversing\n");
         print_state(&gc_state);
-        printf("Marking compacted heap (for visualisation, not actually needed)\n\n");
+        printf("Marking compacted heap (to check integrity, would skip in 'real life')\n\n");
     }
 
     mark(&gc_state, ignore_below);
-
-    if (verbose)
-    {
-        printf("\n\nFinished marking...\n\n");
-        print_heap(&gc_state);
-        print_state(&gc_state);
-    }
 
     mu_assert("Compacted heap should be traceable by 'mark'",
               bitmap_dead_between(
                   &state->heap,
                   ignore_below,
                   state->next_alloc) == 0);
+
+    if (verbose)
+    {
+        print_heap(&gc_state);
+        print_state(&gc_state);
+    }
 
     GcStackMap *empty = (GcStackMap *)state->heap.start;
     state->replay_ptr = empty->newer;
@@ -865,10 +888,6 @@ char *gc_replay_test()
     if (verbose)
     {
         printf("\nFinished replay and 2nd execution run...\n");
-
-        print_heap(&gc_state);
-        print_state(&gc_state);
-
         printf("Aaaand the %dth Fibonacci number is ...drumroll please...\n", literal_n.value);
         print_value(result_replay);
     }
@@ -879,8 +898,15 @@ char *gc_replay_test()
         46368, 75025, 121393, 196418, 317811};
     i32 answer = answers[literal_n.value];
 
-    mu_assert("should return the correct result after replay",
-              result_replay->elm_int.value == answer);
+    bool pass = result_replay->elm_int.value == answer;
+
+    if (verbose && !pass)
+    {
+        print_heap(&gc_state);
+        print_state(&gc_state);
+    }
+
+    mu_assert("should return the correct result after resuming", pass);
 
     return NULL;
 }
