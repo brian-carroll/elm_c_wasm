@@ -16,7 +16,7 @@ struct fn
     void *evaluator;
     char *name;
 };
-#define NUM_FUNC_NAMES 6
+#define NUM_FUNC_NAMES 5
 struct fn func_map[NUM_FUNC_NAMES];
 
 #define MAX_STACKMAP_NAMES 100
