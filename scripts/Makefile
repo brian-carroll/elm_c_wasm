@@ -57,7 +57,8 @@ watch:
 build.log: $(SOURCES) $(HEADERS)
 	make gh-pages | tee build.log
 
-gh-pages: www
+gh-pages: CFLAGS=-Wall -O3
+gh-pages: clean www
 	mkdir -p $(DEPLOY)/dist/www
 	cp $(ROOT)/demos/index.html $(DEPLOY)
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
