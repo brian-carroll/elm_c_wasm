@@ -18,6 +18,12 @@ int test_int_val(ElmInt *actual, i32 expected)
 
 char *test_number_binops()
 {
+    if (verbose)
+    {
+        printf("\n");
+        printf("## Numerical binary operators\n");
+        printf("\n");
+    }
 
     ElmInt *i1 = NEW_ELM_INT(1);
     ElmInt *i2 = NEW_ELM_INT(2);
@@ -86,6 +92,15 @@ char *test_number_binops()
 
 char *basics_test()
 {
+    if (verbose)
+    {
+        printf("\n\n\n");
+        printf("####################################################\n");
+        printf("\n");
+        printf("Basics\n");
+        printf("------\n");
+    }
+
     mu_run_test(test_number_binops);
     return NULL;
 }

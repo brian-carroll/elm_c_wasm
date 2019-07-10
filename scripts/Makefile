@@ -55,7 +55,7 @@ watch:
 
 
 build.log: $(SOURCES) $(HEADERS)
-	make check | tee build.log
+	make gh-pages | tee build.log
 
 gh-pages: www
 	mkdir -p $(DEPLOY)/dist/www

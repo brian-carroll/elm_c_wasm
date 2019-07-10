@@ -8,21 +8,12 @@ char *test_wasm_types()
 {
     if (verbose)
     {
+        printf("\n");
+        printf("## test_wasm_types\n");
+        printf("Platform 32/64 bit types\n");
         printf("sizeof(void*) = %d\n", (int)sizeof(void *));
         printf("sizeof(size_t*) = %d\n", (int)sizeof(size_t));
         printf("sizeof(int) = %d\n", (int)sizeof(int));
-        printf("\n");
-        printf("sizeof(i8) = %d\n", (int)sizeof(i8));
-        printf("sizeof(i16) = %d\n", (int)sizeof(i16));
-        printf("sizeof(i32) = %d\n", (int)sizeof(i32));
-        printf("sizeof(i64) = %d\n", (int)sizeof(i64));
-        printf("sizeof(u8) = %d\n", (int)sizeof(u8));
-        printf("sizeof(u16) = %d\n", (int)sizeof(u16));
-        printf("sizeof(u32) = %d\n", (int)sizeof(u32));
-        printf("sizeof(u64) = %d\n", (int)sizeof(u64));
-        printf("sizeof(f32) = %d\n", (int)sizeof(f32));
-        printf("sizeof(f64) = %d\n", (int)sizeof(f64));
-        printf("\n");
     }
     mu_assert("i8 should be 1 byte", sizeof(i8) == 1);
     mu_assert("i16 should be 2 bytes", sizeof(i16) == 2);
@@ -43,10 +34,11 @@ char *test_elm_constants()
 {
     if (verbose)
     {
+        printf("\n");
+        printf("## test_elm_constants\n");
         printf("Unit size=%zd addr=%s hex=%s\n", sizeof(Unit), hex_ptr(&Unit), hex(&Unit, sizeof(Unit)));
         printf("True size=%zd addr=%s hex=%s\n", sizeof(True), hex_ptr(&True), hex(&True, sizeof(True)));
         printf("False size=%zd addr=%s hex=%s\n", sizeof(False), hex_ptr(&False), hex(&False, sizeof(False)));
-        printf("\n");
     }
 
     // These are now defined as ElmValues to avoid lots of casting
@@ -80,9 +72,10 @@ char *test_header_layout()
 
     if (verbose)
     {
+        printf("\n");
+        printf("## test_header_layout\n");
         printf("mask_tag  BE=%08x, LE=%s\n", *(u32 *)&mask_tag, hex(&mask_tag, 4));
         printf("mask_size BE=%08x, LE=%s\n", *(u32 *)&mask_size, hex(&mask_size, 4));
-        printf("\n");
     }
 
     mu_assert(
@@ -103,7 +96,8 @@ char *test_header_layout()
 char *test_nil()
 {
     if (verbose)
-        printf("Nil sizeof=%zd addr=%s tag=%d, hex=%s\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag, hex(&Nil, sizeof(Nil)));
+        printf("\n## test_nil\n");
+    printf("Nil sizeof=%zd addr=%s tag=%d, hex=%s\n", sizeof(Nil), hex_ptr(&Nil), (int)Nil.header.tag, hex(&Nil, sizeof(Nil)));
     mu_assert("Nil should be the same size as ElmValue", sizeof(Nil) == sizeof(ElmValue));
     mu_assert("Nil should have the right tag field", Nil.header.tag == Tag_Nil);
     mu_assert("Nil should have the right size field", Nil.header.size == 1);
@@ -112,6 +106,8 @@ char *test_nil()
 
 char *test_cons()
 {
+    if (verbose)
+        printf("\n## test_cons\n");
     Cons *c = NEW_CONS(&Unit, &Nil); // [()]
     if (verbose)
         printf("Cons size=%zd addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
@@ -138,6 +134,8 @@ char *test_cons()
 
 char *test_tuples()
 {
+    if (verbose)
+        printf("\n## test_tuples\n");
     ElmInt *i1 = NEW_ELM_INT(1);
     ElmInt *i2 = NEW_ELM_INT(2);
     ElmInt *i3 = NEW_ELM_INT(3);
@@ -185,6 +183,8 @@ char *test_tuples()
 
 char *test_int()
 {
+    if (verbose)
+        printf("\n## test_int\n");
     ElmInt *i = NEW_ELM_INT(123);
 
     if (verbose)
@@ -206,6 +206,8 @@ char *test_int()
 
 char *test_float()
 {
+    if (verbose)
+        printf("\n## test_float\n");
     ElmFloat *f = NEW_ELM_FLOAT(123.456789);
     if (verbose)
         printf("Float size=%zd addr=%s tag=%d value=%f\n",
@@ -229,6 +231,8 @@ char *test_float()
 
 char *test_char()
 {
+    if (verbose)
+        printf("\n## test_char\n");
     ElmChar *ch = NEW_ELM_CHAR('A');
     if (verbose)
         printf("Char size=%zd addr=%s tag=%d value=%c\n",
@@ -264,6 +268,9 @@ char *test_strings()
 
     if (verbose)
     {
+        printf("\n");
+        printf("## test_strings\n");
+        printf("\n");
         printf("sizeof(ElmString) = %zd\n", sizeof(ElmString));
         printf("&str4->bytes - str4 = %zd\n", (void *)&str4->bytes - (void *)str4);
         printf("\n");
@@ -342,6 +349,8 @@ char *test_custom()
     c->values[1] = &Unit;
     if (verbose)
     {
+        printf("\n");
+        printf("## test_custom\n");
         printf("custom with 2 values = %s\n", hex(c, sizeof(Custom) + 2 * sizeof(void *)));
     }
 
@@ -375,6 +384,8 @@ char *test_record()
 
     if (verbose)
     {
+        printf("\n");
+        printf("## test_record\n");
         printf("FieldSet with 2 values: addr=%s, hex=%s\n", hex_ptr(fs), hex(fs, sizeof(FieldSet) + 2 * sizeof(u32)));
         printf("Record with 2 values: tag=%d, size=%d, hex=%s\n",
                r->header.tag, r->header.size,
@@ -418,6 +429,8 @@ char *test_closure()
     c->values[1] = &Unit;
     if (verbose)
     {
+        printf("\n");
+        printf("## test_closure\n");
         printf("Closure with 2 values = %s\n", hex(c, sizeof(Closure) + 2 * sizeof(void *)));
     }
 
@@ -438,6 +451,8 @@ char *types_test()
 {
     if (verbose)
     {
+        printf("\n");
+        printf("####################################################\n");
         printf("\n");
         printf("Elm type structures\n");
         printf("-------------------\n\n");

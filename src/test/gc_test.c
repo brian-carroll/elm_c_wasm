@@ -776,7 +776,6 @@ char *gc_replay_test()
     func_map[2] = (struct fn){Utils_le.evaluator, "Utils_le"};
     func_map[3] = (struct fn){Basics_add.evaluator, "Basics_add"};
     func_map[4] = (struct fn){Basics_sub.evaluator, "Basics_sub"};
-    func_map[5] = (struct fn){Basics_mul.evaluator, "Basics_mul"};
 
     literal_0 = (ElmInt){
         .header = HEADER_INT,

@@ -13,32 +13,33 @@ char *test_records()
     {
         printf("\n");
         printf("## Record access & update\n");
+        printf("\n");
     }
 
-    /*
-        type alias Record1 =
-            { someField: Int
-            , otherField: String
-            }
-
-        type alias Record2 =
-            { things: Int
-            , someField: Int
-            , stuff: Float
-            }
-
-        r1 = Record1 123 "hello"
-        r2 = Record2 456 321 1.0
-
-        int1 = .someField r1  -- 123
-        int2 = .someField r2  -- 321
-
-        r3 = { r2
-               | things = 111
-               , stuff = 3.14
-             }
-
-    */
+    printf(
+        "type alias Record1 =\n"
+        "    { someField: Int\n"
+        "    , otherField: String\n"
+        "    }\n"
+        "\n"
+        "-- differently shaped record type with 'someField' in a different position\n"
+        "type alias Record2 =\n"
+        "    { things: Int\n"
+        "    , someField: Int\n"
+        "    , stuff: Float\n"
+        "    }\n"
+        "\n"
+        "r1 = Record1 123 \"hello\"\n"
+        "r2 = Record2 456 321 1.0\n"
+        "\n"
+        "int1 = .someField r1  -- 123\n"
+        "int2 = .someField r2  -- 321\n"
+        "\n"
+        "r3 = { r2\n"
+        "        | things = 111\n"
+        "        , stuff = 3.14\n"
+        "        }\n"
+        "\n");
 
     // Elm compiler transforms field names to numbers
     u32 things = 12;
@@ -81,18 +82,6 @@ char *test_records()
     // The actual accessor function
     Closure *access_someField = A1(&Utils_access, NEW_ELM_INT(someField));
 
-    if (verbose)
-    {
-        printf("access_someField = %s\n",
-               hex(access_someField, sizeof(Closure) + sizeof(void *)));
-        printf("fsRecord1: addr=%zx val=%s\n",
-               (size_t)fsRecord1,
-               hex(fsRecord1, sizeof(FieldSet) + 2 * sizeof(u32)));
-        printf("fsRecord2: addr=%zx val=%s\n",
-               (size_t)fsRecord2,
-               hex(fsRecord2, sizeof(FieldSet) + 3 * sizeof(u32)));
-    }
-
     ElmInt *int1 = A1(access_someField, r1);
     ElmInt *int2 = A1(access_someField, r2);
 
@@ -108,14 +97,35 @@ char *test_records()
         r2, 2, (u32[]){things, stuff},
         (void *[]){updated_thing, updated_stuff});
 
-    mu_assert("Record accessor should work on r1", int1->value = 123);
-    mu_assert("Record accessor should work on r2", int2->value = 321);
+    if (verbose)
+    {
+        printf("r1: addr=%zx val=%s\n",
+               (size_t)r1,
+               hex(r1, sizeof(Record) + 2 * sizeof(void *)));
+        printf("r2: addr=%zx val=%s\n",
+               (size_t)r2,
+               hex(r2, sizeof(Record) + 3 * sizeof(void *)));
+        printf("fieldset Record1: addr=%zx val=%s\n",
+               (size_t)fsRecord1,
+               hex(fsRecord1, sizeof(FieldSet) + 2 * sizeof(u32)));
+        printf("fieldset for r2: addr=%zx val=%s\n",
+               (size_t)fsRecord2,
+               hex(fsRecord2, sizeof(FieldSet) + 3 * sizeof(u32)));
+        printf("Closure access_someField = %s\n",
+               hex(access_someField, sizeof(Closure) + sizeof(void *)));
+        printf("r3: addr=%zx val=%s\n",
+               (size_t)r3,
+               hex(r3, sizeof(Record) + 3 * sizeof(void *)));
+    }
 
-    mu_assert("Updated record should have same fieldset",
+    mu_assert("Record accessor should return 123 for r1", int1->value = 123);
+    mu_assert("Record accessor should return 321 for r2", int2->value = 321);
+
+    mu_assert("Updated record r3 should have same fieldset as r2",
               r3->fieldset == r2->fieldset);
-    mu_assert("Updated record should have same header",
+    mu_assert("Updated record r3 should have same header as r2",
               memcmp(r3, r2, sizeof(Header)) == 0);
-    mu_assert("Updated record should have 3 correct fields",
+    mu_assert("Updated record should have 3 correct field values",
               r3->values[0] == updated_thing &&
                   r3->values[1] == r2->values[1] &&
                   r3->values[2] == updated_stuff);
@@ -156,8 +166,9 @@ char *test_apply(void)
 {
     if (verbose)
     {
-        printf("\n");
+        printf("\n\n");
         printf("## Apply\n");
+        printf("\n");
     }
 
     Closure user_project_closure = (Closure){
@@ -177,9 +188,6 @@ char *test_apply(void)
     if (verbose)
     {
         printf(
-            "\n"
-            "## Function application\n"
-            "\n"
             "Example Elm function exercising most code paths in `apply`:\n"
             "    outerScopeValue : Int\n"
             "    outerScopeValue =\n"
@@ -218,6 +226,7 @@ char *test_apply(void)
         printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
                hex_ptr(answer), (int)answer->header.tag, answer->value,
                hex(answer, sizeof(ElmInt)));
+        printf("\n");
     }
 
     ElmInt expected_answer = (ElmInt){.header = HEADER_INT, .value = 6};
@@ -230,8 +239,9 @@ char *test_eq(void)
 {
     if (verbose)
     {
-        printf("\n");
+        printf("\n\n");
         printf("## Equality\n");
+        printf("\n");
     }
 
     mu_assert("Expect: () == ()", A2(&Utils_eq, &Unit, &Unit) == &True);
@@ -247,8 +257,6 @@ char *test_eq(void)
     mu_assert("Expect: 2 == 2", A2(&Utils_eq, &two, &two) == &True);
     mu_assert("Expect: 2 /= 3", A2(&Utils_eq, &two, &three) == &False);
 
-    mu_assert("Expect: True /= 3", A2(&Utils_eq, &True, &three) == &False);
-
     ElmFloat *f = NEW_ELM_FLOAT(123.456);
     ElmFloat *f1 = NEW_ELM_FLOAT(123.456);
     ElmFloat *f2 = NEW_ELM_FLOAT(2.0);
@@ -263,6 +271,13 @@ char *test_eq(void)
     mu_assert("Expect: 'A' == 'A', by value", A2(&Utils_eq, &a1, &a2) == &True);
     mu_assert("Expect: 'A' /= 'B'", A2(&Utils_eq, &a1, &b) == &False);
 
+    if (verbose)
+    {
+        printf("\n");
+        printf("Different types: compiler will reject, but `==` can give False anyway\n");
+    }
+    mu_assert("Expect: True /= 3", A2(&Utils_eq, &True, &three) == &False);
+
     ElmString *hello1 = NEW_ELM_STRING(5, "hello");
     ElmString *hello2 = NEW_ELM_STRING(5, "hello");
     ElmString *hello_ = NEW_ELM_STRING(6, "hello_");
@@ -270,6 +285,7 @@ char *test_eq(void)
 
     if (verbose)
     {
+        printf("\nString equality\n");
         printf("hello1 str=\"%s\" hex=%s\n", hello1->bytes, hex(hello1, hello1->header.size * 4));
         printf("hello2 str=\"%s\" hex=%s\n", hello2->bytes, hex(hello2, hello2->header.size * 4));
         printf("hello_ str=\"%s\" hex=%s\n", hello_->bytes, hex(hello_, hello_->header.size * 4));
@@ -283,7 +299,7 @@ char *test_eq(void)
     mu_assert("Expect: \"hello_\" /= \"hello\"", A2(&Utils_eq, hello_, hello1) == &False);
 
     if (verbose)
-        printf("Running List equality tests\n");
+        printf("\nList equality\n");
     Cons *cons2 = NEW_CONS(&two, &Nil);
     Cons *cons2a = NEW_CONS(&two, &Nil);
     Cons *cons3 = NEW_CONS(&three, &Nil);
@@ -305,7 +321,7 @@ char *test_eq(void)
     mu_assert("Expect: [2,3] /= [2,2]", A2(&Utils_eq, cons23, cons22) == &False);
 
     if (verbose)
-        printf("Running Tuple equality tests\n");
+        printf("\nTuple equality\n");
     Tuple2 *tuple23 = NEW_TUPLE2(&two, &three);
     Tuple2 *tuple23a = NEW_TUPLE2(&two, &three);
     Tuple2 *tuple32 = NEW_TUPLE2(&three, &two);
@@ -330,12 +346,13 @@ char *test_eq(void)
     mu_assert("Expect: (1,1,1) /= (1,2,1)", A2(&Utils_eq, tuple111, tuple121) == &False);
     mu_assert("Expect: (1,1,1) /= (1,1,2)", A2(&Utils_eq, tuple111, tuple112) == &False);
 
+    const u32 big_list_size = 123;
     if (verbose)
-        printf("Running recursive equality tests\n");
+        printf("\nLong list equality (recursive, %d elements)\n", big_list_size);
     Cons *bigList1 = NEW_CONS(&one, &Nil);
     Cons *bigList2 = NEW_CONS(&one, &Nil);
     Cons *bigList3 = cons2;
-    for (u32 i = 0; i < 123; ++i)
+    for (u32 i = 0; i < big_list_size; ++i)
     {
         bigList1 = NEW_CONS(&one, bigList1);
         bigList2 = NEW_CONS(&one, bigList2);
@@ -345,7 +362,7 @@ char *test_eq(void)
     mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]", A2(&Utils_eq, bigList1, bigList3) == &False);
 
     if (verbose)
-        printf("Running Custom type equality tests\n");
+        printf("\nCustom type equality\n");
     u8 mem_1_1A[sizeof(Custom) + 2 * sizeof(void *)];
     Custom *custom_1_1A = (Custom *)mem_1_1A;
 
@@ -372,7 +389,7 @@ char *test_eq(void)
     mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'", A2(&Utils_eq, custom_1_1A, custom_1_1B) == &False);
 
     if (verbose)
-        printf("Running Record equality tests\n");
+        printf("\nRecord equality\n");
     u8 mem_fs[sizeof(FieldSet) + 2 * sizeof(void *)];
     FieldSet *fs = (FieldSet *)mem_fs;
     fs->size = 2;
@@ -410,7 +427,11 @@ char *test_eq(void)
 char *test_compare()
 {
     if (verbose)
-        printf("ElmInt comparisons\n");
+    {
+        printf("\n\n");
+        printf("## Compare\n");
+        printf("\nElmInt\n");
+    }
     ElmInt *i123 = NEW_ELM_INT(123);
     ElmInt *i123a = NEW_ELM_INT(123);
     ElmInt *i456 = NEW_ELM_INT(456);
@@ -420,7 +441,7 @@ char *test_compare()
     mu_assert("compare: 123 == 123 (value)", A2(&Utils_compare, i123, i123a) == &Utils_EQ);
 
     if (verbose)
-        printf("ElmFloat comparisons\n");
+        printf("\nElmFloat\n");
     ElmFloat *f1 = NEW_ELM_FLOAT(123.456);
     ElmFloat *f1a = NEW_ELM_FLOAT(123.456);
     ElmFloat *f2 = NEW_ELM_FLOAT(456.789);
@@ -430,7 +451,7 @@ char *test_compare()
     mu_assert("compare: 123.456 == 123.456 (value)", A2(&Utils_compare, f1, f1a) == &Utils_EQ);
 
     if (verbose)
-        printf("ElmChar comparisons\n");
+        printf("\nElmChar\n");
     ElmChar a1 = (ElmChar){.header = HEADER_CHAR, .value = 'A'};
     ElmChar a2 = (ElmChar){.header = HEADER_CHAR, .value = 'A'};
     ElmChar b = (ElmChar){.header = HEADER_CHAR, .value = 'B'};
@@ -440,7 +461,7 @@ char *test_compare()
     mu_assert("Expect: 'B' > 'A'", A2(&Utils_compare, &b, &a1) == &Utils_GT);
 
     if (verbose)
-        printf("Tuple comparisons\n");
+        printf("\nTuple2\n");
     ElmInt one = (ElmInt){.header = HEADER_INT, .value = 1};
     ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
     ElmInt three = (ElmInt){.header = HEADER_INT, .value = 3};
@@ -457,6 +478,8 @@ char *test_compare()
     mu_assert("Expect: (2,2) < (3,2)", A2(&Utils_compare, tuple22, tuple32) == &Utils_LT);
     mu_assert("Expect: (2,2) < (2,3)", A2(&Utils_compare, tuple22, tuple23) == &Utils_LT);
 
+    if (verbose)
+        printf("\nTuple3\n");
     Tuple3 *tuple123 = NEW_TUPLE3(&one, &two, &three);
     Tuple3 *tuple123a = NEW_TUPLE3(&one, &two, &three);
     Tuple3 *tuple111 = NEW_TUPLE3(&one, &one, &one);
@@ -474,7 +497,7 @@ char *test_compare()
     mu_assert("Expect: (1,1,2) > (1,1,1)", A2(&Utils_compare, tuple112, tuple111) == &Utils_GT);
 
     if (verbose)
-        printf("List comparisons\n");
+        printf("\nList\n");
     Cons *cons2 = NEW_CONS(&two, &Nil);
     Cons *cons2a = NEW_CONS(&two, &Nil);
     Cons *cons3 = NEW_CONS(&three, &Nil);
@@ -500,7 +523,7 @@ char *test_compare()
     mu_assert("Expect: [2,2] < [2,3]", A2(&Utils_compare, cons22, cons23) == &Utils_LT);
 
     if (verbose)
-        printf("Recursive list comparison\n");
+        printf("\nLong list (recursive)\n");
     Cons *bigList1 = NEW_CONS(&one, &Nil);
     Cons *bigList2 = NEW_CONS(&one, &Nil);
     Cons *bigList3 = cons2;
@@ -515,7 +538,7 @@ char *test_compare()
     mu_assert("Expect: [1,1,1, ... ,2] > [1,1,1, ... ,1]", A2(&Utils_compare, bigList3, bigList1) == &Utils_GT);
 
     if (verbose)
-        printf("Test <, <=, >, >=\n");
+        printf("\nTest <, <=, >, >=\n");
     mu_assert("Utils_lt: 123 < 456 == True", A2(&Utils_lt, i123, i456) == &True);
     mu_assert("Utils_lt: 456 < 123 == False", A2(&Utils_lt, i456, i123) == &False);
     mu_assert("Utils_lt: 123 < 123 == False", A2(&Utils_lt, i123, i123a) == &False);
@@ -539,6 +562,8 @@ char *utils_test()
 {
     if (verbose)
     {
+        printf("\n\n\n");
+        printf("####################################################\n");
         printf("\n");
         printf("Utils\n");
         printf("-----\n");

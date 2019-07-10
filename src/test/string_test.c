@@ -10,7 +10,11 @@ size_t String_bytes(ElmString *s);
 char *string_bytes_test()
 {
     if (verbose)
+    {
+        printf("\n");
         printf("## String_bytes\n");
+        printf("\n");
+    }
     ElmString *str0 = NEW_ELM_STRING(0, "");
     size_t len0 = String_bytes(str0);
     mu_assert("Expect correct byte length for string length 0", len0 == 0);
@@ -24,8 +28,7 @@ char *string_bytes_test()
     mu_assert("Expect correct byte length for string length 10", String_bytes(NEW_ELM_STRING(10, "12345789a")) == 10);
     mu_assert("Expect correct byte length for string length 11", String_bytes(NEW_ELM_STRING(11, "12345789ab")) == 11);
     mu_assert("Expect correct byte length for string length 12", String_bytes(NEW_ELM_STRING(12, "12345789abc")) == 12);
-    if (verbose)
-        printf("OK\n");
+
     return NULL;
 }
 
@@ -37,7 +40,9 @@ char *string_append_test()
 
     if (verbose)
     {
+        printf("\n");
         printf("## String_append\n");
+        printf("\n");
         printf("\"%s\" ++ \"%s\" == \"%s\"\n", h->bytes, w->bytes, hw->bytes);
         printf("hello: %s\n", hex(h, sizeof(ElmString) + 8));
         printf("world: %s\n", hex(w, sizeof(ElmString) + 8));
@@ -54,6 +59,8 @@ char *string_test()
 {
     if (verbose)
     {
+        printf("\n\n\n");
+        printf("####################################################\n");
         printf("\n");
         printf("String\n");
         printf("------\n");
