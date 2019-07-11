@@ -23,8 +23,8 @@ https://brian-carroll.github.io/elm_c_wasm/
   - [x] A prototype Garbage Collector (7kB download size 😊 No idea what the performance is like! See [gc.c](/src/kernel/gc.c))
   - [x] Numerical operators from the `Basics` library (`+`, `-`, `*`, `/`)
   - [ ] List module
-  - [ ] Tackle String encoding questions, UTF-8, UTF-16, browser/JS interop, etc.
-  - [ ] Write String module
+  - [ ] Finalise String encoding issues, UTF-8, UTF-16, browser/JS interop, etc.
+  - [ ] Complete String module
   - [ ] JSON & ports (currently most effects are not available in Wasm, which probably means using ports heavily)
   - [ ] `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
 
@@ -44,13 +44,12 @@ https://brian-carroll.github.io/elm_c_wasm/
 - Effects
   - Wasm MVP has no Web APIs like DOM, XHR, etc., so most effect managers must be JS only for Wasm MVP
   - Unclear how to interface with browser APIs from C, I guess some header files you `#include` and call functions on.
-- Browser GC
 
+- Browser GC
   - Wasm spec talks about data types like arrays, objects, opaque references.
   - Unclear what this looks like from C. I guess some header files with functions you can call. Will a pointer to an array look like a pointer or like an integer? Seems like they'd have to prevent dereferencing so I guess you treat it as an integer ID and all the functions that operate on that type take this ID as an arg.
 
 - Custom GC
-
   - Impact of GC optimizations based on immutability
     - Want some way to allow Kernel to mutate things despite GC being optimized for immutability.
     - Solution: Keep all mutations outside of the heap. If an Effect Manager needs to dynamically allocate something and mutate it, it can first create new immutable value on the heap, then just mutate an off-heap pointer to point at new instead of old. This is like the way `model` updates already work in elm.js.
@@ -138,13 +137,57 @@ The version in the blog post used the same number of bytes regardless of the num
 
 ## SuperTypes / constrained type variables
 
-TODO
+ [constrained type variables][guide-type-vars] allow some functions like `++`, `+` and `>`, to work on *more than one, but not all* value types.
 
-## Boxed vs unboxed numbers
+[guide-type-vars]: https://guide.elm-lang.org/types/reading_types.html#constrained-type-variables
 
-TODO
+
+|          | **number** | **comparable** | **appendable** | **compappend** |
+| :------: | :--------: | :------------: | :------------: | :------------: |
+|  `Int`   |     ✓      |       ✓        |                |                |
+| `Float`  |     ✓      |       ✓        |                |                |
+|  `Char`  |            |       ✓        |                |                |
+| `String` |            |       ✓        |       ✓        |       ✓        |
+|  `List`  |            |      ✓\*       |       ✓        |      ✓\*       |
+| `Tuple`  |            |      ✓\*       |                |                |
+
+\* Lists and Tuples are only comparable only if their contents are comparable
+
+Low-level functions that operate on these type variables need to be able to look at an Elm value and decide which concrete type it is. For example the `compare` function (which is the basis for  `<`, `>`, `<=`, and `>=`) can accept five different types, and needs to run different low-level code for each.
+
+This implementation adds a header to the byte level representation of every Elm data value. It's a 32-bit number that includes both a type tag (4 bits) and the size of that value in memory (28 bits).
+
+| Name    | Tag |
+| ------- | --- |
+| Int     |  0  |
+| Float   |  1  |
+| Char    |  2  |
+| String  |  3  |
+| Nil     |  4  |
+| Cons    |  5  |
+| Tuple2  |  6  |
+| Tuple3  |  7  |
+| Custom  |  8  |
+| Record  |  9  |
+| Closure |  a  |
+
+The remaining 5 possible values (`b` &rarr; `f`) are reserved for Garbage Collector record-keeping data.
 
 ## Headers
+
+This implementation prefixes every Elm value with a header of 32 bits in size.
+```
+-----------------------------------------------------
+| tag (4 bits) | size (28 bits) |      Elm data     |
+-----------------------------------------------------
+```
+`size` is measured in _words_, where a word is either 32 or 64 bits, depending on the target platform. It makes sense to use words rather than bytes because all values are aligned to word boundaries anyway. For example in a 32-bit system, we'll always place our values at addresses that evenly divide by 4 bytes. Real CPUs are optimised to work faster when pointers are aligned this way.
+
+The only individual value that can get really large in practice is `String`. (Lists don't count, they are made up of many Cons cells.) A maximum value of 2<sup>28</sup>-1 for `size` corresponds to 1 GB on a 32-bit system or 4 GB on a 64-bit system.
+
+We always use 32-bit headers, even on 64-bit systems. 1GB is large enough, there's no point increasing the header size. Wasm is always 32 bits but since we're using C as an intermediate language, we can also create native 64-bit binaries. That's how I run most of my tests.
+
+## Boxed vs unboxed numbers
 
 TODO
 
