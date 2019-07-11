@@ -153,9 +153,7 @@ The version in the blog post used the same number of bytes regardless of the num
 
 \* Lists and Tuples are only comparable only if their contents are comparable
 
-Low-level functions that operate on these type variables need to be able to look at an Elm value and decide which concrete type it is. For example the `compare` function (which is the basis for  `<`, `>`, `<=`, and `>=`) can accept five different types, and needs to run different low-level code for each.
-
-This implementation adds a header to the byte level representation of every Elm data value. It's a 32-bit number that includes both a type tag (4 bits) and the size of that value in memory (28 bits).
+The byte level representation of every Elm data value includes a "tag", which is a 4-bit number containing some information about the type (and in some cases the constructor) of the Elm value. This means that for example the implementation of `++` can have two separate code branches for Lists and Strings, and execute one or the other depending on the tag. The same applies to other functions and operators like `==`, `+`, `>`, etc.
 
 | Name    | Tag |
 | ------- | --- |
@@ -175,7 +173,7 @@ The remaining 5 possible values (`b` &rarr; `f`) are reserved for Garbage Collec
 
 ## Headers
 
-This implementation prefixes every Elm value with a header of 32 bits in size.
+Every Elm value has a header of 32 bits in size.
 ```
 -----------------------------------------------------
 | tag (4 bits) | size (28 bits) |      Elm data     |
