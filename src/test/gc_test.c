@@ -244,7 +244,7 @@ void print_state(GcState *state)
     printf("\n");
 }
 
-char alive_or_dead_msg[30];
+char alive_or_dead_msg[50];
 ElmValue *root_mutable_pointer;
 
 char *gc_mark_compact_test()
@@ -395,21 +395,21 @@ char *gc_mark_compact_test()
 
     if (verbose)
         printf("Marking...\n");
-    size_t *ignore_below = (size_t *)c1;
+    size_t *ignore_below = state->heap.start;
     mark(&gc_state, ignore_below);
     if (verbose)
         printf("Finished marking...\n");
 
     if (verbose)
     {
-        // print_heap(&gc_state);
-        // print_state(&gc_state);
+        print_heap(&gc_state);
+        print_state(&gc_state);
     }
 
     size_t dead_size = 0;
     for (size_t i = 0; i < ndead; i++)
     {
-        sprintf(alive_or_dead_msg, "%p should be dead", dead[i]);
+        sprintf(alive_or_dead_msg, "Value #%zd at %p should be dead", i, dead[i]);
         mu_assert(alive_or_dead_msg, !is_marked(dead[i]));
         ElmValue *v = (ElmValue *)dead[i];
         dead_size += v->header.size;
@@ -418,7 +418,7 @@ char *gc_mark_compact_test()
     size_t live_size = 0;
     for (size_t i = 0; i < nlive; i++)
     {
-        sprintf(alive_or_dead_msg, "%p should be live", live[i]);
+        sprintf(alive_or_dead_msg, "Value #%zd at %p should be live", i, live[i]);
         mu_assert(alive_or_dead_msg, is_marked(live[i]));
         ElmValue *v = (ElmValue *)live[i];
         live_size += v->header.size;
@@ -503,11 +503,13 @@ char *gc_bitmap_test()
 
     if (verbose)
     {
-        printf("\n");
-        printf("########################################################################################\n");
-        printf("gc_bitmap_test\n");
-        printf("--------------\n");
-        printf("\n");
+        printf(
+            "\n"
+            "########################################################################################\n"
+            "\n"
+            "gc_bitmap_test\n"
+            "--------------\n"
+            "\n");
         print_heap(&gc_state);
         print_state(&gc_state);
         printf("\n");
@@ -526,7 +528,7 @@ char *gc_bitmap_test()
         for (size_t b = 0; b < GC_WORD_BITS; b++)
         {
             bool bitmap_bit = (word & ((size_t)1 << b)) != 0;
-            sprintf(bitmap_msg, "is_marked (%d) should match the bitmap (%d)\naddr = %p  word = %zd  bit = %zd",
+            sprintf(bitmap_msg, "is_marked (%d) should match the bitmap (%d) addr = %p  word = %zd  bit = %zd",
                     is_marked(ptr), bitmap_bit, ptr, w, b);
             mu_assert(bitmap_msg, is_marked(ptr) == bitmap_bit);
             ptr++;
@@ -913,19 +915,19 @@ char *gc_replay_test()
 char *gc_test()
 {
     if (verbose)
-    {
-        printf("\n");
-        printf("GC\n");
-        printf("--\n");
-    }
+        printf(
+            "______________________________________________________________\n"
+            "\n"
+            "                  Garbage Collector tests\n"
+            "______________________________________________________________\n");
 
-    //     mu_run_test(gc_struct_test);
-    //     mu_run_test(gc_bitmap_test);
-    //     mu_run_test(gc_dead_between_test);
-    //     mu_run_test(gc_mark_compact_test);
-    //     mu_run_test(gc_bitmap_next_test);
     mu_run_test(gc_replay_test);
     mu_run_test(stackmap_mark_test);
+    mu_run_test(gc_struct_test);
+    mu_run_test(gc_bitmap_test);
+    mu_run_test(gc_dead_between_test);
+    mu_run_test(gc_mark_compact_test);
+    mu_run_test(gc_bitmap_next_test);
 
     return NULL;
 }
