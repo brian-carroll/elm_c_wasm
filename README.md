@@ -1,3 +1,21 @@
+- [Project goals](#project-goals)
+- [Demos](#demos)
+- [Progress](#progress)
+- [Big picture stuff](#big-picture-stuff)
+- [Mixing JS and Wasm in compiled output](#mixing-js-and-wasm-in-compiled-output)
+- [Effects](#effects)
+- [GC](#gc)
+- [Closures](#closures)
+- [Extensible Records](#extensible-records)
+  - [Record accessor functions](#record-accessor-functions)
+  - [Record update](#record-update)
+- [Value Headers](#value-headers)
+- [Type tags & constrained type variables](#type-tags-&-constrained-type-variables)
+- [Boxed vs unboxed integers](#boxed-vs-unboxed-integers)
+- [Alternatives to C](#alternatives-to-c)
+  - [Rust](#rust)
+  - [Direct to Wasm](#direct-to-wasm)
+
 # Project goals
 
 - An experiment to try to implement Elm in WebAssembly
@@ -12,15 +30,15 @@
 
 https://brian-carroll.github.io/elm_c_wasm/
 
-
 # Progress
 
-
 - Elm compiler modifications
+
   - [x] Initial experiments [forking](https://github.com/brian-carroll/elm-compiler/tree/wasm) the Elm compiler to generate Wasm (decided to abandon this direction)
   - [ ] Modify Elm compiler to generate C (coming soon...)
 
 - Kernel code / core libs
+
   - [x] Implement C data structures for all Elm value types: `Int`, `Float`, `Char`, `String`, `List`, tuples, custom types, records, functions
   - [x] Function application and currying
   - [x] Extensible record updates and accessors
@@ -38,20 +56,21 @@ https://brian-carroll.github.io/elm_c_wasm/
   - Other things in my life got busy in the first half of 2019, but my interest is reviving at the moment and I have more time on my hands again!
   - I meant to write some blog posts and see if I could get some interest from the community, but I ended up only writing one. It was on [first class functions][blogpost].
 
-
-
 # Big picture stuff
 
 - Effects
+
   - Wasm MVP has no Web APIs like DOM, XHR, etc., so most effect managers must be JS only for Wasm MVP
   - Unclear how to interface with browser APIs from C, I guess some header files you `#include` and call functions on.
   - Perhaps a good intermediate step would be to generate pure code in C/Wasm and effectful code in JS
 
 - Browser GC
+
   - Wasm spec talks about data types like arrays, objects, opaque references.
   - Unclear what this looks like from C. Values would have integer IDs rather than pointers so that you can't do bad things. I guess you call some library functions to create, get nth child, etc.
 
 - Custom GC
+
   - Impact of GC optimizations based on immutability
     - Want some way to allow Kernel to mutate things despite GC being optimized for immutability.
     - Solution: Keep all mutations outside of the heap. If an Effect Manager needs to dynamically allocate something and mutate it, it can first create new immutable value on the heap, then just mutate an off-heap pointer to point at new instead of old. This is like the way `model` updates already work in elm.js.
@@ -61,47 +80,37 @@ https://brian-carroll.github.io/elm_c_wasm/
   - Quite a bit of maintenance
   - Would it be good to put more of the code in Elm?
 
-# Notes
-
-## Mixing JS and Wasm in compiled output
+# Mixing JS and Wasm in compiled output
 
 - It's a **lot** of work to get to compile a "hello world" Elm program to 100% Wasm. Because of dead code elimination, you can't get any output from the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
 - I need a way for the Elm program to end up as a mix of JS and Wasm. That way I can keep the kernel in JS initially, with the Elm code compiled to Wasm. Afterwards I'll see about gradually replacing the kernel with Wasm. Maybe that's not even needed?
 
-
-
-- Annoyingly, everything crossing the JS/Wasm boundary has to be serialized and de-serialized (as JSON strings)
-- How does that work for `Cmd`? Surely it's not serialisable?
+* Annoyingly, everything crossing the JS/Wasm boundary has to be serialized and de-serialized (as JSON strings)
+* How does that work for `Cmd`? Surely it's not serialisable?
   - `Cmd Msg` going from `update` to the runtime will always have a `Msg` constructor function inside it. In JS-speak this is a callback.
   - Need to spot this happening in code gen. Then export it to be callable from JS, and pass that JS version to the _real_ Elm runtime.
   - Maybe there's a need for an Elm wrapper module for this, exposing a `Program` constructor and maybe some other stuff. My code generator can just make special cases for that module.
-- JS calling `update`
+* JS calling `update`
   - Need to export a curried version of `update` so that JS `A2` works
   - Exporting an Elm function from Wasm to JS
     - Do all the currying in JS land. Inner function calls into Wasm.
     - Wasm export
 
-
-
-## Effects
+# Effects
 
 - Wasm MVP doesn't yet have access to Web APIs like DOM, `XmlHttpRequest`, etc.
 - This means an Elm program in Wasm has to call out to JS to do any effects.
 - Also, all communication with JS is done using typed arrays. This means everything has to be serialised, using JSON or some other format.
 - It should be possible to compile an Elm program to a mixture of JavaScript and Wasm, with the effects modules in JS and the pure code in Wasm. There would be JSON serialisation and de-serialisation in between, which might not be super-efficient, but it's a way to get some kind of prototype up and running.
 
-
-
-## GC
+# GC
 
 - I've built a prototype Garbage Collector so that I could run some Elm programs (well, hand-compiled ones since I don't have a compiler yet!)
 - It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
 - _The GC fits into less than 7kB of binary Wasm!_
 - I have a plan for how kernel code in C/Wasm can do mutations but still use this immutable GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
 
-
-
-## Closures
+# Closures
 
 I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](/src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
 
@@ -111,9 +120,7 @@ The version in the blog post used the same number of bytes regardless of the num
 
 [blogpost]: https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
 
-
-
-## Extensible Records
+# Extensible Records
 
 A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). In this project they are split into two C structs, `Record` and `FieldSet`, defined in [types.h](./src/kernel/types.h).
 
@@ -121,9 +128,9 @@ Field names are represented as integer "field IDs". The compiler would convert e
 
 [shortnames]: https://github.com/elm/compiler/blob/0.19.0/compiler/src/Generate/JavaScript/Mode.hs#L79
 
-The `Record` struct stores only the values, in ascending order of the corresponding field IDs. The field IDs themselves are stored in a `FieldSet`, a single structure shared by all values of the same Record type, in ascending order. To access a field by its field ID, we first look up the field ID in the  `FieldSet`. If it's in the nth position, then the corresponding value will also be in the nth position in the Record itself.
+The `Record` struct stores only the values, in ascending order of the corresponding field IDs. The field IDs themselves are stored in a `FieldSet`, a single structure shared by all values of the same Record type, in ascending order. To access a field by its field ID, we first look up the field ID in the `FieldSet`. If it's in the nth position, then the corresponding value will also be in the nth position in the Record itself.
 
-### Record accessor functions
+## Record accessor functions
 
 Elm has special functions for accessing records, prefixed by a dot, like `.name`, which can be applied to _any_ Record type that contains a field called `name`. It's implemented using a Kernel function that takes the field ID as an Elm `Int`, and the record itself.
 
@@ -145,7 +152,7 @@ The compiler would insert code to create each accessor function by partially app
 
 The implementation is in [utils.c](/src/kernel/utils.c) (see `access_eval`). The code is unsafe if the field does not actually exist in the record, but it can only be called in compiler-generated code.
 
-### Record update
+## Record update
 
 Elm's record update syntax is `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
 
@@ -159,9 +166,7 @@ For each field ID to be updated
 	Change the pointer in the clone at the same index to point at the updated value
 ```
 
-
-
-## Value Headers
+# Value Headers
 
 Every Elm value has a header of 32 bits in size. It's defined in [types.h](./src/kernel/types.h)
 
@@ -177,36 +182,32 @@ The only individual value that can get really large in practice is `String`. (Li
 
 We always use 32-bit headers, even on 64-bit systems. 1GB is large enough, there's no point increasing the header size. Wasm is always 32 bits but since we're using C as an intermediate language, we can also create native 64-bit binaries. That's how I run most of my tests.
 
+# Type tags & constrained type variables
 
-
-## Type tags & constrained type variables
-
-To explain how the type tag in the header works, we need to discuss [constrained type variables][guide-type-vars]. This is the feature of Elm that allows some functions like `++`, `+` and `>`, to work on *more than one, but not all* types.
+To explain how the type tag in the header works, we need to discuss [constrained type variables][guide-type-vars]. This is the feature of Elm that allows some functions like `++`, `+` and `>`, to work on _more than one, but not all_ types.
 
 [guide-type-vars]: https://guide.elm-lang.org/types/reading_types.html#constrained-type-variables
 
-To facilitate this, we insert a "tag" as metadata into the byte level representation of every Elm value. The tag is a 4-bit number carrying information about the type and memory layout of the value. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings because the memory layout for each is totally different. Using the tag data, it can decide which of two code branches to execute. 
+To facilitate this, we insert a "tag" as metadata into the byte level representation of every Elm value. The tag is a 4-bit number carrying information about the type and memory layout of the value. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings because the memory layout for each is totally different. Using the tag data, it can decide which of two code branches to execute.
 
-| Tag  |   Name   | **number** | **comparable** | **appendable** |
-| :--: | :------: | :--------: | :------------: | :------------: |
-|  0   |  `Int`   |     ✓      |       ✓        |                |
-|  1   | `Float`  |     ✓      |       ✓        |                |
-|  2   |  `Char`  |            |       ✓        |                |
-|  3   | `String` |            |       ✓        |       ✓        |
-|  4   |  `List`  |            |       ✓        |       ✓        |
-|  5   | `Tuple2` |            |       ✓        |                |
-|  6   | `Tuple3` |            |       ✓        |                |
-|  7   |  Custom  |            |                |                |
-|  8   |  Record  |            |                |                |
-|  9   | Closure  |            |                |                |
+| Tag |   Name   | **number** | **comparable** | **appendable** |
+| :-: | :------: | :--------: | :------------: | :------------: |
+|  0  |  `Int`   |     ✓      |       ✓        |                |
+|  1  | `Float`  |     ✓      |       ✓        |                |
+|  2  |  `Char`  |            |       ✓        |                |
+|  3  | `String` |            |       ✓        |       ✓        |
+|  4  |  `List`  |            |       ✓        |       ✓        |
+|  5  | `Tuple2` |            |       ✓        |                |
+|  6  | `Tuple3` |            |       ✓        |                |
+|  7  |  Custom  |            |                |                |
+|  8  |  Record  |            |                |                |
+|  9  | Closure  |            |                |                |
 
-*The remaining 6 possible values (`a`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)*
+_The remaining 6 possible values (`a`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)_
 
+# Boxed vs unboxed integers
 
-
-## Boxed vs unboxed integers
-
-In this project, all values are "boxed" - i.e. they have a header that contains some metadata. They're all stored on the heap, and are referred to via a pointer. This setup makes a lot of sense for more complex value types like lists, tuples, records, strings. But for integers it can be a lot of overhead. The `+` operator has to fetch two structures from memory, separate the integer from its header, add the numbers, wrap the new value in a new data structure, and write it back to memory. For a numerical expression like `a-(b+c)*d`,  or more complex expressions, this can be expensive.
+In this project, all values are "boxed" - i.e. they have a header that contains some metadata. They're all stored on the heap, and are referred to via a pointer. This setup makes a lot of sense for more complex value types like lists, tuples, records, strings. But for integers it can be a lot of overhead. The `+` operator has to fetch two structures from memory, separate the integer from its header, add the numbers, wrap the new value in a new data structure, and write it back to memory. For a numerical expression like `a-(b+c)*d`, or more complex expressions, this can be expensive.
 
 Many language implementations "unbox" integers, so they're represented directly as machine integers without any wrapper or metadata. This can be a big performance gain for some common code patterns, but it requires a lot of book-keeping. It can be hard to tell the difference between integers and pointers, you need some system to keep track of what's what.
 
@@ -214,11 +215,9 @@ In this project I've avoided unboxing integers because it seems like it would be
 
 However there are some relatively simple compiler optimisations that could reduce the cost of boxing. For a start, we could translate an Elm expression like `a-(b+c)*d` into the equivalent expression in C, only boxing the final result rather than the result of each subexpression. This kind of thing should be limited to just the code generator. In fact the Elm compiler's JS code generator already has some [special handling for numerical operators](https://github.com/elm/compiler/blob/0.19.0/compiler/src/Generate/JavaScript/Expression.hs#L526).
 
+# Alternatives to C
 
-
-## Alternatives to C
-
-### Rust
+## Rust
 
 I really wanted to use Rust. It's just generally a better language. Hey, it's even heavily influenced by Haskell and ML, just like Elm!
 
@@ -234,7 +233,7 @@ Some of the patterns Rust encourages didn't seem to make sense to me in a garbag
 
 It really felt like at every turn, I was spending all my time _fooling_ Rust into believing my code was OK, and in the process, invalidating a lot of the extra help it should give me compared to C. I also had a couple of years experience with C from about 10 years ago, so that was a factor too. But to be clear, I had no burning desire to go back to it!
 
-### Direct to Wasm
+## Direct to Wasm
 
 My first approach to this project was to directly generate WebAssembly from the Elm AST using a forked version of the compiler. I wrote a set of Haskell types to model a WebAssembly module, and created a WebAssembly DSL and code generator from that.
 
