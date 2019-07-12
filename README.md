@@ -105,7 +105,7 @@ https://brian-carroll.github.io/elm_c_wasm/
 
 # GC
 
-- I've built a prototype Garbage Collector so that I could run some Elm programs (well, hand-compiled ones since I don't have a compiler yet!)
+- I've built a prototype Garbage Collector. So far I can only run [unit tests](https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose) on it, since I don't have any Elm programs compiled to Wasm yet.
 - It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
 - _The GC fits into less than 7kB of binary Wasm!_
 - I have a plan for how kernel code in C/Wasm can do mutations but still use this immutable GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
