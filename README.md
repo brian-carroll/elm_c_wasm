@@ -3,7 +3,7 @@
 - [Progress](#progress)
 - [Big picture stuff](#big-picture-stuff)
 - [Mixing JS and Wasm in compiled output](#mixing-js-and-wasm-in-compiled-output)
-- [Effects](#effects)
+- [Effects](#effects)re
 - [GC](#gc)
 - [Closures](#closures)
 - [Extensible Records](#extensible-records)
@@ -157,6 +157,7 @@ The implementation is in [utils.c](/src/kernel/utils.c) (see `access_eval`). The
 Elm's record update syntax is `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
 
 Currently, Elm implements this using a [JavaScript function][js-update]. We do something similar here with a C function called `record_update`, found in [utils.c](./src/kernel/utils.c). A pseudo-code version is below.
+
 [js-update]: https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Utils.js#L151
 
 ```
