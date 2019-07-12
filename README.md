@@ -3,7 +3,7 @@
 - [Progress](#progress)
 - [Big picture stuff](#big-picture-stuff)
 - [Mixing JS and Wasm in compiled output](#mixing-js-and-wasm-in-compiled-output)
-- [Effects](#effects)re
+- [Effects](#effects)
 - [GC](#gc)
 - [Closures](#closures)
 - [Extensible Records](#extensible-records)
