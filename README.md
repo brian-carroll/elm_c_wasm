@@ -179,7 +179,7 @@ To explain how the type tag in the header works, we need to discuss [constrained
 
 [guide-type-vars]: https://guide.elm-lang.org/types/reading_types.html#constrained-type-variables
 
-To facilitate this, we insert a "tag" as metadata into the byte level representation of every Elm value. The tag is a 4-bit number carrying some type-related information that is needed for kernel functions that operate on constrained type variable values. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings because the memory layout for each is totally different. Using the tag data, it can decide which of two code branches to execute. 
+To facilitate this, we insert a "tag" as metadata into the byte level representation of every Elm value. The tag is a 4-bit number carrying information about the type and memory layout of the value. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings because the memory layout for each is totally different. Using the tag data, it can decide which of two code branches to execute. 
 
 | Tag  |   Name   | **number** | **comparable** | **appendable** |
 | :--: | :------: | :--------: | :------------: | :------------: |
@@ -187,25 +187,14 @@ To facilitate this, we insert a "tag" as metadata into the byte level representa
 |  1   | `Float`  |     ✓      |       ✓        |                |
 |  2   |  `Char`  |            |       ✓        |                |
 |  3   | `String` |            |       ✓        |       ✓        |
-|  4   |  `Nil`   |            |       ✓        |       ✓        |
-|  5   |  `Cons`  |            |       ✓        |       ✓        |
-|  6   | `Tuple2` |            |       ✓        |                |
-|  7   | `Tuple3` |            |       ✓        |                |
-|  8   |  Custom  |            |                |                |
-|  9   |  Record  |            |                |                |
-|  a   | Closure  |            |                |                |
+|  4   |  `List`  |            |       ✓        |       ✓        |
+|  5   | `Tuple2` |            |       ✓        |                |
+|  6   | `Tuple3` |            |       ✓        |                |
+|  7   |  Custom  |            |                |                |
+|  8   |  Record  |            |                |                |
+|  9   | Closure  |            |                |                |
 
-*The remaining 5 possible values (`b`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)*
-
-Note that `Nil` and `Cons` are treated differently from "custom" types, despite their similarities. `List` is `comparable` and `appendable`, which custom types are not. It's better to have different tags so that `compare` and `++` can use it. Custom type values have their constructor ID in the body rather than the header, represented as a 32-bit integer.
-
-> I originally started off with separate fields for type and constructor, but it ended up being less memory-efficient.
->
-> You could combine `Nil` and `Cons` into the same row on the table above, and make it `List` instead. But now you need to find somewhere else to put that 1 bit of constructor information (`Nil` or `Cons`). If you add a constructor field to the _body_ of the value rather than the header, then due to memory alignment, you end up having to make it 4 bytes wide, not just 1 bit. That means every Cons cell goes from 12 bytes up to 16. Yikes! That sounds expensive.
->
-> Alternatively, you could allocate 1 bit in the header for the "Nil/Cons" bit, separate from the type info. But the header layout must be the same for all types, because it's what *tells* you the type. So this "Nil/Cons" bit would end up being reserved for every Elm value, not just Lists. I was worried I'd need room in the header for GC mark bits or some other metadata, so I was reluctant to do this.
->
-> The table above is my compromise solution - to make a weird special case for `List`, where its constructors get lumped in with a bunch of types. This blurs the conceptual meaning of the tag, and the code for `==` and `compare` require some special cases. But those are the only downsides. I think it's a reasonable trade-off.
+*The remaining 6 possible values (`a`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)*
 
 
 
