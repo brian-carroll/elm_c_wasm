@@ -1,8 +1,8 @@
+#include "./gc-internals.h"
+#include "./types.h"
+#include <errno.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <errno.h>
-#include "./types.h"
-#include "./gc-internals.h"
 #ifdef DEBUG
 #include <stdio.h>
 #endif
@@ -30,10 +30,11 @@ size_t child_count(ElmValue *v)
     case Tag_Float:
     case Tag_Char:
     case Tag_String:
-    case Tag_Nil:
         return 0;
 
-    case Tag_Cons:
+    case Tag_List:
+        return v == pNil ? 0 : 2;
+
     case Tag_Tuple2:
         return 2;
 
@@ -59,8 +60,10 @@ size_t child_count(ElmValue *v)
     case Tag_GcStackPop:
     case Tag_GcStackTailCall:
         return 2;
+
+    case Tag_Unused:
+        return 0;
     }
-    return 0;
 }
 
 /* ====================================================
@@ -90,8 +93,7 @@ int set_heap_end(GcHeap *heap, size_t *new_break_ptr)
 
     const size_t bitmap_bytes_per_block = GC_BLOCK_BYTES / GC_WORD_BITS;
     const size_t offset_bytes_per_block = bytes_per_word;
-    const size_t block_plus_overhead_bytes =
-        GC_BLOCK_BYTES + bitmap_bytes_per_block + offset_bytes_per_block;
+    const size_t block_plus_overhead_bytes = GC_BLOCK_BYTES + bitmap_bytes_per_block + offset_bytes_per_block;
 
     // A fractional block needs the overhead of a full block
     size_t heap_blocks = GC_DIV_ROUND_UP(heap_bytes, block_plus_overhead_bytes);
@@ -198,9 +200,8 @@ void mark_trace(GcHeap *heap, ElmValue *v, size_t *ignore_below)
 #ifdef DEBUG
         if ((size_t *)child > heap->end)
         {
-            fprintf(stderr,
-                    "mark_trace: %p out of bounds, reached via %p with header tag %d\n",
-                    child, v, v->header.tag);
+            fprintf(stderr, "mark_trace: %p out of bounds, reached via %p with header tag %d\n", child, v,
+                    v->header.tag);
             return;
         }
 #endif
@@ -261,9 +262,7 @@ void mark_stack_map(GcState *state, size_t *ignore_below)
 
 void bitmap_reset(GcHeap *heap)
 {
-    for (size_t *bm_word = heap->bitmap;
-         bm_word < heap->system_end;
-         bm_word++)
+    for (size_t *bm_word = heap->bitmap; bm_word < heap->system_end; bm_word++)
     {
         *bm_word = 0;
     }
@@ -278,15 +277,15 @@ void mark(GcState *state, size_t *ignore_below)
     mark_stack_map(state, ignore_below);
 
     // Mark GC roots (mutable values in Elm effect managers, including the program's `model`)
-    for (ElmValue *root_cell = state->roots; root_cell->header.tag == Tag_Cons; root_cell = root_cell->cons.tail)
+    for (Cons *root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail)
     {
-        mark_words(&state->heap, root_cell, root_cell->header.size);
+        mark_words(&state->heap, root_cell, sizeof(Cons) / SIZE_UNIT);
 
         // Each GC root is a mutable pointer in a fixed location outside the dynamic heap,
         // pointing to a value on the dynamic heap that should be preserved.
         // e.g. After `update`, the GC root pointer for `model` will be switched from the old to the new value.
         // The double pointer is the off-heap fixed address where we store the address of the current value
-        ElmValue **root_mutable_pointer = (ElmValue **)root_cell->cons.head;
+        ElmValue **root_mutable_pointer = (ElmValue **)root_cell->head;
         ElmValue *live_heap_value = *root_mutable_pointer;
         mark_trace(&state->heap, live_heap_value, ignore_below);
     }
@@ -308,10 +307,7 @@ void bitmap_next(size_t *word, size_t *mask)
     }
 }
 
-void bitmap_next_test_wrapper(size_t *word, size_t *mask)
-{
-    bitmap_next(word, mask);
-}
+void bitmap_next_test_wrapper(size_t *word, size_t *mask) { bitmap_next(word, mask); }
 
 // Count live words between two heap pointers, using the bitmap
 size_t bitmap_dead_between(GcHeap *heap, size_t *first, size_t *last)
@@ -403,9 +399,7 @@ size_t *forwarding_address(GcHeap *heap, size_t *old_pointer)
 
     if (new_pointer > heap->end || new_pointer < heap->start)
     {
-        fprintf(stderr,
-                "forwarding_address: %p to %p (-%zd)\n",
-                old_pointer, new_pointer, old_pointer - new_pointer);
+        fprintf(stderr, "forwarding_address: %p to %p (-%zd)\n", old_pointer, new_pointer, old_pointer - new_pointer);
     }
 #endif
 
@@ -464,12 +458,8 @@ void compact(GcState *state, size_t *compact_start)
         }
 
 #ifdef DEBUG
-        printf("Moving %zd words down by %zd from (%p - %p) to %p\n",
-               next_garbage - live_patch_start,
-               garbage_so_far,
-               live_patch_start,
-               next_garbage - 1,
-               to);
+        printf("Moving %zd words down by %zd from (%p - %p) to %p\n", next_garbage - live_patch_start, garbage_so_far,
+               live_patch_start, next_garbage - 1, to);
 #endif
 
         // Copy each value in the live patch
@@ -485,8 +475,8 @@ void compact(GcState *state, size_t *compact_start)
 #ifdef DEBUG
             if (n_children > 10 || next_value > heap->end || v->header.size > 100)
             {
-                fprintf(stderr, "Possibly corrupted object at %p : tag 0x%x size %d children %zd\n",
-                        v, v->header.tag, v->header.size, n_children);
+                fprintf(stderr, "Possibly corrupted object at %p : tag 0x%x size %d children %zd\n", v, v->header.tag,
+                        v->header.size, n_children);
             }
 #endif
 
@@ -534,24 +524,22 @@ void compact(GcState *state, size_t *compact_start)
         stack_map = forwarding_address(heap, stack_map);
 
 #ifdef DEBUG
-        printf("Changing stackmap pointer from %p to %p\n",
-               state->stack_map, stack_map);
+        printf("Changing stackmap pointer from %p to %p\n", state->stack_map, stack_map);
 #endif
 
         state->stack_map = (GcStackMap *)stack_map;
     }
 
-    for (ElmValue *root_cell = state->roots; root_cell->header.tag == Tag_Cons; root_cell = root_cell->cons.tail)
+    for (Cons *root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail)
     {
-        size_t **root_mutable_pointer = root_cell->cons.head;
+        size_t **root_mutable_pointer = root_cell->head;
         size_t *live_heap_value = *root_mutable_pointer;
         if (live_heap_value > first_move_to)
         {
             live_heap_value = forwarding_address(heap, live_heap_value);
 
 #ifdef DEBUG
-            printf("Changing root from %p to %p\n",
-                   *root_mutable_pointer, live_heap_value);
+            printf("Changing root from %p to %p\n", *root_mutable_pointer, live_heap_value);
 #endif
 
             *root_mutable_pointer = live_heap_value;
@@ -570,9 +558,7 @@ void reverse_stack_map(GcState *state)
     GcStackMap *newer_item = (GcStackMap *)state->next_alloc;
 
     GcStackMap *stack_item;
-    for (stack_item = state->stack_map;
-         stack_item->header.tag != Tag_GcStackEmpty;
-         stack_item = stack_item->older)
+    for (stack_item = state->stack_map; stack_item->header.tag != Tag_GcStackEmpty; stack_item = stack_item->older)
     {
         stack_item->newer = newer_item;
         newer_item = stack_item;
@@ -588,6 +574,4 @@ void reverse_stack_map(GcState *state)
 
    ==================================================== */
 
-void heap_overflow(GcState *state)
-{
-}
+void heap_overflow(GcState *state) {}

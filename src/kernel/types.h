@@ -24,18 +24,18 @@ typedef enum
     Tag_Float,           // 1
     Tag_Char,            // 2
     Tag_String,          // 3
-    Tag_Nil,             // 4
-    Tag_Cons,            // 5
-    Tag_Tuple2,          // 6
-    Tag_Tuple3,          // 7
-    Tag_Custom,          // 8
-    Tag_Record,          // 9
-    Tag_Closure,         // a
-    Tag_GcException,     // b
-    Tag_GcStackEmpty,    // c
-    Tag_GcStackPush,     // d
-    Tag_GcStackPop,      // e
-    Tag_GcStackTailCall, // f
+    Tag_List,            // 4
+    Tag_Tuple2,          // 5
+    Tag_Tuple3,          // 6
+    Tag_Custom,          // 7
+    Tag_Record,          // 8
+    Tag_Closure,         // 9
+    Tag_GcException,     // a
+    Tag_GcStackEmpty,    // b
+    Tag_GcStackPush,     // c
+    Tag_GcStackPop,      // d
+    Tag_GcStackTailCall, // e
+    Tag_Unused,          // f
 } Tag;
 
 typedef struct
@@ -53,65 +53,54 @@ typedef struct
 // Header size field has units corresponding to this many bytes:
 #define SIZE_UNIT sizeof(size_t)
 
-#define HEADER_INT \
+#define HEADER_INT                                                                                                     \
     (Header) { .tag = Tag_Int, .size = sizeof(ElmInt) / SIZE_UNIT }
-#define HEADER_FLOAT \
+#define HEADER_FLOAT                                                                                                   \
     (Header) { .tag = Tag_Float, .size = sizeof(ElmFloat) / SIZE_UNIT }
-#define HEADER_CHAR \
+#define HEADER_CHAR                                                                                                    \
     (Header) { .tag = Tag_Char, .size = sizeof(ElmChar) / SIZE_UNIT }
-#define HEADER_STRING(s) \
+#define HEADER_STRING(s)                                                                                               \
     (Header) { .tag = Tag_String, .size = s }
-#define HEADER_NIL \
-    (Header) { .tag = Tag_Nil, .size = 1 }
-#define HEADER_CONS \
-    (Header) { .tag = Tag_Cons, .size = sizeof(Cons) / SIZE_UNIT }
-#define HEADER_TUPLE2 \
+#define HEADER_LIST                                                                                                    \
+    (Header) { .tag = Tag_List, .size = sizeof(Cons) / SIZE_UNIT }
+#define HEADER_TUPLE2                                                                                                  \
     (Header) { .tag = Tag_Tuple2, .size = sizeof(Tuple2) / SIZE_UNIT }
-#define HEADER_TUPLE3 \
+#define HEADER_TUPLE3                                                                                                  \
     (Header) { .tag = Tag_Tuple3, .size = sizeof(Tuple3) / SIZE_UNIT }
-#define HEADER_CUSTOM(p) \
+#define HEADER_CUSTOM(p)                                                                                               \
     (Header) { .tag = Tag_Custom, .size = (sizeof(Custom) + p * sizeof(void *)) / SIZE_UNIT }
-#define HEADER_RECORD(p) \
+#define HEADER_RECORD(p)                                                                                               \
     (Header) { .tag = Tag_Record, .size = (sizeof(Record) + p * sizeof(void *)) / SIZE_UNIT }
-#define HEADER_CLOSURE(p) \
+#define HEADER_CLOSURE(p)                                                                                              \
     (Header) { .tag = Tag_Closure, .size = (sizeof(Closure) + p * sizeof(void *)) / SIZE_UNIT }
 
-#define HEADER_GC_EXCEPTION \
+#define HEADER_GC_EXCEPTION                                                                                            \
     (Header) { .tag = Tag_GcException, .size = sizeof(GcException) / SIZE_UNIT }
-#define HEADER_GC_STACK_EMPTY \
+#define HEADER_GC_STACK_EMPTY                                                                                          \
     (Header) { .tag = Tag_GcStackEmpty, .size = sizeof(GcStackMap) / SIZE_UNIT }
-#define HEADER_GC_STACK_PUSH \
+#define HEADER_GC_STACK_PUSH                                                                                           \
     (Header) { .tag = Tag_GcStackPush, .size = sizeof(GcStackMap) / SIZE_UNIT }
-#define HEADER_GC_STACK_POP \
+#define HEADER_GC_STACK_POP                                                                                            \
     (Header) { .tag = Tag_GcStackPop, .size = sizeof(GcStackMap) / SIZE_UNIT }
-#define HEADER_GC_STACK_TC \
+#define HEADER_GC_STACK_TC                                                                                             \
     (Header) { .tag = Tag_GcStackTailCall, .size = sizeof(GcStackMap) / SIZE_UNIT }
 
-#define CAN_THROW(expr) ({ void* x=expr; if (x==pGcFull) return x; x; })
+#define CAN_THROW(expr)                                                                                                \
+    ({                                                                                                                 \
+        void *x = expr;                                                                                                \
+        if (x == pGcFull)                                                                                              \
+            return x;                                                                                                  \
+        x;                                                                                                             \
+    })
 
-#define F1(f)                        \
-    (Closure)                        \
-    {                                \
-        .header = HEADER_CLOSURE(0), \
-        .evaluator = &f,             \
-        .max_values = 1,             \
-    }
+#define F1(f)                                                                                                          \
+    (Closure) { .header = HEADER_CLOSURE(0), .evaluator = &f, .max_values = 1, }
 
-#define F2(f)                        \
-    (Closure)                        \
-    {                                \
-        .header = HEADER_CLOSURE(0), \
-        .evaluator = &f,             \
-        .max_values = 2,             \
-    }
+#define F2(f)                                                                                                          \
+    (Closure) { .header = HEADER_CLOSURE(0), .evaluator = &f, .max_values = 2, }
 
-#define F3(f)                        \
-    (Closure)                        \
-    {                                \
-        .header = HEADER_CLOSURE(0), \
-        .evaluator = &f,             \
-        .max_values = 3,             \
-    }
+#define F3(f)                                                                                                          \
+    (Closure) { .header = HEADER_CLOSURE(0), .evaluator = &f, .max_values = 3, }
 
 // LIST
 
@@ -270,10 +259,18 @@ typedef union {
 GcException GcFull;
 void *pGcFull;
 
-ElmValue Nil;
-ElmValue Unit;
-ElmValue False;
-ElmValue True;
+Cons Nil;
+void *pNil;
+
+Custom Unit;
+void *pUnit;
+
+Custom False;
+void *pFalse;
+
+Custom True;
+void *pTrue;
+
 void Types_init();
 
 #endif // #ifndef ELM_KERNEL_TYPES

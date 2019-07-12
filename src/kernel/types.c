@@ -1,13 +1,13 @@
-#include <stdlib.h>
-#include <string.h>
 #include "types.h"
 #include "gc.h"
+#include <stdlib.h>
+#include <string.h>
 
 // see also NEW_CONS in header file
 Cons *ctorCons(void *head, void *tail)
 {
     Cons *p = CAN_THROW(GC_malloc(sizeof(Cons)));
-    p->header = HEADER_CONS;
+    p->header = HEADER_LIST;
     p->head = head;
     p->tail = tail;
     return p;
@@ -84,9 +84,7 @@ ElmString *ctorElmString(size_t payload_bytes, char *str)
     words[aligned_words - 1] = last_byte_value << (SIZE_UNIT - 1) * 8;
 
     // Write header _after_ padding to avoid overwriting if there's only one word
-    p->header = (Header){
-        .tag = Tag_String,
-        .size = (u32)aligned_words};
+    p->header = (Header){.tag = Tag_String, .size = (u32)aligned_words};
 
     // Copy the string body if provided
     if (str != NULL)
@@ -122,14 +120,18 @@ u32 custom_params(Custom *c)
 
 void Types_init()
 {
-    Nil = (ElmValue)HEADER_NIL;
+    Nil = (Cons){.header = HEADER_LIST, .head = NULL, .tail = NULL};
+    pNil = &Nil;
 
-    Unit = (ElmValue)(Custom){.header = HEADER_CUSTOM(0), .ctor = 0};
+    Unit = (Custom){.header = HEADER_CUSTOM(0), .ctor = 0};
+    pUnit = &Unit;
 
-    True = (ElmValue)(Custom){.header = HEADER_CUSTOM(0), .ctor = 1};
-    False = (ElmValue)(Custom){.header = HEADER_CUSTOM(0), .ctor = 0};
+    True = (Custom){.header = HEADER_CUSTOM(0), .ctor = 1};
+    pTrue = &True;
 
-    GcFull = (GcException){
-        .header = HEADER_GC_EXCEPTION};
+    False = (Custom){.header = HEADER_CUSTOM(0), .ctor = 0};
+    pFalse = &False;
+
+    GcFull = (GcException){.header = HEADER_GC_EXCEPTION};
     pGcFull = &GcFull;
 }

@@ -18,21 +18,21 @@
 
 typedef struct
 {
-  size_t *start;
-  size_t *end; // end of usable heap area
-  size_t *offsets;
-  size_t *bitmap;
-  size_t *system_end; // end of heap including GC reserved area (bitmap & offsets)
+    size_t *start;
+    size_t *end; // end of usable heap area
+    size_t *offsets;
+    size_t *bitmap;
+    size_t *system_end; // end of heap including GC reserved area (bitmap & offsets)
 } GcHeap;
 
 typedef struct
 {
-  GcHeap heap;
-  size_t *next_alloc;
-  ElmValue *roots;
-  GcStackMap *stack_map;
-  size_t stack_depth;
-  size_t *replay_ptr;
+    GcHeap heap;
+    size_t *next_alloc;
+    Cons *roots;
+    GcStackMap *stack_map;
+    size_t stack_depth;
+    size_t *replay_ptr;
 } GcState;
 
 void bitmap_reset(GcHeap *);

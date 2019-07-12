@@ -1,9 +1,9 @@
-#include <string.h>
-#include "./types.h"
 #include "./utils.h"
-#include "./string.h"
-#include "./list.h"
 #include "./gc.h"
+#include "./list.h"
+#include "./string.h"
+#include "./types.h"
+#include <string.h>
 
 #ifdef DEBUG
 #include <stdio.h>
@@ -13,10 +13,8 @@ extern void gc_debug_stack_trace(GcStackMap *sm, Closure *c);
 void *Utils_clone(void *x)
 {
     Header *h = (Header *)x;
-    if (h->tag == Tag_Nil || (h->tag == Tag_Custom && custom_params(x) == 1))
-    {
+    if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 1))
         return x;
-    }
     size_t n_bytes = SIZE_UNIT * (size_t)h->size;
     ElmValue *x_new = CAN_THROW(GC_malloc(n_bytes));
     GC_memcpy(x_new, x, n_bytes);
@@ -47,8 +45,7 @@ static u32 fieldset_search(FieldSet *fieldset, u32 search)
     }
 
 #ifdef DEBUG
-    fprintf(stderr, "Failed to find field %d in record fieldset at %zx\n",
-            search, (size_t)fieldset);
+    fprintf(stderr, "Failed to find field %d in record fieldset at %zx\n", search, (size_t)fieldset);
 #endif
 
     return 0;
@@ -167,20 +164,13 @@ static u32 eq_help(ElmValue *pa, ElmValue *pb, u32 depth, ElmValue **pstack)
     }
 
     if (pa == pb)
-    {
         return 1;
-    }
 
     if (pa->header.tag != pb->header.tag)
-    {
         return 0;
-    }
 
     switch (pa->header.tag)
     {
-    case Tag_Nil:
-        return 0;
-
     case Tag_Int:
         return pa->elm_int.value == pb->elm_int.value;
 
@@ -204,48 +194,46 @@ static u32 eq_help(ElmValue *pa, ElmValue *pb, u32 depth, ElmValue **pstack)
         return 1;
     }
 
-    case Tag_Cons:
-        return eq_help(pa->cons.head, pb->cons.head, depth + 1, pstack) && eq_help(pa->cons.tail, pb->cons.tail, depth + 1, pstack);
+    case Tag_List:
+        return (pa != pNil) && (pb != pNil) && eq_help(pa->cons.head, pb->cons.head, depth + 1, pstack) &&
+               eq_help(pa->cons.tail, pb->cons.tail, depth + 1, pstack);
 
     case Tag_Tuple2:
-        return eq_help(pa->tuple2.a, pb->tuple2.a, depth + 1, pstack) && eq_help(pa->tuple2.b, pb->tuple2.b, depth + 1, pstack);
+        return eq_help(pa->tuple2.a, pb->tuple2.a, depth + 1, pstack) &&
+               eq_help(pa->tuple2.b, pb->tuple2.b, depth + 1, pstack);
 
     case Tag_Tuple3:
-        return eq_help(pa->tuple3.a, pb->tuple3.a, depth + 1, pstack) && eq_help(pa->tuple3.b, pb->tuple3.b, depth + 1, pstack) && eq_help(pa->tuple3.c, pb->tuple3.c, depth + 1, pstack);
+        return eq_help(pa->tuple3.a, pb->tuple3.a, depth + 1, pstack) &&
+               eq_help(pa->tuple3.b, pb->tuple3.b, depth + 1, pstack) &&
+               eq_help(pa->tuple3.c, pb->tuple3.c, depth + 1, pstack);
 
     case Tag_Custom:
     {
         if (pa->custom.ctor != pb->custom.ctor)
-        {
             return 0;
-        }
         u32 nparams = custom_params(&pa->custom);
         for (u32 i = 0; i < nparams; ++i)
-        {
             if (!eq_help(pa->custom.values[i], pb->custom.values[i], depth + 1, pstack))
-            {
                 return 0;
-            }
-        }
         return 1;
     }
 
     case Tag_Record:
         // Elm guarantees same Record type => same fieldset
         for (u32 i = 0; i < pa->record.fieldset->size; ++i)
-        {
             if (!eq_help(pa->record.values[i], pb->record.values[i], depth + 1, pstack))
-            {
                 return 0;
-            }
-        }
         return 1;
 
     case Tag_Closure:
 // C doesn't have exceptions, would have to call out to JS.
 // For now it's a warning rather than error and returns False
 #ifdef DEBUG
-        fprintf(stderr, "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which describes why it is this way and what the better version will look like.\n");
+        fprintf(
+            stderr,
+            "Warning: Trying to use `(==)` on functions.\nThere is no way to know if functions are \"the same\" in the "
+            "Elm sense.\nRead more about this at https://package.elm-lang.org/packages/elm/core/latest/Basics#== which "
+            "describes why it is this way and what the better version will look like.\n");
 #endif
         return 0;
 
@@ -254,6 +242,7 @@ static u32 eq_help(ElmValue *pa, ElmValue *pb, u32 depth, ElmValue **pstack)
     case Tag_GcStackPush:
     case Tag_GcStackPop:
     case Tag_GcStackTailCall:
+    case Tag_Unused:
         return 0;
     }
 }
@@ -272,9 +261,7 @@ static void *eq_eval(void *args[2])
         isEqual = eq_help(pair->a, pair->b, 0, &stack);
     }
 
-    return stack == pGcFull
-               ? pGcFull
-               : isEqual ? &True : &False;
+    return stack == pGcFull ? pGcFull : isEqual ? &True : &False;
 }
 
 Closure Utils_eq;
@@ -288,8 +275,7 @@ static void *append_eval(void *args[2])
     case Tag_String:
         return String_append_eval(args);
 
-    case Tag_Nil:
-    case Tag_Cons:
+    case Tag_List:
         return List_append_eval(args);
 
     default:
@@ -304,89 +290,58 @@ Closure Utils_append;
 
 static void *compare_help(ElmValue *x, ElmValue *y)
 {
+    if (x == y)
+        return &Utils_EQ;
+
     switch (x->header.tag)
     {
     case Tag_Int:
         if (x->elm_int.value == y->elm_int.value)
-        {
             return &Utils_EQ;
-        }
         else if (x->elm_int.value < y->elm_int.value)
-        {
             return &Utils_LT;
-        }
         else
-        {
             return &Utils_GT;
-        }
 
     case Tag_Float:
         if (x->elm_float.value == y->elm_float.value)
-        {
             return &Utils_EQ;
-        }
         else if (x->elm_float.value < y->elm_float.value)
-        {
             return &Utils_LT;
-        }
         else
-        {
             return &Utils_GT;
-        }
 
     case Tag_Char:
         if (x->elm_char.value == y->elm_char.value)
-        {
             return &Utils_EQ;
-        }
         else if (x->elm_char.value < y->elm_char.value)
-        {
             return &Utils_LT;
-        }
         else
-        {
             return &Utils_GT;
-        }
 
     case Tag_String:
         // TODO
         // iterate, decode char, compare, loop
         // Probably call something from String lib
         // foldl doesn't have early return so maybe write something that does?
-        return &Utils_EQ;
+        return NULL;
 
-    case Tag_Nil:
-        if (y->header.tag == Tag_Nil)
-        {
-            return &Utils_EQ;
-        }
-        else
-        {
-            return &Utils_LT;
-        }
-
-    case Tag_Cons:
-        if (y->header.tag == Tag_Nil)
-        {
+    case Tag_List:
+        if (y == pNil)
             return &Utils_GT;
-        }
+        else if (x == pNil)
+            return &Utils_LT;
         else
-        {
             while (1)
             {
                 Custom *order_head = compare_help(x->cons.head, y->cons.head);
                 if (order_head != &Utils_EQ)
-                {
                     return order_head;
-                }
                 x = x->cons.tail;
                 y = y->cons.tail;
-                if (x->header.tag == Tag_Nil || y->header.tag == Tag_Nil)
-                {
+                if (x == pNil || y == pNil)
                     return compare_help(x, y);
-                }
             }
-        }
 
     case Tag_Tuple2:
     {

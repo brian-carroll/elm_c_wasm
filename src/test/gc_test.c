@@ -1,13 +1,13 @@
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
+#include "../kernel/basics.h"
+#include "../kernel/gc-internals.h"
+#include "../kernel/gc.h"
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
-#include "../kernel/basics.h"
-#include "../kernel/gc.h"
-#include "../kernel/gc-internals.h"
-#include "./test.h"
 #include "./gc/stackmap_test.h"
+#include "./test.h"
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 extern GcState gc_state;
 
@@ -101,10 +101,7 @@ void print_value(ElmValue *v)
     case Tag_String:
         printf("String \"%s\"", v->elm_string.bytes);
         break;
-    case Tag_Nil:
-        printf("Nil");
-        break;
-    case Tag_Cons:
+    case Tag_List:
         printf("Cons head: %p tail: %p", v->cons.head, v->cons.tail);
         break;
     case Tag_Tuple2:
@@ -128,8 +125,7 @@ void print_value(ElmValue *v)
         }
         break;
     case Tag_Closure:
-        printf("Closure (%s) n_values: %d max_values: %d values: ",
-               find_closure_func_name(&v->closure),
+        printf("Closure (%s) n_values: %d max_values: %d values: ", find_closure_func_name(&v->closure),
                v->closure.n_values, v->closure.max_values);
         for (size_t i = 0; i < v->closure.n_values; ++i)
         {
@@ -140,22 +136,22 @@ void print_value(ElmValue *v)
         printf("GcException");
         break;
     case Tag_GcStackPush:
-        printf("GcStackPush (%s) newer: %p older: %p",
-               find_stackmap_func_name(&v->gc_stackmap),
-               v->gc_stackmap.newer, v->gc_stackmap.older);
+        printf("GcStackPush (%s) newer: %p older: %p", find_stackmap_func_name(&v->gc_stackmap), v->gc_stackmap.newer,
+               v->gc_stackmap.older);
         break;
     case Tag_GcStackPop:
-        printf("GcStackPop (%s) newer: %p older: %p replay: %p",
-               find_stackmap_func_name(&v->gc_stackmap),
+        printf("GcStackPop (%s) newer: %p older: %p replay: %p", find_stackmap_func_name(&v->gc_stackmap),
                v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.replay);
         break;
     case Tag_GcStackTailCall:
-        printf("GcStackTailCall newer: %p older: %p replay: %p",
-               v->gc_stackmap.newer, v->gc_stackmap.older, v->gc_stackmap.replay);
+        printf("GcStackTailCall newer: %p older: %p replay: %p", v->gc_stackmap.newer, v->gc_stackmap.older,
+               v->gc_stackmap.replay);
         break;
     case Tag_GcStackEmpty:
         printf("GcStackEmpty newer: %p", v->gc_stackmap.newer);
         break;
+    case Tag_Unused:
+        printf("Unused tag!!");
     }
     printf("\n");
 }
@@ -253,13 +249,12 @@ char *gc_mark_compact_test()
     gc_test_reset();
 
     if (verbose)
-        printf(
-            "\n"
-            "########################################################################################\n"
-            "\n"
-            "gc_mark_compact_test\n"
-            "--------------------\n"
-            "\n");
+        printf("\n"
+               "########################################################################################\n"
+               "\n"
+               "gc_mark_compact_test\n"
+               "--------------------\n"
+               "\n");
 
     void *live[100];
     void *dead[100];
@@ -274,7 +269,8 @@ char *gc_mark_compact_test()
 
     // Mock Closures.
     // We never evaluate these during the test so they can be anything
-    Closure *mock_effect_callback = &Basics_add; // Basics_add is not really an effect callback. It's just a Closure value.
+    Closure *mock_effect_callback =
+        &Basics_add; // Basics_add is not really an effect callback. It's just a Closure value.
     Closure *mock_closure = &Basics_mul;
 
     live[nlive++] = state->heap.start; // stack_empty
@@ -283,12 +279,13 @@ char *gc_mark_compact_test()
     ElmValue *c1 = (ElmValue *)Utils_clone(mock_effect_callback);
     live[nlive++] = state->next_alloc; // the root Cons cell we're about to allocate
     root_mutable_pointer = c1;
-    GC_register_root(&root_mutable_pointer); // Effect manager is keeping this Closure alive by connecting it to the GC root.
+    GC_register_root(
+        &root_mutable_pointer); // Effect manager is keeping this Closure alive by connecting it to the GC root.
     live[nlive++] = c1;
     if (verbose)
     {
-        printf("Kernel module registered root:\n  located at %p\n  pointing at %p\n",
-               &root_mutable_pointer, root_mutable_pointer);
+        printf("Kernel module registered root:\n  located at %p\n  pointing at %p\n", &root_mutable_pointer,
+               root_mutable_pointer);
     }
 
     void *push1 = GC_stack_push();
@@ -425,8 +422,7 @@ char *gc_mark_compact_test()
     }
 
     size_t heap_size = state->next_alloc - state->heap.start;
-    mu_assert("Stack map test should account for all allocated values",
-              live_size + dead_size == heap_size);
+    mu_assert("Stack map test should account for all allocated values", live_size + dead_size == heap_size);
 
     if (verbose)
         printf("\n\nCompacting from %p\n\n", ignore_below);
@@ -460,8 +456,7 @@ char *gc_mark_compact_test()
     {
         n_marked += is_marked(w);
     }
-    mu_assert("After compaction and re-marking, all values should be marked",
-              n_marked == live_size);
+    mu_assert("After compaction and re-marking, all values should be marked", n_marked == live_size);
 
     return NULL;
 }
@@ -503,13 +498,12 @@ char *gc_bitmap_test()
 
     if (verbose)
     {
-        printf(
-            "\n"
-            "########################################################################################\n"
-            "\n"
-            "gc_bitmap_test\n"
-            "--------------\n"
-            "\n");
+        printf("\n"
+               "########################################################################################\n"
+               "\n"
+               "gc_bitmap_test\n"
+               "--------------\n"
+               "\n");
         print_heap(&gc_state);
         print_state(&gc_state);
         printf("\n");
@@ -612,14 +606,12 @@ char *gc_dead_between_test()
     heap->bitmap[0] = 0xf0f;
     first = heap->start + 4;
     last = heap->start + 8;
-    mu_assert("bitmap_dead_between with 4 words dead",
-              bitmap_dead_between(heap, first, last) == 4);
+    mu_assert("bitmap_dead_between with 4 words dead", bitmap_dead_between(heap, first, last) == 4);
 
     first--;
     last++;
 
-    mu_assert("bitmap_dead_between with 4 dead and 2 live",
-              bitmap_dead_between(heap, first, last) == 4);
+    mu_assert("bitmap_dead_between with 4 dead and 2 live", bitmap_dead_between(heap, first, last) == 4);
 
     heap->bitmap[0] = 0xf0;
     heap->bitmap[1] = 0x00;
@@ -674,10 +666,7 @@ void *fibHelp_tce(void *args[3], void **gc_tce_data)
 }
 
 Closure fibHelp;
-void *fibHelp_eval(void *args[3])
-{
-    return GC_tce_eval(&fibHelp_tce, &fibHelp, args);
-}
+void *fibHelp_eval(void *args[3]) { return GC_tce_eval(&fibHelp_tce, &fibHelp, args); }
 
 /*
 fib : Int -> Int
@@ -703,10 +692,7 @@ void *fib_eval(void *args[1])
     }
 }
 
-ElmValue *gc_replay_test_catch()
-{
-    return A1(&fib, &literal_n);
-}
+ElmValue *gc_replay_test_catch() { return A1(&fib, &literal_n); }
 
 int sn_idx = 0;
 
@@ -727,9 +713,7 @@ void gc_debug_stack_trace(GcStackMap *p, Closure *c)
 
     if (sn_idx < MAX_STACKMAP_NAMES)
     {
-        stackmap_names[sn_idx++] = (struct sn){
-            .stackmap = p,
-            .name = name};
+        stackmap_names[sn_idx++] = (struct sn){.stackmap = p, .name = name};
     }
 }
 
@@ -738,35 +722,34 @@ char *gc_replay_test()
     GcState *state = &gc_state;
     if (verbose)
     {
-        printf(
-            "\n"
-            "########################################################################################\n"
-            "\n"
-            "gc_replay_test\n"
-            "--------------\n"
-            "\n"
-            "- Set up heap to be 'nearly full'\n"
-            "- Call an Elm function that doesn't have enough heap space to finish\n"
-            "- Expect a GC exception to be thrown (interrupting execution and unravelling the call stack)\n"
-            "- Collect garbage (mark & compact)\n"
-            "- Expect compacted heap to be consistent ('mark' succeeds)\n"
-            "- Restore the state of the stack with new pointer locations & resume execution\n"
-            "- Expect execution to complete & return the correct result\n"
-            "\n"
-            "fib : Int -> Int\n"
-            "fib n =\n"
-            "    if n <= 0 then\n"
-            "        0\n"
-            "    else\n"
-            "        (fibHelp n) 1 0\n"
-            "\n"
-            "fibHelp : Int -> Int -> Int -> Int\n"
-            "fibHelp iters prev1 prev2 =\n"
-            "    if iters <= 1 then\n"
-            "        prev1\n"
-            "    else\n"
-            "        fibHelp (iters - 1) (prev1 + prev2) prev1\n"
-            "\n");
+        printf("\n"
+               "########################################################################################\n"
+               "\n"
+               "gc_replay_test\n"
+               "--------------\n"
+               "\n"
+               "- Set up heap to be 'nearly full'\n"
+               "- Call an Elm function that doesn't have enough heap space to finish\n"
+               "- Expect a GC exception to be thrown (interrupting execution and unravelling the call stack)\n"
+               "- Collect garbage (mark & compact)\n"
+               "- Expect compacted heap to be consistent ('mark' succeeds)\n"
+               "- Restore the state of the stack with new pointer locations & resume execution\n"
+               "- Expect execution to complete & return the correct result\n"
+               "\n"
+               "fib : Int -> Int\n"
+               "fib n =\n"
+               "    if n <= 0 then\n"
+               "        0\n"
+               "    else\n"
+               "        (fibHelp n) 1 0\n"
+               "\n"
+               "fibHelp : Int -> Int -> Int -> Int\n"
+               "fibHelp iters prev1 prev2 =\n"
+               "    if iters <= 1 then\n"
+               "        prev1\n"
+               "    else\n"
+               "        fibHelp (iters - 1) (prev1 + prev2) prev1\n"
+               "\n");
     }
     gc_test_reset();
 
@@ -779,15 +762,9 @@ char *gc_replay_test()
     func_map[3] = (struct fn){Basics_add.evaluator, "Basics_add"};
     func_map[4] = (struct fn){Basics_sub.evaluator, "Basics_sub"};
 
-    literal_0 = (ElmInt){
-        .header = HEADER_INT,
-        .value = 0};
-    literal_1 = (ElmInt){
-        .header = HEADER_INT,
-        .value = 1};
-    literal_n = (ElmInt){
-        .header = HEADER_INT,
-        .value = 10};
+    literal_0 = (ElmInt){.header = HEADER_INT, .value = 0};
+    literal_1 = (ElmInt){.header = HEADER_INT, .value = 1};
+    literal_n = (ElmInt){.header = HEADER_INT, .value = 10};
 
 #ifdef TARGET_64BIT
     size_t not_quite_enough_space = 220;
@@ -798,8 +775,8 @@ char *gc_replay_test()
     state->next_alloc = ignore_below;
 
     if (verbose)
-        printf("Set allocation pointer to leave only %zu (%zu-bit) words of heap space\n",
-               not_quite_enough_space, (sizeof(void *)) * 8);
+        printf("Set allocation pointer to leave only %zu (%zu-bit) words of heap space\n", not_quite_enough_space,
+               (sizeof(void *)) * 8);
 
     // wrapper function to prevent GC exception exiting the test
     ElmValue *result = gc_replay_test_catch();
@@ -863,10 +840,7 @@ char *gc_replay_test()
     mark(&gc_state, ignore_below);
 
     mu_assert("Compacted heap should be traceable by 'mark'",
-              bitmap_dead_between(
-                  &state->heap,
-                  ignore_below,
-                  state->next_alloc) == 0);
+              bitmap_dead_between(&state->heap, ignore_below, state->next_alloc) == 0);
 
     if (verbose)
     {
@@ -893,10 +867,8 @@ char *gc_replay_test()
         print_value(result_replay);
     }
 
-    i32 answers[29] = {
-        0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377,
-        610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657,
-        46368, 75025, 121393, 196418, 317811};
+    i32 answers[29] = {0,   1,   1,    2,    3,    5,    8,     13,    21,    34,    55,    89,     144,    233,   377,
+                       610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811};
     i32 answer = answers[literal_n.value];
 
     bool pass = result_replay->elm_int.value == answer;
@@ -915,10 +887,9 @@ char *gc_replay_test()
 char *gc_test()
 {
     if (verbose)
-        printf(
-            "########################################################################################\n"
-            "\n"
-            "                              Garbage Collector tests\n");
+        printf("########################################################################################\n"
+               "\n"
+               "                              Garbage Collector tests\n");
 
     mu_run_test(gc_replay_test);
     mu_run_test(stackmap_mark_test);

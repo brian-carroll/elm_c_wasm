@@ -49,13 +49,13 @@
         - Kermany and Petrank, 2006
         - Abuaiadh et al, 2004
 */
-#include <errno.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <string.h>
-#include "types.h"
 #include "gc.h"
 #include "gc-internals.h"
+#include "types.h"
+#include <errno.h>
+#include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
 #ifdef DEBUG
 #include <stdio.h>
 #endif
@@ -65,10 +65,7 @@ GcState gc_state;
 static void *stack_empty(); // pre-declaration
 
 #ifdef _WIN32
-static void *sbrk(size_t size)
-{
-    return malloc(GC_WASM_PAGE_BYTES * 5 + size);
-}
+static void *sbrk(size_t size) { return malloc(GC_WASM_PAGE_BYTES * 5 + size); }
 #endif
 
 /* ====================================================
@@ -96,13 +93,14 @@ int GC_init()
 
     // Initialise state with zero heap size
     *state = (GcState){
-        .heap = (GcHeap){
-            .start = heap_bottom,
-            .end = heap_bottom,
-            .system_end = heap_bottom,
-            .bitmap = heap_bottom,
-            .offsets = heap_bottom,
-        },
+        .heap =
+            (GcHeap){
+                .start = heap_bottom,
+                .end = heap_bottom,
+                .system_end = heap_bottom,
+                .bitmap = heap_bottom,
+                .offsets = heap_bottom,
+            },
         .next_alloc = heap_bottom,
         .roots = &Nil,
         .stack_map = NULL,
@@ -110,11 +108,9 @@ int GC_init()
     };
 
     // Ask the system for more memory
-    size_t top_of_current_page =
-        (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
+    size_t top_of_current_page = (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
 
-    size_t *top_of_next_page =
-        (size_t *)(top_of_current_page + GC_WASM_PAGE_BYTES + 1);
+    size_t *top_of_next_page = (size_t *)(top_of_current_page + GC_WASM_PAGE_BYTES + 1);
 
     int err = set_heap_end(&state->heap, top_of_next_page);
 
@@ -150,9 +146,7 @@ int GC_init()
 void *GC_register_root(ElmValue **ptr_to_mutable_ptr)
 {
     GcState *state = &gc_state;
-    state->roots = (ElmValue *)NEW_CONS(
-        ptr_to_mutable_ptr,
-        state->roots);
+    state->roots = NEW_CONS(ptr_to_mutable_ptr, state->roots);
     return ptr_to_mutable_ptr; // anything but pGcFull
 }
 
@@ -185,7 +179,8 @@ void *GC_malloc(size_t bytes)
         u32 replay_words = ((Header *)replay)->size;
         if (replay_words != words)
         {
-            fprintf(stderr, "GC_malloc: replay error. Requested size %zd doesn't match cached size %d\n", words, replay_words);
+            fprintf(stderr, "GC_malloc: replay error. Requested size %zd doesn't match cached size %d\n", words,
+                    replay_words);
         }
 #endif
         size_t *next_replay = replay + words;
@@ -360,10 +355,7 @@ void *GC_tce_iteration(size_t n_args, void **gc_tce_data)
 
 // Evaluate a tail call elminated Elm function,
 // managing all of the GC related stuff for it
-void *GC_tce_eval(
-    void *(*tce_evaluator)(void *[], void **),
-    Closure *c_orig,
-    void *args[])
+void *GC_tce_eval(void *(*tce_evaluator)(void *[], void **), Closure *c_orig, void *args[])
 {
     GcState *state = &gc_state;
     GcStackMap *push = state->stack_map;
@@ -414,10 +406,7 @@ void *GC_tce_eval(
     GC_memcpy(c_replay, c_mutable, closure_bytes);
 
     GcStackMap *tailcall = (GcStackMap *)(gc_tce_data + closure_bytes);
-    *tailcall = (GcStackMap){
-        .header = HEADER_GC_STACK_TC,
-        .older = push,
-        .replay = c_replay};
+    *tailcall = (GcStackMap){.header = HEADER_GC_STACK_TC, .older = push, .replay = c_replay};
 
     return pGcFull;
 }
@@ -773,10 +762,7 @@ int main(int argc, char **argv)
     reverse_stack_map(state);
 
     GC_tce_iteration(word, pointer_array);
-    GC_tce_eval(
-        &dummy_tce_eval,
-        c,
-        pointer_array);
+    GC_tce_eval(&dummy_tce_eval, c, pointer_array);
 
     GC_apply_replay();
 

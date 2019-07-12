@@ -1,11 +1,11 @@
-#include <stdlib.h>
-#include <string.h>
+#include "./utils_test.h"
+#include "../kernel/basics.h"
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
-#include "../kernel/basics.h"
-#include "./test.h"
-#include "./utils_test.h"
 #include "./gc_test.h"
+#include "./test.h"
+#include <stdlib.h>
+#include <string.h>
 
 char *test_records()
 {
@@ -16,30 +16,29 @@ char *test_records()
         printf("\n");
     }
 
-    printf(
-        "type alias Record1 =\n"
-        "    { someField: Int\n"
-        "    , otherField: String\n"
-        "    }\n"
-        "\n"
-        "-- differently shaped record type with 'someField' in a different position\n"
-        "type alias Record2 =\n"
-        "    { things: Int\n"
-        "    , someField: Int\n"
-        "    , stuff: Float\n"
-        "    }\n"
-        "\n"
-        "r1 = Record1 123 \"hello\"\n"
-        "r2 = Record2 456 321 1.0\n"
-        "\n"
-        "int1 = .someField r1  -- 123\n"
-        "int2 = .someField r2  -- 321\n"
-        "\n"
-        "r3 = { r2\n"
-        "        | things = 111\n"
-        "        , stuff = 3.14\n"
-        "        }\n"
-        "\n");
+    printf("type alias Record1 =\n"
+           "    { someField: Int\n"
+           "    , otherField: String\n"
+           "    }\n"
+           "\n"
+           "-- differently shaped record type with 'someField' in a different position\n"
+           "type alias Record2 =\n"
+           "    { things: Int\n"
+           "    , someField: Int\n"
+           "    , stuff: Float\n"
+           "    }\n"
+           "\n"
+           "r1 = Record1 123 \"hello\"\n"
+           "r2 = Record2 456 321 1.0\n"
+           "\n"
+           "int1 = .someField r1  -- 123\n"
+           "int2 = .someField r2  -- 321\n"
+           "\n"
+           "r3 = { r2\n"
+           "        | things = 111\n"
+           "        , stuff = 3.14\n"
+           "        }\n"
+           "\n");
 
     // Elm compiler transforms field names to numbers
     u32 things = 12;
@@ -93,42 +92,27 @@ char *test_records()
     */
     ElmInt *updated_thing = NEW_ELM_INT(111);
     ElmFloat *updated_stuff = NEW_ELM_FLOAT(3.14);
-    Record *r3 = Utils_update(
-        r2, 2, (u32[]){things, stuff},
-        (void *[]){updated_thing, updated_stuff});
+    Record *r3 = Utils_update(r2, 2, (u32[]){things, stuff}, (void *[]){updated_thing, updated_stuff});
 
     if (verbose)
     {
-        printf("r1: addr=%zx val=%s\n",
-               (size_t)r1,
-               hex(r1, sizeof(Record) + 2 * sizeof(void *)));
-        printf("r2: addr=%zx val=%s\n",
-               (size_t)r2,
-               hex(r2, sizeof(Record) + 3 * sizeof(void *)));
-        printf("fieldset Record1: addr=%zx val=%s\n",
-               (size_t)fsRecord1,
+        printf("r1: addr=%zx val=%s\n", (size_t)r1, hex(r1, sizeof(Record) + 2 * sizeof(void *)));
+        printf("r2: addr=%zx val=%s\n", (size_t)r2, hex(r2, sizeof(Record) + 3 * sizeof(void *)));
+        printf("fieldset Record1: addr=%zx val=%s\n", (size_t)fsRecord1,
                hex(fsRecord1, sizeof(FieldSet) + 2 * sizeof(u32)));
-        printf("fieldset for r2: addr=%zx val=%s\n",
-               (size_t)fsRecord2,
+        printf("fieldset for r2: addr=%zx val=%s\n", (size_t)fsRecord2,
                hex(fsRecord2, sizeof(FieldSet) + 3 * sizeof(u32)));
-        printf("Closure access_someField = %s\n",
-               hex(access_someField, sizeof(Closure) + sizeof(void *)));
-        printf("r3: addr=%zx val=%s\n",
-               (size_t)r3,
-               hex(r3, sizeof(Record) + 3 * sizeof(void *)));
+        printf("Closure access_someField = %s\n", hex(access_someField, sizeof(Closure) + sizeof(void *)));
+        printf("r3: addr=%zx val=%s\n", (size_t)r3, hex(r3, sizeof(Record) + 3 * sizeof(void *)));
     }
 
     mu_assert("Record accessor should return 123 for r1", int1->value = 123);
     mu_assert("Record accessor should return 321 for r2", int2->value = 321);
 
-    mu_assert("Updated record r3 should have same fieldset as r2",
-              r3->fieldset == r2->fieldset);
-    mu_assert("Updated record r3 should have same header as r2",
-              memcmp(r3, r2, sizeof(Header)) == 0);
+    mu_assert("Updated record r3 should have same fieldset as r2", r3->fieldset == r2->fieldset);
+    mu_assert("Updated record r3 should have same header as r2", memcmp(r3, r2, sizeof(Header)) == 0);
     mu_assert("Updated record should have 3 correct field values",
-              r3->values[0] == updated_thing &&
-                  r3->values[1] == r2->values[1] &&
-                  r3->values[2] == updated_stuff);
+              r3->values[0] == updated_thing && r3->values[1] == r2->values[1] && r3->values[2] == updated_stuff);
 
     return NULL;
 }
@@ -155,7 +139,7 @@ void *eval_user_project_closure(void *args[])
     closure arg1 arg2 =
         outerScopeValue + arg1 + arg2
 
-    curried = 
+    curried =
         closure 2
 
     answer =
@@ -171,11 +155,8 @@ char *test_apply(void)
         printf("\n");
     }
 
-    Closure user_project_closure = (Closure){
-        .header = HEADER_CLOSURE(0),
-        .evaluator = &eval_user_project_closure,
-        .max_values = 3,
-        .n_values = 0};
+    Closure user_project_closure =
+        (Closure){.header = HEADER_CLOSURE(0), .evaluator = &eval_user_project_closure, .max_values = 3, .n_values = 0};
 
     ElmInt outerScopeValue = (ElmInt){.header = HEADER_INT, .value = 1};
     ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
@@ -187,51 +168,43 @@ char *test_apply(void)
 
     if (verbose)
     {
-        printf(
-            "Example Elm function exercising most code paths in `apply`:\n"
-            "    outerScopeValue : Int\n"
-            "    outerScopeValue =\n"
-            "        1\n"
-            "\n"
-            "    closure arg1 arg2 =\n"
-            "        outerScopeValue + arg1 + arg2\n"
-            "\n"
-            "    curried = \n"
-            "        closure 2\n"
-            "\n"
-            "    answer =\n"
-            "        curried 3\n"
-            "\n");
+        printf("Example Elm function exercising most code paths in `apply`:\n"
+               "    outerScopeValue : Int\n"
+               "    outerScopeValue =\n"
+               "        1\n"
+               "\n"
+               "    closure arg1 arg2 =\n"
+               "        outerScopeValue + arg1 + arg2\n"
+               "\n"
+               "    curried = \n"
+               "        closure 2\n"
+               "\n"
+               "    answer =\n"
+               "        curried 3\n"
+               "\n");
 
-        printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
-               hex_ptr(&outerScopeValue), (int)outerScopeValue.header.tag, outerScopeValue.value,
-               hex(&outerScopeValue, sizeof(ElmInt)));
+        printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n", hex_ptr(&outerScopeValue),
+               (int)outerScopeValue.header.tag, outerScopeValue.value, hex(&outerScopeValue, sizeof(ElmInt)));
 
-        printf("two addr=%s ctor=%d value=%d, hex=%s\n",
-               hex_ptr(&two), (int)two.header.tag, two.value,
+        printf("two addr=%s ctor=%d value=%d, hex=%s\n", hex_ptr(&two), (int)two.header.tag, two.value,
                hex(&two, sizeof(ElmInt)));
 
-        printf("three addr=%s ctor=%d value=%d, hex=%s\n",
-               hex_ptr(&three), (int)three.header.tag, three.value,
+        printf("three addr=%s ctor=%d value=%d, hex=%s\n", hex_ptr(&three), (int)three.header.tag, three.value,
                hex(&three, sizeof(ElmInt)));
 
-        printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n",
-               hex_ptr(closure), (int)closure->n_values, (int)closure->max_values,
-               hex(closure, sizeof(Closure) + closure->n_values * sizeof(void *)));
+        printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n", hex_ptr(closure), (int)closure->n_values,
+               (int)closure->max_values, hex(closure, sizeof(Closure) + closure->n_values * sizeof(void *)));
 
-        printf("curried addr=%s n_values=%d max_values=%d, hex=%s\n",
-               hex_ptr(curried), (int)curried->n_values, (int)curried->max_values,
-               hex(curried, sizeof(Closure) + curried->n_values * sizeof(void *)));
+        printf("curried addr=%s n_values=%d max_values=%d, hex=%s\n", hex_ptr(curried), (int)curried->n_values,
+               (int)curried->max_values, hex(curried, sizeof(Closure) + curried->n_values * sizeof(void *)));
 
-        printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
-               hex_ptr(answer), (int)answer->header.tag, answer->value,
+        printf("answer addr=%s ctor=%d value=%d, hex=%s\n", hex_ptr(answer), (int)answer->header.tag, answer->value,
                hex(answer, sizeof(ElmInt)));
         printf("\n");
     }
 
     ElmInt expected_answer = (ElmInt){.header = HEADER_INT, .value = 6};
-    mu_assert("answer should be ElmInt 6",
-              memcmp(answer, &expected_answer, sizeof(ElmInt)) == 0);
+    mu_assert("answer should be ElmInt 6", memcmp(answer, &expected_answer, sizeof(ElmInt)) == 0);
     return NULL;
 }
 
@@ -568,9 +541,9 @@ char *utils_test()
         printf("Utils\n");
         printf("-----\n");
     }
-    gc_test_reset();
-    mu_run_test(test_records);
-    mu_run_test(test_apply);
+    // gc_test_reset();
+    // mu_run_test(test_records);
+    // mu_run_test(test_apply);
     gc_test_reset();
     mu_run_test(test_eq);
     gc_test_reset();
