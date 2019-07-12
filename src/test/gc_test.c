@@ -657,7 +657,8 @@ void *fibHelp_tce(void *args[3], void **gc_tce_data)
 
             CAN_THROW(GC_tce_iteration(3, gc_tce_data));
 
-            // update args last, after everything that can throw
+            // *Mutate* args last, after everything that can throw
+            // Allows us to resume after GC exception
             args[0] = next_iters;
             args[1] = next_prev1;
             args[2] = next_prev2;
