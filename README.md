@@ -15,39 +15,41 @@ https://brian-carroll.github.io/elm_c_wasm/
 
 # Progress
 
-- Kernel code / core libs
 
+- Elm compiler modifications
+  - [x] Initial experiments [forking](https://github.com/brian-carroll/elm-compiler/tree/wasm) the Elm compiler to generate Wasm (decided to abandon this direction)
+  - [ ] Modify Elm compiler to generate C (coming soon...)
+
+- Kernel code / core libs
   - [x] Implement C data structures for all Elm value types: `Int`, `Float`, `Char`, `String`, `List`, tuples, custom types, records, functions
   - [x] Function application and currying
   - [x] Extensible record updates and accessors
-  - [x] A prototype Garbage Collector (7kB download size 😊 No idea what the performance is like! See [gc.c](/src/kernel/gc.c))
+  - [x] A prototype Garbage Collector (7kB download size 😊 I have no idea what the performance is like! See [gc.c](/src/kernel/gc.c))
   - [x] Numerical operators from the `Basics` library (`+`, `-`, `*`, `/`)
-  - [ ] List module
-  - [ ] Finalise String encoding issues, UTF-8, UTF-16, browser/JS interop, etc.
-  - [ ] Complete String module
+  - [ ] Finalise String encoding issues, UTF-8, UTF-16, browser/JS interop, etc. I've given it lots of thought but it needs discussion.
   - [ ] JSON & ports (currently most effects are not available in Wasm, which probably means using ports heavily)
-  - [ ] `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
-
-- Elm compiler modifications
-  - [x] Initial experiments [forking][compiler] the Elm compiler to generate Wasm (decided to abandon this direction)
-  - [ ] Modify Elm compiler to generate C
-
-[compiler]: https://github.com/brian-carroll/elm-compiler/tree/wasm
+  - [ ] Remaining pure kernel modules from core: `String`, `List`
+  - [ ] Effectful modules from core: `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
+  - [ ] HTML
+  - [ ] HTTP
 
 - My activity levels!
   - I did lots of work on this during 2018, particularly the 2nd half
   - Other things in my life got busy in the first half of 2019, but my interest is reviving at the moment and I have more time on my hands again!
   - I meant to write some blog posts and see if I could get some interest from the community, but I ended up only writing one. It was on [first class functions][blogpost].
 
+
+
 # Big picture stuff
 
 - Effects
   - Wasm MVP has no Web APIs like DOM, XHR, etc., so most effect managers must be JS only for Wasm MVP
   - Unclear how to interface with browser APIs from C, I guess some header files you `#include` and call functions on.
+  - Perhaps a good intermediate step would be to generate pure code in C/Wasm and effectful code in JS
 
 - Browser GC
   - Wasm spec talks about data types like arrays, objects, opaque references.
-  - Unclear what this looks like from C. I guess some header files with functions you can call. Will a pointer to an array look like a pointer or like an integer? Seems like they'd have to prevent dereferencing so I guess you treat it as an integer ID and all the functions that operate on that type take this ID as an arg.
+  - Unclear what this looks like from C. Values would have integer IDs rather than pointers so that you can't do bad things. I guess you call some library functions to create, get nth child, etc.
 
 - Custom GC
   - Impact of GC optimizations based on immutability
@@ -55,7 +57,7 @@ https://brian-carroll.github.io/elm_c_wasm/
     - Solution: Keep all mutations outside of the heap. If an Effect Manager needs to dynamically allocate something and mutate it, it can first create new immutable value on the heap, then just mutate an off-heap pointer to point at new instead of old. This is like the way `model` updates already work in elm.js.
     - Process IDs being references may be a bit of a pain. Ideally they'd be integers. But only really used for `kill`, which isn't fully implemented even in JS.
 
-- Kernel is now in multiple languages
+- Kernel ends up in multiple languages? JS and C?
   - Quite a bit of maintenance
   - Would it be good to put more of the code in Elm?
 
@@ -63,12 +65,16 @@ https://brian-carroll.github.io/elm_c_wasm/
 
 ## Mixing JS and Wasm in compiled output
 
-- I'd been getting a bit overwhelmed with the amount of work necessary to get to compile a "hello world" Elm program to Wasm. Because of dead code elimination, you can't get any output from the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
+- It's a **lot** of work to get to compile a "hello world" Elm program to 100% Wasm. Because of dead code elimination, you can't get any output from the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
 - I need a way for the Elm program to end up as a mix of JS and Wasm. That way I can keep the kernel in JS initially, with the Elm code compiled to Wasm. Afterwards I'll see about gradually replacing the kernel with Wasm. Maybe that's not even needed?
-- The barrier here is the fact that everything crossing the JS/Wasm boundary has to be serialized and de-serialized (as JSON strings)
-- How does that work for `Cmd`?
-  - Underlying union has a variant for Process_map containing a function, but this variant appears to never be used?!
-  - `Cmd Msg` going from `update` to the runtime will have a `Msg` constructor function inside it
+
+
+
+- Annoyingly, everything crossing the JS/Wasm boundary has to be serialized and de-serialized (as JSON strings)
+- How does that work for `Cmd`? Surely it's not serialisable?
+  - `Cmd Msg` going from `update` to the runtime will always have a `Msg` constructor function inside it. In JS-speak this is a callback.
+  - Need to spot this happening in code gen. Then export it to be callable from JS, and pass that JS version to the _real_ Elm runtime.
+  - Maybe there's a need for an Elm wrapper module for this, exposing a `Program` constructor and maybe some other stuff. My code generator can just make special cases for that module.
 - JS calling `update`
   - Need to export a curried version of `update` so that JS `A2` works
   - Exporting an Elm function from Wasm to JS
@@ -198,21 +204,17 @@ To facilitate this, we insert a "tag" as metadata into the byte level representa
 
 
 
-## Boxed vs unboxed numbers
+## Boxed vs unboxed integers
 
-TODO
+In this project, all values are "boxed" - i.e. they have a header that contains some metadata. They're all stored on the heap, and are referred to via a pointer. This setup makes a lot of sense for more complex value types like lists, tuples, records, strings. But for integers it can be a lot of overhead. The `+` operator has to fetch two structures from memory, separate the integer from its header, add the numbers, wrap the new value in a new data structure, and write it back to memory. For a numerical expression like `a-(b+c)*d`,  or more complex expressions, this can be expensive.
 
-## Padding & alignment
+Many language implementations "unbox" integers, so they're represented directly as machine integers without any wrapper or metadata. This can be a big performance gain for some common code patterns, but it requires a lot of book-keeping. It can be hard to tell the difference between integers and pointers, you need some system to keep track of what's what.
 
-TODO
+In this project I've avoided unboxing integers because it seems like it would be a major piece of work. I'd rather try to build a working implementation first, and optimise later.
 
-## Memory: stack, heap, static, registers
+However there are some relatively simple compiler optimisations that could reduce the cost of boxing. For a start, we could translate an Elm expression like `a-(b+c)*d` into the equivalent expression in C, only boxing the final result rather than the result of each subexpression. This kind of thing should be limited to just the code generator. In fact the Elm compiler's JS code generator already has some [special handling for numerical operators](https://github.com/elm/compiler/blob/0.19.0/compiler/src/Generate/JavaScript/Expression.hs#L526).
 
-TODO
 
-## Dropping type info
-
-TODO
 
 ## Alternatives to C
 
