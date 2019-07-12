@@ -88,7 +88,7 @@ TODO
 
 ## Closures
 
-I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](./src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
+I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](/src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
 
 In a nutshell, the Closure data structure is a value that can be passed around an Elm program. It stores up any arguments that are partially applied to it, until it is "full". It also contains a function pointer, so that when the last argument is applied, that function can be called. A working example of all of this can be found in `test_apply` in [utils_test.c](./src/test/utils_test.c).
 
@@ -135,9 +135,29 @@ The version in the blog post used the same number of bytes regardless of the num
     - Finds the index of the field in the record's FieldSet
     - Changes the value at the same index in the Record
 
-## SuperTypes / constrained type variables
 
- [constrained type variables][guide-type-vars] allow some functions like `++`, `+` and `>`, to work on *more than one, but not all* value types.
+
+## Value Headers
+
+Every Elm value has a header of 32 bits in size. It's defined in [types.h](./src/kernel/types.h)
+
+```
+-----------------------------------------------------
+| tag (4 bits) | size (28 bits) |      Elm data     |
+-----------------------------------------------------
+```
+
+`size` is measured in _words_, where a word is either 32 or 64 bits, depending on the target platform. It makes sense to use words rather than bytes because all values are aligned to word boundaries anyway. For example in a 32-bit system, we'll always place our values at addresses that evenly divide by 4 bytes. Real CPUs are optimised to work faster when pointers are aligned this way.
+
+The only individual value that can get really large in practice is `String`. (Lists don't count, they are made up of many Cons cells.) A maximum value of 2<sup>28</sup>-1 for `size` corresponds to 1 GB on a 32-bit system or 4 GB on a 64-bit system.
+
+We always use 32-bit headers, even on 64-bit systems. 1GB is large enough, there's no point increasing the header size. Wasm is always 32 bits but since we're using C as an intermediate language, we can also create native 64-bit binaries. That's how I run most of my tests.
+
+
+
+## Type tags & constrained type variables
+
+To explain how the type tag in the header works, we need to discuss [constrained type variables][guide-type-vars]. This is the feature of Elm that allows some functions like `++`, `+` and `>`, to work on *more than one, but not all* types.
 
 [guide-type-vars]: https://guide.elm-lang.org/types/reading_types.html#constrained-type-variables
 
@@ -153,37 +173,37 @@ The version in the blog post used the same number of bytes regardless of the num
 
 \* Lists and Tuples are only comparable only if their contents are comparable
 
-The byte level representation of every Elm data value includes a "tag", which is a 4-bit number containing some information about the type (and in some cases the constructor) of the Elm value. This means that for example the implementation of `++` can have two separate code branches for Lists and Strings, and execute one or the other depending on the tag. The same applies to other functions and operators like `==`, `+`, `>`, etc.
+The byte level representation of every Elm data value includes a "tag", which is a 4-bit number carrying some type-related information. This allows kernel functions to execute the right code paths accordingly. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings, because the memory layout for each is totally different.
 
-| Name    | Tag |
-| ------- | --- |
-| Int     |  0  |
-| Float   |  1  |
-| Char    |  2  |
-| String  |  3  |
-| Nil     |  4  |
-| Cons    |  5  |
-| Tuple2  |  6  |
-| Tuple3  |  7  |
-| Custom  |  8  |
-| Record  |  9  |
-| Closure |  a  |
+[guide-type-vars]: https://guide.elm-lang.org/types/reading_types.html#constrained-type-variables
 
-The remaining 5 possible values (`b` &rarr; `f`) are reserved for Garbage Collector record-keeping data.
+| Tag  |   Name   | **number** | **comparable** | **appendable** |
+| :--: | :------: | :--------: | :------------: | :------------: |
+|  0   |  `Int`   |     ✓      |       ✓        |                |
+|  1   | `Float`  |     ✓      |       ✓        |                |
+|  2   |  `Char`  |            |       ✓        |                |
+|  3   | `String` |            |       ✓        |       ✓        |
+|  4   |  `Nil`   |            |       ✓        |       ✓        |
+|  5   |  `Cons`  |            |       ✓        |       ✓        |
+|  6   | `Tuple2` |            |       ✓        |                |
+|  7   | `Tuple3` |            |       ✓        |                |
+|  8   |  Custom  |            |                |                |
+|  9   |  Record  |            |                |                |
+|  a   | Closure  |            |                |                |
 
-## Headers
+*The remaining 5 possible values (`b`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)*
 
-Every Elm value has a header of 32 bits in size.
-```
------------------------------------------------------
-| tag (4 bits) | size (28 bits) |      Elm data     |
------------------------------------------------------
-```
-`size` is measured in _words_, where a word is either 32 or 64 bits, depending on the target platform. It makes sense to use words rather than bytes because all values are aligned to word boundaries anyway. For example in a 32-bit system, we'll always place our values at addresses that evenly divide by 4 bytes. Real CPUs are optimised to work faster when pointers are aligned this way.
+Note that `Nil` and `Cons` are treated differently from "custom" types, despite their similarities. `List` is `comparable` and `appendable`, which custom types are not, so it's better to have different tags. Custom type values have their constructor ID in the body rather than the header, represented as a 32-bit integer.
 
-The only individual value that can get really large in practice is `String`. (Lists don't count, they are made up of many Cons cells.) A maximum value of 2<sup>28</sup>-1 for `size` corresponds to 1 GB on a 32-bit system or 4 GB on a 64-bit system.
+> I originally started off with separate fields for type and constructor, but it ended up being less memory-efficient.
+>
+> You could combine `Nil` and `Cons` into the same row on the table above, and make it `List` instead. But now you need to find somewhere else to put that 1 bit of constructor information (`Nil` or `Cons`). If you add a constructor field to the _body_ of the value rather than the header, then due to memory alignment, you end up having to make it 4 bytes wide, not just 1 bit. That means every Cons cell goes from 12 bytes up to 16. Yikes! That sounds expensive.
+>
+> Alternatively, you could allocate 1 bit in the header for the "Nil/Cons" bit, separate from the type info. But the header layout must be the same for all types, because it's what *tells* you the type. So this "Nil/Cons" bit would end up being reserved for every Elm value, not just Lists. I was worried I'd need room in the header for GC mark bits or some other metadata, so I was reluctant to do this.
+>
+> The table above is my compromise solution - to make a weird special case for `List`, where its constructors get lumped in with a bunch of types. This blurs the conceptual meaning of the tag, and the code for `==` and `compare` require some special cases. But those are the only downsides. I think it's a reasonable trade-off.
 
-We always use 32-bit headers, even on 64-bit systems. 1GB is large enough, there's no point increasing the header size. Wasm is always 32 bits but since we're using C as an intermediate language, we can also create native 64-bit binaries. That's how I run most of my tests.
+
 
 ## Boxed vs unboxed numbers
 
