@@ -75,9 +75,16 @@ https://brian-carroll.github.io/elm_c_wasm/
     - Do all the currying in JS land. Inner function calls into Wasm.
     - Wasm export
 
+
+
 ## Effects
 
-TODO
+- Wasm MVP doesn't yet have access to Web APIs like DOM, `XmlHttpRequest`, etc.
+- This means an Elm program in Wasm has to call out to JS to do any effects.
+- Also, all communication with JS is done using typed arrays. This means everything has to be serialised, using JSON or some other format.
+- It should be possible to compile an Elm program to a mixture of JavaScript and Wasm, with the effects modules in JS and the pure code in Wasm. There would be JSON serialisation and de-serialisation in between, which might not be super-efficient, but it's a way to get some kind of prototype up and running.
+
+
 
 ## GC
 
@@ -85,6 +92,8 @@ TODO
 - It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
 - _The GC fits into less than 7kB of binary Wasm!_
 - I have a plan for how kernel code in C/Wasm can do mutations but still use this immutable GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
+
+
 
 ## Closures
 
@@ -96,44 +105,53 @@ The version in the blog post used the same number of bytes regardless of the num
 
 [blogpost]: https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
 
+
+
 ## Extensible Records
 
-- A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access).
-- In this project they are split into two C structures, `Record` and `FieldSet`, defined in [types.h](./src/kernel/types.h)
-- The `Record` stores the values only. The field names are stored in a `FieldSet`, shared by all values of the same Record type.
-- Field names are represented as integers. The compiler will convert every field name in the project to a unique integer, using the same kind of optimisation the Elm 0.19 compiler uses to map field names to short combinations of letters.
+A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). In this project they are split into two C structs, `Record` and `FieldSet`, defined in [types.h](./src/kernel/types.h).
 
-- Record accessor functions
+Field names are represented as integer "field IDs". The compiler would convert every field name in the program to a unique ID, using the same kind of [optimisation][shortnames] the Elm 0.19 compiler uses to shorten fieldnames in `--optimize` mode.
 
-  - Elm has special functions for accessing records, prefixed by a dot, like `.name`. The important thing is that this function can be applied to _any_ Record type that contains a field called `name`.
-  - Implemented using a Kernel function that takes the field ID as an Elm Int, and the record itself
+[shortnames]: https://github.com/elm/compiler/blob/0.19.0/compiler/src/Generate/JavaScript/Mode.hs#L79
 
-  ```elm
-      recordAccess : Int -> r -> a
-      recordAccess fieldId record =
-          -- Kernel C code
-          -- 1. Find the position of the `fieldId` in the record's FieldSet
-          -- 2. Look up the same position in `record`
-          -- 3. Return the value found
-  ```
+The `Record` struct stores only the values, in ascending order of the corresponding field IDs. The field IDs themselves are stored in a `FieldSet`, a single structure shared by all values of the same Record type, in ascending order. To access a field by its field ID, we first look up the field ID in the  `FieldSet`. If it's in the nth position, then the corresponding value will also be in the nth position in the Record itself.
 
-  - An accessor function for a particular field is created by partially applying the field ID in the generated code. In Elm syntax it would look something like the following:
+### Record accessor functions
 
-  ```elm
-      .name : { r | name : a } -> a
-      .name = recordAccess 123  -- where 123 represents the field called 'name'
-  ```
+Elm has special functions for accessing records, prefixed by a dot, like `.name`, which can be applied to _any_ Record type that contains a field called `name`. It's implemented using a Kernel function that takes the field ID as an Elm `Int`, and the record itself.
 
-  - Field lookups are implemented as a binary search, which requires the fields to be pre-sorted by the Elm compiler
-  - `recordAccess` is not safe if the field does not actually exist in the record, but it's not available to user Elm code, it can only be emitted by the compiler.
+```elm
+    access : Int -> r -> a
+    access fieldId record =
+        -- Kernel C code
+        -- 1. Look up the FieldSet that this record points to
+        -- 2. Find the index of `fieldId` in that FieldSet (binary search)
+        -- 3. Return the value found at the value at that same index in `record`
+```
 
-- Record update
-  - `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
-  - This Elm syntax is implemented using a C function `record_update`, found in [utils.c](./src/kernel/utils.c)
-  - First it clones the original record
-  - Then for each field to be updated
-    - Finds the index of the field in the record's FieldSet
-    - Changes the value at the same index in the Record
+The compiler would insert code to create each accessor function by partially applying the relevant `fieldId` to `access` function in the generated code.
+
+```elm
+    -- Compiler inserts something roughly equivalent to this to to define `.name`
+    .name record = access 123 record  -- where 123 is the field ID for 'name'
+```
+
+The implementation is in [utils.c](/src/kernel/utils.c) (see `access_eval`). The code is unsafe if the field does not actually exist in the record, but it can only be called in compiler-generated code.
+
+### Record update
+
+Elm's record update syntax is `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
+
+Currently, Elm implements this using a [JavaScript function][js-update]. We do something similar here with a C function called `record_update`, found in [utils.c](./src/kernel/utils.c). A pseudo-code version is below.
+[js-update]: https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Utils.js#L151
+
+```
+Clone the original record
+For each field ID to be updated
+	Find the index of the field ID in the FieldSet
+	Change the pointer in the clone at the same index to point at the updated value
+```
 
 
 
@@ -161,21 +179,7 @@ To explain how the type tag in the header works, we need to discuss [constrained
 
 [guide-type-vars]: https://guide.elm-lang.org/types/reading_types.html#constrained-type-variables
 
-
-|          | **number** | **comparable** | **appendable** | **compappend** |
-| :------: | :--------: | :------------: | :------------: | :------------: |
-|  `Int`   |     ✓      |       ✓        |                |                |
-| `Float`  |     ✓      |       ✓        |                |                |
-|  `Char`  |            |       ✓        |                |                |
-| `String` |            |       ✓        |       ✓        |       ✓        |
-|  `List`  |            |      ✓\*       |       ✓        |      ✓\*       |
-| `Tuple`  |            |      ✓\*       |                |                |
-
-\* Lists and Tuples are only comparable only if their contents are comparable
-
-The byte level representation of every Elm data value includes a "tag", which is a 4-bit number carrying some type-related information. This allows kernel functions to execute the right code paths accordingly. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings, because the memory layout for each is totally different.
-
-[guide-type-vars]: https://guide.elm-lang.org/types/reading_types.html#constrained-type-variables
+To facilitate this, we insert a "tag" as metadata into the byte level representation of every Elm value. The tag is a 4-bit number carrying some type-related information that is needed for kernel functions that operate on constrained type variable values. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings because the memory layout for each is totally different. Using the tag data, it can decide which of two code branches to execute. 
 
 | Tag  |   Name   | **number** | **comparable** | **appendable** |
 | :--: | :------: | :--------: | :------------: | :------------: |
@@ -193,7 +197,7 @@ The byte level representation of every Elm data value includes a "tag", which is
 
 *The remaining 5 possible values (`b`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)*
 
-Note that `Nil` and `Cons` are treated differently from "custom" types, despite their similarities. `List` is `comparable` and `appendable`, which custom types are not, so it's better to have different tags. Custom type values have their constructor ID in the body rather than the header, represented as a 32-bit integer.
+Note that `Nil` and `Cons` are treated differently from "custom" types, despite their similarities. `List` is `comparable` and `appendable`, which custom types are not. It's better to have different tags so that `compare` and `++` can use it. Custom type values have their constructor ID in the body rather than the header, represented as a 32-bit integer.
 
 > I originally started off with separate fields for type and constructor, but it ended up being less memory-efficient.
 >
