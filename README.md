@@ -2,9 +2,9 @@
 - [Demos](#demos)
 - [Progress](#progress)
 - [Big picture stuff](#big-picture-stuff)
-- [Mixing JS and Wasm in compiled output](#mixing-js-and-wasm-in-compiled-output)
 - [Effects](#effects)
-- [Garbage Collector](#garbage-collector)
+- [Elm &rarr; JS + Wasm](#elm-&rarr;-js-+-wasm)
+- [GC](#gc)
 - [Closures](#closures)
 - [Extensible Records](#extensible-records)
   - [Record accessor functions](#record-accessor-functions)
@@ -80,10 +80,16 @@ https://brian-carroll.github.io/elm_c_wasm/
   - Quite a bit of maintenance
   - Would it be good to put more of the code in Elm?
 
-# Mixing JS and Wasm in compiled output
+# Effects
+
+- Wasm MVP doesn't yet have access to Web APIs like DOM, `XmlHttpRequest`, etc.
+- This means an Elm program in Wasm has to call out to JS to do any effects.
+- Also, all communication with JS is done using typed arrays. This means everything has to be serialised, using JSON or some other format.
+
+# Elm &rarr; JS + Wasm
 
 - It's a **lot** of work to get to compile a "hello world" Elm program to 100% Wasm. Because of dead code elimination, you can't get any output from the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
-- I need a way for the Elm program to end up as a mix of JS and Wasm. That way I can keep the kernel in JS initially, with the Elm code compiled to Wasm. Afterwards I'll see about gradually replacing the kernel with Wasm. Maybe that's not even needed?
+- I need a way for the Elm program to end up as a mix of JS and Wasm. That way I can keep the kernel in JS initially, with the Elm code compiled to Wasm. See [proof-of-concept demo](https://brian-carroll.github.io/elm_c_wasm/update-int/index.html) with `update` function in Wasm and the rest in JS.
 
 * Annoyingly, everything crossing the JS/Wasm boundary has to be serialized and de-serialized (as JSON strings)
 * How does that work for `Cmd`? Surely it's not serialisable?
@@ -96,21 +102,12 @@ https://brian-carroll.github.io/elm_c_wasm/
     - Do all the currying in JS land. Inner function calls into Wasm.
     - Wasm export
 
-# Effects
-
-- Wasm MVP doesn't yet have access to Web APIs like DOM, `XmlHttpRequest`, etc.
-- This means an Elm program in Wasm has to call out to JS to do any effects.
-- Also, all communication with JS is done using typed arrays. This means everything has to be serialised, using JSON or some other format.
-- It should be possible to compile an Elm program to a mixture of JavaScript and Wasm, with the effects modules in JS and the pure code in Wasm. There would be JSON serialisation and de-serialisation in between, which might not be super-efficient, but it's a way to get some kind of prototype up and running.
-
-# Garbage Collector
+# GC
 
 - I've built a prototype Garbage Collector. So far I can only run [unit tests](https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose) on it, since I don't have any Elm programs compiled to Wasm yet.
-- _The GC fits into less than 7kB of binary Wasm!_ There's still a lot to implement, and it probably won't be highly competitive with V8. But all the major pieces are there and it's still really tiny.
 - It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
-- It also take advantage of the fact that Elm functions are pure in the way that it restores the state of the call stack at the end of a GC pause. The whole `update` function is called again, but any function calls that had already completed are replaced with the same value they returned last time (which is saved in the heap). This very quickly restores the stack to its previous state, and it only works with pure functions.
-- Kernel code in C/Wasm needs to do mutations but it can still use this GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
-- The bulk of the remaining work is in the control logic to decide when to do a GC and how much of the heap to collect in a given cycle.
+- _The GC fits into less than 7kB of binary Wasm!_
+- I have a plan for how kernel code in C/Wasm can do mutations but still use this immutable GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
 
 # Closures
 
