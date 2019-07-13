@@ -294,6 +294,8 @@ For each field ID to be updated
 	Change the pointer in the clone at the same index to point at the updated value
 ```
 
+Check out the [source][/src/kernel/utils.c] or [run the tests][utils-test-run] in your browser.
+
 &nbsp;
 
 # Value Headers
@@ -322,7 +324,7 @@ To explain how the type tag in the header works, we need to discuss [constrained
 
 To facilitate this, we insert a "tag" as metadata into the byte level representation of every Elm value. The tag is a 4-bit number carrying information about the type and memory layout of the value. For example, the low-level implementation for `++` needs to know whether its arguments are Lists or Strings because the memory layout for each is totally different. Using the tag data, it can decide which of two code branches to execute.
 
-| Tag |   Name   | **number** | **comparable** | **appendable** |
+| Tag |   Type   | **number** | **comparable** | **appendable** |
 | :-: | :------: | :--------: | :------------: | :------------: |
 |  0  |  `Int`   |     ✓      |       ✓        |                |
 |  1  | `Float`  |     ✓      |       ✓        |                |
@@ -336,6 +338,10 @@ To facilitate this, we insert a "tag" as metadata into the byte level representa
 |  9  | Closure  |            |                |                |
 
 _The remaining 6 possible values (`a`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)_
+
+For more details see the [header file](/src/kernel/types.h) defining the relevant structs, or see the [output of some tests][types-test] in your browser.
+
+[types-test]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--verbose
 
 &nbsp;
 
