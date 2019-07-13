@@ -5,20 +5,12 @@
 - [Effects](#effects)
 - [Elm &rarr; JS + Wasm](#elm--js--wasm)
 - [Garbage Collector](#garbage-collector)
-  - [Features](#features)
-  - [Mutable values in kernel code](#mutable-values-in-kernel-code)
-  - [Updating pointers in the call stack](#updating-pointers-in-the-call-stack)
-  - [Scheduling collections](#scheduling-collections)
 - [Closures](#closures)
 - [Extensible Records](#extensible-records)
-  - [Record accessor functions](#record-accessor-functions)
-  - [Record update](#record-update)
 - [Value Headers](#value-headers)
 - [Type tags & constrained type variables](#type-tags--constrained-type-variables)
 - [Boxed vs unboxed integers](#boxed-vs-unboxed-integers)
 - [Alternatives to C](#alternatives-to-c)
-  - [Rust](#rust)
-  - [Direct to Wasm](#direct-to-wasm)
 
 # Project goals
 

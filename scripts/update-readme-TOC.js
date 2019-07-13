@@ -21,6 +21,7 @@ function titleToId(title) {
 const newTOC = headings
   .map(h => {
     const numHashes = h.indexOf(' ');
+    if (numHashes > 1) return;
     const title = h.replace(/#+ /, '');
     const htmlId = titleToId(title);
     const href = '#' + htmlId;
@@ -28,6 +29,7 @@ const newTOC = headings
     const markdown = `${indent}- [${title}](${href})`;
     return markdown;
   })
+  .filter(s => s)
   .join('\n');
 
 const firstHeadingPos = readmeText.indexOf(headings[0]);
