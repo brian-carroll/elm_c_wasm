@@ -131,17 +131,13 @@ The GC also takes advantage of the fact that Elm functions are _pure_.
 
 When resuming execution after a GC pause, we need to restore the state of the call stack to what it was before the pause. This is done using something I call "replay mode". When resuming execution, any function call that had completed before the pause is skipped and replaced with the return value it had previously.
 
-This quickly restores the call stack back to its original state, but skips the vast majority of code execution, and does no new allocation.
+The call stack quickly gets to its original state, and we skip the vast majority of code execution and do no new allocations. It's quite powerful to be able to competely unwind the call stack and quickly restore it. It guarantees that all pointers in the stack and registers are referencing new, valid locations.
 
-This is quite powerful. Competely unwinding the call stack and restoring it guarantees that all pointers in the stack and registers are referencing new, valid locations.
+Most GC's scan the stack and registers for stale pointers to heap values that have moved, and mutate them in place. It's tricky business at the best of times, but as far as I can tell, WebAssembly's semantics actually make it impossible!
 
-Most GC's scan the stack and registers for stale pointers to heap values that have moved. It's tricky at the best of times, but as far as I can tell, WebAssembly's semantics actually make it impossible!
+In order to implement "replay mode", the GC inserts special markers into the heap to keep track of which call allocated each value, and which are currently active. It's an implementation of a "stack map".
 
-In order to implement "replay mode", the GC inserts special markers into the heap to keep track of which values were allocated by which calls, and which calls are currently active. This is an implementation of a "stack map".
-
-I've never heard of this approach being used before, but it probably has!
-
-For more detail, you can check out the output of the `gc_replay_test` [in your browser][unit-tests-gc], or take a look at the [test code](/src/test/gc_test.c) or the [source code](/src/kernel/gc.c)
+For more detail, you can check out the output of the `gc_replay_test` [in your browser][unit-tests-gc], or take a look at the [test code](/src/test/gc_test.c) or the comments in the [source code](/src/kernel/gc.c).
 
 ## Scheduling collections
 
