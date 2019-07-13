@@ -23,9 +23,13 @@
 - C doesn't have first-class functions or high-level data structures like JavaScript does, so we have to implement some of those things. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
 - The idea is to gradually build Elm's core libraries in C and write some tests to mimic 'compiled' code from Elm programs.
 
+&nbsp;
+
 # Demos
 
 https://brian-carroll.github.io/elm_c_wasm/
+
+&nbsp;
 
 # Progress
 
@@ -53,6 +57,8 @@ https://brian-carroll.github.io/elm_c_wasm/
   - Other things in my life got busy in the first half of 2019, but my interest is reviving at the moment and I have more time on my hands again!
   - I meant to write some blog posts and see if I could get some interest from the community, but I ended up only writing one. It was on [first class functions][blogpost].
 
+&nbsp;
+
 # Big picture stuff
 
 - Effects
@@ -77,11 +83,15 @@ https://brian-carroll.github.io/elm_c_wasm/
   - Quite a bit of maintenance
   - Would it be good to put more of the code in Elm?
 
+&nbsp;
+
 # Effects
 
 - Wasm MVP doesn't yet have access to Web APIs like DOM, `XmlHttpRequest`, etc.
 - This means an Elm program in Wasm has to call out to JS to do any effects.
 - Also, all communication with JS is done using typed arrays. This means everything has to be serialised, using JSON or some other format.
+
+&nbsp;
 
 # Elm &rarr; JS + Wasm
 
@@ -93,6 +103,8 @@ https://brian-carroll.github.io/elm_c_wasm/
   - `Cmd Msg` going from `update` to the runtime will always have a `Msg` constructor function inside it. In JS-speak this is a callback.
   - Need to spot this happening in code gen. Then export it to be callable from JS, and pass that JS version to the _real_ Elm runtime.
   - Maybe there's a need for an Elm wrapper module for this, exposing a `Program` constructor and maybe some other stuff. My code generator can just make special cases for that module.
+
+&nbsp;
 
 # String Encoding
 
@@ -175,6 +187,8 @@ UTF-16 has a bit of a bad reputation because of buggy implementations that have 
 3 : Int
 ```
 
+&nbsp;
+
 # Garbage Collector
 
 I've built a prototype Garbage Collector in this repo (see [gc.c](/src/kernel/gc.c)). So far I can only run [unit tests][unit-tests-gc] on it, since I don't have any Elm programs compiled to Wasm yet!
@@ -217,6 +231,8 @@ For more detail, you can check out the output of the `gc_replay_test` [in your b
 
 We should be able to schedule most collections during the idle time just after an `update`. In this case, we don't need to pause at all. The "replay mode" described above is only needed if we run out of memory during an `update`.
 
+&nbsp;
+
 # Closures
 
 I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](/src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
@@ -226,6 +242,8 @@ In a nutshell, the Closure data structure is a value that can be passed around a
 The version in the blog post used the same number of bytes regardless of the number of closed-over values held in the Closure. The new version is a bit more compact, using only the space it needs.
 
 [blogpost]: https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
+
+&nbsp;
 
 # Extensible Records
 
@@ -274,6 +292,8 @@ For each field ID to be updated
 	Change the pointer in the clone at the same index to point at the updated value
 ```
 
+&nbsp;
+
 # Value Headers
 
 Every Elm value has a header of 32 bits in size. It's defined in [types.h](./src/kernel/types.h)
@@ -289,6 +309,8 @@ Every Elm value has a header of 32 bits in size. It's defined in [types.h](./src
 The only individual value that can get really large in practice is `String`. (Lists don't count, they are made up of many Cons cells.) A maximum value of 2<sup>28</sup>-1 for `size` corresponds to 1 GB on a 32-bit system or 4 GB on a 64-bit system.
 
 We always use 32-bit headers, even on 64-bit systems. 1GB is large enough, there's no point increasing the header size. Wasm is always 32 bits but since we're using C as an intermediate language, we can also create native 64-bit binaries. That's how I run most of my tests.
+
+&nbsp;
 
 # Type tags & constrained type variables
 
@@ -313,6 +335,8 @@ To facilitate this, we insert a "tag" as metadata into the byte level representa
 
 _The remaining 6 possible values (`a`&rarr;`f`) are reserved for Garbage Collector record-keeping data.)_
 
+&nbsp;
+
 # Boxed vs unboxed integers
 
 In this project, all values are "boxed" - i.e. they have a header that contains some metadata. They're all stored on the heap, and are referred to via a pointer. This setup makes a lot of sense for more complex value types like lists, tuples, records, strings. But for integers it can be a lot of overhead. The `+` operator has to fetch two structures from memory, separate the integer from its header, add the numbers, wrap the new value in a new data structure, and write it back to memory. For a numerical expression like `a-(b+c)*d`, or more complex expressions, this can be expensive.
@@ -322,6 +346,8 @@ Many language implementations "unbox" integers, so they're represented directly 
 In this project I've avoided unboxing integers because it seems like it would be a major piece of work. I'd rather try to build a working implementation first, and optimise later.
 
 However there are some relatively simple compiler optimisations that could reduce the cost of boxing. For a start, we could translate an Elm expression like `a-(b+c)*d` into the equivalent expression in C, only boxing the final result rather than the result of each subexpression. This kind of thing should be limited to just the code generator. In fact the Elm compiler's JS code generator already has some [special handling for numerical operators](https://github.com/elm/compiler/blob/0.19.0/compiler/src/Generate/JavaScript/Expression.hs#L526).
+
+&nbsp;
 
 # Alternatives to C
 
