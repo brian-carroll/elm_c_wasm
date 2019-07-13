@@ -3,14 +3,18 @@
 - [Progress](#progress)
 - [Big picture stuff](#big-picture-stuff)
 - [Effects](#effects)
-- [Elm &rarr; JS + Wasm](#elm-&rarr;-js-+-wasm)
-- [GC](#gc)
+- [Elm &rarr; JS + Wasm](#elm--js--wasm)
+- [Garbage Collector](#garbage-collector)
+  - [Features](#features)
+  - [Mutable values in kernel code](#mutable-values-in-kernel-code)
+  - [Updating pointers in the call stack](#updating-pointers-in-the-call-stack)
+  - [Scheduling collections](#scheduling-collections)
 - [Closures](#closures)
 - [Extensible Records](#extensible-records)
   - [Record accessor functions](#record-accessor-functions)
   - [Record update](#record-update)
 - [Value Headers](#value-headers)
-- [Type tags & constrained type variables](#type-tags-&-constrained-type-variables)
+- [Type tags & constrained type variables](#type-tags--constrained-type-variables)
 - [Boxed vs unboxed integers](#boxed-vs-unboxed-integers)
 - [Alternatives to C](#alternatives-to-c)
   - [Rust](#rust)
@@ -96,18 +100,52 @@ https://brian-carroll.github.io/elm_c_wasm/
   - `Cmd Msg` going from `update` to the runtime will always have a `Msg` constructor function inside it. In JS-speak this is a callback.
   - Need to spot this happening in code gen. Then export it to be callable from JS, and pass that JS version to the _real_ Elm runtime.
   - Maybe there's a need for an Elm wrapper module for this, exposing a `Program` constructor and maybe some other stuff. My code generator can just make special cases for that module.
-* JS calling `update`
-  - Need to export a curried version of `update` so that JS `A2` works
-  - Exporting an Elm function from Wasm to JS
-    - Do all the currying in JS land. Inner function calls into Wasm.
-    - Wasm export
 
-# GC
+# Garbage Collector
 
-- I've built a prototype Garbage Collector. So far I can only run [unit tests](https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose) on it, since I don't have any Elm programs compiled to Wasm yet.
-- It uses a mark-compact algorithm that takes advantage of the fact that all Elm values are immutable and can therefore only point to _older_ values.
-- _The GC fits into less than 7kB of binary Wasm!_
-- I have a plan for how kernel code in C/Wasm can do mutations but still use this immutable GC. You only need to mutate a fixed number of "GC roots", which are pointers that sit outside the managed heap, pointing at values inside it.
+I've built a prototype Garbage Collector. So far I can only run [unit tests][unit-tests-gc] on it, since I don't have any Elm programs compiled to Wasm yet!
+
+[unit-tests-gc]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose
+
+_The GC fits into less than 7kB of binary Wasm!_
+
+## Features
+
+It uses a [mark-compact algorithm](https://en.wikipedia.org/wiki/Mark-compact_algorithm) that is greatly simplified by the fact that all Elm values are immutable and can therefore only point to _older_ values.
+
+This means that when you move a value, you only need to update references to it in _newer_ values. You don't need to scan the whole heap. Older values end up the bottom of the heap and newer ones at the top. At any time you can easily do a _partial_ collection of the heap, picking any starting point and only collecting items _above_ that.
+
+This brings a lot of the advantages of a generational collector, without the overhead of managing regions. Hopefully this helps to keep the GC small.
+
+## Mutable values in kernel code
+
+Some kernel code in the core modules needs to dynamically allocate values and mutate them. But this could result in old values pointing at newer ones, breaking some of the assumptions the GC relies on.
+
+A solution that works here is to only mutate a _pointer_ to a value. Copy the value immutably, then switch the pointer to reference it instead of the old value. The pointer has fixed size so it can be outside the garbage-collected area.
+
+This would mean changes in the way some of the core modules work. The changes all look fairly minor except for [Scheduler.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Scheduler.js) and [Platform.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Platform.js).
+
+## Updating pointers in the call stack
+
+The GC also takes advantage of the fact that Elm functions are _pure_.
+
+When resuming execution after a GC pause, we need to restore the state of the call stack to what it was before the pause. This is done using something I call "replay mode". When resuming execution, any function call that had completed before the pause is skipped and replaced with the return value it had previously.
+
+This quickly restores the call stack back to its original state, but skips the vast majority of code execution, and does no new allocation.
+
+This is quite powerful. Competely unwinding the call stack and restoring it guarantees that all pointers in the stack and registers are referencing new, valid locations.
+
+Most GC's scan the stack and registers for stale pointers to heap values that have moved. It's tricky at the best of times, but as far as I can tell, WebAssembly's semantics actually make it impossible!
+
+In order to implement "replay mode", the GC inserts special markers into the heap to keep track of which values were allocated by which calls, and which calls are currently active. This is an implementation of a "stack map".
+
+I've never heard of this approach being used before, but it probably has!
+
+For more detail, you can check out the output of the `gc_replay_test` [in your browser][unit-tests-gc], or take a look at the [test code](/src/test/gc_test.c) or the [source code](/src/kernel/gc.c)
+
+## Scheduling collections
+
+We should be able to schedule most collections during the idle time just after an `update`. In this case, we don't need to pause at all. The "replay mode" described above is only needed if we run out of memory during an `update`.
 
 # Closures
 
