@@ -61,6 +61,7 @@ gh-pages: CFLAGS=-Wall -O3
 gh-pages: clean www
 	mkdir -p $(DEPLOY)/dist/www
 	cp $(ROOT)/demos/index.html $(DEPLOY)
+	cp $(ROOT)/demos/favicon.png $(DEPLOY)
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
 	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www
 	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
