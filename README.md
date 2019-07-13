@@ -243,9 +243,6 @@ A working example of all of this can be the tests for the `apply` operator. Chec
 
 [utils-test-src]: /src/test/utils_test.c
 [utils-test-run]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--utils+--verbose
-
-The version in the blog post used the same number of bytes regardless of the number of closed-over values held in the Closure. The new version is a bit more compact, using only the space it needs.
-
 [blogpost]: https://dev.to/briancarroll/elm-functions-in-webassembly-50ak
 
 &nbsp;
