@@ -36,7 +36,7 @@ https://brian-carroll.github.io/elm_c_wasm/
 - Elm compiler modifications
 
   - [x] Initial experiments [forking](https://github.com/brian-carroll/elm-compiler/tree/wasm) the Elm compiler to generate Wasm (decided to abandon this direction)
-  - [ ] Modify Elm compiler to generate C (coming soon...)
+  - [ ] Do another Elm compiler fork to generate C (coming soon...)
 
 - Kernel code / core libs
 
@@ -45,7 +45,7 @@ https://brian-carroll.github.io/elm_c_wasm/
   - [x] Extensible record updates and accessors
   - [x] A prototype Garbage Collector (7kB download size 😊 I have no idea what the performance is like! See [gc.c](/src/kernel/gc.c))
   - [x] Numerical operators from the `Basics` library (`+`, `-`, `*`, `/`)
-  - [ ] Finalise String encoding issues, UTF-8, UTF-16, browser/JS interop, etc. I've given it lots of thought but it needs discussion.
+  - [ ] Finalise String encoding issues, UTF-8, UTF-16, browser/JS interop, etc. I've given it [lots of thought](#string-encoding) but it needs discussion.
   - [ ] JSON & ports (currently most effects are not available in Wasm, which probably means using ports heavily)
   - [ ] Remaining pure kernel modules from core: `String`, `List`
   - [ ] Effectful modules from core: `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
@@ -54,8 +54,8 @@ https://brian-carroll.github.io/elm_c_wasm/
 
 - My activity levels!
   - I did lots of work on this during 2018, particularly the 2nd half
-  - Other things in my life got busy in the first half of 2019, but my interest is reviving at the moment and I have more time on my hands again!
-  - I meant to write some blog posts and see if I could get some interest from the community, but I ended up only writing one. It was on [first class functions][blogpost].
+  - I got busy in the first half of 2019, but my interest is reviving at the moment and I have more time on my hands again!
+  - I meant to write some blog posts about this, but I ended up only writing one so far. It was on [first class functions][blogpost].
 
 &nbsp;
 
