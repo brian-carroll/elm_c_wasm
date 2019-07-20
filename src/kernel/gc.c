@@ -50,22 +50,24 @@
         - Abuaiadh et al, 2004
 */
 #include "gc.h"
-#include "gc-internals.h"
-#include "types.h"
 #include <errno.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include "gc-internals.h"
+#include "types.h"
 #ifdef DEBUG
 #include <stdio.h>
 #endif
 
 GcState gc_state;
 
-static void *stack_empty(); // pre-declaration
+static void* stack_empty();  // pre-declaration
 
 #ifdef _WIN32
-static void *sbrk(size_t size) { return malloc(GC_WASM_PAGE_BYTES * 5 + size); }
+static void* sbrk(size_t size) {
+  return malloc(GC_WASM_PAGE_BYTES * 5 + size);
+}
 #endif
 
 /* ====================================================
@@ -75,51 +77,48 @@ static void *sbrk(size_t size) { return malloc(GC_WASM_PAGE_BYTES * 5 + size); }
    ==================================================== */
 
 // Call exactly once on program startup
-int GC_init()
-{
-    GcState *state = &gc_state; // local reference for debugger to see
+int GC_init() {
+  GcState* state = &gc_state;  // local reference for debugger to see
 
-    // Get current max address of program data
-    size_t *break_ptr = sbrk(0);
+  // Get current max address of program data
+  size_t* break_ptr = sbrk(0);
 
-    // Align to next block boundary
-    size_t break_aligned = (size_t)break_ptr;
-    if (break_aligned % GC_BLOCK_BYTES)
-    {
-        break_aligned |= (GC_BLOCK_BYTES - 1);
-        break_aligned++;
-    }
-    size_t *heap_bottom = (size_t *)break_aligned;
+  // Align to next block boundary
+  size_t break_aligned = (size_t)break_ptr;
+  if (break_aligned % GC_BLOCK_BYTES) {
+    break_aligned |= (GC_BLOCK_BYTES - 1);
+    break_aligned++;
+  }
+  size_t* heap_bottom = (size_t*)break_aligned;
 
-    // Initialise state with zero heap size
-    *state = (GcState){
-        .heap =
-            (GcHeap){
-                .start = heap_bottom,
-                .end = heap_bottom,
-                .system_end = heap_bottom,
-                .bitmap = heap_bottom,
-                .offsets = heap_bottom,
-            },
-        .next_alloc = heap_bottom,
-        .roots = &Nil,
-        .stack_map = NULL,
-        .stack_depth = 0,
-    };
+  // Initialise state with zero heap size
+  *state = (GcState){
+      .heap =
+          (GcHeap){
+              .start = heap_bottom,
+              .end = heap_bottom,
+              .system_end = heap_bottom,
+              .bitmap = heap_bottom,
+              .offsets = heap_bottom,
+          },
+      .next_alloc = heap_bottom,
+      .roots = &Nil,
+      .stack_map = NULL,
+      .stack_depth = 0,
+  };
 
-    // Ask the system for more memory
-    size_t top_of_current_page = (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
+  // Ask the system for more memory
+  size_t top_of_current_page = (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
 
-    size_t *top_of_next_page = (size_t *)(top_of_current_page + GC_WASM_PAGE_BYTES + 1);
+  size_t* top_of_next_page = (size_t*)(top_of_current_page + GC_WASM_PAGE_BYTES + 1);
 
-    int err = set_heap_end(&state->heap, top_of_next_page);
+  int err = set_heap_end(&state->heap, top_of_next_page);
 
-    if (!err)
-    {
-        stack_empty();
-    }
+  if (!err) {
+    stack_empty();
+  }
 
-    return err;
+  return err;
 }
 
 /*
@@ -143,11 +142,10 @@ int GC_init()
   pointing to. If it moves the value, it will update the
   pointer to reference the new location.
 */
-void *GC_register_root(ElmValue **ptr_to_mutable_ptr)
-{
-    GcState *state = &gc_state;
-    state->roots = NEW_CONS(ptr_to_mutable_ptr, state->roots);
-    return ptr_to_mutable_ptr; // anything but pGcFull
+void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
+  GcState* state = &gc_state;
+  state->roots = NEW_CONS(ptr_to_mutable_ptr, state->roots);
+  return ptr_to_mutable_ptr;  // anything but pGcFull
 }
 
 /* ====================================================
@@ -160,74 +158,63 @@ void *GC_register_root(ElmValue **ptr_to_mutable_ptr)
   Allocate memory on the heap
   Same interface as malloc in stdlib.h
 */
-void *GC_malloc(size_t bytes)
-{
-    GcState *state = &gc_state;
-    size_t words = bytes / sizeof(size_t);
+void* GC_malloc(size_t bytes) {
+  GcState* state = &gc_state;
+  size_t words = bytes / sizeof(size_t);
 
 #ifdef DEBUG
-    if (bytes % sizeof(size_t))
-    {
-        fprintf(stderr, "GC_malloc: Request for %zd bytes is misaligned\n", bytes);
-    }
+  if (bytes % sizeof(size_t)) {
+    fprintf(stderr, "GC_malloc: Request for %zd bytes is misaligned\n", bytes);
+  }
 #endif
-    size_t *replay = state->replay_ptr;
-    if (replay != NULL)
-    {
+  size_t* replay = state->replay_ptr;
+  if (replay != NULL) {
 // replay mode
 #ifdef DEBUG
-        u32 replay_words = ((Header *)replay)->size;
-        if (replay_words != words)
-        {
-            fprintf(stderr, "GC_malloc: replay error. Requested size %zd doesn't match cached size %d\n", words,
-                    replay_words);
-        }
+    u32 replay_words = ((Header*)replay)->size;
+    if (replay_words != words) {
+      fprintf(
+          stderr,
+          "GC_malloc: replay error. Requested size %zd doesn't match cached size %d\n",
+          words, replay_words);
+    }
 #endif
-        size_t *next_replay = replay + words;
-        if (next_replay >= state->next_alloc)
-        {
-            next_replay = NULL; // exit replay mode
-        }
-        state->replay_ptr = next_replay;
-        return (void *)replay;
+    size_t* next_replay = replay + words;
+    if (next_replay >= state->next_alloc) {
+      next_replay = NULL;  // exit replay mode
     }
-    else
-    {
-        // normal mode
-        size_t *old_heap = state->next_alloc;
-        size_t *new_heap = old_heap + words;
+    state->replay_ptr = next_replay;
+    return (void*)replay;
+  } else {
+    // normal mode
+    size_t* old_heap = state->next_alloc;
+    size_t* new_heap = old_heap + words;
 
-        if (new_heap < state->heap.end)
-        {
-            state->next_alloc = new_heap;
-            return old_heap;
-        }
-        else
-        {
-            return pGcFull;
-        }
+    if (new_heap < state->heap.end) {
+      state->next_alloc = new_heap;
+      return old_heap;
+    } else {
+      return pGcFull;
     }
+  }
 }
 
-void *GC_memcpy(void *dest, void *src, size_t bytes)
-{
-    size_t words = bytes / sizeof(size_t);
+void* GC_memcpy(void* dest, void* src, size_t bytes) {
+  size_t words = bytes / sizeof(size_t);
 
 #ifdef DEBUG
-    if (bytes % sizeof(size_t))
-    {
-        fprintf(stderr, "GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
-    }
+  if (bytes % sizeof(size_t)) {
+    fprintf(stderr, "GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
+  }
 #endif
 
-    size_t *src_words = (size_t *)src;
-    size_t *dest_words = (size_t *)dest;
+  size_t* src_words = (size_t*)src;
+  size_t* dest_words = (size_t*)dest;
 
-    for (size_t i = 0; i < words; i++)
-    {
-        dest_words[i] = src_words[i];
-    }
-    return dest; // C standard lib returns this. Normally ignored.
+  for (size_t i = 0; i < words; i++) {
+    dest_words[i] = src_words[i];
+  }
+  return dest;  // C standard lib returns this. Normally ignored.
 }
 
 /* ====================================================
@@ -266,64 +253,55 @@ void *GC_memcpy(void *dest, void *src, size_t bytes)
     The functions below are called from the `apply` operator
 */
 
-static void *stack_empty()
-{
-    GcState *state = &gc_state;
-    GcStackMap *p = GC_malloc(sizeof(GcStackMap));
-    if (p == pGcFull)
-        return pGcFull;
-    p->header = HEADER_GC_STACK_EMPTY;
-    state->stack_map = p;
-    return p;
+static void* stack_empty() {
+  GcState* state = &gc_state;
+  GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+  if (p == pGcFull) return pGcFull;
+  p->header = HEADER_GC_STACK_EMPTY;
+  state->stack_map = p;
+  return p;
 }
 
-void *GC_stack_push()
-{
-    GcState *state = &gc_state;
-    if (state->replay_ptr != NULL)
-        return state->replay_ptr;
+void* GC_stack_push() {
+  GcState* state = &gc_state;
+  if (state->replay_ptr != NULL) return state->replay_ptr;
 
-    GcStackMap *p = GC_malloc(sizeof(GcStackMap));
-    if (p == pGcFull)
-        return pGcFull;
+  GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+  if (p == pGcFull) return pGcFull;
 
-    p->header = HEADER_GC_STACK_PUSH;
-    p->older = state->stack_map;
+  p->header = HEADER_GC_STACK_PUSH;
+  p->older = state->stack_map;
 
-    state->stack_map = p;
-    state->stack_depth++;
-    return p;
+  state->stack_map = p;
+  state->stack_depth++;
+  return p;
 }
 
-void *GC_stack_pop(ElmValue *result, void *push)
-{
-    GcState *state = &gc_state;
-    GcStackMap *p = GC_malloc(sizeof(GcStackMap));
-    if (p == pGcFull)
-        return pGcFull;
+void* GC_stack_pop(ElmValue* result, void* push) {
+  GcState* state = &gc_state;
+  GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+  if (p == pGcFull) return pGcFull;
 
-    p->header = HEADER_GC_STACK_POP;
-    p->older = push;
-    p->replay = result;
+  p->header = HEADER_GC_STACK_POP;
+  p->older = push;
+  p->replay = result;
 
-    state->stack_map = p;
-    state->stack_depth--;
-    return p;
+  state->stack_map = p;
+  state->stack_depth--;
+  return p;
 }
 
-void *GC_stack_tailcall(Closure *c, void *push)
-{
-    GcState *state = &gc_state;
-    GcStackMap *p = GC_malloc(sizeof(GcStackMap));
-    if (p == pGcFull)
-        return pGcFull;
-    p->header = HEADER_GC_STACK_TC;
-    p->older = push;
-    p->replay = c;
+void* GC_stack_tailcall(Closure* c, void* push) {
+  GcState* state = &gc_state;
+  GcStackMap* p = GC_malloc(sizeof(GcStackMap));
+  if (p == pGcFull) return pGcFull;
+  p->header = HEADER_GC_STACK_TC;
+  p->older = push;
+  p->replay = c;
 
-    state->stack_map = p;
-    // stack_depth stays the same
-    return p;
+  state->stack_map = p;
+  // stack_depth stays the same
+  return p;
 }
 
 /* ====================================================
@@ -336,79 +314,73 @@ void *GC_stack_tailcall(Closure *c, void *push)
 // Allocates space for a Closure and GcStackMap so that during replay
 // we can skip previous iterations (and their garbage)
 // Creates lots of extra garbage in order to be able to clean it all up!
-void *GC_tce_iteration(size_t n_args, void **gc_tce_data)
-{
-    GcState *state = &gc_state;
-    size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void *);
-    size_t cont_bytes = closure_bytes + sizeof(GcStackMap);
+void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
+  GcState* state = &gc_state;
+  size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void*);
+  size_t cont_bytes = closure_bytes + sizeof(GcStackMap);
 
-    void *tce_space = GC_malloc(cont_bytes);
-    if (tce_space == pGcFull)
-        return pGcFull;
+  void* tce_space = GC_malloc(cont_bytes);
+  if (tce_space == pGcFull) return pGcFull;
 
-    GcStackMap *tailcall = (GcStackMap *)(tce_space + closure_bytes);
-    state->stack_map = tailcall;
-    *gc_tce_data = tce_space;
+  GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
+  state->stack_map = tailcall;
+  *gc_tce_data = tce_space;
 
-    return tce_space; // not pGcFull
+  return tce_space;  // not pGcFull
 }
 
 // Evaluate a tail call elminated Elm function,
 // managing all of the GC related stuff for it
-void *GC_tce_eval(void *(*tce_evaluator)(void *[], void **), Closure *c_orig, void *args[])
-{
-    GcState *state = &gc_state;
-    GcStackMap *push = state->stack_map;
-    size_t n_args = (size_t)c_orig->max_values;
-    size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void *);
+void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* args[]) {
+  GcState* state = &gc_state;
+  GcStackMap* push = state->stack_map;
+  size_t n_args = (size_t)c_orig->max_values;
+  size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void*);
 
-    // Copy the closure and mutate the args during iteration
-    // then let it become garbage
-    Closure *c_mutable;
-    if (state->replay_ptr)
-    {
-        // In replay mode, reuse the Closure we created earlier,
-        // retrieved from replay a moment ago in Utils_apply
-        // It's our own private copy, we can mutate it without harm
-        // Only way to get it is to look just below 'args'
-        // c_orig is not from the same Closure, it's off-heap
-        c_mutable = (Closure *)(args - sizeof(Closure) / sizeof(void *));
-    }
-    else
-    {
-        c_mutable = CAN_THROW(GC_malloc(closure_bytes));
-        *c_mutable = (Closure){
-            .header = HEADER_CLOSURE(n_args),
-            .n_values = n_args,
-            .max_values = n_args,
-            .evaluator = c_orig->evaluator,
-        };
-        GC_memcpy(c_mutable->values, args, n_args * sizeof(void *));
-    }
+  // Copy the closure and mutate the args during iteration
+  // then let it become garbage
+  Closure* c_mutable;
+  if (state->replay_ptr) {
+    // In replay mode, reuse the Closure we created earlier,
+    // retrieved from replay a moment ago in Utils_apply
+    // It's our own private copy, we can mutate it without harm
+    // Only way to get it is to look just below 'args'
+    // c_orig is not from the same Closure, it's off-heap
+    c_mutable = (Closure*)(args - sizeof(Closure) / sizeof(void*));
+  } else {
+    c_mutable = CAN_THROW(GC_malloc(closure_bytes));
+    *c_mutable = (Closure){
+        .header = HEADER_CLOSURE(n_args),
+        .n_values = n_args,
+        .max_values = n_args,
+        .evaluator = c_orig->evaluator,
+    };
+    GC_memcpy(c_mutable->values, args, n_args * sizeof(void*));
+  }
 
-    // Pointer to new space allocated by tce_evaluator on every iteration
-    // to place tailcall and closure in case of exception
-    void *gc_tce_data;
+  // Pointer to new space allocated by tce_eval on every iteration
+  // to place tailcall and closure in case of exception
+  void* gc_tce_data;
 
-    // Run the tail-call-eliminated evaluator
-    void *result = (*tce_evaluator)(c_mutable->values, &gc_tce_data);
-    if (result != pGcFull)
-    {
-        return result;
-    }
+  // Run the tail-call-eliminated evaluator
+  void* result = (*tce_eval)(c_mutable->values, &gc_tce_data);
+  if (result != pGcFull) {
+    return result;
+  }
 
-    // GC Exception handling
-    // Save the current args in a closure in the stack map
-    // Then we can replay later, skipping earlier iterations
-    // This space was already _allocated_ but not _written_
-    // by GC_tce_iteration, called from tce_evaluator
-    Closure *c_replay = (Closure *)gc_tce_data;
-    GC_memcpy(c_replay, c_mutable, closure_bytes);
+  // GC Exception handling
+  // Save the current args in a closure in the stack map
+  // Then we can replay later, skipping earlier iterations
+  // This space was already _allocated_ but not _written_
+  // by GC_tce_iteration, called from tce_eval
+  Closure* c_replay = (Closure*)gc_tce_data;
+  GC_memcpy(c_replay, c_mutable, closure_bytes);
 
-    GcStackMap *tailcall = (GcStackMap *)(gc_tce_data + closure_bytes);
-    *tailcall = (GcStackMap){.header = HEADER_GC_STACK_TC, .older = push, .replay = c_replay};
+  GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + closure_bytes);
+  *tailcall =
+      (GcStackMap){.header = HEADER_GC_STACK_TC, .older = push, .replay = c_replay};
 
-    return pGcFull;
+  return pGcFull;
 }
 
 /* ====================================================
@@ -417,11 +389,10 @@ void *GC_tce_eval(void *(*tce_evaluator)(void *[], void **), Closure *c_orig, vo
 
    ==================================================== */
 
-static void *next_heap_value(void *current)
-{
-    Header *h = current;
-    size_t *words = current;
-    return words + h->size;
+static void* next_heap_value(void* current) {
+  Header* h = current;
+  size_t* words = current;
+  return words + h->size;
 }
 
 /*
@@ -435,287 +406,267 @@ static void *next_heap_value(void *current)
     This function is called from the normal 'Utils_apply'.
 */
 
-typedef enum
-{
-    Finished,                  // This call had finished, replay saved return value from previous execution.
-    Unfinished_Sat_Normal,     // Unfinished call. Saturated (all args in one go). Re-execute it.
-    Unfinished_Sat_Tail,       // Unfinished saturated tail call. Re-execute from last completed iteration.
-    Unfinished_Curried_Normal, // Unfinished normal call with curried values. Re-execute it.
-    Unfinished_Curried_Tail,   // Unfinished tail call with curried values. Re-execute from last iteration.
-    Partial_Application,       // Partial application, unsaturated so no execution required. Return saved value.
-    Apply_Alloc_Failed,        // Apply itself failed to allocate a Closure or stackmap value. Re-execute.
-    BugScenario                // Heap doesn't make sense given that a replaying function has called Utils_apply.
+typedef enum {
+  Finished,  // Call had finished. Replay saved return value from previous execution.
+  Unfinished_Sat_Normal,  // Unfinished call. Saturated (all args in one go). Re-execute.
+  Unfinished_Sat_Tail,  // Unfinished saturated tail call. Re-execute from last iteration.
+  Unfinished_Curried_Normal,  // Unfinished call with curried values. Re-execute.
+  Unfinished_Curried_Tail,    // Unfinished tail call. Re-execute from last iteration.
+  Partial_Application,        // Partial app, unsaturated. Return saved Closure.
+  Apply_Alloc_Failed,  // `apply` failed to allocate Closure or stackmap. Re-execute.
+  BugScenario          // Heap doesn't make sense. Must be a bug somewhere.
 } ReplayScenario;
 
 #ifdef DEBUG
-char *scenario_to_string(ReplayScenario scenario)
-{
-    switch (scenario)
-    {
+char* scenario_to_string(ReplayScenario scenario) {
+  switch (scenario) {
     case Finished:
-        return "Finished";
+      return "Finished";
     case Unfinished_Sat_Normal:
-        return "Unfinished_Sat_Normal";
+      return "Unfinished_Sat_Normal";
     case Unfinished_Sat_Tail:
-        return "Unfinished_Sat_Tail";
+      return "Unfinished_Sat_Tail";
     case Unfinished_Curried_Normal:
-        return "Unfinished_Curried_Normal";
+      return "Unfinished_Curried_Normal";
     case Unfinished_Curried_Tail:
-        return "Unfinished_Curried_Tail";
+      return "Unfinished_Curried_Tail";
     case Partial_Application:
-        return "Partial_Application";
+      return "Partial_Application";
     case Apply_Alloc_Failed:
-        return "Apply_Alloc_Failed";
+      return "Apply_Alloc_Failed";
     case BugScenario:
-        return "BugScenario";
-    }
-    return "";
+      return "BugScenario";
+  }
+  return "";
 }
 #endif
 
-void *GC_apply_replay()
-{
-    GcState *state = &gc_state;
-    if (state->replay_ptr == NULL)
-        return NULL;
+void* GC_apply_replay() {
+  GcState* state = &gc_state;
+  if (state->replay_ptr == NULL) return NULL;
 
-    Tag replay_tag = ((Header *)state->replay_ptr)->tag;
+  Tag replay_tag = ((Header*)state->replay_ptr)->tag;
 #ifdef DEBUG
-    printf("GC_apply_replay: replay_ptr = %p, tag = %x\n", state->replay_ptr, replay_tag);
+  printf("GC_apply_replay: replay_ptr = %p, tag = %x\n", state->replay_ptr, replay_tag);
 #endif
 
-    /*
-    Analyse heap values to work out which of several scenarios we're in.
+  /*
+  Analyse heap values to work out which of several scenarios we're in.
 
-    replay_ptr      newer stackmap  scenario
-    ----------      --------------  --------
-    Push            Pop             Finished
-    Push            Push            Unfinished saturated call
-    Push            Tailcall        Unfinished saturated tail call
-    Closure(sat)    Pop             Finished
-    Closure(sat)    Push            Unfinished curried call
-    Closure(sat)    Tailcall        Unfinished curried tail call
-    Closure(unsat)  (N/A)           Partial application, unsaturated
-    next_alloc      (N/A)           Failed to allocate Push or Closure
-    */
+  replay_ptr      newer stackmap  scenario
+  ----------      --------------  --------
+  Push            Pop             Finished
+  Push            Push            Unfinished saturated call
+  Push            Tailcall        Unfinished saturated tail call
+  Closure(sat)    Pop             Finished
+  Closure(sat)    Push            Unfinished curried call
+  Closure(sat)    Tailcall        Unfinished curried tail call
+  Closure(unsat)  (N/A)           Partial application, unsaturated
+  next_alloc      (N/A)           Failed to allocate Push or Closure
+  */
 
-    ReplayScenario scenario;
-    GcStackMap *push;
-    GcStackMap *newer;
-    Closure *closure;
-    size_t *after_closure;
+  ReplayScenario scenario;
+  GcStackMap* push;
+  GcStackMap* newer;
+  Closure* closure;
+  size_t* after_closure;
 
-    // Each time we advance to next heap value, need to check if we've passed end of heap.
-    // Early breaks are handy here, so use do-while(0)
-    do
-    {
-        if (state->replay_ptr >= state->next_alloc)
-        {
-            scenario = Apply_Alloc_Failed;
-            break;
-        }
-        if (replay_tag == Tag_Closure)
-        {
-            // Replay points to a Closure that was allocated last time in Utils_apply
-            // It was a partially-applied Closure that had some more values applied
-            closure = (Closure *)state->replay_ptr;
-            after_closure = next_heap_value(closure);
+  // Each time we advance to next heap value, need to check if we've passed end of heap.
+  // Early breaks are handy here, so use do-while(0)
+  do {
+    if (state->replay_ptr >= state->next_alloc) {
+      scenario = Apply_Alloc_Failed;
+      break;
+    }
+    if (replay_tag == Tag_Closure) {
+      // Replay points to a Closure that was allocated last time in Utils_apply
+      // It was a partially-applied Closure that had some more values applied
+      closure = (Closure*)state->replay_ptr;
+      after_closure = next_heap_value(closure);
 
-            if (closure->n_values != closure->max_values)
-            {
-                // Closure did not get enough new values to be saturated
-                scenario = Partial_Application;
-                break;
-            }
-
-            if (after_closure >= state->next_alloc)
-            {
-                scenario = Apply_Alloc_Failed;
-                break;
-            }
-
-            // Closure got saturated and started executing
-            push = (GcStackMap *)after_closure;
-            newer = push->newer;
-
-            if ((size_t *)newer >= state->next_alloc)
-            {
-                scenario = Unfinished_Curried_Normal;
-                break;
-            }
-
-            switch (newer->header.tag)
-            {
-            case Tag_GcStackPop:
-                scenario = Finished;
-                break;
-
-            case Tag_GcStackPush:
-                scenario = Unfinished_Curried_Normal;
-                break;
-
-            case Tag_GcStackTailCall:
-                scenario = Unfinished_Curried_Tail;
-                break;
-
-            default:
-                scenario = BugScenario;
-#ifdef DEBUG
-                fprintf(stderr, "GC_apply_replay: no newer stack item after %p\n", state->replay_ptr);
-#endif
-                break;
-            }
-        }
-        else if (replay_tag == Tag_GcStackPush)
-        {
-            // This was a saturated call (all args applied at once)
-            push = (GcStackMap *)state->replay_ptr;
-            newer = push->newer;
-            if ((size_t *)newer >= state->next_alloc)
-            {
-                scenario = Unfinished_Sat_Normal;
-                break;
-            }
-            switch (newer->header.tag)
-            {
-            case Tag_GcStackPop:
-                scenario = Finished;
-                break;
-
-            case Tag_GcStackPush:
-                scenario = Unfinished_Sat_Normal;
-                break;
-
-            case Tag_GcStackTailCall:
-                scenario = Unfinished_Sat_Tail;
-                break;
-
-            default:
-                scenario = BugScenario;
-#ifdef DEBUG
-                fprintf(stderr, "GC_apply_replay: expected stack map value at %p\n", newer);
-#endif
-                break;
-            }
-        }
-        else
-        {
-            scenario = BugScenario;
-#ifdef DEBUG
-            fprintf(stderr, "GC_apply_replay: expected Closure or Push at %p\n", state->replay_ptr);
-#endif
-        }
-    } while (0);
-
-    /*
-    Decide what to do based on which scenario we're in.
-    - What should Utils_apply return?
-    - How to find the next position of the stackmap pointer?
-    - How to find the next position of the replay pointer?
-
-    scenario                  apply returns    stackmap         replay_next
-    --------                  -------------    --------         -----------
-    Finished                  Pop data         push-newer       stackmap-next
-    Unfinished Sat. call      eval args        push             stackmap-next
-    Unfinished Sat. tail      eval tc data     push-tc          stackmap-next
-    Unfinished Curried        eval args        closure-push     stackmap-next
-    Unfinished Curried tail   eval tc data     closure-push-tc  stackmap-next
-    Part apply, unsaturated   closure(unsat)   (no change)      closure-next
-    Part apply failed         fuller closure   (no change)      NULL (exit)
-    */
-
-    void *replay;
-    size_t *replay_next;
-    GcStackMap *stackmap_next;
-    size_t stack_depth_increment;
-
-    // Specific meanings for NULL
-    GcStackMap *STACKMAP_UNCHANGED = NULL;
-    void *RE_EXECUTE = NULL;
-    void *EXIT_REPLAY_MODE = NULL;
-
-    switch (scenario)
-    {
-    case Finished:
-        replay = newer->replay; // saved return value
-        stackmap_next = newer;
-        stack_depth_increment = 0; // we've pushed AND popped
-        replay_next = next_heap_value(stackmap_next);
+      if (closure->n_values != closure->max_values) {
+        // Closure did not get enough new values to be saturated
+        scenario = Partial_Application;
         break;
+      }
+
+      if (after_closure >= state->next_alloc) {
+        scenario = Apply_Alloc_Failed;
+        break;
+      }
+
+      // Closure got saturated and started executing
+      push = (GcStackMap*)after_closure;
+      newer = push->newer;
+
+      if ((size_t*)newer >= state->next_alloc) {
+        scenario = Unfinished_Curried_Normal;
+        break;
+      }
+
+      switch (newer->header.tag) {
+        case Tag_GcStackPop:
+          scenario = Finished;
+          break;
+
+        case Tag_GcStackPush:
+          scenario = Unfinished_Curried_Normal;
+          break;
+
+        case Tag_GcStackTailCall:
+          scenario = Unfinished_Curried_Tail;
+          break;
+
+        default:
+          scenario = BugScenario;
+#ifdef DEBUG
+          fprintf(stderr, "GC_apply_replay: no newer stack item after %p\n",
+                  state->replay_ptr);
+#endif
+          break;
+      }
+    } else if (replay_tag == Tag_GcStackPush) {
+      // This was a saturated call (all args applied at once)
+      push = (GcStackMap*)state->replay_ptr;
+      newer = push->newer;
+      if ((size_t*)newer >= state->next_alloc) {
+        scenario = Unfinished_Sat_Normal;
+        break;
+      }
+      switch (newer->header.tag) {
+        case Tag_GcStackPop:
+          scenario = Finished;
+          break;
+
+        case Tag_GcStackPush:
+          scenario = Unfinished_Sat_Normal;
+          break;
+
+        case Tag_GcStackTailCall:
+          scenario = Unfinished_Sat_Tail;
+          break;
+
+        default:
+          scenario = BugScenario;
+#ifdef DEBUG
+          fprintf(stderr, "GC_apply_replay: expected stack map value at %p\n", newer);
+#endif
+          break;
+      }
+    } else {
+      scenario = BugScenario;
+#ifdef DEBUG
+      fprintf(stderr, "GC_apply_replay: expected Closure or Push at %p\n",
+              state->replay_ptr);
+#endif
+    }
+  } while (0);
+
+  /*
+  Decide what to do based on which scenario we're in.
+  - What should Utils_apply return?
+  - How to find the next position of the stackmap pointer?
+  - How to find the next position of the replay pointer?
+
+  scenario                  apply returns    stackmap         replay_next
+  --------                  -------------    --------         -----------
+  Finished                  Pop data         push-newer       stackmap-next
+  Unfinished Sat. call      eval args        push             stackmap-next
+  Unfinished Sat. tail      eval tc data     push-tc          stackmap-next
+  Unfinished Curried        eval args        closure-push     stackmap-next
+  Unfinished Curried tail   eval tc data     closure-push-tc  stackmap-next
+  Part apply, unsaturated   closure(unsat)   (no change)      closure-next
+  Part apply failed         fuller closure   (no change)      NULL (exit)
+  */
+
+  void* replay;
+  size_t* replay_next;
+  GcStackMap* stackmap_next;
+  size_t stack_depth_increment;
+
+  // Specific meanings for NULL
+  GcStackMap* STACKMAP_UNCHANGED = NULL;
+  void* RE_EXECUTE = NULL;
+  void* EXIT_REPLAY_MODE = NULL;
+
+  switch (scenario) {
+    case Finished:
+      replay = newer->replay;  // saved return value
+      stackmap_next = newer;
+      stack_depth_increment = 0;  // we've pushed AND popped
+      replay_next = next_heap_value(stackmap_next);
+      break;
 
     case Unfinished_Sat_Normal:
-        replay = RE_EXECUTE;
-        stackmap_next = push;
-        stack_depth_increment = 1;
-        replay_next = next_heap_value(stackmap_next);
-        break;
+      replay = RE_EXECUTE;
+      stackmap_next = push;
+      stack_depth_increment = 1;
+      replay_next = next_heap_value(stackmap_next);
+      break;
 
     case Unfinished_Sat_Tail:
-        replay = newer->replay; // saved full closure
-        stackmap_next = newer;
-        stack_depth_increment = 1; // push and tailcall = push
-        replay_next = next_heap_value(stackmap_next);
-        break;
+      replay = newer->replay;  // saved full closure
+      stackmap_next = newer;
+      stack_depth_increment = 1;  // push and tailcall = push
+      replay_next = next_heap_value(stackmap_next);
+      break;
 
     case Unfinished_Curried_Normal:
-        replay = RE_EXECUTE;
-        stackmap_next = push;
-        stack_depth_increment = 1;
-        replay_next = next_heap_value(stackmap_next);
-        break;
+      replay = RE_EXECUTE;
+      stackmap_next = push;
+      stack_depth_increment = 1;
+      replay_next = next_heap_value(stackmap_next);
+      break;
 
     case Unfinished_Curried_Tail:
-        replay = newer->replay; // saved full closure
-        stackmap_next = newer;
-        stack_depth_increment = 1; // push and tailcall = push
-        replay_next = next_heap_value(stackmap_next);
-        break;
+      replay = newer->replay;  // saved full closure
+      stackmap_next = newer;
+      stack_depth_increment = 1;  // push and tailcall = push
+      replay_next = next_heap_value(stackmap_next);
+      break;
 
     case Partial_Application:
-        replay = closure;
-        stackmap_next = STACKMAP_UNCHANGED;
-        stack_depth_increment = 0;
-        replay_next = after_closure;
-        break;
+      replay = closure;
+      stackmap_next = STACKMAP_UNCHANGED;
+      stack_depth_increment = 0;
+      replay_next = after_closure;
+      break;
 
     case Apply_Alloc_Failed:
     case BugScenario:
-        replay = RE_EXECUTE;
-        stackmap_next = STACKMAP_UNCHANGED;
-        stack_depth_increment = 0;
-        replay_next = EXIT_REPLAY_MODE;
-        break;
-    }
+      replay = RE_EXECUTE;
+      stackmap_next = STACKMAP_UNCHANGED;
+      stack_depth_increment = 0;
+      replay_next = EXIT_REPLAY_MODE;
+      break;
+  }
 
-    // #ifdef DEBUG
-    // printf("GC_apply_replay:\n");
-    // printf("    scenario = %s\n", scenario_to_string(scenario));
-    // printf("    replay = %p\n", replay);
-    // printf("    stackmap_next = %p\n", stackmap_next);
-    // printf("    stack_depth_increment = %zd\n", stack_depth_increment);
-    // printf("    replay_next = %p\n", replay_next);
-    // #endif
+  // #ifdef DEBUG
+  // printf("GC_apply_replay:\n");
+  // printf("    scenario = %s\n", scenario_to_string(scenario));
+  // printf("    replay = %p\n", replay);
+  // printf("    stackmap_next = %p\n", stackmap_next);
+  // printf("    stack_depth_increment = %zd\n", stack_depth_increment);
+  // printf("    replay_next = %p\n", replay_next);
+  // #endif
 
-    // Update the state
-    // Don't do the memory access unless value is changed
+  // Update the state
+  // Don't do the memory access unless value is changed
 
-    if (stackmap_next != STACKMAP_UNCHANGED)
-    {
-        state->stack_map = stackmap_next;
-    }
+  if (stackmap_next != STACKMAP_UNCHANGED) {
+    state->stack_map = stackmap_next;
+  }
 
-    if (stack_depth_increment)
-    {
-        state->stack_depth += stack_depth_increment;
-    }
+  if (stack_depth_increment) {
+    state->stack_depth += stack_depth_increment;
+  }
 
-    if (replay_next >= state->next_alloc)
-    {
-        replay_next = EXIT_REPLAY_MODE;
-    }
-    state->replay_ptr = replay_next;
+  if (replay_next >= state->next_alloc) {
+    replay_next = EXIT_REPLAY_MODE;
+  }
+  state->replay_ptr = replay_next;
 
-    return replay;
+  return replay;
 }
 
 #ifdef GC_SIZE_CHECK
@@ -724,48 +675,46 @@ void *GC_apply_replay()
 // I don't have replay or controller yet, but wow
 // And this includes some fixed overhead that emcc generates
 //
-void *dummy_tce_eval(void *args[3], void **gc_tce_data)
-{
-    size_t dummy = (size_t)args + (size_t)gc_tce_data;
-    return (void *)dummy;
+void* dummy_tce_eval(void* args[3], void** gc_tce_data) {
+  size_t dummy = (size_t)args + (size_t)gc_tce_data;
+  return (void*)dummy;
 }
-int main(int argc, char **argv)
-{
-    // Dummy code to prevent dead code elimination
+int main(int argc, char** argv) {
+  // Dummy code to prevent dead code elimination
 
-    GcState *state = &gc_state;
+  GcState* state = &gc_state;
 
-    // Create variables of particular types, with values
-    // coming from outside world so compiler can't eliminate.
-    // We don't need to run this, just compile it,
-    // so segfaults are not an issue!
-    ElmValue **root = (ElmValue **)argv[0];
-    size_t word = (size_t)argc;
-    size_t *pword = (size_t *)argv[3];
-    Closure *c = (Closure *)argv[1];
-    ElmValue *v = (ElmValue *)argv[2];
-    void *dest = argv[4];
-    void *src = argv[5];
-    void **pointer_array = (void **)argv;
+  // Create variables of particular types, with values
+  // coming from outside world so compiler can't eliminate.
+  // We don't need to run this, just compile it,
+  // so segfaults are not an issue!
+  ElmValue** root = (ElmValue**)argv[0];
+  size_t word = (size_t)argc;
+  size_t* pword = (size_t*)argv[3];
+  Closure* c = (Closure*)argv[1];
+  ElmValue* v = (ElmValue*)argv[2];
+  void* dest = argv[4];
+  void* src = argv[5];
+  void** pointer_array = (void**)argv;
 
-    GC_init();
-    GC_register_root(root);
-    GC_malloc(word);
-    GC_memcpy(dest, src, word);
+  GC_init();
+  GC_register_root(root);
+  GC_malloc(word);
+  GC_memcpy(dest, src, word);
 
-    void *push = GC_stack_push();
-    // GC_stack_tailcall(c, push);
-    GC_stack_pop(v, push);
+  void* push = GC_stack_push();
+  // GC_stack_tailcall(c, push);
+  GC_stack_pop(v, push);
 
-    mark(state, pword);
-    compact(state, pword);
-    reverse_stack_map(state);
+  mark(state, pword);
+  compact(state, pword);
+  reverse_stack_map(state);
 
-    GC_tce_iteration(word, pointer_array);
-    GC_tce_eval(&dummy_tce_eval, c, pointer_array);
+  GC_tce_iteration(word, pointer_array);
+  GC_tce_eval(&dummy_tce_eval, c, pointer_array);
 
-    GC_apply_replay();
+  GC_apply_replay();
 
-    return 0;
+  return 0;
 }
 #endif

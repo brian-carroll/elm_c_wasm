@@ -2,29 +2,23 @@
 #include <stdio.h>
 
 #define mu_assert(message, test)     \
-  do                                 \
-  {                                  \
+  do {                               \
     assertions_made++;               \
-    if (!(test))                     \
-    {                                \
+    if (!(test)) {                   \
       return message;                \
-    }                                \
-    else if (verbose)                \
-    {                                \
+    } else if (verbose) {            \
       printf("PASS: %s\n", message); \
     }                                \
   } while (0)
 
-#define mu_run_test(test)   \
-  do                        \
-  {                         \
-    char *message = test(); \
-    tests_run++;            \
-    if (message != NULL)    \
-      return message;       \
+#define mu_run_test(test)                \
+  do {                                   \
+    char* message = test();              \
+    tests_run++;                         \
+    if (message != NULL) return message; \
   } while (0)
 
 extern int tests_run, assertions_made, verbose;
 
-char *hex(void *addr, int size);
-char *hex_ptr(void *ptr);
+char* hex(void* addr, int size);
+char* hex_ptr(void* ptr);
