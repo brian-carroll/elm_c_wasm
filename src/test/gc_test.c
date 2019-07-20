@@ -103,8 +103,8 @@ void print_value(ElmValue* v) {
       }
       break;
     case Tag_Record:
-      printf("Record fieldset: %p values: ", v->record.fieldset);
-      for (size_t i = 0; i < v->record.fieldset->size; ++i) {
+      printf("Record fieldgroup: %p values: ", v->record.fieldgroup);
+      for (size_t i = 0; i < v->record.fieldgroup->size; ++i) {
         printf("%p ", v->record.values[i]);
       }
       break;

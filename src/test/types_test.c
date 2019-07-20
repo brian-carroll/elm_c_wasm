@@ -372,30 +372,30 @@ char* test_custom() {
 }
 
 char* test_record() {
-  u8 mem_fs[sizeof(FieldSet) + 2 * sizeof(u32)];
-  FieldSet* fs = (FieldSet*)mem_fs;
-  fs->size = 2;
-  fs->fields[0] = 0xaa;
-  fs->fields[1] = 0x55;
+  u8 mem_fs[sizeof(FieldGroup) + 2 * sizeof(u32)];
+  FieldGroup* fg = (FieldGroup*)mem_fs;
+  fg->size = 2;
+  fg->fields[0] = 0xaa;
+  fg->fields[1] = 0x55;
 
   u8 mem_r[sizeof(Record) + 2 * sizeof(void*)];
   Record* r = (Record*)mem_r;
   r->header = HEADER_RECORD(2);
-  r->fieldset = fs;
+  r->fieldgroup = fg;
   r->values[0] = &Unit;
   r->values[1] = &Nil;
 
   if (verbose) {
     printf("\n");
     printf("## test_record\n");
-    printf("FieldSet with 2 values: addr=%s, hex=%s\n", hex_ptr(fs),
-           hex(fs, sizeof(FieldSet) + 2 * sizeof(u32)));
+    printf("FieldGroup with 2 values: addr=%s, hex=%s\n", hex_ptr(fg),
+           hex(fg, sizeof(FieldGroup) + 2 * sizeof(u32)));
     printf("Record with 2 values: tag=%d, size=%d, hex=%s\n", r->header.tag,
            r->header.size, hex(r, sizeof(Record) + 2 * sizeof(void*)));
   }
 
-  mu_assert("FieldSet struct with no fields should be the same size as an integer",
-            sizeof(FieldSet) == sizeof(u32));
+  mu_assert("FieldGroup struct with no fields should be the same size as an integer",
+            sizeof(FieldGroup) == sizeof(u32));
 
 #ifdef TARGET_64BIT
   mu_assert(

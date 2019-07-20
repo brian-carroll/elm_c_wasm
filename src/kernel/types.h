@@ -185,11 +185,11 @@ u32 custom_params(Custom* c);  // number of parameters in a Custom struct
 typedef struct {
   u32 size;
   u32 fields[];
-} FieldSet;
+} FieldGroup;
 
 typedef struct {
   Header header;
-  FieldSet* fieldset;
+  FieldGroup* fieldgroup;
   void* values[];
 } Record;
 

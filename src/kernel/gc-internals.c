@@ -42,7 +42,7 @@ size_t child_count(ElmValue* v) {
       return custom_params(&v->custom);
 
     case Tag_Record:
-      return v->record.fieldset->size;
+      return v->record.fieldgroup->size;
 
     case Tag_Closure:
       return v->closure.n_values;

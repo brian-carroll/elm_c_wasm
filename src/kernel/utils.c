@@ -45,10 +45,10 @@ void* Utils_clone(void* x) {
   return x_new;
 }
 
-static u32 fieldset_search(FieldSet* fieldset, u32 search) {
+static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
   u32 first = 0;
-  u32 last = fieldset->size - 1;
-  u32* array = fieldset->fields;
+  u32 last = fieldgroup->size - 1;
+  u32* array = fieldgroup->fields;
 
   while (first <= last) {
     u32 middle = (first + last) / 2;
@@ -62,8 +62,8 @@ static u32 fieldset_search(FieldSet* fieldset, u32 search) {
   }
 
 #ifdef DEBUG
-  fprintf(stderr, "Failed to find field %d in record fieldset at %zx\n", search,
-          (size_t)fieldset);
+  fprintf(stderr, "Failed to find field %d in record fieldgroup at %zx\n", search,
+          (size_t)fieldgroup);
 #endif
 
   return 0;
@@ -73,7 +73,7 @@ static void* access_eval(void* args[2]) {
   ElmInt* field = (ElmInt*)args[0];
   Record* record = (Record*)args[1];
 
-  u32 index = fieldset_search(record->fieldset, field->value);
+  u32 index = fieldgroup_search(record->fieldgroup, field->value);
   return record->values[index];
 }
 
@@ -84,7 +84,7 @@ Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   if (r_new == pGcFull) return pGcFull;
 
   for (u32 i = 0; i < n_updates; ++i) {
-    u32 field_pos = fieldset_search(r_new->fieldset, fields[i]);
+    u32 field_pos = fieldgroup_search(r_new->fieldgroup, fields[i]);
     r_new->values[field_pos] = values[i];
   }
 
@@ -211,8 +211,8 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     }
 
     case Tag_Record:
-      // Elm guarantees same Record type => same fieldset
-      for (u32 i = 0; i < pa->record.fieldset->size; ++i)
+      // Elm guarantees same Record type => same fieldgroup
+      for (u32 i = 0; i < pa->record.fieldgroup->size; ++i)
         if (!eq_help(pa->record.values[i], pb->record.values[i], depth + 1, pstack))
           return 0;
       return 1;

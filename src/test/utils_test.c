@@ -45,20 +45,20 @@ char* test_records() {
   u32 otherField = 42;
   u32 stuff = 71;
 
-  u8 mem_fsRecord1[sizeof(FieldSet) + 2 * sizeof(u32)];
-  u8 mem_fsRecord2[sizeof(FieldSet) + 3 * sizeof(u32)];
+  u8 mem_fsRecord1[sizeof(FieldGroup) + 2 * sizeof(u32)];
+  u8 mem_fsRecord2[sizeof(FieldGroup) + 3 * sizeof(u32)];
 
-  FieldSet* fsRecord1 = (FieldSet*)mem_fsRecord1;
-  FieldSet* fsRecord2 = (FieldSet*)mem_fsRecord2;
+  FieldGroup* fgRecord1 = (FieldGroup*)mem_fsRecord1;
+  FieldGroup* fgRecord2 = (FieldGroup*)mem_fsRecord2;
 
-  fsRecord1->size = 2;
-  fsRecord1->fields[0] = someField;
-  fsRecord1->fields[1] = otherField;
+  fgRecord1->size = 2;
+  fgRecord1->fields[0] = someField;
+  fgRecord1->fields[1] = otherField;
 
-  fsRecord2->size = 3;
-  fsRecord2->fields[0] = things;
-  fsRecord2->fields[1] = someField;
-  fsRecord2->fields[2] = stuff;
+  fgRecord2->size = 3;
+  fgRecord2->fields[0] = things;
+  fgRecord2->fields[1] = someField;
+  fgRecord2->fields[2] = stuff;
 
   u8 mem_r1[sizeof(Record) + 2 * sizeof(void*)];
   u8 mem_r2[sizeof(Record) + 3 * sizeof(void*)];
@@ -67,12 +67,12 @@ char* test_records() {
   Record* r2 = (Record*)mem_r2;
 
   r1->header = HEADER_RECORD(2);
-  r1->fieldset = fsRecord1;
+  r1->fieldgroup = fgRecord1;
   r1->values[0] = NEW_ELM_INT(123);
   r1->values[1] = NEW_ELM_STRING(5, "hello");
 
   r2->header = HEADER_RECORD(3);
-  r2->fieldset = fsRecord2;
+  r2->fieldgroup = fgRecord2;
   r2->values[0] = NEW_ELM_INT(456);
   r2->values[1] = NEW_ELM_INT(321);
   r2->values[2] = NEW_ELM_FLOAT(1.0);
@@ -99,10 +99,10 @@ char* test_records() {
            hex(r1, sizeof(Record) + 2 * sizeof(void*)));
     printf("r2: addr=%zx val=%s\n", (size_t)r2,
            hex(r2, sizeof(Record) + 3 * sizeof(void*)));
-    printf("fieldset Record1: addr=%zx val=%s\n", (size_t)fsRecord1,
-           hex(fsRecord1, sizeof(FieldSet) + 2 * sizeof(u32)));
-    printf("fieldset for r2: addr=%zx val=%s\n", (size_t)fsRecord2,
-           hex(fsRecord2, sizeof(FieldSet) + 3 * sizeof(u32)));
+    printf("fieldgroup Record1: addr=%zx val=%s\n", (size_t)fgRecord1,
+           hex(fgRecord1, sizeof(FieldGroup) + 2 * sizeof(u32)));
+    printf("fieldgroup for r2: addr=%zx val=%s\n", (size_t)fgRecord2,
+           hex(fgRecord2, sizeof(FieldGroup) + 3 * sizeof(u32)));
     printf("Closure access_someField = %s\n",
            hex(access_someField, sizeof(Closure) + sizeof(void*)));
     printf("r3: addr=%zx val=%s\n", (size_t)r3,
@@ -112,8 +112,8 @@ char* test_records() {
   mu_assert("Record accessor should return 123 for r1", int1->value = 123);
   mu_assert("Record accessor should return 321 for r2", int2->value = 321);
 
-  mu_assert("Updated record r3 should have same fieldset as r2",
-            r3->fieldset == r2->fieldset);
+  mu_assert("Updated record r3 should have same fieldgroup as r2",
+            r3->fieldgroup == r2->fieldgroup);
   mu_assert("Updated record r3 should have same header as r2",
             memcmp(r3, r2, sizeof(Header)) == 0);
   mu_assert("Updated record should have 3 correct field values",
@@ -377,16 +377,16 @@ char* test_eq(void) {
             A2(&Utils_eq, custom_1_1A, custom_1_1B) == &False);
 
   if (verbose) printf("\nRecord equality\n");
-  u8 mem_fs[sizeof(FieldSet) + 2 * sizeof(void*)];
-  FieldSet* fs = (FieldSet*)mem_fs;
-  fs->size = 2;
-  fs->fields[0] = 123;
-  fs->fields[1] = 321;
+  u8 mem_fs[sizeof(FieldGroup) + 2 * sizeof(void*)];
+  FieldGroup* fg = (FieldGroup*)mem_fs;
+  fg->size = 2;
+  fg->fields[0] = 123;
+  fg->fields[1] = 321;
 
   u8 mem_rec12[sizeof(Record) + 2 * sizeof(void*)];
   Record* rec12 = (Record*)mem_rec12;
   rec12->header = HEADER_RECORD(2);
-  rec12->fieldset = fs;
+  rec12->fieldgroup = fg;
   rec12->values[0] = &one;
   rec12->values[1] = &two;
 
