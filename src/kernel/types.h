@@ -244,20 +244,20 @@ typedef union {
 
 // STATIC CONSTANTS
 
-GcException GcFull;
-void* pGcFull;
+const GcException GcFull;
+const void* pGcFull;
 
-Cons Nil;
-void* pNil;
+const Cons Nil;
+const void* pNil;
 
-Custom Unit;
-void* pUnit;
+const Custom Unit;
+const void* pUnit;
 
-Custom False;
-void* pFalse;
+const Custom False;
+const void* pFalse;
 
-Custom True;
-void* pTrue;
+const Custom True;
+const void* pTrue;
 
 void Types_init();
 

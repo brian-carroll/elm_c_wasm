@@ -62,7 +62,6 @@ char* test_all(bool types, bool utils, bool basics, bool string, bool gc) {
 
 int main(int argc, char** argv) {
   GC_init();
-  Types_init();
   Basics_init();
   Utils_init();
   String_init();

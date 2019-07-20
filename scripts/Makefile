@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -O1
+CFLAGS=-Wall -O1 -Wno-discarded-qualifiers
 
 ROOT := ..
 SRC := $(ROOT)/src
