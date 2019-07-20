@@ -10,6 +10,33 @@
 extern void gc_debug_stack_trace(GcStackMap *sm, Closure *c);
 #endif
 
+void *Utils_destruct_index(ElmValue *v, size_t index)
+{
+    // Destructure by index: custom, cons, or tuple
+    // Dynamic type check needed, since Cons and tuples are using "special-case" structs
+    // and compiler code gen doesn't have type info to distinguish them from generic Custom
+    // All cases except Custom should compile to same assembly. But it's more robust than 'if'
+    void **children;
+    switch (v->header.tag)
+    {
+    case Tag_Custom:
+        children = v->custom.values;
+        break;
+    case Tag_List:
+        children = &v->cons.head;
+        break;
+    case Tag_Tuple2:
+        children = &v->tuple2.a;
+        break;
+    case Tag_Tuple3:
+    default:
+        children = &v->tuple3.a;
+        break;
+    }
+
+    return children[index];
+}
+
 void *Utils_clone(void *x)
 {
     Header *h = (Header *)x;
