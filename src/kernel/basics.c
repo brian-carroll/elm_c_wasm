@@ -2,31 +2,6 @@
 #include <math.h>
 #include "types.h"
 
-i32 ipow(i32 base, i32 ex) {
-  if (ex < 0) {
-    if (base == 1) {
-      return 1;
-    } else if (base == -1) {
-      return (ex & 1) ? -1 : 1;
-    } else {
-      return 0;
-    }
-  }
-
-  i32 result = 1;
-  while (1) {  // < 32 iterations since ex >= 0
-    if (ex & 1) {
-      result *= base;
-    }
-    ex >>= 1;
-    if (!ex) {
-      break;
-    }
-    base *= base;
-  }
-  return result;
-}
-
 static void* add_eval(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
@@ -90,6 +65,35 @@ const Closure Basics_mul = {
     .max_values = 2,
 };
 
+static i32 ipow(i32 base, i32 ex) {
+  if (ex < 0) {
+    if (base == 1) {
+      return 1;
+    } else if (base == -1) {
+      return (ex & 1) ? -1 : 1;
+    } else {
+      return 0;
+    }
+  }
+  // Iterate over bits (<32 iterations)
+  // Gradually reduce ex to 0, maintaining invariant `result*base^ex`
+  // Evantually `base^0=1`, so `result` must be original value of `base^ex`
+  // https://stackoverflow.com/a/101613
+  i32 result = 1;
+  while (1) {
+    // (result*base)*base^(ex-1) = result*base^ex   [ex-1 is implicit in right shift]
+    if (ex & 1) {
+      result *= base;
+    }
+    // result*(base^2)^(ex/2) = result*base^ex
+    ex >>= 1;
+    if (!ex) {  // always terminates if ex started positive or zero
+      break;
+    }
+    base *= base;
+  }
+  return result;
+}
 static void* pow_eval(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
