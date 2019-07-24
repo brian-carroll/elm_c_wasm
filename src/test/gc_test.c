@@ -630,7 +630,11 @@ const Closure fibHelp;
 void* fibHelp_eval(void* args[3]) {
   return GC_tce_eval(&fibHelp_tce, &fibHelp, args);
 }
-F3(fibHelp, fibHelp_eval);
+const Closure fibHelp = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &fibHelp_eval,
+    .max_values = 3,
+};
 
 /*
 fib : Int -> Int
@@ -650,7 +654,11 @@ void* fib_eval(void* args[1]) {
     return A2(curried, &literal_1, &literal_0);
   }
 }
-F1(fib, fib_eval);
+const Closure fib = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &fib_eval,
+    .max_values = 1,
+};
 
 ElmValue* gc_replay_test_catch() {
   return A1(&fib, &literal_n);

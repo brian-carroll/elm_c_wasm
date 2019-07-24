@@ -93,27 +93,6 @@ typedef struct {
     x;                          \
   })
 
-#define F1(c, f)                   \
-  const Closure c = {              \
-      .header = HEADER_CLOSURE(0), \
-      .evaluator = &f,             \
-      .max_values = 1,             \
-  }
-
-#define F2(c, f)                   \
-  const Closure c = {              \
-      .header = HEADER_CLOSURE(0), \
-      .evaluator = &f,             \
-      .max_values = 2,             \
-  }
-
-#define F3(c, f)                   \
-  const Closure c = {              \
-      .header = HEADER_CLOSURE(0), \
-      .evaluator = &f,             \
-      .max_values = 3,             \
-  }
-
 // LIST
 
 typedef struct {

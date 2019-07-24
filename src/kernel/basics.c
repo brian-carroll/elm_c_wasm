@@ -42,7 +42,11 @@ static void* add_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-F2(Basics_add, add_eval);
+const Closure Basics_add = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &add_eval,
+    .max_values = 2,
+};
 
 static void* sub_eval(void* args[2]) {
   Number* pa = args[0];
@@ -59,7 +63,11 @@ static void* sub_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-F2(Basics_sub, sub_eval);
+const Closure Basics_sub = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &sub_eval,
+    .max_values = 2,
+};
 
 static void* mul_eval(void* args[2]) {
   Number* pa = args[0];
@@ -76,7 +84,11 @@ static void* mul_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-F2(Basics_mul, mul_eval);
+const Closure Basics_mul = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &mul_eval,
+    .max_values = 2,
+};
 
 static void* pow_eval(void* args[2]) {
   Number* pa = args[0];
@@ -93,4 +105,8 @@ static void* pow_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-F2(Basics_pow, pow_eval);
+const Closure Basics_pow = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &pow_eval,
+    .max_values = 2,
+};

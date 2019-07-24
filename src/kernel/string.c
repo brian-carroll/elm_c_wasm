@@ -29,4 +29,8 @@ void* String_append_eval(void* args[2]) {
 
   return s;
 }
-F2(String_append, String_append_eval);
+const Closure String_append = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &String_append_eval,
+    .max_values = 2,
+};

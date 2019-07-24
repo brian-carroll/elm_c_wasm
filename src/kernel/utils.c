@@ -76,7 +76,11 @@ static void* access_eval(void* args[2]) {
   u32 index = fieldgroup_search(record->fieldgroup, field->value);
   return record->values[index];
 }
-F2(Utils_access, access_eval);
+const Closure Utils_access = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &access_eval,
+    .max_values = 2,
+};
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   Record* r_new = Utils_clone(r);
@@ -150,7 +154,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
   return result;
 }
 
-ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
+static ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
   Tuple2* t2 = NEW_TUPLE2(pa, pb);
   Cons* c = NEW_CONS(t2, *pstack);
   return (ElmValue*)c;
@@ -254,7 +258,11 @@ static void* eq_eval(void* args[2]) {
 
   return stack == pGcFull ? pGcFull : isEqual ? &True : &False;
 }
-F2(Utils_eq, eq_eval);
+const Closure Utils_eq = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eq_eval,
+    .max_values = 2,
+};
 
 static void* append_eval(void* args[2]) {
   Header* h = (Header*)args[0];
@@ -273,7 +281,11 @@ static void* append_eval(void* args[2]) {
       return args[0];
   }
 }
-F2(Utils_append, append_eval);
+const Closure Utils_append = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &append_eval,
+    .max_values = 2,
+};
 
 static void* compare_help(ElmValue* x, ElmValue* y) {
   if (x == y) return &Utils_EQ;
@@ -352,35 +364,55 @@ static void* compare_eval(void* args[2]) {
   ElmValue* y = args[1];
   return compare_help(x, y);
 }
-F2(Utils_compare, compare_eval);
+const Closure Utils_compare = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &compare_eval,
+    .max_values = 2,
+};
 
 static void* lt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &Utils_LT) ? &True : &False;
 }
-F2(Utils_lt, lt_eval);
+const Closure Utils_lt = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &lt_eval,
+    .max_values = 2,
+};
 
 static void* le_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &Utils_GT) ? &True : &False;
 }
-F2(Utils_le, le_eval);
+const Closure Utils_le = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &le_eval,
+    .max_values = 2,
+};
 
 static void* gt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &Utils_GT) ? &True : &False;
 }
-F2(Utils_gt, gt_eval);
+const Closure Utils_gt = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &gt_eval,
+    .max_values = 2,
+};
 
 static void* ge_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &Utils_LT) ? &True : &False;
 }
-F2(Utils_ge, ge_eval);
+const Closure Utils_ge = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &ge_eval,
+    .max_values = 2,
+};
 
 const Custom Utils_LT = {
     .header = HEADER_CUSTOM(0),
