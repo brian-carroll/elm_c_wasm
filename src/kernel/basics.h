@@ -3,11 +3,9 @@
 
 #include "types.h"
 
-Closure Basics_add;
-Closure Basics_sub;
-Closure Basics_mul;
-Closure Basics_pow;
-
-void Basics_init();
+const Closure Basics_add;
+const Closure Basics_sub;
+const Closure Basics_mul;
+const Closure Basics_pow;
 
 #endif

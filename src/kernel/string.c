@@ -29,8 +29,4 @@ void* String_append_eval(void* args[2]) {
 
   return s;
 }
-Closure String_append;
-
-void String_init() {
-  String_append = F2(String_append_eval);
-}
+F2(String_append, String_append_eval);

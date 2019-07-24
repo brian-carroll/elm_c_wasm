@@ -62,9 +62,6 @@ char* test_all(bool types, bool utils, bool basics, bool string, bool gc) {
 
 int main(int argc, char** argv) {
   GC_init();
-  Basics_init();
-  Utils_init();
-  String_init();
 
   static struct option long_options[] = {
       {"verbose", no_argument, NULL, 'v'}, {"all", no_argument, NULL, 'a'},

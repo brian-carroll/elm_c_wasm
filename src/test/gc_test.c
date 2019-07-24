@@ -626,10 +626,11 @@ void* fibHelp_tce(void* args[3], void** gc_tce_data) {
   }
 }
 
-Closure fibHelp;
+const Closure fibHelp;
 void* fibHelp_eval(void* args[3]) {
   return GC_tce_eval(&fibHelp_tce, &fibHelp, args);
 }
+F3(fibHelp, fibHelp_eval);
 
 /*
 fib : Int -> Int
@@ -639,7 +640,6 @@ fib n =
     else
         (fibHelp n) 1 0
 */
-Closure fib;
 void* fib_eval(void* args[1]) {
   ElmInt* n = args[0];
   if (A2(&Utils_le, n, &literal_0) == &True) {
@@ -650,6 +650,7 @@ void* fib_eval(void* args[1]) {
     return A2(curried, &literal_1, &literal_0);
   }
 }
+F1(fib, fib_eval);
 
 ElmValue* gc_replay_test_catch() {
   return A1(&fib, &literal_n);
@@ -710,9 +711,6 @@ char* gc_replay_test() {
         "\n");
   }
   gc_test_reset();
-
-  fib = F1(fib_eval);
-  fibHelp = F3(fibHelp_eval);
 
   func_map[0] = (struct fn){fib.evaluator, "fib"};
   func_map[1] = (struct fn){fibHelp.evaluator, "fibHelp"};

@@ -93,14 +93,26 @@ typedef struct {
     x;                          \
   })
 
-#define F1(f) \
-  (Closure) { .header = HEADER_CLOSURE(0), .evaluator = &f, .max_values = 1, }
+#define F1(c, f)                   \
+  const Closure c = {              \
+      .header = HEADER_CLOSURE(0), \
+      .evaluator = &f,             \
+      .max_values = 1,             \
+  }
 
-#define F2(f) \
-  (Closure) { .header = HEADER_CLOSURE(0), .evaluator = &f, .max_values = 2, }
+#define F2(c, f)                   \
+  const Closure c = {              \
+      .header = HEADER_CLOSURE(0), \
+      .evaluator = &f,             \
+      .max_values = 2,             \
+  }
 
-#define F3(f) \
-  (Closure) { .header = HEADER_CLOSURE(0), .evaluator = &f, .max_values = 3, }
+#define F3(c, f)                   \
+  const Closure c = {              \
+      .header = HEADER_CLOSURE(0), \
+      .evaluator = &f,             \
+      .max_values = 3,             \
+  }
 
 // LIST
 
@@ -258,7 +270,5 @@ const void* pFalse;
 
 const Custom True;
 const void* pTrue;
-
-void Types_init();
 
 #endif  // #ifndef ELM_KERNEL_TYPES

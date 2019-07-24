@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -O1 -Wno-discarded-qualifiers
+CFLAGS=-Wall -O1
 
 ROOT := ..
 SRC := $(ROOT)/src
@@ -89,10 +89,10 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 # Binary & Wasm
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) $(SOURCES) -o $@ -lm
+	$(CC) $(CFLAGS) -Wno-discarded-qualifiers $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
-	emcc $(CFLAGS) $(SOURCES) -o $@
+	emcc $(CFLAGS) -Wno-incompatible-pointer-types-discards-qualifiers $(SOURCES) -o $@
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'

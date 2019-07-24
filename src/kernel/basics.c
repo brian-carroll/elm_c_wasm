@@ -42,6 +42,7 @@ static void* add_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
+F2(Basics_add, add_eval);
 
 static void* sub_eval(void* args[2]) {
   Number* pa = args[0];
@@ -58,6 +59,7 @@ static void* sub_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
+F2(Basics_sub, sub_eval);
 
 static void* mul_eval(void* args[2]) {
   Number* pa = args[0];
@@ -74,6 +76,7 @@ static void* mul_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
+F2(Basics_mul, mul_eval);
 
 static void* pow_eval(void* args[2]) {
   Number* pa = args[0];
@@ -90,15 +93,4 @@ static void* pow_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-
-Closure Basics_add;
-Closure Basics_sub;
-Closure Basics_mul;
-Closure Basics_pow;
-
-void Basics_init() {
-  Basics_add = F2(add_eval);
-  Basics_sub = F2(sub_eval);
-  Basics_mul = F2(mul_eval);
-  Basics_pow = F2(pow_eval);
-}
+F2(Basics_pow, pow_eval);

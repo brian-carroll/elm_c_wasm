@@ -76,8 +76,7 @@ static void* access_eval(void* args[2]) {
   u32 index = fieldgroup_search(record->fieldgroup, field->value);
   return record->values[index];
 }
-
-Closure Utils_access;
+F2(Utils_access, access_eval);
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   Record* r_new = Utils_clone(r);
@@ -255,8 +254,7 @@ static void* eq_eval(void* args[2]) {
 
   return stack == pGcFull ? pGcFull : isEqual ? &True : &False;
 }
-
-Closure Utils_eq;
+F2(Utils_eq, eq_eval);
 
 static void* append_eval(void* args[2]) {
   Header* h = (Header*)args[0];
@@ -275,8 +273,7 @@ static void* append_eval(void* args[2]) {
       return args[0];
   }
 }
-
-Closure Utils_append;
+F2(Utils_append, append_eval);
 
 static void* compare_help(ElmValue* x, ElmValue* y) {
   if (x == y) return &Utils_EQ;
@@ -355,57 +352,45 @@ static void* compare_eval(void* args[2]) {
   ElmValue* y = args[1];
   return compare_help(x, y);
 }
-
-Closure Utils_compare;
+F2(Utils_compare, compare_eval);
 
 static void* lt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &Utils_LT) ? &True : &False;
 }
-Closure Utils_lt;
+F2(Utils_lt, lt_eval);
 
 static void* le_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &Utils_GT) ? &True : &False;
 }
-Closure Utils_le;
+F2(Utils_le, le_eval);
 
 static void* gt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &Utils_GT) ? &True : &False;
 }
-Closure Utils_gt;
+F2(Utils_gt, gt_eval);
 
 static void* ge_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &Utils_LT) ? &True : &False;
 }
-Closure Utils_ge;
+F2(Utils_ge, ge_eval);
 
-void Utils_init() {
-  Utils_eq = F2(eq_eval);
-  Utils_access = F2(access_eval);
-  Utils_append = F2(append_eval);
-  Utils_compare = F2(compare_eval);
-  Utils_lt = F2(lt_eval);
-  Utils_le = F2(le_eval);
-  Utils_gt = F2(gt_eval);
-  Utils_ge = F2(ge_eval);
-
-  Utils_LT = (Custom){
-      .header = HEADER_CUSTOM(0),
-      .ctor = -1,
-  };
-  Utils_EQ = (Custom){
-      .header = HEADER_CUSTOM(0),
-      .ctor = 0,
-  };
-  Utils_GT = (Custom){
-      .header = HEADER_CUSTOM(0),
-      .ctor = 1,
-  };
-}
+const Custom Utils_LT = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = -1,
+};
+const Custom Utils_EQ = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = 0,
+};
+const Custom Utils_GT = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = 1,
+};

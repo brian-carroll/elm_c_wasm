@@ -4,7 +4,6 @@
 #include "types.h"
 
 void* String_append_eval(void* args[]);
-Closure String_append;
-void String_init();
+const Closure String_append;
 
 #endif
