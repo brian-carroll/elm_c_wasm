@@ -1,3 +1,14 @@
+# pointer types
+
+- Hard to know what pointer and value types to use
+- `ElmValue*` is a nice idea but can be awkward
+- C unions are not really polymorphism
+- use `void*` for all function parameters
+- also use `const` more in function signatures to show that the function doesn't modify the variable, which is true almost always. This really just enables compiler type checks, that's all
+- However using const when defining values does have a real effect
+- Succinctly: `const` _definitions_ affect the compiler output but `const` _declarations_ (e.g. function signatures) are just for warnings
+- need to figure out exactly what combination of squiggles does the right thing and start doing it
+
 # Next steps
 
 - Getting unstuck
