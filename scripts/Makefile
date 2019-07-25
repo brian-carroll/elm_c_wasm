@@ -3,10 +3,14 @@ CFLAGS=-Wall -O1
 
 ROOT := ..
 SRC := $(ROOT)/src
+KERNEL := $(ROOT)/src/kernel
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
 SOURCES := $(shell find $(SRC) -name '*.c')
 HEADERS := $(shell find $(SRC) -name '*.h')
+KSOURCES := $(shell find $(KERNEL) -name '*.c')
+KHEADERS := $(shell find $(KERNEL) -name '*.h')
+
 DATA_TSV := $(shell find $(SRC) -name '*.tsv')
 DATA_INC := $(DATA_TSV:.tsv=.inc)
 
@@ -93,6 +97,10 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS)
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
 	emcc $(CFLAGS) -Wno-incompatible-pointer-types-discards-qualifiers $(SOURCES) -o $@
+
+$(DIST)/bin/fake-ast: $(KSOURCES) $(KHEADERS)
+	$(CC) $(CFLAGS) $(SRC)/hand-compiled/fake-ast.c $(KSOURCES) -o $@ -lm -Wno-discarded-qualifiers
+
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'
