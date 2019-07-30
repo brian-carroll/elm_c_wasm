@@ -83,18 +83,18 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
   // Copy the string body if provided
   if (str != NULL) {
     // Header is 32 bits => ElmString body is 32-bit aligned
-    size_t payload_ints = payload_bytes / 4;
-    u32* str32 = (u32*)str;
-    u32* i_from = str32;
+    u32* i_from = (u32*)str;
+    u32* i_end = i_from + (payload_bytes / 4);
     u32* i_to = (u32*)p->bytes;
-    while (i_from < str32 + payload_ints) {
+    while (i_from < i_end) {
       *i_to++ = *i_from++;
     }
 
     // Last few bytes (<4)
     char* c_from = (char*)i_from;
+    char* c_end = str + payload_bytes;
     char* c_to = (char*)i_to;
-    while (c_from < str + payload_bytes) {
+    while (c_from < c_end) {
       *c_to++ = *c_from++;
     }
   }

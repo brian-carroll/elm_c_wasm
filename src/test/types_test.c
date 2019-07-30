@@ -232,8 +232,9 @@ char* test_strings() {
   ElmString* str7 = NEW_ELM_STRING(7, "1234567");
   ElmString* str8 = NEW_ELM_STRING(8, "12345678");
   ElmString* str9 = NEW_ELM_STRING(9, "123456789");
-
-  ElmString* strN = NEW_ELM_STRING(45, "The quick brown fox jumped over the lazy dog.");
+  char s[] = "The quick brown fox jumped over the lazy dog, yeah.";
+  size_t n = strlen(s);
+  ElmString* strN = NEW_ELM_STRING(n, s);
 
   if (verbose) {
     printf("\n");
@@ -286,10 +287,9 @@ char* test_strings() {
             memcmp(str8->bytes, "12345678\0\0\0\3", (str8->header.size * 8) - 4) == 0);
   mu_assert("9-byte string should have correct body & padding",
             memcmp(str9->bytes, "123456789\0\0\2", (str9->header.size * 8) - 4) == 0);
-  mu_assert(
-      "45-byte string should have correct body & padding",
-      memcmp(strN->bytes, "The quick brown fox jumped over the lazy dog.\0\0\0\0\0\0\6",
-             (strN->header.size * 8) - 4) == 0);
+  mu_assert("N-byte string should have correct body & padding",
+            memcmp(strN->bytes, "The quick brown fox jumped over the lazy dog, yeah.",
+                   (strN->header.size * 8) - 4) == 0);
 
   mu_assert("0-byte string should have correct size field", str0->header.size == 1);
   mu_assert("1-byte string should have correct size field", str1->header.size == 1);
@@ -300,7 +300,7 @@ char* test_strings() {
   mu_assert("7-byte string should have correct size field", str7->header.size == 2);
   mu_assert("8-byte string should have correct size field", str8->header.size == 2);
   mu_assert("9-byte string should have correct size field", str9->header.size == 2);
-  mu_assert("45-byte string should have correct size field", strN->header.size == 7);
+  mu_assert("N-byte string should have correct size field", strN->header.size == 7);
 #else
   mu_assert("0-byte string should have correct body & padding",
             memcmp(str0->bytes, "\0\0\0\3", (str0->header.size * 4) - 4) == 0);
@@ -320,9 +320,10 @@ char* test_strings() {
             memcmp(str8->bytes, "12345678\0\0\0\3", (str8->header.size * 4) - 4) == 0);
   mu_assert("9-byte string should have correct body & padding",
             memcmp(str9->bytes, "123456789\0\0\2", (str9->header.size * 4) - 4) == 0);
-  mu_assert("45-byte string should have correct body & padding",
-            memcmp(strN->bytes, "The quick brown fox jumped over the lazy dog.\0\0\2",
-                   (strN->header.size * 4) - 4) == 0);
+  mu_assert(
+      "N-byte string should have correct body & padding",
+      memcmp(strN->bytes, "The quick brown fox jumped over the lazy dog, yeah.\0\0\2",
+             (strN->header.size * 4) - 4) == 0);
 
   mu_assert("0-byte string should have correct size field", str0->header.size == 2);
   mu_assert("1-byte string should have correct size field", str1->header.size == 2);
