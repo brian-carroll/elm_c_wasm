@@ -4,12 +4,17 @@ CFLAGS=-Wall -O1
 ROOT := ..
 SRC := $(ROOT)/src
 KERNEL := $(ROOT)/src/kernel
+TEST := $(ROOT)/src/test
+
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
-SOURCES := $(shell find $(SRC) -name '*.c')
-HEADERS := $(shell find $(SRC) -name '*.h')
+
 KSOURCES := $(shell find $(KERNEL) -name '*.c')
 KHEADERS := $(shell find $(KERNEL) -name '*.h')
+TSOURCES := $(shell find $(TEST) -name '*.c')
+THEADERS := $(shell find $(TEST) -name '*.h')
+SOURCES := $(KSOURCES) $(TSOURCES)
+HEADERS := $(KHEADERS) $(THEADERS)
 
 DATA_TSV := $(shell find $(SRC) -name '*.tsv')
 DATA_INC := $(DATA_TSV:.tsv=.inc)
@@ -98,7 +103,7 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS)
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
 	emcc $(CFLAGS) -Wno-incompatible-pointer-types-discards-qualifiers $(SOURCES) -o $@
 
-$(DIST)/bin/fake-ast: $(KSOURCES) $(KHEADERS)
+$(DIST)/bin/fake-ast: $(KSOURCES) $(KHEADERS) $(SRC)/hand-compiled/fake-ast.c
 	$(CC) $(CFLAGS) $(SRC)/hand-compiled/fake-ast.c $(KSOURCES) -o $@ -lm -Wno-discarded-qualifiers
 
 

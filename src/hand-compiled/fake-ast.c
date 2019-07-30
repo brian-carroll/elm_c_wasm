@@ -36,8 +36,8 @@ const Closure author_project_TestModule_closure = {
 // // Define, deps=$author$project$TestModule$closure
 // var $author$project$TestModule$curried =
 //      /* Call *//* VarGlobal*/$author$project$TestModule$closure(/* Int */2);
-ElmValue* ptr_author_project_TestModule_curried;
 #define author_project_TestModule_curried (*ptr_author_project_TestModule_curried)
+ElmValue* ptr_author_project_TestModule_curried;
 void* init_author_project_TestModule_curried() {
   ptr_author_project_TestModule_curried =
       A1(&author_project_TestModule_closure, NEW_ELM_INT(2));
@@ -47,8 +47,8 @@ void* init_author_project_TestModule_curried() {
 // // Define, deps=$author$project$TestModule$curried
 // var $author$project$TestModule$main =
 //        /* Call *//* VarGlobal*/$author$project$TestModule$curried(/* Int */3);
-ElmValue* ptr_author_project_TestModule_main;
 #define author_project_TestModule_main (*ptr_author_project_TestModule_main)
+ElmValue* ptr_author_project_TestModule_main;
 void* init_author_project_TestModule_main() {
   ptr_author_project_TestModule_main =
       A1(&author_project_TestModule_curried, NEW_ELM_INT(3));
