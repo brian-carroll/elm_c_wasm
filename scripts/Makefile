@@ -106,6 +106,9 @@ $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
 $(DIST)/bin/fake-ast: $(KSOURCES) $(KHEADERS) $(SRC)/hand-compiled/fake-ast.c
 	$(CC) $(CFLAGS) $(SRC)/hand-compiled/fake-ast.c $(KSOURCES) -o $@ -lm -Wno-discarded-qualifiers
 
+$(DIST)/bin/compiled-elm: $(KSOURCES) $(KHEADERS) $(SRC)/compiled/elm.c
+	$(CC) $(CFLAGS) $(SRC)/compiled/elm.c $(KSOURCES) -o $@ -lm -Wno-discarded-qualifiers
+
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'
