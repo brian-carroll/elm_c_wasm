@@ -669,6 +669,29 @@ void* GC_apply_replay() {
   return replay;
 }
 
+void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]) {
+  GcState* state = &gc_state;
+  GcHeap* heap = &state->heap;
+
+  // How much of the heap to collect (all of it)
+  size_t* ignore_below = heap->start;
+
+  // Collect garbage
+  mark(state, ignore_below);
+  compact(state, ignore_below);
+
+  // Set up for replay
+  reverse_stack_map(state);
+  GcStackMap* empty = (GcStackMap*)state->heap.start;
+  state->replay_ptr = empty->newer;
+  state->stack_depth = 0;
+
+  // Update pointers in parent scope after moving stuff around
+  for (size_t i = 0; i < npointers; ++i) {
+    pointers_to_move[i] = forwarding_address(heap, pointers_to_move[i]);
+  }
+}
+
 #ifdef GC_SIZE_CHECK
 // Check compiled size of GC in Wasm
 // Only 6.4kB!!! :)

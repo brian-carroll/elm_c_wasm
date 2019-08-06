@@ -1,3 +1,25 @@
+# GC exports (header functions)
+
+```c
+void GC_collect_exception_full(void* stack_vars[]);
+void GC_collect_exception_nursery(void* stack_vars[]);
+void GC_collect_idle();
+void* GC_run(Closure* cfull);
+```
+
+- `GC_run` could be a nice interface. Create a full closure then call it and everything 'just happens' and it returns a result
+- no need to move local pointers around. But is this error-prone?
+  - gets called from sendToApp and from Wasm exports
+- But needs to assume either full or partial collection
+- OR make dynamic decisions about that as it goes
+
+# JS/Wasm interface format
+
+- Could be raw C structs for Elm values. Write some JS to do it.
+- JS PROD mode => hard to distinguish List from Custom
+- JS DEV mode => easier. `x.$ == '::'`
+- This could be a job for the Bytes package
+
 # pointer types
 
 - Hard to know what pointer and value types to use

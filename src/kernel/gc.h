@@ -16,6 +16,7 @@ void* GC_stack_tailcall(Closure* c, void* push);
 void* GC_tce_iteration(size_t n_args, void** gc_tce_data);
 void* GC_tce_eval(void* (*tce_evaluator)(void* [], void**), Closure* c, void* args[]);
 
-void* GC_apply_replay();
+void* GC_apply_replay();  // called from Utils_apply
+void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]);
 
 #endif
