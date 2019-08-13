@@ -22,10 +22,12 @@ suite =
         -- * 1000
     in
     describe "Count"
-        [ benchmark "unboxed" <|
+        [ benchmark "countUnboxed" <|
             \_ -> countUnboxed count
-        , benchmark "boxed" <|
+        , benchmark "countBoxed" <|
             \_ -> countBoxed (Box count)
+        , benchmark "wasmCount" <|
+            \_ -> wasmCount count
         ]
 
 
@@ -45,3 +47,7 @@ countBoxed (Box remaining) =
 
     else
         countBoxed (Box (remaining - 1))
+
+
+wasmCount =
+    countUnboxed

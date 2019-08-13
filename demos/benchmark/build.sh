@@ -14,11 +14,11 @@ emcc src/$FILENAME.c \
   -s EXPORT_NAME='createEmscriptenModule' \
   -s EXPORTED_FUNCTIONS='["export_count", "main"]' \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-  && echo "emcc success" \
+  && echo -e "\nemcc success\n" \
   &
 
 elm make src/Main.elm $ELM_OPTIMIZE --output build/elm.js > /dev/null \
-  && echo "elm success" \
+  && echo -e "\nelm success\n" \
   &
 
 wait
