@@ -180,9 +180,13 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 
 #ifdef DEBUG
     if ((size_t*)child > heap->end) {
-      fprintf(stderr, "mark_trace: %p out of bounds, reached via %p with header tag %d\n",
+      fprintf(stderr,
+              "BUG mark_trace: %p out of bounds, reached via %p with header tag %d\n",
               child, v, v->header.tag);
       return;
+    }
+    if (child > v) {
+      fprintf(stderr, "BUG mark_trace: older %p points to newer %p\n", v, child);
     }
 #endif
 

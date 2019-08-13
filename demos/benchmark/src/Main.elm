@@ -17,7 +17,9 @@ suite : Benchmark
 suite =
     let
         count =
-            100 * 1000
+            100
+
+        -- * 1000
     in
     describe "Count"
         [ benchmark "unboxed" <|

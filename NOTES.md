@@ -1,3 +1,79 @@
+# Benchmarks
+
+- Counter with boxed integers
+
+  - count to 10
+    - 22 times slower than JS
+    - adding more heap pages doesn't change much
+      - 1 page: 22.8x slower
+      - 3 pages: 21.9x slower
+      - 7 pages: 22.0x slower
+  - count to 100
+    - 1 page: 39x slower
+    - 3 pages: 34.9x slower
+    - 7 pages: 38.5x slower
+
+- number of pages doesn't matter much, which implies GC pause is not the issue
+- rather the issue is probably all the bookkeeping on the critical path for TCE
+- should try to postpone more of this work until GC exception happens
+- should also really look at just reusing the same stack frame
+  - hard to guarantee the one-way-pointer invariant. Reshuffle on Pop or exception?
+
+# More benchmarks
+
+- Gather some more data
+  - Try a non-TCE version of the counter. Just iterate on stack.
+- Reverse a list, TCE and non-TCE
+- Update a record
+- Add two numbers: Boxed, unboxed
+
+# More efficient TCE / stackmap
+
+- Only **write** the stackmap items on exception (fewer accesses)
+
+  - do it while popping back up the stack
+  - maybe the linked list style isn't the only way
+  - while running, pushes and pops could just move the "end of heap" pointer
+    - reserves enough space at top of heap to record start and end of heap sections owned by live functions. Just the addresses, that's it.
+  - only actually write those values while processing GC exception (maybe never)
+  - `apply` needs the location of the "next" pointer as a local var
+  - **ah no...**
+    - I need to know the dead sections too so I can sweep them! Can't just mark start and end, that's an over-approx.
+    - Also need to be able to memoize returned functions using Pop
+    - Otherwise need to be able to resume from the point where exception was thrown
+
+- another idea
+
+  - what if I actually dynamically mark stuff in the real bitmap
+  - before starting first call, mark entire nursery as live
+  - when a function pops, mark its space as dead (unless later revived by marking)
+  - BUT need to handle this case in `mark` (don't cut short on finding a marked value in the nursery)
+
+- go crazy and implement own stack frames
+
+  - prob needs to be written in assembly though?
+  - sorta defeats a lot of the purpose of using C
+
+- optimise GC_stack_iteration
+
+  - do calculation of closure size in function itself.
+  - removes some multiplication and addition, leaves stackmap pointer update
+  - go further... pre-calculate entire space for the stack, just do one allocation
+
+- mutate stuff in-place, then re-order "later"
+
+  - when is "later"?
+    - defo on exception
+    - also prob on pop
+    - maybe detect out-of-order stuff during mark or compact phase for nursery?
+    - banning mutation and reverse pointers is a real bugger for TCE
+
+- roll back the "next" heap pointer and mutate
+  - once we know we're doing a tail call, none of the lower-level pushes and pops matter.
+  - But their return values might
+  - The bugger is that args may point to new stuff
+    - but this is the _only_ place we can get reverse pointers...
+
 # GC exports (header functions)
 
 ```c
@@ -15,8 +91,10 @@ void* GC_run(Closure* cfull);
 
 # JS/Wasm interface format
 
+- How about not using JSON but bytes? Just directly translate Elm JS to Elm Wasm bytes
 - Could be raw C structs for Elm values. Write some JS to do it.
-- JS PROD mode => hard to distinguish List from Custom
+- JS PROD mode => can only distinguish List from Custom by iterating down the list and doing reference equality on Nil. Tuples have no `$`, can't distinguish from Record with fields a and b (and c). Could at least check if such a fieldset exists maybe?
+- Use Bytes package? Thing is, we get redundant decode on Wasm side
 - JS DEV mode => easier. `x.$ == '::'`
 - This could be a job for the Bytes package
 

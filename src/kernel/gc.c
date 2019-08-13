@@ -109,10 +109,11 @@ int GC_init() {
 
   // Ask the system for more memory
   size_t top_of_current_page = (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
+  size_t pages = 1;
+  size_t* top_of_nth_page =
+      (size_t*)(top_of_current_page + (pages * GC_WASM_PAGE_BYTES) + 1);
 
-  size_t* top_of_next_page = (size_t*)(top_of_current_page + GC_WASM_PAGE_BYTES + 1);
-
-  int err = set_heap_end(&state->heap, top_of_next_page);
+  int err = set_heap_end(&state->heap, top_of_nth_page);
 
   if (!err) {
     stack_empty();
@@ -321,7 +322,7 @@ void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
 
   void* tce_space = GC_malloc(cont_bytes);
   if (tce_space == pGcFull) return pGcFull;
-
+  Closure* c = tce_space;
   GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
   state->stack_map = tailcall;
   *gc_tce_data = tce_space;
@@ -333,21 +334,20 @@ void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
 // managing all of the GC related stuff for it
 void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* args[]) {
   GcState* state = &gc_state;
-  GcStackMap* push = state->stack_map;
+  GcStackMap* push;
   size_t n_args = (size_t)c_orig->max_values;
   size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void*);
 
-  // Copy the closure and mutate the args during iteration
-  // then let it become garbage
+  // Make a local copy of the closure and mutate the args during iteration
+  // Ensure it becomes garbage before exiting this function
   Closure* c_mutable;
   if (state->replay_ptr) {
-    // In replay mode, reuse the Closure we created earlier,
-    // retrieved from replay a moment ago in Utils_apply
-    // It's our own private copy, we can mutate it without harm
-    // Only way to get it is to look just below 'args'
-    // c_orig is not from the same Closure, it's off-heap
-    c_mutable = (Closure*)(args - sizeof(Closure) / sizeof(void*));
+    // In replay mode, reuse the Closure created by previous run (c_replay)
+    GcStackMap* tailcall_old = state->stack_map;
+    push = tailcall_old->older;
+    c_mutable = tailcall_old->replay;
   } else {
+    push = state->stack_map;  // First run. No tailcall has occurred yet, just a Push.
     c_mutable = CAN_THROW(GC_malloc(closure_bytes));
     *c_mutable = (Closure){
         .header = HEADER_CLOSURE(n_args),
@@ -377,8 +377,9 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
   GC_memcpy(c_replay, c_mutable, closure_bytes);
 
   GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + closure_bytes);
-  *tailcall =
-      (GcStackMap){.header = HEADER_GC_STACK_TC, .older = push, .replay = c_replay};
+  tailcall->header = HEADER_GC_STACK_TC;
+  tailcall->older = push;
+  tailcall->replay = c_replay;
 
   return pGcFull;
 }
