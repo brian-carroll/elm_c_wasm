@@ -5,7 +5,7 @@
 #include "../../../src/kernel/gc.h"
 #include "../../../src/kernel/types.h"
 #include "../../../src/kernel/utils.h"
-// #include "../../../src/test/gc/print-heap.h"
+#include "../../../src/test/gc/print-heap.h"
 
 // extern GcState gc_state;
 
@@ -53,12 +53,12 @@ const Closure count = {
 // #endif
 
 int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
-  ElmInt* remaining;
+  GC_stack_empty();
 
-  remaining = NEW_ELM_INT(fromJS);
-  if (remaining == Tag_GcException) {
-    GC_collect_onexception_full(1, (void* []){remaining});
-    remaining = NEW_ELM_INT(fromJS);
+  ElmInt* remaining = ctorElmInt(fromJS);
+  if (remaining == pGcFull) {
+    GC_collect_onexception_full(0, (void* []){});
+    remaining = ctorElmInt(fromJS);
   }
 
   void* args[1];
@@ -93,6 +93,36 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
   return (int)result->header.tag;  // makes no sense but it's the right type
 }
 
+int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
+  // printf("\n\n-----------------\n");
+  // printf("export_add: entering\n");
+  GC_stack_empty();
+  while (1) {
+    ElmInt* boxA = ctorElmInt(a);
+    ElmInt* boxB = ctorElmInt(b);
+    // printf("export_add: calling Basics_add with %d and %d\n", boxA->value,
+    // boxB->value);
+    // if (boxA->value != 123 || boxB->value != 456) {
+    //   printf("oopsie");
+    //   return -1;
+    // }
+    ElmInt* result = Utils_apply(&Basics_add, 2, (void* []){boxA, boxB});
+    if (boxA == pGcFull || boxB == pGcFull || result == pGcFull) {
+      // printf("export_add: GC\n");
+      GC_collect_onexception_full(0, NULL);
+    } else {
+      // print_state();
+      // printf("stack_map->older = %p\n", gc_state.stack_map->older);
+      // printf("export_add: returning with %d\n", result->value);
+      return result->value;
+    }
+  }
+}
+
+int EMSCRIPTEN_KEEPALIVE export_add_unboxed(int a, int b) {
+  return a + b;
+}
+
 int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   // printf("True: %p\n", &True);
   // printf("False: %p\n", &False);
@@ -101,6 +131,8 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   // printf("eval_count: %p\n", &eval_count);
   // printf("entering main\n");
   GC_init();
+  // while (export_add(123, 456) != -1)
+  //   ;
   // export_count(100000);
   return 0;
 }

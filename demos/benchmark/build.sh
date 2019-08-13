@@ -3,6 +3,7 @@
 
 FILENAME="benchmark"
 KERNELS=$(find ../../src/kernel -name '*.c')
+KERNELS="$KERNELS ../../src/test/gc/print-heap.c"
 
 emcc src/$FILENAME.c \
   $KERNELS \
@@ -12,13 +13,13 @@ emcc src/$FILENAME.c \
   -Wno-incompatible-pointer-types-discards-qualifiers \
   -s MODULARIZE=1 \
   -s EXPORT_NAME='createEmscriptenModule' \
-  -s EXPORTED_FUNCTIONS='["export_count", "main"]' \
+  -s EXPORTED_FUNCTIONS='["main", "export_count", "export_add", "export_add_unboxed"]' \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-  && echo -e "\nemcc success\n" \
+  && echo -e "\n !!! emcc success !!! \n" \
   &
 
 elm make src/Main.elm $ELM_OPTIMIZE --output build/elm.js > /dev/null \
-  && echo -e "\nelm success\n" \
+  && echo -e "\n !!! elm success !!!\n" \
   &
 
 wait

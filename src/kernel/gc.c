@@ -58,11 +58,10 @@
 #include "types.h"
 #ifdef DEBUG
 #include <stdio.h>
+// #include "../test/gc/print-heap.h"
 #endif
 
 GcState gc_state;
-
-static void* stack_empty();  // pre-declaration
 
 #ifdef _WIN32
 static void* sbrk(size_t size) {
@@ -116,7 +115,7 @@ int GC_init() {
   int err = set_heap_end(&state->heap, top_of_nth_page);
 
   if (!err) {
-    stack_empty();
+    GC_stack_empty();
   }
 
   return err;
@@ -254,12 +253,13 @@ void* GC_memcpy(void* dest, void* src, size_t bytes) {
     The functions below are called from the `apply` operator
 */
 
-static void* stack_empty() {
+void* GC_stack_empty() {
   GcState* state = &gc_state;
   GcStackMap* p = GC_malloc(sizeof(GcStackMap));
   if (p == pGcFull) return pGcFull;
   p->header = HEADER_GC_STACK_EMPTY;
   state->stack_map = p;
+  state->nursery = (size_t*)p;
   return p;
 }
 
@@ -678,17 +678,22 @@ void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]) {
   size_t* ignore_below = heap->start;
 
   // Collect garbage
+  // printf("mark\n");
   mark(state, ignore_below);
+  // printf("compact\n");
   compact(state, ignore_below);
 
   // Set up for replay
+  // printf("reverse_stack_map\n");
+  // print_state();
   reverse_stack_map(state);
-  GcStackMap* empty = (GcStackMap*)state->heap.start;
+  GcStackMap* empty = (GcStackMap*)state->nursery;
   state->replay_ptr = empty->newer;
   state->stack_depth = 0;
 
   // Update pointers in parent scope after moving stuff around
   for (size_t i = 0; i < npointers; ++i) {
+    // printf("move pointer %zu\n", i);
     pointers_to_move[i] = forwarding_address(heap, pointers_to_move[i]);
   }
 }

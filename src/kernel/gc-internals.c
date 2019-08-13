@@ -480,13 +480,11 @@ void compact(GcState* state, size_t* compact_start) {
 
   size_t* stack_map = (size_t*)state->stack_map;
   if (stack_map > first_move_to) {
-    stack_map = forwarding_address(heap, stack_map);
+    state->stack_map = (GcStackMap*)forwarding_address(heap, stack_map);
+  }
 
-#ifdef DEBUG
-    printf("Changing stackmap pointer from %p to %p\n", state->stack_map, stack_map);
-#endif
-
-    state->stack_map = (GcStackMap*)stack_map;
+  if (state->nursery > first_move_to) {
+    state->nursery = forwarding_address(heap, state->nursery);
   }
 
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {

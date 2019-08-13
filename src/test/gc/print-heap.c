@@ -139,6 +139,7 @@ void print_state() {
   printf("roots = %p\n", state->roots);
   printf("stack_map = %p\n", state->stack_map);
   printf("stack_depth = %zd\n", state->stack_depth);
+  printf("nursery = %p\n", state->nursery);
 
   // find last non-zero word in the bitmap
   size_t bitmap_size = state->heap.system_end - state->heap.bitmap;
