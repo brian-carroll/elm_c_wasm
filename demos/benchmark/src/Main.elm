@@ -26,16 +26,16 @@ suite =
             ++ [ addJsVsWasmUnboxed ]
             ++ [ addJsVsWasm ]
             ++ [ countJsVsWasm ]
-            ++ [ countBoxedVsUnboxed ]
 
 
 
+-- ++ [ countBoxedVsUnboxed ]
 -- COUNT
 
 
 countJsVsWasm : Benchmark
 countJsVsWasm =
-    Benchmark.compare ("Count to " ++ String.fromInt count)
+    Benchmark.compare ("Count to " ++ String.fromInt count ++ " Wasm vs JS")
         "Wasm Boxed"
         (\_ -> wasmCount count)
         "JS Boxed"
@@ -44,7 +44,7 @@ countJsVsWasm =
 
 countBoxedVsUnboxed : Benchmark
 countBoxedVsUnboxed =
-    Benchmark.compare ("Count to " ++ String.fromInt count)
+    Benchmark.compare ("Count to " ++ String.fromInt count ++ " JS only")
         "JS Boxed"
         (\_ -> jsCountBoxed (Box count))
         "JS Unboxed"
