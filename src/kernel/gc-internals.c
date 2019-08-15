@@ -341,10 +341,6 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
     ndead += bitmap_dead_between(heap, prev_block, current_block);
     heap->offsets[++offset_index] = ndead;
 
-#ifdef DEBUG
-    printf("offset %zd %p : %zd\n", offset_index, current_block, ndead);
-#endif
-
     prev_block = current_block;
     current_block += GC_BLOCK_WORDS;
   }

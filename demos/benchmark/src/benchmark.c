@@ -1,23 +1,28 @@
+#ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#else
+#define EMSCRIPTEN_KEEPALIVE
+#endif
 // #include <stdio.h>
 #include "../../../src/kernel/basics.h"
-// #include "../../../src/kernel/gc-internals.h"
+#include "../../../src/kernel/gc-internals.h"
 #include "../../../src/kernel/gc.h"
 #include "../../../src/kernel/types.h"
 #include "../../../src/kernel/utils.h"
 #include "../../../src/test/gc/print-heap.h"
 
-// extern GcState gc_state;
+extern GcState gc_state;
+
+const ElmInt literal_0 = {
+    .header = HEADER_INT,
+    .value = 0,
+};
+const ElmInt literal_1 = {
+    .header = HEADER_INT,
+    .value = 1,
+};
 
 void* eval_tce_count(void* args[1], void** gc_tce_data) {
-  const ElmInt literal_0 = {
-      .header = HEADER_INT,
-      .value = 0,
-  };
-  const ElmInt literal_1 = {
-      .header = HEADER_INT,
-      .value = 1,
-  };
   // int i = 0;
   while (1) {
     ElmInt* remaining = args[0];
@@ -47,10 +52,6 @@ const Closure count = {
     .evaluator = &eval_count,
     .max_values = 1,
 };
-
-// #ifndef EMSCRIPTEN_KEEPALIVE
-// #define EMSCRIPTEN_KEEPALIVE
-// #endif
 
 int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
   GC_stack_empty();

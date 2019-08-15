@@ -1,31 +1,8 @@
-# EM_DEBUG="-g"
+FILENAME="benchmark"
 # ELM_OPTIMIZE='--optimize'
 
-FILENAME="benchmark"
-KERNELS=$(find ../../src/kernel -name '*.c')
-KERNELS="$KERNELS ../../src/test/gc/print-heap.c"
-
-emcc src/$FILENAME.c \
-  $KERNELS \
-  -O3 \
-  $EM_DEBUG \
-  -o build/$FILENAME.html \
-  -Wno-incompatible-pointer-types-discards-qualifiers \
-  -s MODULARIZE=1 \
-  -s EXPORT_NAME='createEmscriptenModule' \
-  -s EXPORTED_FUNCTIONS='["main", "export_count", "export_add", "export_add_unboxed"]' \
-  -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-  && echo -e "\n !!! emcc success !!! \n" \
-  &
-
-elm make src/Main.elm $ELM_OPTIMIZE --output build/elm.js > /dev/null \
-  && echo -e "\n !!! elm success !!!\n" \
-  &
-
-wait
-
+# Wasm & sourcemap
 cp build/$FILENAME.wasm* dist
-
 
 echo "combining JS files"
 
