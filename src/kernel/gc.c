@@ -259,7 +259,7 @@ void* GC_stack_empty() {
   if (p == pGcFull) return pGcFull;
   p->header = HEADER_GC_STACK_EMPTY;
   state->stack_map = p;
-  state->nursery = (size_t*)p;
+  state->stack_map_empty = p;
   return p;
 }
 
@@ -686,10 +686,12 @@ void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]) {
   // Set up for replay
   // printf("reverse_stack_map\n");
   // print_state();
+  // print_heap();
   reverse_stack_map(state);
-  GcStackMap* empty = (GcStackMap*)state->nursery;
-  state->replay_ptr = empty->newer;
+  size_t* first_allocated = (size_t*)(state->stack_map_empty + 1);
+  state->replay_ptr = first_allocated;
   state->stack_depth = 0;
+  // printf("GC_collect_onexception_full: set replay_ptr to %p\n", state->replay_ptr);
 
   // Update pointers in parent scope after moving stuff around
   for (size_t i = 0; i < npointers; ++i) {

@@ -23,13 +23,13 @@ suite =
     describe "" <|
         -- use append syntax for easier commenting-out
         []
-            -- ++ [ addJsVsWasmUnboxed ]
+            ++ [ addJsVsWasmUnboxed ]
             ++ [ addJsVsWasm ]
+            ++ [ countJsVsWasm ]
+            ++ [ countBoxedVsUnboxed ]
 
 
 
--- ++ [ countJsVsWasm ]
--- ++ [ countBoxedVsUnboxed ]
 -- COUNT
 
 

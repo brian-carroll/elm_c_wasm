@@ -479,8 +479,9 @@ void compact(GcState* state, size_t* compact_start) {
     state->stack_map = (GcStackMap*)forwarding_address(heap, stack_map);
   }
 
-  if (state->nursery > first_move_to) {
-    state->nursery = forwarding_address(heap, state->nursery);
+  size_t* stack_map_empty = (size_t*)state->stack_map_empty;
+  if (stack_map_empty > first_move_to) {
+    state->stack_map_empty = (GcStackMap*)forwarding_address(heap, stack_map_empty);
   }
 
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {

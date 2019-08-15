@@ -29,7 +29,7 @@ typedef struct {
   size_t* next_alloc;
   Cons* roots;
   GcStackMap* stack_map;
-  size_t* nursery;
+  GcStackMap* stack_map_empty;
   size_t stack_depth;
   size_t* replay_ptr;
 } GcState;
