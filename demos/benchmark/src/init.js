@@ -1,3 +1,4 @@
 //============ start init.js ===================
-Elm.Main.init({ node: document.querySelector('main') });
+debugger;
+Elm.Main.init({ node: document.querySelector('#main') });
 //============ end init.js ===================

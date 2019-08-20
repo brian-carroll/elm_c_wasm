@@ -9,7 +9,7 @@ all: dist/bundle.js
 clean:
 	rm -f build/* dist/*
 
-dist/bundle.js: build-combine.sh build/elm.js build/benchmark.wasm
+dist/bundle.js: build-combine.sh build/elm.js build/benchmark.wasm src/*.js
 	bash build-combine.sh
 
 build/elm.js: src/Main.elm
