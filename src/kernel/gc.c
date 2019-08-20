@@ -56,9 +56,10 @@
 #include <unistd.h>
 #include "gc-internals.h"
 #include "types.h"
-#ifdef DEBUG
+
+#if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
-// #include "../test/gc/print-heap.h"
+#include "../test/gc/print-heap.h"
 #endif
 
 GcState gc_state;
@@ -173,10 +174,12 @@ void* GC_malloc(size_t bytes) {
 #ifdef DEBUG
     u32 replay_words = ((Header*)replay)->size;
     if (replay_words != words) {
-      fprintf(
-          stderr,
-          "GC_malloc: replay error. Requested size %zd doesn't match cached size %d\n",
-          words, replay_words);
+      print_heap();
+      print_state();
+      fprintf(stderr,
+              "GC_malloc: replay error. Requested size %zd doesn't match cached size %d "
+              "at %p\n",
+              words, replay_words, replay);
     }
 #endif
     size_t* next_replay = replay + words;
@@ -447,7 +450,7 @@ void* GC_apply_replay() {
   if (state->replay_ptr == NULL) return NULL;
 
   Tag replay_tag = ((Header*)state->replay_ptr)->tag;
-#ifdef DEBUG
+#ifdef DEBUG_LOG
   printf("GC_apply_replay: replay_ptr = %p, tag = %x\n", state->replay_ptr, replay_tag);
 #endif
 
@@ -557,6 +560,8 @@ void* GC_apply_replay() {
     } else {
       scenario = BugScenario;
 #ifdef DEBUG
+      print_heap();
+      print_state();
       fprintf(stderr, "GC_apply_replay: expected Closure or Push at %p\n",
               state->replay_ptr);
 #endif
@@ -677,6 +682,13 @@ void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]) {
   // How much of the heap to collect (all of it)
   size_t* ignore_below = heap->start;
 
+#ifdef DEBUG_LOG
+  printf("---------- Before GC --------------\n");
+  print_state();
+  print_heap();
+  printf("---------- / Before GC --------------\n");
+#endif
+
   // Collect garbage
   // printf("mark\n");
   mark(state, ignore_below);
@@ -685,8 +697,6 @@ void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]) {
 
   // Set up for replay
   // printf("reverse_stack_map\n");
-  // print_state();
-  // print_heap();
   reverse_stack_map(state);
   size_t* first_allocated = (size_t*)(state->stack_map_empty + 1);
   state->replay_ptr = first_allocated;
@@ -698,6 +708,13 @@ void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]) {
     // printf("move pointer %zu\n", i);
     pointers_to_move[i] = forwarding_address(heap, pointers_to_move[i]);
   }
+
+#ifdef DEBUG_LOG
+  printf("---------- After GC --------------\n");
+  print_state();
+  print_heap();
+  printf("---------- / After GC --------------\n");
+#endif
 }
 
 #ifdef GC_SIZE_CHECK

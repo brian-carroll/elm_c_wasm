@@ -5,7 +5,7 @@
 #include "./string.h"
 #include "./types.h"
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #endif

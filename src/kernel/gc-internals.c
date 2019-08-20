@@ -3,8 +3,10 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include "./types.h"
-#ifdef DEBUG
+
+#if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
+#include "../test/gc/print-heap.h"
 #endif
 
 #ifdef _WIN32
@@ -155,7 +157,7 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
       bitmap[first_word] |= first_mask;
       bitmap[last_word] |= make_bitmask(0, last_bit);
 
-      // Long string
+      // Loop for values spanning >2 words in bitmap. Rare. ElmString only.
       for (size_t word = first_word + 1; word < last_word; ++word) {
         bitmap[word] = ALL_ONES;
       }
@@ -180,12 +182,16 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 
 #ifdef DEBUG
     if ((size_t*)child > heap->end) {
+      print_heap();
+      print_state();
       fprintf(stderr,
               "BUG mark_trace: %p out of bounds, reached via %p with header tag %d\n",
               child, v, v->header.tag);
       return;
     }
     if (child > v) {
+      print_heap();
+      print_state();
       fprintf(stderr, "BUG mark_trace: older %p points to newer %p\n", v, child);
     }
 #endif
@@ -328,7 +334,7 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
   size_t prev_block_start_addr = (size_t)prev_block & GC_BLOCK_MASK;
   size_t* current_block = (size_t*)(prev_block_start_addr + GC_BLOCK_BYTES);
 
-#ifdef DEBUG
+#ifdef DEBUG_LOG
   printf("\n");
   printf("calc_offsets\n");
   printf("compact_start %p\n", compact_start);
@@ -356,7 +362,7 @@ size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
 
   size_t* new_pointer = old_pointer - block_offset - offset_in_block;
 
-#ifdef DEBUG
+#ifdef DEBUG_LOG
   printf("\nforwarding_address:\n");
   printf("old_pointer %p\n", old_pointer);
   printf("heap->start %p\n", heap->start);
@@ -369,8 +375,8 @@ size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
   printf("\n");
 
   if (new_pointer > heap->end || new_pointer < heap->start) {
-    fprintf(stderr, "forwarding_address: %p to %p (-%zd)\n", old_pointer, new_pointer,
-            old_pointer - new_pointer);
+    fprintf(stderr, "BUG: forwarding_address out of range moving %p to %p (-%zd)\n",
+            old_pointer, new_pointer, old_pointer - new_pointer);
   }
 #endif
 
@@ -399,7 +405,7 @@ void compact(GcState* state, size_t* compact_start) {
   size_t* to = first_move_to;
   size_t garbage_so_far = 0;
 
-#ifdef DEBUG
+#ifdef DEBUG_LOG
   printf("compact: first available space at %p\n", first_move_to);
 #endif
 
@@ -421,7 +427,7 @@ void compact(GcState* state, size_t* compact_start) {
       next_garbage++;
     }
 
-#ifdef DEBUG
+#ifdef DEBUG_LOG
     printf("Moving %zd words down by %zd from (%p - %p) to %p\n",
            next_garbage - live_patch_start, garbage_so_far, live_patch_start,
            next_garbage - 1, to);
@@ -490,7 +496,7 @@ void compact(GcState* state, size_t* compact_start) {
     if (live_heap_value > first_move_to) {
       live_heap_value = forwarding_address(heap, live_heap_value);
 
-#ifdef DEBUG
+#ifdef DEBUG_LOG
       printf("Changing root from %p to %p\n", *root_mutable_pointer, live_heap_value);
 #endif
 
@@ -506,13 +512,27 @@ void compact(GcState* state, size_t* compact_start) {
    ==================================================== */
 
 void reverse_stack_map(GcState* state) {
-  GcStackMap* newer_item = (GcStackMap*)state->next_alloc;
+#ifdef DEBUG_LOG
+  printf("reverse_stack_map\n");
+  print_state();
+#endif
 
-  GcStackMap* stack_item;
-  for (stack_item = state->stack_map; stack_item->header.tag != Tag_GcStackEmpty;
-       stack_item = stack_item->older) {
+  GcStackMap* newer_item = (GcStackMap*)state->next_alloc;
+  GcStackMap* stack_item = state->stack_map;
+  while (stack_item > state->stack_map_empty) {
+#ifdef DEBUG
+    if (stack_item->header.tag != Tag_GcStackEmpty &&
+        stack_item->header.tag != Tag_GcStackPush &&
+        stack_item->header.tag != Tag_GcStackPop &&
+        stack_item->header.tag != Tag_GcStackTailCall) {
+      print_heap();
+      print_state();
+      fprintf(stderr, "BUG: invalid stackmap item at %p\n", stack_item);
+    }
+#endif
     stack_item->newer = newer_item;
     newer_item = stack_item;
+    stack_item = stack_item->older;
   }
 
   // GcStackEmpty
