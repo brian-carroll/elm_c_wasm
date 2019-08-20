@@ -15,7 +15,7 @@ main =
 
 count : Int
 count =
-    100
+    10
 
 
 suite : Benchmark
@@ -23,28 +23,39 @@ suite =
     describe "" <|
         -- use append syntax for easier commenting-out
         []
-            ++ [ addJsVsWasmUnboxed ]
-            ++ [ addJsVsWasm ]
-            ++ [ countJsVsWasm ]
+            -- ++ [ addJsVsWasmUnboxed ]
+            -- ++ [ addJsVsWasm ]
+            -- ++ [ countJsVsWasm ]
+            ++ [ countTCE ]
+            -- ++ [ countBoxedVsUnboxed ]
+            ++ []
 
 
 
--- ++ [ countBoxedVsUnboxed ]
 -- COUNT
 
 
 countJsVsWasm : Benchmark
 countJsVsWasm =
-    Benchmark.compare ("Count to " ++ String.fromInt count ++ " Wasm vs JS")
+    Benchmark.compare ("Count to " ++ String.fromInt count ++ " (Wasm vs JS)")
         "Wasm Boxed"
         (\_ -> wasmCount count)
         "JS Boxed"
         (\_ -> jsCountBoxed (Box count))
 
 
+countTCE : Benchmark
+countTCE =
+    Benchmark.compare "TCE overhead"
+        "Tail call eliminated"
+        (\_ -> wasmCount count)
+        "Not eliminated"
+        (\_ -> wasmCountNoTCE count)
+
+
 countBoxedVsUnboxed : Benchmark
 countBoxedVsUnboxed =
-    Benchmark.compare ("Count to " ++ String.fromInt count ++ " JS only")
+    Benchmark.compare ("Count to " ++ String.fromInt count ++ " (JS only)")
         "JS Boxed"
         (\_ -> jsCountBoxed (Box count))
         "JS Unboxed"
@@ -71,6 +82,11 @@ jsCountBoxed (Box remaining) =
 
 wasmCount : Int -> ()
 wasmCount =
+    jsCountUnboxed
+
+
+wasmCountNoTCE : Int -> ()
+wasmCountNoTCE =
     jsCountUnboxed
 
 

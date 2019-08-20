@@ -209,6 +209,7 @@ typedef struct {
 } GcException;
 
 // Doubly-linked list for tracking stack pointers
+// GC makes assumptions about order of these fields (child_count and its usages)
 typedef struct {
   Header header;
   void* newer;  // cheat! mutable field pointing at newer stuff

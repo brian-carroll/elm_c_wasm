@@ -1,3 +1,20 @@
+# debug logging
+
+- move it into a macro
+  - errors
+    - prod: `#define WARNING(args) /* blank */`
+    - dev:
+      - print_heap, print_state
+      - fprintf(stderr, ...)
+        - find out varargs syntax for `#define`
+      - call imported JS `debugger`
+        - look up how to do Emscripten imports
+  - logs
+    - prod: `#define LOG(args) /* blank */`
+    - dev: `#define LOG(args) printf(args)`
+- maybe create a `logger.h` in src/test (rename from print-heap)
+- could change some of the guard #ifdefs
+
 # Benchmarks
 
 - Counter with boxed integers

@@ -3,7 +3,7 @@
 #else
 #define EMSCRIPTEN_KEEPALIVE
 #endif
-// #include <stdio.h>
+#include <stdio.h>
 #include "../../../src/kernel/basics.h"
 #include "../../../src/kernel/gc-internals.h"
 #include "../../../src/kernel/gc.h"
@@ -23,7 +23,6 @@ const ElmInt literal_1 = {
 };
 
 void* eval_tce_count(void* args[1], void** gc_tce_data) {
-  // int i = 0;
   while (1) {
     ElmInt* remaining = args[0];
     // printf("tce loop, remaining = %d\n", remaining->value);
@@ -31,11 +30,9 @@ void* eval_tce_count(void* args[1], void** gc_tce_data) {
       // printf("tce returning Unit at %p with tag %d\n", &Unit, Unit.header.tag);
       return &Unit;
     } else {
-      // i++;
       ElmInt* next_remaining = A2(&Basics_sub, remaining, (void*)&literal_1);
       void* maybeException = GC_tce_iteration(1, gc_tce_data);
       if (maybeException == pGcFull) {
-        // printf("heap full after %d iterations\n", i);
         return maybeException;
       }
       args[0] = next_remaining;
@@ -53,43 +50,84 @@ const Closure count = {
     .max_values = 1,
 };
 
+int export_count_call_id = 0;
+int gc_id = 0;
+
 int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
+  ElmValue* result;
+
+  export_count_call_id++;
+  // printf("export_count: call %d with remaining=%d\n", export_count_call_id, fromJS);
+
+  if (GC_stack_empty() == pGcFull) {
+    printf("export_count: GC point 1, call %d, gc %d\n", export_count_call_id, ++gc_id);
+    GC_collect_onexception_full(0, NULL);
+    GC_stack_empty();
+  }
+  while (1) {
+    void* args[1];
+    ElmInt* remaining = ctorElmInt(fromJS);
+    args[0] = remaining;
+    if (remaining->header.tag == Tag_GcException) {
+      printf("export_count: GC point 2, call=%d, gc=%d\n", export_count_call_id, ++gc_id);
+      GC_collect_onexception_full(0, NULL);
+      continue;
+    }
+    result = Utils_apply(&count, 1, args);
+    if (result->header.tag != Tag_GcException) break;
+    printf("export_count: GC point 3, call=%d, gc=%d\n", export_count_call_id, ++gc_id);
+    GC_collect_onexception_full(0, NULL);
+  }
+  return (int)result->header.tag;  // makes no sense but it's the right type
+}
+
+const Closure count_no_tce;  // pre-declaration for circular dependency
+int level = 0;
+
+void* eval_count_no_tce(void* args[]) {
+  level++;
+  ElmInt* remaining = args[0];
+  // printf("eval_count_no_tce level %d, remaining=%d\n", level, remaining->value);
+  if (A2(&Utils_eq, remaining, &literal_0) == &True) {
+    // printf("eval_count_no_tce returning Unit at %p with tag %d\n", &Unit,
+    //  Unit.header.tag);
+    return &Unit;
+  } else {
+    ElmInt* next_remaining = A2(&Basics_sub, remaining, &literal_1);
+    return A1(&count_no_tce, next_remaining);
+  }
+}
+
+const Closure count_no_tce = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_count_no_tce,
+    .max_values = 1,
+};
+
+int export_count_no_tce_call_id = 0;
+
+int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
+  level = 0;
+  export_count_no_tce_call_id++;
+  // printf("export_count_no_tce: call %d remaining=%d\n", export_count_no_tce_call_id,
+  //        fromJS);
+
   GC_stack_empty();
 
-  ElmInt* remaining = ctorElmInt(fromJS);
-  if (remaining == pGcFull) {
-    GC_collect_onexception_full(0, (void* []){});
-    remaining = ctorElmInt(fromJS);
-  }
-
-  void* args[1];
-  args[0] = remaining;
-  ElmValue* result = NULL;
-  // printf("entering export_count with %d\n", fromJS);
+  ElmValue* result;
   while (1) {
-    // printf("\napply count to value %d at %p\n", fromJS, args[0]);
-    result = Utils_apply(&count, 1, args);
-    // printf("returning addr %p with tag %d\n", result, result->header.tag);
+    ElmInt* remaining = ctorElmInt(fromJS);
+    if (remaining->header.tag == Tag_GcException) {
+      printf("export_count_no_tce: GC point 1, call=%d, gc=%d\n",
+             export_count_no_tce_call_id, ++gc_id);
+      GC_collect_onexception_full(0, NULL);
+      continue;
+    }
+    result = Utils_apply(&count_no_tce, 1, (void* []){remaining});
     if (result->header.tag != Tag_GcException) break;
-    // printf("\n----- GC exception ------\n");
-    // printf("Marking the heap before printing it out\n");
-    // mark(&gc_state, gc_state.heap.start);
-    // print_heap();
-    // print_state();
-    // printf("Collect garbage. remaining %p, tag=%d, value=%d\n", remaining,
-    //  remaining->header.tag, remaining->value);
-    GC_collect_onexception_full(1, args);
-    // printf("finished GC_collect_onexception_full, remaining=%p\n", remaining);
-    // print_heap();
-    // print_state();
-    // printf("marking cleaned up heap that is ready to run\n");
-    // mark(&gc_state, gc_state.heap.start);
-    // print_heap();
-    // print_state();
-    // printf("Done. remaining %p, tag=%d, value=%d\n", remaining,
-    // remaining->header.tag,
-    //        remaining->value);
-    // printf("\n----- end of GC exception ------\n");
+    printf("export_count_no_tce: GC point 2, call=%d, gc=%d\n",
+           export_count_no_tce_call_id, ++gc_id);
+    GC_collect_onexception_full(0, NULL);
   }
   return (int)result->header.tag;  // makes no sense but it's the right type
 }
@@ -109,7 +147,7 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
     // }
     ElmInt* result = Utils_apply(&Basics_add, 2, (void* []){boxA, boxB});
     if (boxA == pGcFull || boxB == pGcFull || result == pGcFull) {
-      // printf("export_add: GC\n");
+      printf("export_add: GC\n");
       GC_collect_onexception_full(0, NULL);
     } else {
       // print_state();
@@ -125,15 +163,6 @@ int EMSCRIPTEN_KEEPALIVE export_add_unboxed(int a, int b) {
 }
 
 int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
-  // printf("True: %p\n", &True);
-  // printf("False: %p\n", &False);
-  // printf("Unit: %p\n", &Unit);
-  // printf("pGcFull: %p\n", pGcFull);
-  // printf("eval_count: %p\n", &eval_count);
-  // printf("entering main\n");
   GC_init();
-  // while (export_add(123, 456) != -1)
-  //   ;
-  // export_count(100000);
   return 0;
 }
