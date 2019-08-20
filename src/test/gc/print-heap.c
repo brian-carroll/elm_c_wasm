@@ -97,24 +97,17 @@ void print_heap() {
 #endif
 
   size_t* first_value = state->heap.start;
-  ElmValue* v = (ElmValue*)first_value;
-  if (v->header.tag == Tag_GcStackEmpty) {
-    print_value(v);
-    first_value += v->header.size;
-  }
-  // skip junk zeros used to force GC in tests
-  size_t* zeros = first_value;
-  while (*first_value == 0)
-    first_value++;
-
-  if (first_value > zeros) {
-    printf("| %p |      |%5zd | (zeros)\n", zeros, first_value - zeros);
-  }
-
   size_t* next_value = first_value;
   for (size_t* p = first_value; p < state->next_alloc; p++) {
     if (p == next_value) {
-      v = (ElmValue*)p;
+      if (*p == 0) {
+        // summarize big chunks of zeros
+        while (*p == 0)
+          p++;
+        printf("| %p |      |%5zd | (zeros)\n", next_value, p - next_value);
+        next_value = p;
+      }
+      ElmValue* v = (ElmValue*)p;
       print_value(v);
       if (v->header.size > 0 && v->header.size < 128) {
         next_value += v->header.size;
