@@ -479,6 +479,7 @@ void compact(GcState* state, size_t* compact_start) {
   // Compaction is finished. Update the GC state and roots.
 
   state->next_alloc = to;
+  state->nursery = to;
 
   size_t* stack_map = (size_t*)state->stack_map;
   if (stack_map > first_move_to) {
@@ -541,8 +542,25 @@ void reverse_stack_map(GcState* state) {
 
 /* ====================================================
 
-                CONTROL
+                COLLECT
 
    ==================================================== */
 
-void heap_overflow(GcState* state) {}
+void collect(GcState* state, size_t* ignore_below) {
+#ifdef DEBUG_LOG
+  printf("---------- Before GC --------------\n");
+  print_state();
+  print_heap();
+  printf("---------- / Before GC --------------\n");
+#endif
+
+  mark(state, ignore_below);
+  compact(state, ignore_below);
+
+#ifdef DEBUG_LOG
+  printf("---------- After GC --------------\n");
+  print_state();
+  print_heap();
+  printf("---------- / After GC --------------\n");
+#endif
+}

@@ -18,7 +18,7 @@ emcc src/$FILENAME.c \
   -Wno-incompatible-pointer-types-discards-qualifiers \
   -s MODULARIZE=1 \
   -s EXPORT_NAME='createEmscriptenModule' \
-  -s EXPORTED_FUNCTIONS='["main", "export_count", "export_count_no_tce", "export_add", "export_add_unboxed"]' \
+  -s EXPORTED_FUNCTIONS='["main", "export_count", "export_count_no_tce", "export_add", "export_add_unboxed", "dump"]' \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
   $extra_opt
 

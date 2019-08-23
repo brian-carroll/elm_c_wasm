@@ -27,6 +27,7 @@ typedef struct {
 typedef struct {
   GcHeap heap;
   size_t* next_alloc;
+  size_t* nursery;
   Cons* roots;
   GcStackMap* stack_map;
   GcStackMap* stack_map_empty;
@@ -48,7 +49,8 @@ void mark(GcState* state, size_t* ignore_below);
 
 void bitmap_next_test_wrapper(size_t* word, size_t* mask);
 void compact(GcState* state, size_t* compact_start);
-void heap_overflow(GcState*);
+
+void collect(GcState* state, size_t* ignore_below);
 
 void reverse_stack_map(GcState* state);
 

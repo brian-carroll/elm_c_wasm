@@ -61,7 +61,7 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
 
   if (GC_stack_empty() == pGcFull) {
     printf("export_count: GC point 1, call %d, gc %d\n", export_count_call_id, ++gc_id);
-    GC_collect_onexception_full(0, NULL);
+    GC_collect_full();
     GC_stack_empty();
   }
   while (1) {
@@ -70,13 +70,15 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
     args[0] = remaining;
     if (remaining->header.tag == Tag_GcException) {
       printf("export_count: GC point 2, call=%d, gc=%d\n", export_count_call_id, ++gc_id);
-      GC_collect_onexception_full(0, NULL);
+      GC_collect_full();
+      GC_start_replay();
       continue;
     }
     result = Utils_apply(&count, 1, args);
     if (result->header.tag != Tag_GcException) break;
     printf("export_count: GC point 3, call=%d, gc=%d\n", export_count_call_id, ++gc_id);
-    GC_collect_onexception_full(0, NULL);
+    GC_collect_full();
+    GC_start_replay();
   }
   return (int)result->header.tag;  // makes no sense but it's the right type
 }
@@ -120,14 +122,16 @@ int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
     if (remaining->header.tag == Tag_GcException) {
       printf("export_count_no_tce: GC point 1, call=%d, gc=%d\n",
              export_count_no_tce_call_id, ++gc_id);
-      GC_collect_onexception_full(0, NULL);
+      GC_collect_full();
+      GC_start_replay();
       continue;
     }
     result = Utils_apply(&count_no_tce, 1, (void* []){remaining});
     if (result->header.tag != Tag_GcException) break;
     printf("export_count_no_tce: GC point 2, call=%d, gc=%d\n",
            export_count_no_tce_call_id, ++gc_id);
-    GC_collect_onexception_full(0, NULL);
+    GC_collect_full();
+    GC_start_replay();
   }
   return (int)result->header.tag;  // makes no sense but it's the right type
 }
@@ -148,7 +152,8 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
     ElmInt* result = Utils_apply(&Basics_add, 2, (void* []){boxA, boxB});
     if (boxA == pGcFull || boxB == pGcFull || result == pGcFull) {
       printf("export_add: GC\n");
-      GC_collect_onexception_full(0, NULL);
+      GC_collect_full();
+      GC_start_replay();
     } else {
       // print_state();
       // printf("stack_map->older = %p\n", gc_state.stack_map->older);
@@ -158,11 +163,15 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
   }
 }
 
+void EMSCRIPTEN_KEEPALIVE dump() {
+  print_heap();
+  print_state();
+}
+
 int EMSCRIPTEN_KEEPALIVE export_add_unboxed(int a, int b) {
   return a + b;
 }
 
 int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
-  GC_init();
-  return 0;
+  return GC_init();
 }

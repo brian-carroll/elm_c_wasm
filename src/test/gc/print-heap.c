@@ -9,7 +9,8 @@ bool is_marked(void* p) {
   GcState* state = &gc_state;
   size_t* pword = (size_t*)p;
   size_t slot = pword - state->heap.start;
-  if (slot >> (GC_WORD_BITS - 1)) return true;  // off heap => not garbage, stop tracing
+  if (slot & (1 << (GC_WORD_BITS - 1)))  // unsigned number wrapped around
+    return true;                         // off heap => not garbage, stop tracing
   size_t word = slot / GC_WORD_BITS;
   size_t bit = slot % GC_WORD_BITS;
   size_t mask = (size_t)1 << bit;
@@ -17,8 +18,15 @@ bool is_marked(void* p) {
   return (state->heap.bitmap[word] & mask) != 0;
 }
 
+#ifdef TARGET_64BIT
+#define ZERO_PAD_HEX "%016zx"
+#else
+#define ZERO_PAD_HEX "%08zx"
+#endif
+
 void print_value(ElmValue* v) {
-  printf("| %p |  %c   |%5d | ", v, is_marked(v) ? 'X' : ' ', v->header.size);
+  printf("| %p | " ZERO_PAD_HEX " |  %c   |%5d | ", v, *((size_t*)v),
+         is_marked(v) ? 'X' : ' ', v->header.size);
   switch (v->header.tag) {
     case Tag_Int:
       printf("Int %d", v->elm_int.value);
@@ -88,12 +96,11 @@ void print_heap() {
   GcState* state = &gc_state;
 
 #ifdef TARGET_64BIT
-  printf("|    Address     | Mark | Size | Value\n");
-  printf("| -------------- | ---- | ---- | -----\n");
-
+  printf("|    Address     |     Hex        | Mark | Size | Value\n");
+  printf("| -------------- | -------------- | ---- | ---- | -----\n");
 #else
-  printf("| Address  | Mark | Size | Value\n");
-  printf("| -------- | ---- | ---- | -----\n");
+  printf("| Address  |   Hex    | Mark | Size | Value\n");
+  printf("| -------- | -------- | ---- | ---- | -----\n");
 #endif
 
   size_t* first_value = state->heap.start;
@@ -104,7 +111,8 @@ void print_heap() {
         // summarize big chunks of zeros
         while (*p == 0)
           p++;
-        printf("| %p |      |%5zd | (zeros)\n", next_value, p - next_value);
+        printf("| %p | " ZERO_PAD_HEX " |      |%5zd | (zeros)\n", next_value, (size_t)0,
+               p - next_value);
         next_value = p;
       }
       ElmValue* v = (ElmValue*)p;
@@ -115,7 +123,8 @@ void print_heap() {
         next_value++;
       }
     } else {
-      printf("| %p |  %c   |      |\n", p, is_marked(p) ? 'X' : ' ');
+      printf("| %p | " ZERO_PAD_HEX " |  %c   |      |\n", p, *p,
+             is_marked(p) ? 'X' : ' ');
     }
   }
 }
@@ -133,6 +142,7 @@ void print_state() {
   printf("stack_map = %p\n", state->stack_map);
   printf("stack_depth = %zd\n", state->stack_depth);
   printf("stack_map_empty = %p\n", state->stack_map_empty);
+  printf("replay_ptr = %p\n", state->replay_ptr);
 
   // find last non-zero word in the bitmap
   size_t bitmap_size = state->heap.system_end - state->heap.bitmap;

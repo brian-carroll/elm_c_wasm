@@ -344,7 +344,7 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
   // Make a local copy of the closure and mutate the args during iteration
   // Ensure it becomes garbage before exiting this function
   Closure* c_mutable;
-  if (state->replay_ptr) {
+  if (state->replay_ptr && state->stack_map->header.tag == Tag_GcStackTailCall) {
     // In replay mode, reuse the Closure created by previous run (c_replay)
     GcStackMap* tailcall_old = state->stack_map;
     push = tailcall_old->older;
@@ -675,47 +675,33 @@ void* GC_apply_replay() {
   return replay;
 }
 
-void GC_collect_onexception_full(size_t npointers, void* pointers_to_move[]) {
+/* ====================================================
+
+                COLLECT
+
+   ==================================================== */
+
+void GC_collect_full() {
+  collect(&gc_state, gc_state.heap.start);
+}
+
+void GC_collect_nursery() {
+  collect(&gc_state, gc_state.nursery);
+}
+
+void GC_start_replay() {
   GcState* state = &gc_state;
-  GcHeap* heap = &state->heap;
-
-  // How much of the heap to collect (all of it)
-  size_t* ignore_below = heap->start;
-
-#ifdef DEBUG_LOG
-  printf("---------- Before GC --------------\n");
-  print_state();
-  print_heap();
-  printf("---------- / Before GC --------------\n");
-#endif
-
-  // Collect garbage
-  // printf("mark\n");
-  mark(state, ignore_below);
-  // printf("compact\n");
-  compact(state, ignore_below);
-
-  // Set up for replay
-  // printf("reverse_stack_map\n");
   reverse_stack_map(state);
   size_t* first_allocated = (size_t*)(state->stack_map_empty + 1);
   state->replay_ptr = first_allocated;
   state->stack_depth = 0;
-  // printf("GC_collect_onexception_full: set replay_ptr to %p\n", state->replay_ptr);
-
-  // Update pointers in parent scope after moving stuff around
-  for (size_t i = 0; i < npointers; ++i) {
-    // printf("move pointer %zu\n", i);
-    pointers_to_move[i] = forwarding_address(heap, pointers_to_move[i]);
-  }
-
-#ifdef DEBUG_LOG
-  printf("---------- After GC --------------\n");
-  print_state();
-  print_heap();
-  printf("---------- / After GC --------------\n");
-#endif
 }
+
+/* ====================================================
+
+                SIZE CHECK
+
+   ==================================================== */
 
 #ifdef GC_SIZE_CHECK
 // Check compiled size of GC in Wasm
