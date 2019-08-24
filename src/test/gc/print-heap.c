@@ -14,9 +14,8 @@ extern GcState gc_state;
 bool is_marked(void* p) {
   GcState* state = &gc_state;
   size_t* pword = (size_t*)p;
+  if (pword < state->heap.start) return true;
   size_t slot = pword - state->heap.start;
-  if (slot & (1 << (GC_WORD_BITS - 1)))  // unsigned number wrapped around
-    return true;                         // off heap => not garbage, stop tracing
   size_t word = slot / GC_WORD_BITS;
   size_t bit = slot % GC_WORD_BITS;
   size_t mask = (size_t)1 << bit;
