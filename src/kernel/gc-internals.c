@@ -548,6 +548,13 @@ void collect(GcState* state, size_t* ignore_below) {
 #endif
 
   mark(state, ignore_below);
+
+#ifdef DEBUG
+  if (!is_marked(state->stack_map_empty)) {
+    log_error("stack_empty is not marked\n");
+  }
+#endif
+
   compact(state, ignore_below);
 
 #ifdef DEBUG_LOG

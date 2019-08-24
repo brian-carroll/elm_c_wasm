@@ -19,8 +19,9 @@ bool is_marked(void* p) {
   size_t word = slot / GC_WORD_BITS;
   size_t bit = slot % GC_WORD_BITS;
   size_t mask = (size_t)1 << bit;
-
-  return (state->heap.bitmap[word] & mask) != 0;
+  size_t masked = state->heap.bitmap[word] & mask;
+  size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
+  return (bool)downshift;
 }
 
 #ifdef TARGET_64BIT
@@ -101,8 +102,8 @@ void print_heap() {
   GcState* state = &gc_state;
 
 #ifdef TARGET_64BIT
-  printf("|    Address     |     Hex        | Mark | Size | Value\n");
-  printf("| -------------- | -------------- | ---- | ---- | -----\n");
+  printf("|    Address     |       Hex        | Mark | Size | Value\n");
+  printf("| -------------- | ---------------- | ---- | ---- | -----\n");
 #else
   printf("| Address  |   Hex    | Mark | Size | Value\n");
   printf("| -------- | -------- | ---- | ---- | -----\n");
@@ -134,20 +135,8 @@ void print_heap() {
   }
 }
 
-void print_state() {
+void print_bitmap() {
   GcState* state = &gc_state;
-
-  printf("start = %p\n", state->heap.start);
-  printf("end = %p (%zd bytes)\n", state->heap.end, state->heap.end - state->heap.start);
-  printf("offsets = %p\n", state->heap.offsets);
-  printf("bitmap = %p\n", state->heap.bitmap);
-  printf("system_end = %p\n", state->heap.system_end);
-  printf("next_alloc = %p\n", state->next_alloc);
-  printf("roots = %p\n", state->roots);
-  printf("stack_map = %p\n", state->stack_map);
-  printf("stack_depth = %zd\n", state->stack_depth);
-  printf("stack_map_empty = %p\n", state->stack_map_empty);
-  printf("replay_ptr = %p\n", state->replay_ptr);
 
   // find last non-zero word in the bitmap
   size_t bitmap_size = state->heap.system_end - state->heap.bitmap;
@@ -164,8 +153,26 @@ void print_state() {
 #endif
     }
   }
-
   printf("\n");
+}
+
+void print_state() {
+  GcState* state = &gc_state;
+
+  printf("start = %p\n", state->heap.start);
+  printf("end = %p (%zd bytes)\n", state->heap.end, state->heap.end - state->heap.start);
+  printf("offsets = %p\n", state->heap.offsets);
+  printf("bitmap = %p\n", state->heap.bitmap);
+  printf("system_end = %p\n", state->heap.system_end);
+  printf("next_alloc = %p\n", state->next_alloc);
+  printf("roots = %p\n", state->roots);
+  printf("stack_map = %p\n", state->stack_map);
+  printf("stack_depth = %zd\n", state->stack_depth);
+  printf("stack_map_empty = %p\n", state->stack_map_empty);
+  printf("nursery = %p\n", state->nursery);
+  printf("replay_ptr = %p\n", state->replay_ptr);
+
+  print_bitmap();
 }
 
 void log_error(const char* fmt, ...) {
@@ -173,6 +180,9 @@ void log_error(const char* fmt, ...) {
   va_start(args, fmt);
   print_heap();
   print_state();
+  printf("Unit = %p\n", &Unit);
+  printf("True = %p\n", &True);
+  printf("False = %p\n", &False);
   fprintf(stderr, fmt, args);
   va_end(args);
   emscripten_run_script("debugger;");

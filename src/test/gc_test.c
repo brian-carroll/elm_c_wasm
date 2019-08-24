@@ -272,15 +272,6 @@ char* gc_mark_compact_test() {
   return NULL;
 }
 
-char* gc_struct_test() {
-  mu_assert("GcHeap should be the size of 5 pointers",
-            sizeof(GcHeap) == 5 * sizeof(void*));
-  mu_assert("GcState should be the size of 10 pointers",
-            sizeof(GcState) == 10 * sizeof(void*));
-
-  return NULL;
-}
-
 char bitmap_msg[100];
 
 char* gc_bitmap_test() {
@@ -291,17 +282,17 @@ char* gc_bitmap_test() {
   for (size_t i = 0; i < 10; i++) {
     ElmValue *p1, *p2, *p3, *p4;
 
-    p1 = (ElmValue*)NEW_ELM_INT(1);
-    p2 = (ElmValue*)NEW_ELM_INT(0);
+    p1 = (ElmValue*)NEW_ELM_INT(0x101);
+    p2 = (ElmValue*)NEW_ELM_INT(0x102);
     p3 = (ElmValue*)NEW_ELM_STRING(sizeof(str), str);
-    p4 = (ElmValue*)NEW_ELM_INT(0);
+    p4 = (ElmValue*)NEW_ELM_INT(0x103);
 
     mark_words(&state->heap, p1, p1->header.size);
     mark_words(&state->heap, p3, p3->header.size);
 
-    mu_assert("p1 should be marked", is_marked(p1));
+    mu_assert("p1 should be marked", !!is_marked(p1));
     mu_assert("p2 should NOT be marked", !is_marked(p2));
-    mu_assert("p3 should be marked", is_marked(p3));
+    mu_assert("p3 should be marked", !!is_marked(p3));
     mu_assert("p4 should NOT be marked", !is_marked(p4));
   }
 
@@ -699,7 +690,6 @@ char* gc_test() {
 
   mu_run_test(gc_replay_test);
   mu_run_test(stackmap_mark_test);
-  mu_run_test(gc_struct_test);
   mu_run_test(gc_bitmap_test);
   mu_run_test(gc_dead_between_test);
   mu_run_test(gc_mark_compact_test);

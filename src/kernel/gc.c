@@ -325,7 +325,6 @@ void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
 
   void* tce_space = GC_malloc(cont_bytes);
   if (tce_space == pGcFull) return pGcFull;
-  Closure* c = tce_space;
   GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
   state->stack_map = tailcall;
   *gc_tce_data = tce_space;
