@@ -60,6 +60,8 @@
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 #include "../test/gc/print-heap.h"
+#else
+#define log_error(...)
 #endif
 
 GcState gc_state;
@@ -165,7 +167,7 @@ void* GC_malloc(size_t bytes) {
 
 #ifdef DEBUG
   if (bytes % sizeof(size_t)) {
-    fprintf(stderr, "GC_malloc: Request for %zd bytes is misaligned\n", bytes);
+    log_error("GC_malloc: Request for %zd bytes is misaligned\n", bytes);
   }
 #endif
   size_t* replay = state->replay_ptr;
@@ -174,12 +176,10 @@ void* GC_malloc(size_t bytes) {
 #ifdef DEBUG
     u32 replay_words = ((Header*)replay)->size;
     if (replay_words != words) {
-      print_heap();
-      print_state();
-      fprintf(stderr,
-              "GC_malloc: replay error. Requested size %zd doesn't match cached size %d "
-              "at %p\n",
-              words, replay_words, replay);
+      log_error(
+          "GC_malloc: replay error. Requested size %zd doesn't match cached size %d "
+          "at %p\n",
+          words, replay_words, replay);
     }
 #endif
     size_t* next_replay = replay + words;
@@ -207,7 +207,7 @@ void* GC_memcpy(void* dest, void* src, size_t bytes) {
 
 #ifdef DEBUG
   if (bytes % sizeof(size_t)) {
-    fprintf(stderr, "GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
+    log_error("GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
   }
 #endif
 
@@ -523,10 +523,7 @@ void* GC_apply_replay() {
 
         default:
           scenario = BugScenario;
-#ifdef DEBUG
-          fprintf(stderr, "GC_apply_replay: no newer stack item after %p\n",
-                  state->replay_ptr);
-#endif
+          log_error("GC_apply_replay: no newer stack item after %p\n", state->replay_ptr);
           break;
       }
     } else if (replay_tag == Tag_GcStackPush) {
@@ -552,19 +549,12 @@ void* GC_apply_replay() {
 
         default:
           scenario = BugScenario;
-#ifdef DEBUG
-          fprintf(stderr, "GC_apply_replay: expected stack map value at %p\n", newer);
-#endif
+          log_error("GC_apply_replay: expected stack map value at %p\n", newer);
           break;
       }
     } else {
       scenario = BugScenario;
-#ifdef DEBUG
-      print_heap();
-      print_state();
-      fprintf(stderr, "GC_apply_replay: expected Closure or Push at %p\n",
-              state->replay_ptr);
-#endif
+      log_error("GC_apply_replay: expected Closure or Push at %p\n", state->replay_ptr);
     }
   } while (0);
 

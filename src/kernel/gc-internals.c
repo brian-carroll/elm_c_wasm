@@ -7,6 +7,8 @@
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 #include "../test/gc/print-heap.h"
+#else
+#define log_error(...)
 #endif
 
 #ifdef _WIN32
@@ -74,9 +76,7 @@ size_t child_count(ElmValue* v) {
 int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
   int has_error = brk(new_break_ptr);
   if (has_error) {
-#ifdef DEBUG
-    fprintf(stderr, "Failed to get heap memory. Error code %d\n", errno);
-#endif
+    log_error("Failed to get heap memory. Error code %d\n", errno);
     return errno;
   }
 
@@ -182,17 +182,12 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 
 #ifdef DEBUG
     if ((size_t*)child > heap->end) {
-      print_heap();
-      print_state();
-      fprintf(stderr,
-              "BUG mark_trace: %p out of bounds, reached via %p with header tag %d\n",
-              child, v, v->header.tag);
+      log_error("BUG mark_trace: %p out of bounds, reached via %p with header tag %d\n",
+                child, v, v->header.tag);
       return;
     }
     if (child > v) {
-      print_heap();
-      print_state();
-      fprintf(stderr, "BUG mark_trace: older %p points to newer %p\n", v, child);
+      log_error("BUG mark_trace: older %p points to newer %p\n", v, child);
     }
 #endif
 
@@ -373,10 +368,11 @@ size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
   printf("new_pointer %p\n", new_pointer);
   printf("old_pointer - new_pointer %zd\n", old_pointer - new_pointer);
   printf("\n");
-
+#endif
+#ifdef DEBUG
   if (new_pointer > heap->end || new_pointer < heap->start) {
-    fprintf(stderr, "BUG: forwarding_address out of range moving %p to %p (-%zd)\n",
-            old_pointer, new_pointer, old_pointer - new_pointer);
+    log_error("BUG: forwarding_address out of range moving %p to %p (-%zd)\n",
+              old_pointer, new_pointer, old_pointer - new_pointer);
   }
 #endif
 
@@ -443,9 +439,8 @@ void compact(GcState* state, size_t* compact_start) {
 
 #ifdef DEBUG
       if (n_children > 10 || next_value > heap->end || v->header.size > 100) {
-        fprintf(stderr,
-                "Possibly corrupted object at %p : tag 0x%x size %d children %zd\n", v,
-                v->header.tag, v->header.size, n_children);
+        log_error("Possibly corrupted object at %p : tag 0x%x size %d children %zd\n", v,
+                  v->header.tag, v->header.size, n_children);
       }
 #endif
 
@@ -526,9 +521,7 @@ void reverse_stack_map(GcState* state) {
         stack_item->header.tag != Tag_GcStackPush &&
         stack_item->header.tag != Tag_GcStackPop &&
         stack_item->header.tag != Tag_GcStackTailCall) {
-      print_heap();
-      print_state();
-      fprintf(stderr, "BUG: invalid stackmap item at %p\n", stack_item);
+      log_error("BUG: invalid stackmap item at %p\n", stack_item);
     }
 #endif
     stack_item->newer = newer_item;

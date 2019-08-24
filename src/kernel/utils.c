@@ -7,7 +7,10 @@
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
+#include "../test/gc/print-heap.h"
 extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
+#else
+#define log_error(...)
 #endif
 
 void* Utils_destruct_index(ElmValue* v, size_t index) {
@@ -61,10 +64,8 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
     }
   }
 
-#ifdef DEBUG
-  fprintf(stderr, "Failed to find field %d in record fieldgroup at %zx\n", search,
-          (size_t)fieldgroup);
-#endif
+  log_error("Failed to find field %d in record fieldgroup at %zx\n", search,
+            (size_t)fieldgroup);
 
   return 0;
 }
@@ -276,9 +277,7 @@ static void* append_eval(void* args[2]) {
       return List_append_eval(args);
 
     default:
-#ifdef DEBUG
-      fprintf(stderr, "Tried to Utils_append non-appendable\n");
-#endif
+      log_error("Tried to Utils_append non-appendable\n");
       return args[0];
   }
 }

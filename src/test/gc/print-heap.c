@@ -1,7 +1,13 @@
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include "../../kernel/gc-internals.h"
 #include "../../kernel/types.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#else
+#define emscripten_run_script(x)
+#endif
 
 extern GcState gc_state;
 
@@ -161,4 +167,14 @@ void print_state() {
   }
 
   printf("\n");
+}
+
+void log_error(const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  print_heap();
+  print_state();
+  fprintf(stderr, fmt, args);
+  va_end(args);
+  emscripten_run_script("debugger;");
 }
