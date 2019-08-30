@@ -57,6 +57,7 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
   ElmValue* result;
 
   export_count_call_id++;
+  int gc_id_on_call = gc_id;
   // printf("export_count: call %d with remaining=%d\n", export_count_call_id, fromJS);
 
   if (GC_stack_empty() == pGcFull) {
@@ -77,6 +78,9 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
     result = Utils_apply(&count, 1, args);
     if (result->header.tag != Tag_GcException) break;
     printf("export_count: GC point 3, call=%d, gc=%d\n", export_count_call_id, ++gc_id);
+    if (gc_id - gc_id_on_call > 10) {
+      log_error("Too many gc cycles\n");
+    }
     GC_collect_full();
     GC_start_replay();
   }
@@ -173,5 +177,18 @@ int EMSCRIPTEN_KEEPALIVE export_add_unboxed(int a, int b) {
 }
 
 int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
-  return GC_init();
+  int exit_code = GC_init();
+
+#ifndef __EMSCRIPTEN__
+  while (1) {
+    for (int i = 0; i < 10; i++) {
+      export_count(10);
+    }
+    for (int i = 0; i < 10; i++) {
+      export_count_no_tce(10);
+    }
+  }
+#endif
+
+  return exit_code;
 }
