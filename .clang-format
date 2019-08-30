@@ -3,4 +3,6 @@
   ColumnLimit: 90,
   AllowShortIfStatementsOnASingleLine: true,
   AllowAllParametersOfDeclarationOnNextLine: true,
+  BinPackArguments: false,
+  AlignAfterOpenBracket: false,
 }
