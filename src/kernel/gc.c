@@ -170,9 +170,10 @@ void* GC_malloc(size_t bytes) {
     log_error("GC_malloc: Request for %zd bytes is misaligned\n", bytes);
   }
 #endif
+
   size_t* replay = state->replay_ptr;
-  if (replay != NULL) {
-// replay mode
+  if (replay != NULL) {  // replay mode
+
 #ifdef DEBUG
     u32 replay_words = ((Header*)replay)->size;
     if (replay_words != words) {
@@ -182,14 +183,16 @@ void* GC_malloc(size_t bytes) {
           words, replay_words, replay);
     }
 #endif
+
     size_t* next_replay = replay + words;
     if (next_replay >= state->next_alloc) {
       next_replay = NULL;  // exit replay mode
     }
     state->replay_ptr = next_replay;
     return (void*)replay;
-  } else {
-    // normal mode
+
+  } else {  // normal (non-replay) mode
+
     size_t* old_heap = state->next_alloc;
     size_t* new_heap = old_heap + words;
 
@@ -260,7 +263,12 @@ void* GC_stack_empty() {
   GcState* state = &gc_state;
   GcStackMap* p = GC_malloc(sizeof(GcStackMap));
   if (p == pGcFull) return pGcFull;
-  p->header = HEADER_GC_STACK_EMPTY;
+  *p = (GcStackMap){
+      .header = HEADER_GC_STACK_EMPTY,
+      .newer = NULL,
+      .older = NULL,
+      .replay = NULL,
+  };
   state->stack_map = p;
   state->stack_map_empty = p;
   return p;
@@ -272,10 +280,12 @@ void* GC_stack_push() {
 
   GcStackMap* p = GC_malloc(sizeof(GcStackMap));
   if (p == pGcFull) return pGcFull;
-
-  p->header = HEADER_GC_STACK_PUSH;
-  p->older = state->stack_map;
-
+  *p = (GcStackMap){
+      .header = HEADER_GC_STACK_PUSH,
+      .newer = NULL,
+      .older = state->stack_map,
+      .replay = NULL,
+  };
   state->stack_map = p;
   state->stack_depth++;
   return p;
@@ -285,11 +295,12 @@ void* GC_stack_pop(ElmValue* result, void* push) {
   GcState* state = &gc_state;
   GcStackMap* p = GC_malloc(sizeof(GcStackMap));
   if (p == pGcFull) return pGcFull;
-
-  p->header = HEADER_GC_STACK_POP;
-  p->older = push;
-  p->replay = result;
-
+  *p = (GcStackMap){
+      .header = HEADER_GC_STACK_POP,
+      .newer = NULL,
+      .older = push,
+      .replay = result,
+  };
   state->stack_map = p;
   state->stack_depth--;
   return p;
@@ -299,10 +310,12 @@ void* GC_stack_tailcall(Closure* c, void* push) {
   GcState* state = &gc_state;
   GcStackMap* p = GC_malloc(sizeof(GcStackMap));
   if (p == pGcFull) return pGcFull;
-  p->header = HEADER_GC_STACK_TC;
-  p->older = push;
-  p->replay = c;
-
+  *p = (GcStackMap){
+      .header = HEADER_GC_STACK_TC,
+      .newer = NULL,
+      .older = push,
+      .replay = c,
+  };
   state->stack_map = p;
   // stack_depth stays the same
   return p;
@@ -329,6 +342,19 @@ void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
   state->stack_map = tailcall;
   *gc_tce_data = tce_space;
 
+  Closure* c = tce_space;
+  *c = (Closure){
+      .header = HEADER_CLOSURE(n_args),
+      .n_values = n_args,
+      .max_values = n_args,
+      .evaluator = NULL,
+  };
+  *tailcall = (GcStackMap){
+      .header = HEADER_GC_STACK_TC,
+      .newer = NULL,
+      .older = NULL,
+      .replay = c,
+  };
   return tce_space;  // not pGcFull
 }
 
@@ -376,12 +402,13 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
   // This space was already _allocated_ but not _written_
   // by GC_tce_iteration, called from tce_eval
   Closure* c_replay = (Closure*)gc_tce_data;
-  GC_memcpy(c_replay, c_mutable, closure_bytes);
+  c_replay->evaluator = c_orig->evaluator;
+  // GC_memcpy(c_replay, c_mutable, closure_bytes);
 
   GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + closure_bytes);
-  tailcall->header = HEADER_GC_STACK_TC;
+  // tailcall->header = HEADER_GC_STACK_TC;
   tailcall->older = push;
-  tailcall->replay = c_replay;
+  // tailcall->replay = c_replay;
 
   return pGcFull;
 }
