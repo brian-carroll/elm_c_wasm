@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "../../kernel/gc-internals.h"
 #include "../../kernel/types.h"
 #ifdef __EMSCRIPTEN__
@@ -14,7 +15,7 @@ extern GcState gc_state;
 bool is_marked(void* p) {
   GcState* state = &gc_state;
   size_t* pword = (size_t*)p;
-  if (pword < state->heap.start) return true;
+  if (pword < state->heap.start || pword > state->heap.end) return true;
   size_t slot = pword - state->heap.start;
   size_t word = slot / GC_WORD_BITS;
   size_t bit = slot % GC_WORD_BITS;
@@ -31,8 +32,11 @@ bool is_marked(void* p) {
 #endif
 
 void print_value(ElmValue* v) {
-  printf("| %p | " ZERO_PAD_HEX " |  %c   |%5d | ", v, *((size_t*)v),
-         is_marked(v) ? 'X' : ' ', v->header.size);
+  printf("| %14p | " ZERO_PAD_HEX " |  %c   |%5d | ",
+      v,
+      *((size_t*)v),
+      is_marked(v) ? 'X' : ' ',
+      v->header.size);
   switch (v->header.tag) {
     case Tag_Int:
       printf("Int %d", v->elm_int.value);
@@ -68,9 +72,12 @@ void print_value(ElmValue* v) {
       }
       break;
     case Tag_Closure:
-      printf("Closure (%p) n_values: %d max_values: %d values: ", v->closure.evaluator,
-             v->closure.n_values, v->closure.max_values);
-      for (size_t i = 0; i < v->closure.n_values; ++i) {
+      printf("Closure (%p) n_values: %d max_values: %d values: ",
+          v->closure.evaluator,
+          v->closure.n_values,
+          v->closure.max_values);
+      size_t header_kids = (size_t)(v->header.size) - (sizeof(Closure) / sizeof(void*));
+      for (size_t i = 0; i < header_kids; ++i) {
         printf("%p ", v->closure.values[i]);
       }
       break;
@@ -78,16 +85,20 @@ void print_value(ElmValue* v) {
       printf("GcException");
       break;
     case Tag_GcStackPush:
-      printf("GcStackPush newer: %p older: %p", v->gc_stackmap.newer,
-             v->gc_stackmap.older);
+      printf(
+          "GcStackPush newer: %p older: %p", v->gc_stackmap.newer, v->gc_stackmap.older);
       break;
     case Tag_GcStackPop:
-      printf("GcStackPop newer: %p older: %p replay: %p", v->gc_stackmap.newer,
-             v->gc_stackmap.older, v->gc_stackmap.replay);
+      printf("GcStackPop newer: %p older: %p replay: %p",
+          v->gc_stackmap.newer,
+          v->gc_stackmap.older,
+          v->gc_stackmap.replay);
       break;
     case Tag_GcStackTailCall:
-      printf("GcStackTailCall newer: %p older: %p replay: %p", v->gc_stackmap.newer,
-             v->gc_stackmap.older, v->gc_stackmap.replay);
+      printf("GcStackTailCall newer: %p older: %p replay: %p",
+          v->gc_stackmap.newer,
+          v->gc_stackmap.older,
+          v->gc_stackmap.replay);
       break;
     case Tag_GcStackEmpty:
       printf("GcStackEmpty newer: %p", v->gc_stackmap.newer);
@@ -101,13 +112,8 @@ void print_value(ElmValue* v) {
 void print_heap() {
   GcState* state = &gc_state;
 
-#ifdef TARGET_64BIT
   printf("|    Address     |       Hex        | Mark | Size | Value\n");
   printf("| -------------- | ---------------- | ---- | ---- | -----\n");
-#else
-  printf("| Address  |   Hex    | Mark | Size | Value\n");
-  printf("| -------- | -------- | ---- | ---- | -----\n");
-#endif
 
   size_t* first_value = state->heap.start;
   size_t* next_value = first_value;
@@ -117,8 +123,10 @@ void print_heap() {
         // summarize big chunks of zeros
         while (*p == 0)
           p++;
-        printf("| %p | " ZERO_PAD_HEX " |      |%5zd | (zeros)\n", next_value, (size_t)0,
-               p - next_value);
+        printf("| %14p | " ZERO_PAD_HEX " |      |%5zd | (zeros)\n",
+            next_value,
+            (size_t)0,
+            p - next_value);
         next_value = p;
       }
       ElmValue* v = (ElmValue*)p;
@@ -129,8 +137,10 @@ void print_heap() {
         next_value++;
       }
     } else {
-      printf("| %p | " ZERO_PAD_HEX " |  %c   |      |\n", p, *p,
-             is_marked(p) ? 'X' : ' ');
+      printf("| %14p | " ZERO_PAD_HEX " |  %c   |      |\n",
+          p,
+          *p,
+          is_marked(p) ? 'X' : ' ');
     }
   }
 }

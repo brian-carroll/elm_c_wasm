@@ -7,6 +7,7 @@
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
 #include "./gc/print-heap.h"
+#include "./gc/replay_test.h"
 #include "./gc/stackmap_test.h"
 #include "./test.h"
 
@@ -47,18 +48,13 @@ char* find_closure_func_name(Closure* c) {
 
 void gc_test_reset() {
   GcState* state = &gc_state;
-  size_t* bm_word = state->heap.start;
-  while (bm_word < state->heap.system_end) {
-    *bm_word = 0;
-    bm_word++;
+  for (size_t* word = state->heap.start; word < state->heap.system_end; word++) {
+    *word = 0;
   }
   state->next_alloc = state->heap.start;
   state->roots = &Nil;
   state->stack_depth = 0;
-
-  GcStackMap* p = GC_malloc(sizeof(GcStackMap));
-  p->header = HEADER_GC_STACK_EMPTY;
-  state->stack_map = p;
+  GC_stack_empty();
 }
 
 char alive_or_dead_msg[50];
@@ -104,7 +100,8 @@ char* gc_mark_compact_test() {
   live[nlive++] = c1;
   if (verbose) {
     printf("Kernel module registered root:\n  located at %p\n  pointing at %p\n",
-           &root_mutable_pointer, root_mutable_pointer);
+        &root_mutable_pointer,
+        root_mutable_pointer);
   }
 
   void* push1 = GC_stack_push();
@@ -238,7 +235,7 @@ char* gc_mark_compact_test() {
 
   size_t heap_size = state->next_alloc - state->heap.start;
   mu_assert("Stack map test should account for all allocated values",
-            live_size + dead_size == heap_size);
+      live_size + dead_size == heap_size);
 
   if (verbose) printf("\n\nCompacting from %p\n\n", ignore_below);
   compact(&gc_state, ignore_below);
@@ -259,7 +256,7 @@ char* gc_mark_compact_test() {
   }
 
   mu_assert("Compacted heap should contain exactly the number of live values",
-            state->next_alloc - state->heap.start == live_size);
+      state->next_alloc - state->heap.start == live_size);
 
   // If 'mark' is able to trace correctly, forwarding addresses are OK
   size_t n_marked = 0;
@@ -267,7 +264,7 @@ char* gc_mark_compact_test() {
     n_marked += is_marked(w);
   }
   mu_assert("After compaction and re-marking, all values should be marked",
-            n_marked == live_size);
+      n_marked == live_size);
 
   return NULL;
 }
@@ -320,10 +317,13 @@ char* gc_bitmap_test() {
     size_t word = bitmap[w];
     for (size_t b = 0; b < GC_WORD_BITS; b++) {
       bool bitmap_bit = (word & ((size_t)1 << b)) != 0;
-      sprintf(
-          bitmap_msg,
+      sprintf(bitmap_msg,
           "is_marked (%d) should match the bitmap (%d) addr = %p  word = %zd  bit = %zd",
-          is_marked(ptr), bitmap_bit, ptr, w, b);
+          is_marked(ptr),
+          bitmap_bit,
+          ptr,
+          w,
+          b);
       mu_assert(bitmap_msg, is_marked(ptr) == bitmap_bit);
       ptr++;
     }
@@ -350,29 +350,41 @@ char* gc_bitmap_next_test() {
 
   word = 0;
   mask = 1;
-  sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx",
-          assertion++, word, mask);
+  sprintf(gc_bitmap_next_test_str,
+      "bitmap_next assertion %d from word %zd mask %0zx",
+      assertion++,
+      word,
+      mask);
   bitmap_next_test_wrapper(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 2);
 
   word = 0;
   mask = 2;
-  sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx",
-          assertion++, word, mask);
+  sprintf(gc_bitmap_next_test_str,
+      "bitmap_next assertion %d from word %zd mask %0zx",
+      assertion++,
+      word,
+      mask);
   bitmap_next_test_wrapper(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 4);
 
   word = 1;
   mask = 1;
-  sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx",
-          assertion++, word, mask);
+  sprintf(gc_bitmap_next_test_str,
+      "bitmap_next assertion %d from word %zd mask %0zx",
+      assertion++,
+      word,
+      mask);
   bitmap_next_test_wrapper(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 2);
 
   word = 1;
   mask = 2;
-  sprintf(gc_bitmap_next_test_str, "bitmap_next assertion %d from word %zd mask %0zx",
-          assertion++, word, mask);
+  sprintf(gc_bitmap_next_test_str,
+      "bitmap_next assertion %d from word %zd mask %0zx",
+      assertion++,
+      word,
+      mask);
   bitmap_next_test_wrapper(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 4);
 
@@ -408,13 +420,13 @@ char* gc_dead_between_test() {
   first = heap->start + 4;
   last = heap->start + 8;
   mu_assert("bitmap_dead_between with 4 words dead",
-            bitmap_dead_between(heap, first, last) == 4);
+      bitmap_dead_between(heap, first, last) == 4);
 
   first--;
   last++;
 
   mu_assert("bitmap_dead_between with 4 dead and 2 live",
-            bitmap_dead_between(heap, first, last) == 4);
+      bitmap_dead_between(heap, first, last) == 4);
 
   heap->bitmap[0] = 0xf0;
   heap->bitmap[1] = 0x00;
@@ -423,8 +435,8 @@ char* gc_dead_between_test() {
   last = heap->start + (2 * GC_WORD_BITS) + 10;
 
   mu_assert("bitmap_dead_between across 3 bitmap words",
-            bitmap_dead_between(heap, first, last) ==
-                ((GC_WORD_BITS - 2 - 4) + GC_WORD_BITS + 10 - 4));
+      bitmap_dead_between(heap, first, last) ==
+          ((GC_WORD_BITS - 2 - 4) + GC_WORD_BITS + 10 - 4));
 
   return NULL;
 }
@@ -579,13 +591,14 @@ char* gc_replay_test() {
 
   if (verbose)
     printf("Set allocation pointer to leave only %zu (%zu-bit) words of heap space\n",
-           not_quite_enough_space, (sizeof(void*)) * 8);
+        not_quite_enough_space,
+        (sizeof(void*)) * 8);
 
   // wrapper function to prevent GC exception exiting the test
   ElmValue* result = gc_replay_test_catch();
 
   mu_assert("Expect GC exception when 'fib' called with insufficient heap space",
-            result->header.tag == Tag_GcException);
+      result->header.tag == Tag_GcException);
 
   if (verbose) {
     printf("\n");
@@ -637,7 +650,7 @@ char* gc_replay_test() {
   mark(&gc_state, ignore_below);
 
   mu_assert("Compacted heap should be traceable by 'mark'",
-            bitmap_dead_between(&state->heap, ignore_below, state->next_alloc) == 0);
+      bitmap_dead_between(&state->heap, ignore_below, state->next_alloc) == 0);
 
   if (verbose) {
     print_heap();
@@ -659,14 +672,40 @@ char* gc_replay_test() {
 
   if (verbose) {
     printf("\nFinished replay and 2nd execution run...\n");
-    printf("Aaaand the %dth Fibonacci number is ...drumroll please...\n",
-           literal_n.value);
+    printf(
+        "Aaaand the %dth Fibonacci number is ...drumroll please...\n", literal_n.value);
     print_value(result_replay);
   }
 
-  i32 answers[29] = {0,    1,     1,     2,     3,     5,     8,      13,     21,    34,
-                     55,   89,    144,   233,   377,   610,   987,    1597,   2584,  4181,
-                     6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811};
+  i32 answers[29] = {0,
+      1,
+      1,
+      2,
+      3,
+      5,
+      8,
+      13,
+      21,
+      34,
+      55,
+      89,
+      144,
+      233,
+      377,
+      610,
+      987,
+      1597,
+      2584,
+      4181,
+      6765,
+      10946,
+      17711,
+      28657,
+      46368,
+      75025,
+      121393,
+      196418,
+      317811};
   i32 answer = answers[literal_n.value];
 
   bool pass = result_replay->elm_int.value == answer;
@@ -688,12 +727,13 @@ char* gc_test() {
         "\n"
         "                              Garbage Collector tests\n");
 
-  mu_run_test(gc_replay_test);
-  mu_run_test(stackmap_mark_test);
-  mu_run_test(gc_bitmap_test);
-  mu_run_test(gc_dead_between_test);
-  mu_run_test(gc_mark_compact_test);
-  mu_run_test(gc_bitmap_next_test);
+  // mu_run_test(gc_replay_test);
+  // mu_run_test(stackmap_mark_test);
+  // mu_run_test(gc_bitmap_test);
+  // mu_run_test(gc_dead_between_test);
+  // mu_run_test(gc_mark_compact_test);
+  // mu_run_test(gc_bitmap_next_test);
+  mu_run_test(replay_scenario_tests);
 
   return NULL;
 }
