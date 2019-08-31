@@ -14,20 +14,22 @@ extern GcState gc_state;
 Tag mock_func_tags[10];
 i32 mock_func_count;
 
+const u32 INT_OFFSET = 256000;
+
 void* eval_mock_func(void* args[2]) {
   void* last_alloc = NULL;
   for (mock_func_count = 0;; mock_func_count++) {
     Tag current_tag = mock_func_tags[mock_func_count];
     switch (current_tag) {
       case Tag_Int:
-        last_alloc = NEW_ELM_INT(mock_func_count);
-        printf("allocated at %p, count=%d\n", last_alloc, mock_func_count);
+        last_alloc = NEW_ELM_INT(INT_OFFSET + mock_func_count);
+        // printf("allocated at %p, count=%d\n", last_alloc, mock_func_count);
         break;
       case Tag_GcException:
-        printf("throwing exception, count=%d\n", mock_func_count);
+        // printf("throwing exception, count=%d\n", mock_func_count);
         return pGcFull;
       case Tag_GcStackPop:
-        printf("returning pointer %p, count=%d\n", last_alloc, mock_func_count);
+        // printf("returning pointer %p, count=%d\n", last_alloc, mock_func_count);
         return last_alloc;
       default:
         fprintf(stderr, "Unhandled tag in eval_mock_func %x\n", current_tag);
@@ -48,6 +50,94 @@ int next_value_matches(size_t** p, const void* v) {
   return areEqual;
 }
 
+char assert_heap_message[1024];
+
+char* assert_heap_values(const char* description, const void* values[]) {
+  size_t* heap_value = gc_state.heap.start;
+  size_t i = 0;
+  size_t* bad_addr = NULL;
+  size_t expected_value;
+
+  while (true) {
+    ElmValue* v = (ElmValue*)values[i];
+    if (v == NULL) break;
+
+    size_t children;
+    switch (v->header.tag) {
+      case Tag_GcStackEmpty:
+      case Tag_GcStackPush:
+      case Tag_GcStackPop:
+      case Tag_GcStackTailCall:
+        children = 3;
+        break;
+      default:
+        children = child_count(v);
+        break;
+    }
+
+    size_t* p = (size_t*)values[i];
+    size_t* v_end = p + v->header.size;
+    size_t* first_child = v_end - children;
+    size_t* heap_word = heap_value;
+
+    for (; p < first_child; heap_word++, p++) {
+      expected_value = *p;
+      if (*heap_word != expected_value) {
+        bad_addr = heap_word;
+        if (verbose) {
+          printf("\n");
+          printf("Mismatch at word %zd (tag %x with %zu children)\n",
+              heap_word - heap_value,
+              v->header.tag,
+              children);
+          print_value(v);
+          Header myheader = HEADER_GC_STACK_POP;
+          print_value((ElmValue*)&myheader);
+          printf("\n");
+        }
+        break;
+      }
+    }
+    if (bad_addr) break;
+
+    for (; p < v_end; heap_word++, p++) {
+      size_t relative_offset = *p;
+      size_t heap_child_addr = *heap_word;
+      size_t heap_parent_addr = (size_t)heap_value;
+      expected_value = heap_parent_addr + relative_offset;
+      if (heap_child_addr == 0 && relative_offset == 0) {
+        continue;
+      }
+      if (heap_child_addr != expected_value) {
+        if (verbose)
+          printf("Mismatch in child pointer (tag %x with %zu children)\n",
+              v->header.tag,
+              children);
+        bad_addr = heap_word;
+        break;
+      }
+    }
+    if (bad_addr) break;
+
+    heap_value = heap_word;
+    i++;
+  }
+
+  if (bad_addr) {
+    print_heap();
+    sprintf(assert_heap_message,
+        "%s\nExpected %p to be " ZERO_PAD_HEX " but found " ZERO_PAD_HEX "\n",
+        description,
+        bad_addr,
+        expected_value,
+        *bad_addr);
+    return assert_heap_message;
+  } else {
+    if (verbose) printf("PASS: %s\n", description);
+    return NULL;
+  }
+}
+
 char* test_gc_replay_finished() {
   // SETUP
   gc_test_reset();
@@ -62,8 +152,6 @@ char* test_gc_replay_finished() {
 
   // RUN
   void* result1 = Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
-  print_heap();
-  print_state();
   ElmInt expected_result = {
       .header = HEADER_INT,
       .value = 3,
@@ -71,37 +159,36 @@ char* test_gc_replay_finished() {
   mu_assert("Return value",
       memcmp(result1, &expected_result, expected_result.header.size) == 0);
 
-  size_t* heap_value;
-
   // HEAP BEFORE GC
-  heap_value = gc_state.heap.start;
-  printf("%p ", heap_value);
-  mu_assert("Empty",
-      next_value_matches(&heap_value, &(GcStackMap){.header = HEADER_GC_STACK_EMPTY}));
-
-  size_t* push = heap_value;
-  printf("%p ", heap_value);
-  mu_assert("Push",
-      next_value_matches(&heap_value,
-          &(GcStackMap){.header = HEADER_GC_STACK_PUSH, .older = gc_state.heap.start}));
-
-  printf("%p ", heap_value);
-  mu_assert("Int 0",
-      next_value_matches(&heap_value, &(ElmInt){.header = HEADER_INT, .value = 0}));
-
-  printf("%p ", heap_value);
-  mu_assert("Int 1",
-      next_value_matches(&heap_value, &(ElmInt){.header = HEADER_INT, .value = 1}));
-
-  size_t* ret = heap_value;
-  printf("%p ", heap_value);
-  mu_assert("Int 2",
-      next_value_matches(&heap_value, &(ElmInt){.header = HEADER_INT, .value = 2}));
-
-  printf("%p ", heap_value);
-  mu_assert("Pop",
-      next_value_matches(&heap_value,
-          &(GcStackMap){.header = HEADER_GC_STACK_POP, .older = push, .replay = ret}));
+  char* heap_err_before_gc = assert_heap_values("Replay finished call, heap before GC",
+      (void* []){
+          &(GcStackMap){
+              .header = HEADER_GC_STACK_EMPTY,
+          },
+          &(GcStackMap){
+              .header = HEADER_GC_STACK_PUSH,
+              .older = (void*)(-sizeof(GcStackMap)),
+          },
+          &(ElmInt){
+              .header = HEADER_INT,
+              .value = INT_OFFSET,
+          },
+          &(ElmInt){
+              .header = HEADER_INT,
+              .value = INT_OFFSET + 1,
+          },
+          &(ElmInt){
+              .header = HEADER_INT,
+              .value = INT_OFFSET + 2,
+          },
+          &(GcStackMap){
+              .header = HEADER_GC_STACK_POP,
+              .older = (void*)(-(3 * sizeof(ElmInt) + sizeof(GcStackMap))),
+              .replay = (void*)(-sizeof(ElmInt)),
+          },
+          NULL,
+      });
+  if (heap_err_before_gc) return heap_err_before_gc;
 
   // GC + REPLAY
   GC_collect_full();
@@ -110,52 +197,44 @@ char* test_gc_replay_finished() {
   mu_assert("Replay return value",
       memcmp(result2, &expected_result, expected_result.header.size) == 0);
 
-  print_heap();
-
   // HEAP AFTER GC
-  heap_value = gc_state.heap.start;
-  printf("%p ", heap_value);
-  mu_assert("Empty",
-      next_value_matches(&heap_value,
-          &(GcStackMap){
-              .header = HEADER_GC_STACK_EMPTY,
-              .newer = heap_value + sizeof(GcStackMap) / SIZE_UNIT,
-          }));
-
-  size_t* push2 = heap_value;
-  printf("%p ", heap_value);
-  mu_assert("Push",
-      next_value_matches(&heap_value,
-          &(GcStackMap){
-              .header = HEADER_GC_STACK_PUSH,
-              .older = gc_state.heap.start,
-              .newer = heap_value + (sizeof(GcStackMap) + sizeof(ElmInt)) / SIZE_UNIT,
-          }));
-
-  size_t* ret2 = heap_value;
-  printf("%p ", heap_value);
-  mu_assert("Int 2",
-      next_value_matches(&heap_value, &(ElmInt){.header = HEADER_INT, .value = 2}));
-
-  size_t* pop2 = heap_value;
-  printf("%p ", heap_value);
-  mu_assert("Pop",
-      next_value_matches(&heap_value,
-          &(GcStackMap){
-              .header = HEADER_GC_STACK_POP,
-              .older = push2,
-              .replay = ret2,
-              .newer = gc_state.next_alloc,
-          }));
+  const void* heap_after_spec[] = {
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_EMPTY,
+          .newer = (void*)(sizeof(GcStackMap)),
+      },
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_PUSH,
+          .older = (void*)(-sizeof(GcStackMap)),
+          .newer = (void*)(sizeof(GcStackMap) + sizeof(ElmInt)),
+      },
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = INT_OFFSET + 2,
+      },
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_POP,
+          .older = (void*)(-sizeof(GcStackMap) - sizeof(ElmInt)),
+          .replay = (void*)(-sizeof(ElmInt)),
+          .newer = (void*)(sizeof(GcStackMap)),
+      },
+      NULL,
+  };
+  char* heap_err_after_gc =
+      assert_heap_values("Replay finished call, heap after GC", heap_after_spec);
+  mu_assert(heap_err_after_gc, heap_err_after_gc == NULL);
 
   mu_assert("GC State replay_ptr", gc_state.replay_ptr == NULL);
   mu_assert("GC State stack_depth", gc_state.stack_depth == 0);
-  mu_assert("GC State stackmap", gc_state.stack_map == (GcStackMap*)pop2);
+  mu_assert("GC State stackmap",
+      (void*)gc_state.stack_map - (void*)gc_state.heap.start ==
+          2 * sizeof(GcStackMap) + sizeof(ElmInt));
 
   return NULL;
 }
 
 char* replay_scenario_tests() {
   mu_run_test(test_gc_replay_finished);
+  // mu_run_test(test_gc_replay_finished_original);
   return NULL;
 }

@@ -1,3 +1,4 @@
+#include "print-heap.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -24,12 +25,6 @@ bool is_marked(void* p) {
   size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
   return (bool)downshift;
 }
-
-#ifdef TARGET_64BIT
-#define ZERO_PAD_HEX "%016zx"
-#else
-#define ZERO_PAD_HEX "%08zx"
-#endif
 
 void print_value(ElmValue* v) {
   printf("| %14p | " ZERO_PAD_HEX " |  %c   |%5d | ",
