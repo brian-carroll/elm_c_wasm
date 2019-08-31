@@ -9,6 +9,12 @@
 #include "../test.h"
 #include "./print-heap.h"
 
+#ifdef TARGET_64BIT
+#define ZERO_PADDING .padding = 0,
+#else
+#define ZERO_PADDING
+#endif
+
 extern GcState gc_state;
 
 Tag mock_func_tags[10];
@@ -159,35 +165,37 @@ char* test_gc_replay_finished() {
   mu_assert("Return value",
       memcmp(result1, &expected_result, expected_result.header.size) == 0);
 
+  const void* heap_before_spec[] = {
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_EMPTY,
+      },
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_PUSH,
+          .older = (void*)(-sizeof(GcStackMap)),
+      },
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = INT_OFFSET,
+      },
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = INT_OFFSET + 1,
+      },
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = INT_OFFSET + 2,
+      },
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_POP,
+          .older = (void*)(-(3 * sizeof(ElmInt) + sizeof(GcStackMap))),
+          .replay = (void*)(-sizeof(ElmInt)),
+      },
+      NULL,
+  };
+
   // HEAP BEFORE GC
-  char* heap_err_before_gc = assert_heap_values("Replay finished call, heap before GC",
-      (void* []){
-          &(GcStackMap){
-              .header = HEADER_GC_STACK_EMPTY,
-          },
-          &(GcStackMap){
-              .header = HEADER_GC_STACK_PUSH,
-              .older = (void*)(-sizeof(GcStackMap)),
-          },
-          &(ElmInt){
-              .header = HEADER_INT,
-              .value = INT_OFFSET,
-          },
-          &(ElmInt){
-              .header = HEADER_INT,
-              .value = INT_OFFSET + 1,
-          },
-          &(ElmInt){
-              .header = HEADER_INT,
-              .value = INT_OFFSET + 2,
-          },
-          &(GcStackMap){
-              .header = HEADER_GC_STACK_POP,
-              .older = (void*)(-(3 * sizeof(ElmInt) + sizeof(GcStackMap))),
-              .replay = (void*)(-sizeof(ElmInt)),
-          },
-          NULL,
-      });
+  char* heap_err_before_gc =
+      assert_heap_values("Replay finished call, heap before GC", heap_before_spec);
   if (heap_err_before_gc) return heap_err_before_gc;
 
   // GC + REPLAY
@@ -222,7 +230,7 @@ char* test_gc_replay_finished() {
   };
   char* heap_err_after_gc =
       assert_heap_values("Replay finished call, heap after GC", heap_after_spec);
-  mu_assert(heap_err_after_gc, heap_err_after_gc == NULL);
+  if (heap_err_after_gc) return heap_err_after_gc;
 
   mu_assert("GC State replay_ptr", gc_state.replay_ptr == NULL);
   mu_assert("GC State stack_depth", gc_state.stack_depth == 0);

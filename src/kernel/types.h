@@ -49,6 +49,16 @@ typedef struct {
 #define TARGET_64BIT
 #endif
 
+#ifdef TARGET_64BIT
+// Padding would be inserted by compiler anyway
+// This makes it more explicit (but we have to get it right!)
+// This also gives automatic zeroing of the padding in struct literals,
+// since if you leave out a member the compiler zeros it
+#define PADDING64 u32 padding;
+#else
+#define PADDING64
+#endif
+
 // Header size field has units corresponding to this many bytes:
 #define SIZE_UNIT sizeof(size_t)
 
@@ -97,6 +107,7 @@ typedef struct {
 
 typedef struct {
   Header header;
+  PADDING64
   void* head;
   void* tail;
 } Cons;
@@ -107,6 +118,7 @@ Cons* ctorCons(void* head, void* tail);
 
 typedef struct {
   Header header;
+  PADDING64
   void* a;
   void* b;
 } Tuple2;
@@ -115,6 +127,7 @@ Tuple2* ctorTuple2(void* a, void* b);
 
 typedef struct {
   Header header;
+  PADDING64
   void* a;
   void* b;
   void* c;
@@ -133,6 +146,7 @@ ElmInt* ctorElmInt(i32 value);
 
 typedef struct {
   Header header;
+  PADDING64
   f64 value;
 } ElmFloat;
 ElmFloat* ctorElmFloat(f64 value);
@@ -180,6 +194,7 @@ typedef struct {
 
 typedef struct {
   Header header;
+  PADDING64
   FieldGroup* fieldgroup;
   void* values[];
 } Record;
@@ -212,6 +227,7 @@ typedef struct {
 // GC makes assumptions about order of these fields (child_count and its usages)
 typedef struct {
   Header header;
+  PADDING64
   void* newer;  // cheat! mutable field pointing at newer stuff
   void* replay;
   void* older;
