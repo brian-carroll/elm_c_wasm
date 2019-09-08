@@ -2,6 +2,7 @@
 
 char* test_replay_finished();
 char* test_replay_unfinished_saturated();
+char* test_replay_unfinished_curried();
 
 #ifdef TARGET_64BIT
 #define ZERO_PADDING .padding = 0,
@@ -151,5 +152,6 @@ char* replay_scenario_tests() {
   }
   mu_run_test(test_replay_finished);
   mu_run_test(test_replay_unfinished_saturated);
+  mu_run_test(test_replay_unfinished_curried);
   return NULL;
 }

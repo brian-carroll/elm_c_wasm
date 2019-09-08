@@ -14,6 +14,7 @@
 
 char* replay_scenario_tests();
 const Closure mock_func;
+void* eval_mock_func(void**);
 char* assert_heap_values(const char* description, const void* values[]);
 extern GcState gc_state;
 extern Tag mock_func_ops[10];
