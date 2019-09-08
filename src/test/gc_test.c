@@ -677,7 +677,8 @@ char* gc_replay_test() {
     print_value(result_replay);
   }
 
-  i32 answers[29] = {0,
+  i32 answers[29] = {
+      0,
       1,
       1,
       2,
@@ -705,7 +706,8 @@ char* gc_replay_test() {
       75025,
       121393,
       196418,
-      317811};
+      317811,
+  };
   i32 answer = answers[literal_n.value];
 
   bool pass = result_replay->elm_int.value == answer;

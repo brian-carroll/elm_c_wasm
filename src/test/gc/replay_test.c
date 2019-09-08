@@ -17,28 +17,40 @@
 
 extern GcState gc_state;
 
-Tag mock_func_tags[10];
-i32 mock_func_count;
+Tag mock_func_ops[10];  // list of operations for the mock function, encoded as tags
+char mock_func_err[1024];
 
 const u32 INT_OFFSET = 256000;
 
 void* eval_mock_func(void* args[2]) {
   void* last_alloc = NULL;
-  for (mock_func_count = 0;; mock_func_count++) {
-    Tag current_tag = mock_func_tags[mock_func_count];
-    switch (current_tag) {
+  for (i32 i = 0;; i++) {
+    switch (mock_func_ops[i]) {
       case Tag_Int:
-        last_alloc = NEW_ELM_INT(INT_OFFSET + mock_func_count);
-        // printf("allocated at %p, count=%d\n", last_alloc, mock_func_count);
+        last_alloc = NEW_ELM_INT(INT_OFFSET + i);
+        if (gc_state.replay_ptr) {
+          Tag replayed_tag = ((Header*)last_alloc)->tag;
+          if (replayed_tag != Tag_Int) {
+            print_heap();
+            print_state();
+            sprintf(mock_func_err,
+                "%p: Replay returned tag %x instead of %x",
+                last_alloc,
+                replayed_tag,
+                Tag_Int);
+            return mock_func_err;
+          }
+        }
+        // printf("allocated at %p, count=%d\n", last_alloc, i);
         break;
       case Tag_GcException:
-        // printf("throwing exception, count=%d\n", mock_func_count);
+        // printf("throwing exception, count=%d\n", i);
         return pGcFull;
       case Tag_GcStackPop:
-        // printf("returning pointer %p, count=%d\n", last_alloc, mock_func_count);
+        // printf("returning pointer %p, count=%d\n", last_alloc, i);
         return last_alloc;
       default:
-        fprintf(stderr, "Unhandled tag in eval_mock_func %x\n", current_tag);
+        fprintf(stderr, "Unhandled tag in eval_mock_func %x\n", mock_func_ops[i]);
     }
   }
 }
@@ -48,13 +60,6 @@ const Closure mock_func = {
     .evaluator = &eval_mock_func,
     .max_values = 2,
 };
-
-int next_value_matches(size_t** p, const void* v) {
-  Header* h = (Header*)v;
-  bool areEqual = memcmp(*p, v, h->size * SIZE_UNIT) == 0;
-  *p += h->size;
-  return areEqual;
-}
 
 char assert_heap_message[1024];
 
@@ -92,14 +97,11 @@ char* assert_heap_values(const char* description, const void* values[]) {
         bad_addr = heap_word;
         if (verbose) {
           printf("\n");
-          printf("Mismatch at word %zd (tag %x with %zu children)\n",
-              heap_word - heap_value,
+          printf("Mismatch at %p (tag %x with %zu children)\n",
+              heap_word,
               v->header.tag,
               children);
           print_value(v);
-          Header myheader = HEADER_GC_STACK_POP;
-          print_value((ElmValue*)&myheader);
-          printf("\n");
         }
         break;
       }
@@ -144,27 +146,33 @@ char* assert_heap_values(const char* description, const void* values[]) {
   }
 }
 
-char* test_gc_replay_finished() {
+/*******************************************************************************/
+
+/*******************************************************************************/
+
+char* test_replay_unfinished_saturated() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## test_gc_unfinished_saturated\n"
+        "\n");
+  }
+
   // SETUP
   gc_test_reset();
-  memcpy(mock_func_tags,
+  memcpy(mock_func_ops,
       (Tag[]){
           Tag_Int,
           Tag_Int,
-          Tag_Int,
-          Tag_GcStackPop,
+          Tag_GcException,
       },
       sizeof(Tag[4]));
 
   // RUN
   void* result1 = Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
-  ElmInt expected_result = {
-      .header = HEADER_INT,
-      .value = 3,
-  };
-  mu_assert("Return value",
-      memcmp(result1, &expected_result, expected_result.header.size) == 0);
+  mu_assert("Throws exception", result1 == pGcFull);
 
+  // HEAP BEFORE GC
   const void* heap_before_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
@@ -181,19 +189,8 @@ char* test_gc_replay_finished() {
           .header = HEADER_INT,
           .value = INT_OFFSET + 1,
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = INT_OFFSET + 2,
-      },
-      &(GcStackMap){
-          .header = HEADER_GC_STACK_POP,
-          .older = (void*)(-(3 * sizeof(ElmInt) + sizeof(GcStackMap))),
-          .replay = (void*)(-sizeof(ElmInt)),
-      },
       NULL,
   };
-
-  // HEAP BEFORE GC
   char* heap_err_before_gc =
       assert_heap_values("Replay finished call, heap before GC", heap_before_spec);
   if (heap_err_before_gc) return heap_err_before_gc;
@@ -201,48 +198,53 @@ char* test_gc_replay_finished() {
   // GC + REPLAY
   GC_collect_full();
   GC_start_replay();
-  void* result2 = Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
-  mu_assert("Replay return value",
-      memcmp(result2, &expected_result, expected_result.header.size) == 0);
+  Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
 
   // HEAP AFTER GC
   const void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
-          .newer = (void*)(sizeof(GcStackMap)),
+          .newer = (void*)sizeof(GcStackMap),
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
           .older = (void*)(-sizeof(GcStackMap)),
-          .newer = (void*)(sizeof(GcStackMap) + sizeof(ElmInt)),
+          .newer = (void*)(sizeof(GcStackMap) + 2 * sizeof(ElmInt)),
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = INT_OFFSET + 2,
+          .value = INT_OFFSET,
       },
-      &(GcStackMap){
-          .header = HEADER_GC_STACK_POP,
-          .older = (void*)(-sizeof(GcStackMap) - sizeof(ElmInt)),
-          .replay = (void*)(-sizeof(ElmInt)),
-          .newer = (void*)(sizeof(GcStackMap)),
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = INT_OFFSET + 1,
       },
       NULL,
   };
-  char* heap_err_after_gc =
+
+  char* heap_err_after =
       assert_heap_values("Replay finished call, heap after GC", heap_after_spec);
-  if (heap_err_after_gc) return heap_err_after_gc;
+  if (heap_err_after) return heap_err_after;
 
   mu_assert("GC State replay_ptr", gc_state.replay_ptr == NULL);
-  mu_assert("GC State stack_depth", gc_state.stack_depth == 0);
+  mu_assert("GC State stack_depth", gc_state.stack_depth == 1);
   mu_assert("GC State stackmap",
-      (void*)gc_state.stack_map - (void*)gc_state.heap.start ==
-          2 * sizeof(GcStackMap) + sizeof(ElmInt));
+      (void*)gc_state.stack_map - (void*)gc_state.heap.start == sizeof(GcStackMap));
 
   return NULL;
 }
 
 char* replay_scenario_tests() {
-  mu_run_test(test_gc_replay_finished);
-  // mu_run_test(test_gc_replay_finished_original);
+  if (verbose) {
+    printf(
+        "\n"
+        "##############################################################################\n"
+        "\n"
+        "replay_scenario_tests\n"
+        "---------------------\n"
+        "\n");
+  }
+  mu_run_test(test_replay_finished);
+  mu_run_test(test_replay_unfinished_saturated);
   return NULL;
 }
