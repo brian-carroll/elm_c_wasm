@@ -180,7 +180,9 @@ void* GC_malloc(size_t bytes) {
       log_error(
           "GC_malloc: replay error. Requested size %zd doesn't match cached size %d "
           "at %p\n",
-          words, replay_words, replay);
+          words,
+          replay_words,
+          replay);
     }
 #endif
 
@@ -366,6 +368,10 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
   size_t n_args = (size_t)c_orig->max_values;
   size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void*);
 
+  // Pointer to new space allocated by tce_eval on every iteration
+  // to place tailcall and closure in case of exception
+  void* gc_tce_data;
+
   // Make a local copy of the closure and mutate the args during iteration
   // Ensure it becomes garbage before exiting this function
   Closure* c_mutable;
@@ -374,21 +380,13 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
     GcStackMap* tailcall_old = state->stack_map;
     push = tailcall_old->older;
     c_mutable = tailcall_old->replay;
+    gc_tce_data = c_mutable;
   } else {
     push = state->stack_map;  // First run. No tailcall has occurred yet, just a Push.
-    c_mutable = CAN_THROW(GC_malloc(closure_bytes));
-    *c_mutable = (Closure){
-        .header = HEADER_CLOSURE(n_args),
-        .n_values = n_args,
-        .max_values = n_args,
-        .evaluator = c_orig->evaluator,
-    };
+    GC_tce_iteration(n_args, &gc_tce_data);
+    c_mutable = gc_tce_data;
     GC_memcpy(c_mutable->values, args, n_args * sizeof(void*));
   }
-
-  // Pointer to new space allocated by tce_eval on every iteration
-  // to place tailcall and closure in case of exception
-  void* gc_tce_data;
 
   // Run the tail-call-eliminated evaluator
   void* result = (*tce_eval)(c_mutable->values, &gc_tce_data);

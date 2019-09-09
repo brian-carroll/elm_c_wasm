@@ -98,7 +98,7 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 # Binary & Wasm
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) -Wno-discarded-qualifiers $(SOURCES) -o $@ -lm
+	$(CC) -Wall -O0 -ggdb -Wno-discarded-qualifiers $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
 	emcc $(CFLAGS) -Wno-incompatible-pointer-types-discards-qualifiers $(SOURCES) -o $@
