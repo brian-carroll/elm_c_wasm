@@ -40,6 +40,8 @@ char* test_replay_curried() {
   void* result1 = Utils_apply(curried, 1, (void* []){NULL});
   mu_assert("Throws exception", result1 == pGcFull);
 
+  void* h = gc_state.heap.start;
+
   // HEAP BEFORE GC
   const void* heap_before_spec[] = {
       &(GcStackMap){
@@ -49,8 +51,7 @@ char* test_replay_curried() {
       &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older =
-              (void*)(-sizeof(GcStackMap) - (2 * sizeof(Closure)) - (3 * sizeof(void*))),
+          .older = h,
       },
       &(ElmInt){
           .header = HEADER_INT,
@@ -75,16 +76,15 @@ char* test_replay_curried() {
   const void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
-          .newer =
-              (void*)(sizeof(GcStackMap) + (2 * sizeof(Closure)) + (3 * sizeof(void*))),
+          .newer = h + sizeof(GcStackMap) + 2 * sizeof(Closure) + 3 * sizeof(void*),
       },
       &partial_spec,
       &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older =
-              (void*)(-sizeof(GcStackMap) - (2 * sizeof(Closure)) - (3 * sizeof(void*))),
-          .newer = (void*)(sizeof(GcStackMap) + 2 * sizeof(ElmInt)),
+          .older = h,
+          .newer = h + 2 * sizeof(GcStackMap) + 2 * sizeof(Closure) + 3 * sizeof(void*) +
+                   2 * sizeof(ElmInt),
       },
       &(ElmInt){
           .header = HEADER_INT,

@@ -143,8 +143,7 @@ char* replay_scenario_tests() {
   if (verbose) {
     printf(
         "\n"
-        "##############################################################################"
-        "\n"
+        "##############################################################################\n"
         "\n"
         "replay_scenario_tests\n"
         "---------------------\n"
@@ -152,7 +151,7 @@ char* replay_scenario_tests() {
   }
   mu_run_test(test_replay_finished);
   mu_run_test(test_replay_saturated);
-  // mu_run_test(test_replay_curried); // FAILS!
+  // mu_run_test(test_replay_curried);  // fails due to real bug
   mu_run_test(test_replay_tce_saturated_iter1);
   mu_run_test(test_replay_tce_saturated_iter2);
   return NULL;
