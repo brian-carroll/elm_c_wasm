@@ -1,10 +1,10 @@
 #include "./replay_test.h"
 
 char* test_replay_finished();
-char* test_replay_unfinished_saturated();
-char* test_replay_unfinished_curried();
-char* test_replay_unfinished_tce_sat_iter1();
-char* test_replay_unfinished_tce_sat_iter2();
+char* test_replay_saturated();
+char* test_replay_curried();
+char* test_replay_tce_saturated_iter1();
+char* test_replay_tce_saturated_iter2();
 
 Tag mock_func_ops[10];  // list of operations for the mock function, encoded as tags
 char mock_func_err[1024];
@@ -151,9 +151,9 @@ char* replay_scenario_tests() {
         "\n");
   }
   mu_run_test(test_replay_finished);
-  mu_run_test(test_replay_unfinished_saturated);
-  // mu_run_test(test_replay_unfinished_curried); // FAILS!
-  mu_run_test(test_replay_unfinished_tce_sat_iter1);
-  mu_run_test(test_replay_unfinished_tce_sat_iter2);
+  mu_run_test(test_replay_saturated);
+  // mu_run_test(test_replay_curried); // FAILS!
+  mu_run_test(test_replay_tce_saturated_iter1);
+  mu_run_test(test_replay_tce_saturated_iter2);
   return NULL;
 }

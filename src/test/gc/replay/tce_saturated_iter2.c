@@ -5,20 +5,29 @@ static const ElmInt zero = {
     .value = 0,
 };
 
-static const Closure full_spec = {
+static Closure closure_spec_iter1 = {
     .header = HEADER_CLOSURE(2),
     .max_values = 2,
     .n_values = 2,
     .evaluator = &eval_mock_func_tail,
-    .values[0] = &zero,
+    .values[0] = NULL,
     .values[1] = NULL,
 };
 
-char* test_replay_unfinished_tce_sat_iter1() {
+static Closure closure_spec_iter2 = {
+    .header = HEADER_CLOSURE(2),
+    .max_values = 2,
+    .n_values = 2,
+    .evaluator = &eval_mock_func_tail,
+    .values[0] = NULL,
+    .values[1] = NULL,
+};
+
+char* test_replay_tce_saturated_iter2() {
   if (verbose) {
     printf(
         "\n"
-        "## test_replay_unfinished_tce_sat_iter1\n"
+        "## test_replay_tce_saturated_iter2\n"
         "\n");
   }
 
@@ -28,15 +37,24 @@ char* test_replay_unfinished_tce_sat_iter1() {
       (Tag[]){
           Tag_Int,
           Tag_Int,
+          Tag_Int,
+          Tag_GcStackTailCall,
+          Tag_Int,
+          Tag_Int,
           Tag_GcException,
       },
-      sizeof(Tag[4]));
+      sizeof(Tag[7]));
 
   // RUN
   void* result1 = Utils_apply(&mock_func_tail, 2, (void* []){&zero, NULL});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
+
+  closure_spec_iter2.values[0] = h + 3 * sizeof(GcStackMap) + sizeof(Closure) +
+                                 2 * sizeof(void*) + 2 * sizeof(ElmInt);
+  closure_spec_iter1.values[0] =  // implementation mutates and copies
+      closure_spec_iter2.values[0];
 
   // HEAP BEFORE GC
   const void* heap_before_spec[] = {
@@ -47,10 +65,10 @@ char* test_replay_unfinished_tce_sat_iter1() {
           .header = HEADER_GC_STACK_PUSH,
           .older = h,
       },
-      &full_spec,
+      &closure_spec_iter1,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
-          .older = h + sizeof(GcStackMap),
+          .older = NULL,  // never gets populated
           .replay = h + 2 * sizeof(GcStackMap),
       },
       &(ElmInt){
@@ -60,6 +78,25 @@ char* test_replay_unfinished_tce_sat_iter1() {
       &(ElmInt){
           .header = HEADER_INT,
           .value = 1,
+      },
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = 4,
+      },
+      &closure_spec_iter2,
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_TC,
+          .older = h + sizeof(GcStackMap),
+          .replay = h + 3 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*) +
+                    3 * sizeof(ElmInt),
+      },
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = 4,
+      },
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = 5,
       },
       NULL,
   };
@@ -71,6 +108,9 @@ char* test_replay_unfinished_tce_sat_iter1() {
   GC_start_replay();
   Utils_apply(&mock_func_tail, 2, (void* []){&zero, NULL});
 
+  // pointer gets moved
+  closure_spec_iter2.values[0] = h + 2 * sizeof(GcStackMap);
+
   // HEAP AFTER GC
   const void* heap_after_spec[] = {
       &(GcStackMap){
@@ -80,23 +120,28 @@ char* test_replay_unfinished_tce_sat_iter1() {
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
           .older = h,
-          .newer = h + 2 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*),
+          .newer = h + 2 * sizeof(GcStackMap) + sizeof(ElmInt) + sizeof(Closure) +
+                   2 * sizeof(void*),
       },
-      &full_spec,
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = 4,
+      },
+      &closure_spec_iter2,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
           .older = h + sizeof(GcStackMap),
-          .replay = h + 2 * sizeof(GcStackMap),
-          .newer = h + 3 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*) +
-                   2 * sizeof(ElmInt),
+          .replay = h + 2 * sizeof(GcStackMap) + sizeof(ElmInt),
+          .newer = h + 3 * sizeof(GcStackMap) + 3 * sizeof(ElmInt) + sizeof(Closure) +
+                   2 * sizeof(void*),
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = 0,
+          .value = 4,
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = 1,
+          .value = 5,
       },
       NULL,
   };
@@ -108,7 +153,7 @@ char* test_replay_unfinished_tce_sat_iter1() {
   mu_assert("GC State stack_depth", gc_state.stack_depth == 1);
   mu_assert("GC State stackmap",
       (void*)gc_state.stack_map - (void*)gc_state.heap.start ==
-          2 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*));
+          2 * sizeof(GcStackMap) + sizeof(ElmInt) + sizeof(Closure) + 2 * sizeof(void*));
 
   return NULL;
 }
