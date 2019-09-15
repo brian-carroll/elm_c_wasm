@@ -4,6 +4,7 @@ char* test_replay_finished();
 char* test_replay_unfinished_saturated();
 char* test_replay_unfinished_curried();
 char* test_replay_unfinished_tce_sat_iter1();
+char* test_replay_unfinished_tce_sat_iter2();
 
 Tag mock_func_ops[10];  // list of operations for the mock function, encoded as tags
 char mock_func_err[1024];
@@ -140,14 +141,23 @@ char* assert_heap_values(const char* description, const void* values[]) {
 
     for (; p < v_end; heap_word++, p++) {
       size_t heap_child_addr = *heap_word;
-      if (heap_child_addr == 0 && *p == 0) {
+      if (*p == 0) {  // NULL pointer in spec means "don't care"
+        // printf("%p: skipping NULL spec\n", heap_word);
         continue;
-      } else if (p < gc_state.heap.start) {
+      } else if (heap_word < gc_state.heap.start) {
+        // printf("%p: constant, below heap\n", heap_word);
         expected_value = *p;
       } else {
         size_t relative_offset = *p;
         size_t heap_parent_addr = (size_t)heap_value;
         expected_value = heap_parent_addr + relative_offset;
+        // printf(
+        //     "%p: heap relative pointer. heap_parent_addr=%zx relative_offset=%zx "
+        //     "expected_value=%zx\n",
+        //     heap_word,
+        //     heap_parent_addr,
+        //     relative_offset,
+        //     expected_value);
       }
       if (heap_child_addr != expected_value) {
         if (verbose)
@@ -192,7 +202,8 @@ char* replay_scenario_tests() {
   }
   mu_run_test(test_replay_finished);
   mu_run_test(test_replay_unfinished_saturated);
-  // mu_run_test(test_replay_unfinished_curried);
+  // mu_run_test(test_replay_unfinished_curried); // FAILS!
   mu_run_test(test_replay_unfinished_tce_sat_iter1);
+  mu_run_test(test_replay_unfinished_tce_sat_iter2);
   return NULL;
 }

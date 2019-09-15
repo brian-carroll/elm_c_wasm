@@ -385,6 +385,7 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
     push = state->stack_map;  // First run. No tailcall has occurred yet, just a Push.
     GC_tce_iteration(n_args, &gc_tce_data);
     c_mutable = gc_tce_data;
+    c_mutable->evaluator = c_orig->evaluator;
     GC_memcpy(c_mutable->values, args, n_args * sizeof(void*));
   }
 
@@ -400,8 +401,7 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
   // This space was already _allocated_ but not _written_
   // by GC_tce_iteration, called from tce_eval
   Closure* c_replay = (Closure*)gc_tce_data;
-  c_replay->evaluator = c_orig->evaluator;
-  // GC_memcpy(c_replay, c_mutable, closure_bytes);
+  GC_memcpy(c_replay, c_mutable, closure_bytes);
 
   GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + closure_bytes);
   // tailcall->header = HEADER_GC_STACK_TC;
