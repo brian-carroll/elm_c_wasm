@@ -1,5 +1,8 @@
 ## Finished
 
+Ran out of memory after returning from this call.
+Expect intermediate values to be GC'd but return value to be kept.
+
 | eval ops | before GC   | after GC             |
 | -------- | ----------- | -------------------- |
 |          | empty       | empty                |
@@ -13,6 +16,10 @@
 
 ## Unfinished_Sat_Normal
 
+Ran out of memory during a call that applied all arguments at once.
+Function is "normal", not tail-call-eliminated.
+Expect everything to be kept alive and replayed.
+
 | eval ops  | before GC | after GC             |
 | --------- | --------- | -------------------- |
 |           | empty     | empty                |
@@ -24,6 +31,10 @@
 |           | replay    | check stackmap push  |
 
 ## Unfinished_Curried_Normal
+
+Ran out of memory during a call that applied the final argument to a curried closure
+Function is "normal", not tail-call-eliminated.
+Expect everything to be kept alive and replayed.
 
 | eval ops  | before GC            | after GC             |
 | --------- | -------------------- | -------------------- |
@@ -39,6 +50,10 @@
 
 ## Unfinished_Sat_Tail 1st iteration
 
+Ran out of memory while executing a tail-call-eliminated function,
+before the first tail call actually happens.
+Expect everything to be kept alive and replayed.
+
 | eval ops  | before GC    | after GC             |
 | --------- | ------------ | -------------------- |
 |           | empty        | empty                |
@@ -52,6 +67,11 @@
 |           | replay       | check stackmap push  |
 
 ## Unfinished_Sat_Tail 2nd iteration
+
+Ran out of memory while executing a tail-call-eliminated function,
+after a tail call.
+Expect first iteration values to be GC'd
+Expect second iteration to be kept alive and replayed.
 
 | eval ops  | before GC     | after GC                |
 | --------- | ------------- | ----------------------- |
@@ -72,6 +92,11 @@
 
 ## Unfinished_Curried_Tail 1st iteration
 
+Ran out of memory while executing a tail-call-eliminated function,
+before the first tail call actually happens.
+And the call was applying the final argument to a curried closure
+Expect everything to be kept alive and replayed.
+
 | eval ops  | before GC      | after GC             |
 | --------- | -------------- | -------------------- |
 |           | empty          | empty                |
@@ -85,6 +110,12 @@
 |           | replay         | check stackmap push  |
 
 ## Unfinished_Curried_Tail 2nd iteration
+
+Ran out of memory while executing a tail-call-eliminated function,
+after a tail call.
+And the call was applying the final argument to a curried closure
+Expect first iteration values to be GC'd
+Expect second iteration to be kept alive and replayed.
 
 | eval ops  | before GC        | after GC                |
 | --------- | ---------------- | ----------------------- |
