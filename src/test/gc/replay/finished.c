@@ -33,6 +33,8 @@ char* test_replay_finished() {
   }
   mu_assert("Return value", return_val_ok);
 
+  void* h = gc_state.heap.start;
+
   // HEAP BEFORE GC
   const void* heap_before_spec[] = {
       &(GcStackMap){
@@ -40,7 +42,7 @@ char* test_replay_finished() {
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older = (void*)(-sizeof(GcStackMap)),
+          .older = h,
       },
       &(ElmInt){
           .header = HEADER_INT,
@@ -56,8 +58,8 @@ char* test_replay_finished() {
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_POP,
-          .older = (void*)(-(3 * sizeof(ElmInt) + sizeof(GcStackMap))),
-          .replay = (void*)(-sizeof(ElmInt)),
+          .older = h + sizeof(GcStackMap),
+          .replay = h + 2 * sizeof(GcStackMap) + 2 * sizeof(ElmInt),
       },
       NULL,
   };
@@ -75,12 +77,12 @@ char* test_replay_finished() {
   const void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
-          .newer = (void*)(sizeof(GcStackMap)),
+          .newer = h + sizeof(GcStackMap),
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older = (void*)(-sizeof(GcStackMap)),
-          .newer = (void*)(sizeof(GcStackMap) + sizeof(ElmInt)),
+          .older = h,
+          .newer = h + 2 * sizeof(GcStackMap) + sizeof(ElmInt),
       },
       &(ElmInt){
           .header = HEADER_INT,
@@ -88,9 +90,9 @@ char* test_replay_finished() {
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_POP,
-          .older = (void*)(-sizeof(GcStackMap) - sizeof(ElmInt)),
-          .replay = (void*)(-sizeof(ElmInt)),
-          .newer = (void*)(sizeof(GcStackMap)),
+          .older = h + sizeof(GcStackMap),
+          .replay = h + 2 * sizeof(GcStackMap),
+          .newer = h + 3 * sizeof(GcStackMap) + sizeof(ElmInt),
       },
       NULL,
   };

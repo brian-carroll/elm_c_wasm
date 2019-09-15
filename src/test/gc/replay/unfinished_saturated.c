@@ -22,6 +22,8 @@ char* test_replay_unfinished_saturated() {
   void* result1 = Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
   mu_assert("Throws exception", result1 == pGcFull);
 
+  void* h = gc_state.heap.start;
+
   // HEAP BEFORE GC
   const void* heap_before_spec[] = {
       &(GcStackMap){
@@ -29,7 +31,7 @@ char* test_replay_unfinished_saturated() {
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older = (void*)(-sizeof(GcStackMap)),
+          .older = h,
       },
       &(ElmInt){
           .header = HEADER_INT,
@@ -53,12 +55,12 @@ char* test_replay_unfinished_saturated() {
   const void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
-          .newer = (void*)sizeof(GcStackMap),
+          .newer = h + sizeof(GcStackMap),
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older = (void*)(-sizeof(GcStackMap)),
-          .newer = (void*)(sizeof(GcStackMap) + 2 * sizeof(ElmInt)),
+          .older = h,
+          .newer = h + 2 * sizeof(GcStackMap) + 2 * sizeof(ElmInt),
       },
       &(ElmInt){
           .header = HEADER_INT,

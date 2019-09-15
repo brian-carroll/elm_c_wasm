@@ -36,6 +36,8 @@ char* test_replay_unfinished_tce_sat_iter1() {
   void* result1 = Utils_apply(&mock_func_tail, 2, (void* []){&zero, NULL});
   mu_assert("Throws exception", result1 == pGcFull);
 
+  void* h = gc_state.heap.start;
+
   // HEAP BEFORE GC
   const void* heap_before_spec[] = {
       &(GcStackMap){
@@ -43,13 +45,13 @@ char* test_replay_unfinished_tce_sat_iter1() {
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older = (void*)(-sizeof(GcStackMap)),
+          .older = h,
       },
       &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
-          .older = (void*)(-(sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*))),
-          .replay = (void*)(-(sizeof(Closure) + 2 * sizeof(void*))),
+          .older = h + sizeof(GcStackMap),
+          .replay = h + 2 * sizeof(GcStackMap),
       },
       &(ElmInt){
           .header = HEADER_INT,
@@ -73,19 +75,20 @@ char* test_replay_unfinished_tce_sat_iter1() {
   const void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
-          .newer = (void*)(sizeof(GcStackMap)),
+          .newer = h + sizeof(GcStackMap),
       },
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
-          .older = (void*)(-sizeof(GcStackMap)),
-          .newer = (void*)(sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*)),
+          .older = h,
+          .newer = h + 2 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*),
       },
       &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
-          .older = (void*)(-(sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*))),
-          .replay = (void*)(-(sizeof(Closure) + 2 * sizeof(void*))),
-          .newer = (void*)(sizeof(GcStackMap) + 2 * sizeof(ElmInt)),
+          .older = h + sizeof(GcStackMap),
+          .replay = h + 2 * sizeof(GcStackMap),
+          .newer = h + 3 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*) +
+                   2 * sizeof(ElmInt),
       },
       &(ElmInt){
           .header = HEADER_INT,

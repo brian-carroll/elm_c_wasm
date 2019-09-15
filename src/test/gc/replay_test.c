@@ -104,72 +104,22 @@ char* assert_heap_values(const char* description, const void* values[]) {
     ElmValue* v = (ElmValue*)values[i];
     if (v == NULL) break;
 
-    size_t children;
-    switch (v->header.tag) {
-      case Tag_GcStackEmpty:
-      case Tag_GcStackPush:
-      case Tag_GcStackPop:
-      case Tag_GcStackTailCall:
-        children = 3;
-        break;
-      default:
-        children = child_count(v);
-        break;
-    }
-
     size_t* p = (size_t*)values[i];
     size_t* v_end = p + v->header.size;
-    size_t* first_child = v_end - children;
     size_t* heap_word = heap_value;
 
-    for (; p < first_child; heap_word++, p++) {
+    for (; p < v_end; heap_word++, p++) {
       expected_value = *p;
       if (*heap_word != expected_value) {
         bad_addr = heap_word;
         if (verbose) {
-          printf("\n");
-          printf("Mismatch at %p (tag %x with %zu children)\n",
-              heap_word,
-              v->header.tag,
-              children);
+          printf("\nMismatch at %p\n", heap_word);
           print_value(v);
         }
         break;
       }
     }
     if (bad_addr) break;
-
-    for (; p < v_end; heap_word++, p++) {
-      size_t heap_child_addr = *heap_word;
-      if (*p == 0) {  // NULL pointer in spec means "don't care"
-        // printf("%p: skipping NULL spec\n", heap_word);
-        continue;
-      } else if (heap_word < gc_state.heap.start) {
-        // printf("%p: constant, below heap\n", heap_word);
-        expected_value = *p;
-      } else {
-        size_t relative_offset = *p;
-        size_t heap_parent_addr = (size_t)heap_value;
-        expected_value = heap_parent_addr + relative_offset;
-        // printf(
-        //     "%p: heap relative pointer. heap_parent_addr=%zx relative_offset=%zx "
-        //     "expected_value=%zx\n",
-        //     heap_word,
-        //     heap_parent_addr,
-        //     relative_offset,
-        //     expected_value);
-      }
-      if (heap_child_addr != expected_value) {
-        if (verbose)
-          printf("Mismatch in child pointer (tag %x with %zu children)\n",
-              v->header.tag,
-              children);
-        bad_addr = heap_word;
-        break;
-      }
-    }
-    if (bad_addr) break;
-
     heap_value = heap_word;
     i++;
   }
