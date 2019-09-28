@@ -123,6 +123,7 @@ void print_heap() {
             (size_t)0,
             p - next_value);
         next_value = p;
+        if (p >= state->next_alloc) break;
       }
       ElmValue* v = (ElmValue*)p;
       print_value(v);
@@ -164,8 +165,11 @@ void print_bitmap() {
 void print_state() {
   GcState* state = &gc_state;
 
+  size_t heap_bytes = (void*)(state->heap.end) - (void*)(state->heap.start);
+  size_t heap_kb = heap_bytes / 1024;
+
   printf("start = %p\n", state->heap.start);
-  printf("end = %p (%zd bytes)\n", state->heap.end, state->heap.end - state->heap.start);
+  printf("end = %p (%zd bytes / %zd kB)\n", state->heap.end, heap_bytes, heap_kb);
   printf("offsets = %p\n", state->heap.offsets);
   printf("bitmap = %p\n", state->heap.bitmap);
   printf("system_end = %p\n", state->heap.system_end);

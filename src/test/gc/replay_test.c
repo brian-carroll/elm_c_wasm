@@ -7,6 +7,7 @@ char* test_replay_tce_saturated_iter1();
 char* test_replay_tce_saturated_iter2();
 char* test_replay_tce_curried_iter1();
 char* test_replay_tce_curried_iter2();
+char* test_replay_apply_alloc_failed();
 
 Tag mock_func_ops[10];  // list of operations for the mock function, encoded as tags
 char mock_func_err[1024];
@@ -144,11 +145,12 @@ char* assert_heap_values(const char* description, const void* values[]) {
 static char* run() {
   mu_run_test(test_replay_finished);
   mu_run_test(test_replay_saturated);
-  // mu_run_test(test_replay_curried);  // fails due to real bug
+  // mu_run_test(test_replay_curried);  // TODO: fix this, there's a real bug!
   mu_run_test(test_replay_tce_saturated_iter1);
   mu_run_test(test_replay_tce_saturated_iter2);
   mu_run_test(test_replay_tce_curried_iter1);
   mu_run_test(test_replay_tce_curried_iter2);
+  mu_run_test(test_replay_apply_alloc_failed);
   return NULL;
 }
 

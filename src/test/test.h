@@ -11,20 +11,20 @@
     }                                \
   } while (0)
 
-#define mu_expect_equal(message, expr1, expr2)         \
-  do {                                                 \
-    assertions_made++;                                 \
-    if (expr1 != expr2) {                              \
-      if (verbose) {                                   \
-        printf("FAIL: %s\n  LHS : %zx\n  RHS : %zx\n", \
-            message,                                   \
-            (size_t)(expr1),                           \
-            (size_t)(expr2));                          \
-      }                                                \
-      return message;                                  \
-    } else if (verbose) {                              \
-      printf("PASS: %s\n", message);                   \
-    }                                                  \
+#define mu_expect_equal(message, expr1, expr2)             \
+  do {                                                     \
+    assertions_made++;                                     \
+    if (expr1 != expr2) {                                  \
+      if (verbose) {                                       \
+        printf("FAIL: %s\n  LHS : 0x%zx\n  RHS : 0x%zx\n", \
+            message,                                       \
+            (size_t)(expr1),                               \
+            (size_t)(expr2));                              \
+      }                                                    \
+      return message;                                      \
+    } else if (verbose) {                                  \
+      printf("PASS: %s\n", message);                       \
+    }                                                      \
   } while (0)
 
 #define mu_run_test(test)                \

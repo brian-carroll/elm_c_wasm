@@ -133,3 +133,34 @@ Expect second iteration to be kept alive and replayed.
 | exception |
 |           | GC               |
 |           | replay           |
+
+## Alloc failed
+
+Includes anything in the runtime failing to allocate
+
+- normal calls
+  - Push (Utils_apply)
+  - Pop (Utils_apply)
+- partial application
+  - Closure (Utils_apply)
+- TCE
+  - Closure after Push (tce eval)
+  - TailCall 1st iter (tce eval)
+  - Closure 2nd iter (iter thing)
+  - TailCall 2nd iter (iter thing)
+
+if I wasn't checking the heap before replay,
+instead only checking that it recovers properly from the overflow,
+I could just reuse the same scenarios I already have,
+but with lots of different initial conditions
+Would get rid of separate test files for iter1 and iter2
+Would get rid of separate "finished" file
+
+modify the existing test to allocate the junk _in_ the mock function
+so that after GC I get the same heap I already have.
+may not work in all scenarios
+
+try putting an Empty after the garbage!
+then the current expected heap after GC should still be right
+
+But... meh... benchmark is working now
