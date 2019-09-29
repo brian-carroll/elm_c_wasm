@@ -1,3 +1,14 @@
+# publish something
+
+- demos
+  - benchmark
+    - lets me do very small contained functions in C, without the compiler stuff done yet
+    - not really expecting it to actually be fast so it might be a bit misleading
+    - Language boundary crossing is particularly expensive for micro benchmarks. Would be less if more of the program was in Wasm
+  - unit tests for Elm data structures
+  - unit tests for GC
+  - count up and down with update in C
+
 # debug logging
 
 - move it into a macro

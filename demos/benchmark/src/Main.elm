@@ -15,7 +15,7 @@ main =
 
 count : Int
 count =
-    10
+    100
 
 
 suite : Benchmark
@@ -23,11 +23,12 @@ suite =
     describe "" <|
         -- use append syntax for easier commenting-out
         []
+            ++ [ addJsVsWasm ]
             ++ [ addJsVsWasmUnboxed ]
-            -- ++ [ addJsVsWasm ]
-            -- ++ [ countJsVsWasm ]
-            -- ++ [ countTCE ]
-            -- ++ [ countBoxedVsUnboxed ]
+            ++ [ addJsVsWasmWithoutA2 ]
+            ++ [ countJsVsWasm ]
+            ++ [ countBoxedVsUnboxed ]
+            ++ [ countTCE ]
             ++ []
 
 
@@ -46,7 +47,7 @@ countJsVsWasm =
 
 countTCE : Benchmark
 countTCE =
-    Benchmark.compare "TCE overhead"
+    Benchmark.compare "Wasm tail call elimination (count)"
         "Tail call eliminated"
         (\_ -> wasmCount count)
         "Not eliminated"
@@ -80,11 +81,15 @@ jsCountBoxed (Box remaining) =
         jsCountBoxed (Box (remaining - 1))
 
 
+{-| Will be replaced with Wasm version via build-combine.sh & patch.js. Just need something to keep Elm compiler happy.
+-}
 wasmCount : Int -> ()
 wasmCount =
     jsCountUnboxed
 
 
+{-| Will be replaced with Wasm version via build-combine.sh & patch.js. Just need something to keep Elm compiler happy.
+-}
 wasmCountNoTCE : Int -> ()
 wasmCountNoTCE =
     jsCountUnboxed
@@ -94,6 +99,8 @@ wasmCountNoTCE =
 -- ADD
 
 
+{-| Compare Wasm add to JS add, but since Wasm Elm implementation uses "boxed" integers, do the same in JS
+-}
 addJsVsWasm : Benchmark
 addJsVsWasm =
     Benchmark.compare "Add boxed"
@@ -103,6 +110,17 @@ addJsVsWasm =
         (\_ -> jsAddBoxed (Box 123) (Box 456))
 
 
+{-| Will be replaced with Wasm version via patch.js. Just need something to keep Elm compiler happy.
+-}
+wasmAdd : Int -> Int -> Int
+wasmAdd =
+    jsAddUnboxed
+
+
+{-| Compare Wasm add to JS add, but for Wasm use plain C ints rather than my 'ElmInt' struct
+Not planning to actually implement Elm integers this way, as it complicates the whole runtime.
+But it's an interesting comparison to help understand where the bottlenecks are
+-}
 addJsVsWasmUnboxed : Benchmark
 addJsVsWasmUnboxed =
     Benchmark.compare "Add unboxed"
@@ -110,6 +128,34 @@ addJsVsWasmUnboxed =
         (\_ -> wasmAddUnboxed 123 456)
         "JS"
         (\_ -> jsAddUnboxed 123 456)
+
+
+{-| Will be replaced with Wasm version via build-combine.sh & patch.js. Just need something to keep Elm compiler happy.
+-}
+wasmAddUnboxed : Int -> Int -> Int
+wasmAddUnboxed =
+    jsAddUnboxed
+
+
+addJsVsWasmWithoutA2 : Benchmark
+addJsVsWasmWithoutA2 =
+    Benchmark.compare "Add unboxed without A2"
+        "Wasm"
+        (\_ -> wasmAddUnboxedNoA2 123 456)
+        "JS"
+        (\_ -> jsAddUnboxedNoA2 123 456)
+
+
+{-| Will be replaced with Wasm version, and have Elm's 'A2' helper removed from call, via build-combine.sh & patch.js
+-}
+wasmAddUnboxedNoA2 =
+    wasmAddUnboxed
+
+
+{-| Will have Elm's 'A2' helper removed from call via build-combine.sh
+-}
+jsAddUnboxedNoA2 =
+    jsAddUnboxed
 
 
 addBoxedVsUnboxed : Benchmark
@@ -129,13 +175,3 @@ jsAddUnboxed a b =
 jsAddBoxed : Box Int -> Box Int -> Box Int
 jsAddBoxed (Box a) (Box b) =
     Box (a + b)
-
-
-wasmAdd : Int -> Int -> Int
-wasmAdd =
-    jsAddUnboxed
-
-
-wasmAddUnboxed : Int -> Int -> Int
-wasmAddUnboxed =
-    jsAddUnboxed
