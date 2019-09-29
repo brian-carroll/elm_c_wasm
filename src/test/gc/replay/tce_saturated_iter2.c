@@ -10,8 +10,7 @@ static Closure closure_spec_iter1 = {
     .max_values = 2,
     .n_values = 2,
     .evaluator = &eval_mock_func_tail,
-    .values[0] = NULL,
-    .values[1] = NULL,
+    .values = {NULL, NULL},
 };
 
 static Closure closure_spec_iter2 = {
@@ -19,8 +18,7 @@ static Closure closure_spec_iter2 = {
     .max_values = 2,
     .n_values = 2,
     .evaluator = &eval_mock_func_tail,
-    .values[0] = NULL,
-    .values[1] = NULL,
+    .values = {NULL, NULL},
 };
 
 char* test_replay_tce_saturated_iter2() {

@@ -1,20 +1,23 @@
 #include "../replay_test.h"
 
-static const Closure partial_spec = {
+// static
+// const
+Closure partial_spec = {
     .header = HEADER_CLOSURE(1),
     .max_values = 2,
     .n_values = 1,
     .evaluator = &eval_mock_func,
-    .values[0] = NULL,
+    .values = {NULL},
 };
 
-static const Closure full_spec = {
+// static
+// const
+Closure full_spec = {
     .header = HEADER_CLOSURE(2),
     .max_values = 2,
     .n_values = 2,
     .evaluator = &eval_mock_func,
-    .values[0] = NULL,
-    .values[1] = NULL,
+    .values = {NULL, NULL},
 };
 
 char* test_replay_curried() {

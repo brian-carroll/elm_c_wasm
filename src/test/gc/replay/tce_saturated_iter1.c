@@ -10,8 +10,7 @@ static const Closure full_spec = {
     .max_values = 2,
     .n_values = 2,
     .evaluator = &eval_mock_func_tail,
-    .values[0] = &zero,
-    .values[1] = NULL,
+    .values = {&zero, NULL},
 };
 
 char* test_replay_tce_saturated_iter1() {
