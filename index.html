@@ -30,10 +30,57 @@
         <tbody>
           <tr>
             <td style="text-align: center">
+              <a href="benchmark/index.html">
+                Wasm & JS Benchmarks
+              </a>
+              <br />
+              <br />
+              (
+              <a
+                href="https://github.com/brian-carroll/elm_c_wasm/tree/master/demos/benchmark/src/Main.elm"
+              >
+                source code </a
+              >)
+            </td>
+            <td>
+              Micro-benchmarks of some Elm functions compiled to Wasm and JS.<br />
+              <b>Note:</b>
+              <i>
+                Wasm is not expected to be faster yet under these conditions!
+              </i>
+              (I worry that the existence of this demo might set the wrong
+              expectation!)
+              <ul>
+                <li>
+                  I haven't done any optimisation work yet and it won't come for
+                  free just by using Wasm. (Browser JITs are pretty darn good at
+                  optimising JS micro-benchmarks iterated thousands of times.)
+                </li>
+                <li>
+                  The JS/Wasm boundary crossing has a cost, and the JS engine
+                  doesn't seem to optimise across the boundary. This effect is
+                  exaggerated in the case of micro-benchmarks. It would be
+                  cheaper if the whole program was in Wasm but that's not
+                  feasible yet since I'm "compiling" to C by hand.
+                </li>
+                <li>
+                  However the benchmark format is handy for development because
+                  I can try out some small Wasm functions in a real Elm program.
+                  And iterating thousands of times has helped me to fix a lot of
+                  subtle bugs.
+                </li>
+              </ul>
+            </td>
+          </tr>
+          <!----------------------------------->
+
+          <tr>
+            <td style="text-align: center">
               <a
                 href="unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose"
-                >Kernel unit tests</a
               >
+                Kernel unit tests
+              </a>
               <br />
               <br />
               (
