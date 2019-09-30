@@ -4,6 +4,11 @@ import Benchmark exposing (..)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 
 
+{-| Wrapper type for JS values
+We can use this to make Elm-JS integers more similar to
+Elm-Wasm integers, by wrapping them in a data structure.
+This helps to understand where perf differences come from.
+-}
 type Box a
     = Box a
 
@@ -99,7 +104,8 @@ wasmCountNoTCE =
 -- ADD
 
 
-{-| Compare Wasm add to JS add, but since Wasm Elm implementation uses "boxed" integers, do the same in JS
+{-| Compare Wasm add to JS add
+Since Wasm Elm implementation uses "boxed" integers, do the same in JS
 -}
 addJsVsWasm : Benchmark
 addJsVsWasm =
@@ -110,16 +116,16 @@ addJsVsWasm =
         (\_ -> jsAddBoxed (Box 123) (Box 456))
 
 
-{-| Will be replaced with Wasm version via patch.js. Just need something to keep Elm compiler happy.
+{-| Will be replaced with Wasm version via build-combine.sh & patch.js. Just need something to keep Elm compiler happy.
 -}
 wasmAdd : Int -> Int -> Int
 wasmAdd =
     jsAddUnboxed
 
 
-{-| Compare Wasm add to JS add, but for Wasm use plain C ints rather than my 'ElmInt' struct
-Not planning to actually implement Elm integers this way, as it complicates the whole runtime.
-But it's an interesting comparison to help understand where the bottlenecks are
+{-| Compare Wasm add to JS add, but for Wasm use plain C ints rather than the 'ElmInt' struct
+This would not be workable in reality without huge changes to the Elm-Wasm runtime,
+but it's an interesting data point for analysis
 -}
 addJsVsWasmUnboxed : Benchmark
 addJsVsWasmUnboxed =
