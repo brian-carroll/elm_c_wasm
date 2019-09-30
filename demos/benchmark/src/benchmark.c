@@ -3,7 +3,7 @@
 #else
 #define EMSCRIPTEN_KEEPALIVE
 #endif
-#include <stdio.h>
+// #include <stdio.h>
 #include "../../../src/kernel/basics.h"
 #include "../../../src/kernel/gc-internals.h"
 #include "../../../src/kernel/gc.h"
@@ -50,18 +50,19 @@ const Closure count = {
     .max_values = 1,
 };
 
-int export_count_call_id = 0;
-int gc_id = 0;
+// int export_count_call_id = 0;
+// int gc_id = 0;
 
 int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
   ElmValue* result;
 
-  export_count_call_id++;
-  int gc_id_on_call = gc_id;
+  // export_count_call_id++;
+  // int gc_id_on_call = gc_id;
   // printf("export_count: call %d with remaining=%d\n", export_count_call_id, fromJS);
 
   if (GC_stack_empty() == pGcFull) {
-    printf("export_count: GC point 1, call %d, gc %d\n", export_count_call_id, ++gc_id);
+    // printf("export_count: GC point 1, call %d, gc %d\n", export_count_call_id,
+    // ++gc_id);
     GC_collect_full();
     GC_stack_empty();
   }
@@ -70,17 +71,19 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
     ElmInt* remaining = ctorElmInt(fromJS);
     args[0] = remaining;
     if (remaining->header.tag == Tag_GcException) {
-      printf("export_count: GC point 2, call=%d, gc=%d\n", export_count_call_id, ++gc_id);
+      // printf("export_count: GC point 2, call=%d, gc=%d\n", export_count_call_id,
+      // ++gc_id);
       GC_collect_full();
       GC_start_replay();
       continue;
     }
     result = Utils_apply(&count, 1, args);
     if (result->header.tag != Tag_GcException) break;
-    printf("export_count: GC point 3, call=%d, gc=%d\n", export_count_call_id, ++gc_id);
-    if (gc_id - gc_id_on_call > 10) {
-      log_error("Too many gc cycles\n");
-    }
+    // printf("export_count: GC point 3, call=%d, gc=%d\n", export_count_call_id,
+    // ++gc_id);
+    // if (gc_id - gc_id_on_call > 10) {
+    //   log_error("Too many gc cycles\n");
+    // }
     GC_collect_full();
     GC_start_replay();
   }
@@ -88,10 +91,10 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
 }
 
 const Closure count_no_tce;  // pre-declaration for circular dependency
-int level = 0;
+// int level = 0;
 
 void* eval_count_no_tce(void* args[]) {
-  level++;
+  // level++;
   ElmInt* remaining = args[0];
   // printf("eval_count_no_tce level %d, remaining=%d\n", level, remaining->value);
   if (A2(&Utils_eq, remaining, &literal_0) == &True) {
@@ -110,11 +113,11 @@ const Closure count_no_tce = {
     .max_values = 1,
 };
 
-int export_count_no_tce_call_id = 0;
+// int export_count_no_tce_call_id = 0;
 
 int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
-  level = 0;
-  export_count_no_tce_call_id++;
+  // level = 0;
+  // export_count_no_tce_call_id++;
   // printf("export_count_no_tce: call %d remaining=%d\n", export_count_no_tce_call_id,
   //        fromJS);
 
@@ -124,16 +127,17 @@ int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
   while (1) {
     ElmInt* remaining = ctorElmInt(fromJS);
     if (remaining->header.tag == Tag_GcException) {
-      printf("export_count_no_tce: GC point 1, call=%d, gc=%d\n",
-             export_count_no_tce_call_id, ++gc_id);
+      // printf("export_count_no_tce: GC point 1, call=%d, gc=%d\n",
+      //        export_count_no_tce_call_id, ++gc_id);
       GC_collect_full();
       GC_start_replay();
       continue;
     }
     result = Utils_apply(&count_no_tce, 1, (void* []){remaining});
     if (result->header.tag != Tag_GcException) break;
-    printf("export_count_no_tce: GC point 2, call=%d, gc=%d\n",
-           export_count_no_tce_call_id, ++gc_id);
+    // printf("export_count_no_tce: GC point 2, call=%d, gc=%d\n",
+    //     export_count_no_tce_call_id,
+    //     ++gc_id);
     GC_collect_full();
     GC_start_replay();
   }
@@ -155,7 +159,7 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
     // }
     ElmInt* result = Utils_apply(&Basics_add, 2, (void* []){boxA, boxB});
     if (boxA == pGcFull || boxB == pGcFull || result == pGcFull) {
-      printf("export_add: GC\n");
+      // printf("export_add: GC\n");
       GC_collect_full();
       GC_start_replay();
     } else {

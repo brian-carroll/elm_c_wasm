@@ -7,7 +7,7 @@ extra_opt=""
 extra_opt="$extra_opt -O3"
 
 # extra_opt="$extra_opt -g4"
-extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/benchmark/"
+# extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/benchmark/"
 
 set -x
 

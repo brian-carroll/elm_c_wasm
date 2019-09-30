@@ -19,7 +19,7 @@ HEADERS := $(KHEADERS) $(THEADERS)
 DATA_TSV := $(shell find $(SRC) -name '*.tsv')
 DATA_INC := $(DATA_TSV:.tsv=.inc)
 
-.PHONY: all check dist www gc-size clean watch
+.PHONY: all check dist www gc-size clean watch benchmark
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
@@ -66,8 +66,11 @@ watch:
 build.log: $(SOURCES) $(HEADERS)
 	make gh-pages | tee build.log
 
+benchmark:
+	cd $(ROOT)/demos/benchmark && make clean && make
+
 gh-pages: CFLAGS=-Wall -O3
-gh-pages: clean www
+gh-pages: clean www benchmark
 	mkdir -p $(DEPLOY)/dist/www
 	cp $(ROOT)/demos/index.html $(DEPLOY)
 	cp $(ROOT)/demos/favicon.png $(DEPLOY)
