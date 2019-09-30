@@ -4607,7 +4607,6 @@ var author$project$Main$jsAddUnboxed = F2(
 	function (a, b) {
 		return a + b;
 	});
-var author$project$Main$wasmAdd = author$project$Main$jsAddUnboxed;
 var elm_explorations$benchmark$Benchmark$Benchmark$Series = F2(
 	function (a, b) {
 		return {$: 'Series', a: a, b: b};
@@ -4637,6 +4636,21 @@ var elm_explorations$benchmark$Benchmark$compare = F5(
 					elm_explorations$benchmark$Benchmark$Status$Cold)
 				]));
 	});
+var author$project$Main$addBoxedVsUnboxed = A5(
+	elm_explorations$benchmark$Benchmark$compare,
+	'Add',
+	'JS Boxed',
+	function (_n0) {
+		return A2(
+			author$project$Main$jsAddBoxed,
+			author$project$Main$Box(123),
+			author$project$Main$Box(456));
+	},
+	'JS Unboxed',
+	function (_n1) {
+		return A2(author$project$Main$jsAddUnboxed, 123, 456);
+	});
+var author$project$Main$wasmAdd = author$project$Main$jsAddUnboxed;
 var author$project$Main$addJsVsWasm = A5(
 	elm_explorations$benchmark$Benchmark$compare,
 	'Add boxed',
@@ -4670,11 +4684,11 @@ var author$project$Main$addJsVsWasmWithoutA2 = A5(
 	'Add unboxed without A2',
 	'Wasm',
 	function (_n0) {
-		return A2(author$project$Main$wasmAddUnboxedNoA2, 123, 456);
+		return author$project$Main$wasmAddUnboxedNoA2(123, 456);
 	},
 	'JS',
 	function (_n1) {
-		return A2(author$project$Main$jsAddUnboxedNoA2, 123, 456);
+		return author$project$Main$jsAddUnboxedNoA2(123, 456);
 	});
 var author$project$Main$count = 100;
 var elm$core$Basics$eq = _Utils_equal;
@@ -4772,14 +4786,17 @@ var author$project$Main$suite = A2(
 						[author$project$Main$addJsVsWasmWithoutA2]),
 					_Utils_ap(
 						_List_fromArray(
-							[author$project$Main$countJsVsWasm]),
+							[author$project$Main$addBoxedVsUnboxed]),
 						_Utils_ap(
 							_List_fromArray(
-								[author$project$Main$countBoxedVsUnboxed]),
+								[author$project$Main$countJsVsWasm]),
 							_Utils_ap(
 								_List_fromArray(
-									[author$project$Main$countTCE]),
-								_List_Nil))))))));
+									[author$project$Main$countBoxedVsUnboxed]),
+								_Utils_ap(
+									_List_fromArray(
+										[author$project$Main$countTCE]),
+									_List_Nil)))))))));
 var elm$core$Array$branchFactor = 32;
 var elm$core$Array$Array_elm_builtin = F4(
 	function (a, b, c, d) {
@@ -14943,7 +14960,6 @@ if (catch_wasm_exceptions) {
 var author$project$Main$main = elm_explorations$benchmark$Benchmark$Runner$program(author$project$Main$suite);
 _Platform_export({'Main':{'init':author$project$Main$main(
 	elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
-
 //============ start init.js ===================
 debugger;
 Elm.Main.init({ node: document.querySelector('#main') });
