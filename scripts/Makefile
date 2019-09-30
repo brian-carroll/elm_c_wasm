@@ -77,6 +77,7 @@ gh-pages: clean www
 	cp $(ROOT)/favicon.png $(DEPLOY)/unit-tests/
 	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www
 	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
+	cd $(DEPLOY) && git add . && git commit -m 'update' && git push
 
 
 # Makefile squiggles:

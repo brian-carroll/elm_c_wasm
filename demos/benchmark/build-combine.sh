@@ -19,9 +19,12 @@ if [ -n "$ELM_OPTIMIZE" ] && which google-closure-compiler > /dev/null
 then
   echo "Minifying Elm"
   elm_code=$(echo "$elm_code" | google-closure-compiler)
-  elm_code=$(echo "$elm_code" | sed 's/A2(author$project$Main$wasmAddUnboxedNoA2, /author$project$Main$wasmAddUnboxedNoA2(/')
-  elm_code=$(echo "$elm_code" | sed 's/A2(author$project$Main$jsAddUnboxedNoA2, /author$project$Main$jsAddUnboxedNoA2(/')
 fi
+elm_code=$(\
+    echo "$elm_code" \
+    | sed 's/A2(author$project$Main$wasmAddUnboxedNoA2, /author$project$Main$wasmAddUnboxedNoA2(/' \
+    | sed 's/A2(author$project$Main$jsAddUnboxedNoA2, /author$project$Main$jsAddUnboxedNoA2(/' \
+  )
 
 emscripten_code=$(cat build/$FILENAME.js)
 init_code=$(cat src/init.js)

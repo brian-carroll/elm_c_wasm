@@ -31,6 +31,7 @@ suite =
             ++ [ addJsVsWasm ]
             ++ [ addJsVsWasmUnboxed ]
             ++ [ addJsVsWasmWithoutA2 ]
+            ++ [ addBoxedVsUnboxed ]
             ++ [ countJsVsWasm ]
             ++ [ countBoxedVsUnboxed ]
             ++ [ countTCE ]
@@ -143,6 +144,13 @@ wasmAddUnboxed =
     jsAddUnboxed
 
 
+{-| Analyse the contribution of Elm's `A2` helper function,
+which implements currying but is not really needed in this case.
+Remove it by post-processing the compiled JS using a Bash script.
+This has little effect on JS but a huge effect on Wasm, suggesting the
+browser is able to optimise it away for JS but not Wasm.
+JS and Wasm give comparable results here, especially in Firefox.
+-}
 addJsVsWasmWithoutA2 : Benchmark
 addJsVsWasmWithoutA2 =
     Benchmark.compare "Add unboxed without A2"
@@ -164,6 +172,10 @@ jsAddUnboxedNoA2 =
     jsAddUnboxed
 
 
+{-| Check whether the browser is actually completely eliminating
+the "box" from the JS implementation.
+It looks like it's not quite eliminating it but
+-}
 addBoxedVsUnboxed : Benchmark
 addBoxedVsUnboxed =
     Benchmark.compare "Add"
