@@ -35,8 +35,12 @@ char* hex(void* addr, int size) {
   u32 i, c = 0;
   for (i = 0; i < size; c += 9, i += 4) {
     // Print in actual byte order (little endian)
-    sprintf(hex_strings[rotate] + c, "%02x%02x%02x%02x|", *(u8*)(addr + i),
-            *(u8*)(addr + i + 1), *(u8*)(addr + i + 2), *(u8*)(addr + i + 3));
+    sprintf(hex_strings[rotate] + c,
+        "%02x%02x%02x%02x|",
+        *(u8*)(addr + i),
+        *(u8*)(addr + i + 1),
+        *(u8*)(addr + i + 2),
+        *(u8*)(addr + i + 3));
   }
   hex_strings[rotate][c - 1] = 0;  // erase last "|" and terminate the string
   return hex_strings[rotate];
@@ -51,6 +55,15 @@ char* hex_ptr(void* ptr) {
 }
 
 char* test_all(bool types, bool utils, bool basics, bool string, bool gc) {
+  if (verbose) {
+    printf("Selected tests: ");
+    if (types) printf("types ");
+    if (utils) printf("utils ");
+    if (basics) printf("basics ");
+    if (string) printf("string ");
+    if (gc) printf("gc ");
+    printf("\n\n");
+  }
   if (types) mu_run_test(types_test);
   if (utils) mu_run_test(utils_test);
   if (basics) mu_run_test(basics_test);
@@ -63,11 +76,14 @@ char* test_all(bool types, bool utils, bool basics, bool string, bool gc) {
 int main(int argc, char** argv) {
   GC_init();
 
-  static struct option long_options[] = {
-      {"verbose", no_argument, NULL, 'v'}, {"all", no_argument, NULL, 'a'},
-      {"types", no_argument, NULL, 't'},   {"utils", no_argument, NULL, 'u'},
-      {"basics", no_argument, NULL, 'b'},  {"string", no_argument, NULL, 's'},
-      {"gc", no_argument, NULL, 'g'},      {NULL, 0, NULL, 0}};
+  static struct option long_options[] = {{"verbose", no_argument, NULL, 'v'},
+      {"all", no_argument, NULL, 'a'},
+      {"types", no_argument, NULL, 't'},
+      {"utils", no_argument, NULL, 'u'},
+      {"basics", no_argument, NULL, 'b'},
+      {"string", no_argument, NULL, 's'},
+      {"gc", no_argument, NULL, 'g'},
+      {NULL, 0, NULL, 0}};
 
   // By default in Bash shell, just do what's specified
   bool types = false;
