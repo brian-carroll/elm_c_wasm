@@ -14,7 +14,7 @@ char* test_wasm_types() {
     printf("Target platform is 32-bit\n");
 #endif
     printf("sizeof(void*) = %d\n", (int)sizeof(void*));
-    printf("sizeof(size_t*) = %d\n", (int)sizeof(size_t));
+    printf("sizeof(size_t) = %d\n", (int)sizeof(size_t));
     printf("sizeof(int) = %d\n", (int)sizeof(int));
   }
   mu_assert("i8 should be 1 byte", sizeof(i8) == 1);
