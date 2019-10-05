@@ -8,7 +8,11 @@ char* test_wasm_types() {
   if (verbose) {
     printf("\n");
     printf("## test_wasm_types\n");
-    printf("Platform 32/64 bit types\n");
+#ifdef TARGET_64BIT
+    printf("Target platform is 64-bit\n");
+#else
+    printf("Target platform is 32-bit\n");
+#endif
     printf("sizeof(void*) = %d\n", (int)sizeof(void*));
     printf("sizeof(size_t*) = %d\n", (int)sizeof(size_t));
     printf("sizeof(int) = %d\n", (int)sizeof(int));
