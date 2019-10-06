@@ -1,6 +1,6 @@
 - [Contents](#contents)
 - [Demos](#demos)
-- [Effects](#effects)
+- [System design](#system-design)
 - [String Encoding](#string-encoding)
 - [Garbage Collector](#garbage-collector)
 - [Closures](#closures)
@@ -68,7 +68,7 @@ At this early stage, they're very primitive demos! Definitely not full Elm progr
 
 &nbsp;
 
-# Effects
+# System design
 
 Currently Wasm does not have direct support for any Web APIs such as DOM, XmlHttpRequest, etc. You have to call out from WebAssembly to JavaScript to use them. That means that effectful modules like `VirtualDom`, `Browser`, and `Http`, cannot be fully ported to WebAssembly yet. A few effects could be ported, but not enough to justify the effort of porting lots of complex kernel code to C (like [Scheduler.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Scheduler.js) and [Platform.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Platform.js)), so I think it's better to leave that for later.
 
@@ -257,6 +257,8 @@ We can run a Minor GC on the young generation only, ignoring the older generatio
 While tracing a value during minor GC, we can stop as soon as we see any address in the old generation. Everything in the old generation is considered "marked" for minor GC, and it can only point to other old generation values. So there is no need to trace any further. We already know the outcome. This should speed things up considerably.
 
 Compacting should also be fast simply because it only operates on live values, which are few and far between in the young generation.
+
+The lower threshold address for the collection does not *have* to be where I've drawn it here. On any cycle, we can choose any threshold address and limit the collection to addresses above it. We could decide to have many generations, rather than just two. Or we could choose the threshold based on some algorithm that accounts for the fact that space at the bottom of the heap is more expensive to free up.
 
 
 
