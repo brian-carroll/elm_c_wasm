@@ -59,13 +59,13 @@ The `update` will return a new `model` and `Cmd`, which will be decoded from byt
 
 &nbsp;
 
-## FAQ
+# Intermediate language
 
 &nbsp;
 
-#### Why use an intermediate language?
+## Why use an intermediate language?
 
-It would certainly be possible to compile Elm code directly to WebAssembly. In fact that's what I did in [my first attempt](https://github.com/brian-carroll/elm-compiler/tree/wasm). There are a few drawbacks to this:
+It would be possible to compile Elm code directly to WebAssembly. In fact that's what I did in [my first attempt](https://github.com/brian-carroll/elm-compiler/tree/wasm). But there are a few drawbacks:
 
 1. Writing Kernel code in WebAssembly is **not fun**.
    - Initially I thought I could build up a little Haskell DSL to abstract over raw WebAssembly, since I already had that kind of machinery in my fork of the compiler. But I gave up after just trying to implement one kernel function. I found it completely impractical to debug. I'm no fan of C but it's far more readable than WebAssembly!
@@ -75,17 +75,10 @@ It would certainly be possible to compile Elm code directly to WebAssembly. In f
 
 &nbsp;
 
-#### Why C and not Rust?
+## Why C and not Rust?
 
 Rust has great WebAssembly support and I tried to use it early on, but
 
 - By the time the Elm compiler actually gets to the code generation phase, the program has already been validated by Elm's type checker. So I <u>know</u> it's OK but now I have to convince Rust that it's OK, and I found this was very difficult.
 - Rust is very good for _hand-written_ code that does _manual memory management_, but not so much for auto-generated code running with a garbage collector. I found it was throwing errors about a lot of things that were actually _good_ ideas in that context.
 - A language implementation, particularly one with a GC, is going to involve a lot of `unsafe` Rust. That's quite advanced Rust programming. It would have been too hard for me to know when to go against the normal rules and when not to, on my very first Rust project.
-
-&nbsp;
-
-#### What kind of string encoding are you using?
-
-Umm none yet! I haven't really gotten that far!
-But I have put some thought into it. See [here](./docs/string-encoding.md).
