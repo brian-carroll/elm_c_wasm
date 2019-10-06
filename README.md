@@ -286,7 +286,7 @@ To solve this, I developed something I call "replay mode". When resuming executi
 
 Part of the machinery for this is in the C function `Utils_apply`, which implements Elm function application (including partial application etc.) Before executing a function, it does a fast check to see if GC replay mode is active, and executes a different code branch if so.
 
-With this system, the call stack quickly gets to its original state, plus we skip the vast majority of code execution and do no new allocations. The old call stack with its stale pointers has been discarded. The brand new call stack is guaranteed only to be referencing new, valid memory locations.
+With this system, the call stack quickly gets back to the same state it was in before the GC pause. At this point we exit replay mode and resume normal execution from where we left off. The old call stack with its stale pointers has been discarded, and the brand new call stack is guaranteed only to be referencing new, valid memory locations.
 
 In order to implement "replay mode", the GC inserts special markers into the heap to keep track of which call allocated each value, and which are currently active. It's an implementation of a "stack map".
 
