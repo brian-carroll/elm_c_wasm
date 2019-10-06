@@ -1,3 +1,38 @@
+- [Contents](#contents)
+- [Demos](#demos)
+- [Effects](#effects)
+- [String Encoding](#string-encoding)
+- [Garbage Collector](#garbage-collector)
+- [Closures](#closures)
+- [Extensible Records](#extensible-records)
+- [Value Headers](#value-headers)
+- [Type tags & constrained type variables](#type-tags--constrained-type-variables)
+- [Boxed vs unboxed integers](#boxed-vs-unboxed-integers)
+
+
+
+## Why use an intermediate language?
+
+It would certainly be possible to compile Elm code directly to WebAssembly. In fact that's what I did in [my first attempt](https://github.com/brian-carroll/elm-compiler/tree/wasm). There are a few drawbacks to this:
+
+1. Writing Kernel code in WebAssembly is **not fun**.
+   - Initially I thought I could build up a little Haskell DSL to abstract over raw WebAssembly, since I already had that kind of machinery in my fork of the compiler. But I gave up after just trying to implement one kernel function. I found it completely impractical to debug. I'm no fan of C but it's far more readable than WebAssembly!
+2. Debugging the output of the compiler is also **not fun**
+   - Like any other coding project, you're going to spend a lot of time getting stuff wrong and debugging it. I really really didn't fancy doing that in raw WebAssembly
+3. Compilers for C (and C++ and Rust) are *very good* at producing high-quality optimised assembly code. They've been optimising it for decades. I probably can't beat that performance sitting on my couch in my pyjamas. Might as well use what's out there.
+
+
+
+## Why  C and not Rust?
+
+Rust has great WebAssembly support and I tried to use it initially but
+
+- By the time the Elm compiler actually gets to the code generation phase, the program has already been validated by Elm's type checker. So I <u>know</u> it's OK but now I have to convince Rust that it's OK, and I found this was very difficult.
+- Rust is very good for *hand-written* code that does *manual memory management*, but not so much for auto-generated code running with a garbage collector. I found it was throwing errors about a lot of things that were actually _good_ ideas in that context.
+- A language implementation, particularly one with a GC, is going to involve a lot of `unsafe` Rust. That's quite advanced Rust programming. It would have been too hard for me to know when to go against the normal rules and when not to, on my very first Rust project.
+
+# Contents
+
 - [Project goals](#project-goals)
 - [Demos](#demos)
 - [Progress](#progress)
@@ -13,102 +48,48 @@
 - [Boxed vs unboxed integers](#boxed-vs-unboxed-integers)
 - [Alternatives to C](#alternatives-to-c)
 
-# Project goals
-
-- An experiment to try to implement Elm in WebAssembly
-- Uses C as an intermediate language
-  - This repo contains Elm Kernel code, garbage collector, etc. The parts of the system outside of the compiler itself.
-  - Elm Compiler would output C code instead of JavaScript. A second step would further compile that to Wasm.
-  - This approach makes it much easier to write Kernel code and to debug the output of the Elm compiler.
-- C doesn't have first-class functions or high-level data structures like JavaScript does, so we have to implement some of those things. Most of this is in [types.h](/src/kernel/types.h) and [utils.c](/src/kernel/utils.c)
-- The idea is to gradually build Elm's core libraries in C and write some tests to mimic 'compiled' code from Elm programs.
-
-&nbsp;
-
 # Demos
 
-https://brian-carroll.github.io/elm_c_wasm/
+I have built a few demos here: https://brian-carroll.github.io/elm_c_wasm/
+
+At this early stage, they're very primitive demos! Definitely not full Elm programs in Wasm!
+
+- Unit tests for the kernel code are [here](https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose)
+  - You can see byte-level Elm data structures, arithmetic operations, record updates and accessors, and first-class functions in action.
+- Unit tests for the garbage collector are [here](https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose)
+  - You can see print-outs of the heap, with byte-level Elm data structures, GC mark bits, etc.
+- Some performance micro-benchmarks are [here](https://brian-carroll.github.io/elm_c_wasm/benchmark/index.html)
+  - Reported figures for the Wasm implementations are slower than the JS implementations.
+    - This is partly to do with crossing back and forth across the JS/Wasm boundary _a lot_. The benchmarking loop is in JS even when functions under test are in Wasm. Browsers can't optimise this as well as pure JS yet, and it's exaggerated by testing tiny functions.
+    - It's also partly to do with the way Elm implements currying using the `A2` helper. This is something that could be changed in future.
+  - Nevertheless, this is a good way to stress-test the implementation and flush out bugs in the GC, and to find out where the bottlenecks are (such as those described above).
 
 &nbsp;
-
-# Progress
-
-- Elm compiler modifications
-
-  - [x] Initial experiments [forking](https://github.com/brian-carroll/elm-compiler/tree/wasm) the Elm compiler to generate Wasm (decided to abandon this direction)
-  - [ ] Do another Elm compiler fork to generate C (coming soon...)
-
-- Kernel code / core libs
-
-  - [x] Implement C data structures for all Elm value types: `Int`, `Float`, `Char`, `String`, `List`, tuples, custom types, records, functions
-  - [x] Function application and currying
-  - [x] Extensible record updates and accessors
-  - [x] A prototype Garbage Collector (7kB download size 😊 I have no idea what the performance is like! See [gc.c](/src/kernel/gc.c))
-  - [x] Numerical operators from the `Basics` library (`+`, `-`, `*`, `/`)
-  - [ ] Finalise String encoding issues, UTF-8, UTF-16, browser/JS interop, etc. I've given it [lots of thought](#string-encoding) but it needs discussion.
-  - [ ] JSON & ports (currently most effects are not available in Wasm, which probably means using ports heavily)
-  - [ ] Remaining pure kernel modules from core: `String`, `List`
-  - [ ] Effectful modules from core: `Program`, `Cmd`, `Task`, `Process`, scheduler, etc.
-  - [ ] HTML
-  - [ ] HTTP
-
-- My activity levels!
-  - I did lots of work on this during 2018, particularly the 2nd half
-  - I got busy in the first half of 2019, but my interest is reviving at the moment and I have more time on my hands again!
-  - I meant to write some blog posts about this, but I ended up only writing one so far. It was on [first class functions][blogpost].
-
-&nbsp;
-
-# Big picture stuff
-
-- Effects
-
-  - Wasm MVP has no Web APIs like DOM, XHR, etc., so most effect managers must be JS only for Wasm MVP
-  - Unclear how to interface with browser APIs from C, I guess some header files you `#include` and call functions on.
-  - Perhaps a good intermediate step would be to generate pure code in C/Wasm and effectful code in JS
-
-- Browser GC
-
-  - Wasm spec talks about data types like arrays, objects, opaque references.
-  - Unclear what this looks like from C. Values would have integer IDs rather than pointers so that you can't do bad things. I guess you call some library functions to create, get nth child, etc.
-
-- Custom GC
-
-  - Impact of GC optimizations based on immutability
-    - Want some way to allow Kernel to mutate things despite GC being optimized for immutability.
-    - Solution: Keep all mutations outside of the heap. If an Effect Manager needs to dynamically allocate something and mutate it, it can first create new immutable value on the heap, then just mutate an off-heap pointer to point at new instead of old. This is like the way `model` updates already work in elm.js.
-    - Process IDs being references may be a bit of a pain. Ideally they'd be integers. But only really used for `kill`, which isn't fully implemented even in JS.
-
-- Kernel ends up in multiple languages? JS and C?
-  - Quite a bit of maintenance
-  - Would it be good to put more of the code in Elm?
 
 &nbsp;
 
 # Effects
 
-- Wasm MVP doesn't yet have access to Web APIs like DOM, `XmlHttpRequest`, etc.
-- This means an Elm program in Wasm has to call out to JS to do any effects.
-- Also, all communication with JS is done using typed arrays. This means everything has to be serialised, using JSON or some other format.
+Currently Wasm does not have direct support for any Web APIs such as DOM, XmlHttpRequest, etc. You have to call out from WebAssembly to JavaScript to use them. That means that effectful modules like `VirtualDom`, `Browser`, and `Http`, cannot be fully ported to WebAssembly yet. A few effects could be ported, but not enough to justify the effort of porting lots of complex kernel code to C (like [Scheduler.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Scheduler.js) and [Platform.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Platform.js)), so I think it's better to leave that for later.
 
-&nbsp;
+In the meantime, I think a good goal is to compile the pure part of the Elm program to WebAssembly and leave the effectful Kernel code in JavaScript. The way I envision it working is that there would be a "wrapper" `Program` type that acts as an interface between the Elm runtime and the WebAssembly module.
 
-# Elm &rarr; JS + Wasm
+There are two ways for JavaScript and WebAssembly to talk to each other
 
-- It's a **lot** of work to get to compile a "hello world" Elm program to 100% Wasm. Because of dead code elimination, you can't get any output from the compiler until you have an implementation for `Program`. And that requires building a lot of really complex stuff like the effect manager system.
-- I need a way for the Elm program to end up as a mix of JS and Wasm. That way I can keep the kernel in JS initially, with the Elm code compiled to Wasm. See [proof-of-concept demo](https://brian-carroll.github.io/elm_c_wasm/update-int/index.html) with `update` function in Wasm and the rest in JS.
+- **Function calls**: The WebAssembly module can *import* JavaScript functions and call them, and *export* some of its own functions to make them callable from JavaScript. The main limitation is that the arguments can only be numbers, not data structures.
+- **Data**: For data structures, you need to read and write to the WebAssembly module's memory, which appears in JavaScript as an `ArrayBuffer`. JavaScript can write bytes into the memory and then call an exported function when the data is ready (perhaps passing the offset and size of the data written). More details [here](https://developer.mozilla.org/en-US/docs/WebAssembly/Using_the_JavaScript_API#Memory).
 
-* Annoyingly, everything crossing the JS/Wasm boundary has to be serialized and de-serialized (as JSON strings)
-* How does that work for `Cmd`? Surely it's not serialisable?
-  - `Cmd Msg` going from `update` to the runtime will always have a `Msg` constructor function inside it. In JS-speak this is a callback.
-  - Need to spot this happening in code gen. Then export it to be callable from JS, and pass that JS version to the _real_ Elm runtime.
-  - Maybe there's a need for an Elm wrapper module for this, exposing a `Program` constructor and maybe some other stuff. My code generator can just make special cases for that module.
+The wrapper `Program` would convert the `msg` and `model` to a byte-level representation, write them to the WebAssembly module's memory, and then call an `update` function exposed by the compiled WebAssembly module. 
+
+The `update` will return a new `model` and `Cmd`, which will be decoded from bytes to the JavaScript structures that the Elm runtime kernel code uses.
+
+`VirtualDom` effects could be trickier. It might be worth implementing the diff algorithm in pure Elm and using ports to apply the patches, as *gampleman* demonstrated [here](https://gist.github.com/gampleman/cbf0434b22e1da0e3193736b87e040f5) in the Elm 0.18 days.
 
 &nbsp;
 
 # String Encoding
 
-WebAssembly has no string primitives, so they have to be implemented at the byte level. That makes sense because different source languages targeting WebAssembly may have different string representations, and WebAssembly needs to support that.
+WebAssembly has no string primitives, so they have to be implemented at the byte level. Different source languages targeting WebAssembly may have different string representations, and WebAssembly needs to support that.
 
 The String struct defined in [types.h](/src/kernel/types.h) contains header and a sequence of bytes. There are various "encodings" of characters to bytes, and the modern _de facto_ standard is UTF-8. A lot of recently-developed languages use it as their default encoding (Go, Rust, etc.).
 
@@ -191,45 +172,131 @@ UTF-16 has a bit of a bad reputation because of buggy implementations that have 
 
 # Garbage Collector
 
-I've built a prototype Garbage Collector in this repo (see [gc.c](/src/kernel/gc.c)). So far I can only run [unit tests][unit-tests-gc] on it, since I don't have any Elm programs compiled to Wasm yet!
+I've built a prototype Garbage Collector in this repo (see [gc.c](/src/kernel/gc.c)). I don't have any Elm programs compiled to Wasm yet, but I do have [unit tests][unit-tests-gc] and a [benchmark demo](https://brian-carroll.github.io/elm_c_wasm/benchmark/index.html).
 
 [unit-tests-gc]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose
 
 _The GC fits into less than 7kB of binary Wasm!_
 
-## Features
 
-It uses a [mark-compact algorithm](https://en.wikipedia.org/wiki/Mark-compact_algorithm) that is greatly simplified by the fact that all Elm values are immutable and can therefore only point to _older_ values.
 
-This means that when you move a value, you only need to update references to it in _newer_ values. You don't need to scan the whole heap. Older values end up the bottom of the heap and newer ones at the top. At any time you can easily do a _partial_ collection of the heap, picking any starting point and only collecting items _above_ that.
+## Taking advantage of immutability
 
-This brings a lot of the advantages of a generational collector, without the overhead of managing regions. Hopefully this helps to keep the GC small.
+It seems intuitive that *something* about immutability should simplify the GC. But what exactly? I had an "aha" moment about this when I read [this article about the Haskell GC](https://wiki.haskell.org/GHC/Memory_Management).
+
+> The trick is that immutable data NEVER points to younger values... At any time we can scan the last values created and free those that are not pointed to from the same set
+
+This means it's very efficient to do a "minor GC" of the most recently-created values. You don't need to scan the entire heap to see if any older value is pointing to the new values, because that's impossible.
+
+The funny thing is, when you read the full Haskell paper linked in the article, it turns out Haskell *does* have some mutation! It has a feature called `MVar`, and the GC has to have special cases for it, including "write barriers" that track old-to-young pointers. The [OCaml GC](https://v1.realworldocaml.org/v1/en/html/understanding-the-garbage-collector.html#the-mutable-write-barrier) and the [Chrome V8 GC](https://v8.dev/blog/trash-talk#minor-gc) also have write barriers. But a GC for Elm doesn't need this at all.
+
+
+
+## GC architecture choice
+
+I've done some research on the different memory management architectures. Here are my thoughts about how they relate to Elm.
+
+Firstly, let's look a few relevant languages and runtimes and see what choices they've made.
+
+| Garbage collector                                            | Architecture                                                 |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [Haskell](http://simonmar.github.io/bib/papers/parallel-gc.pdf) | Multi-generational copying                                   |
+| [OCaml](https://v1.realworldocaml.org/v1/en/html/understanding-the-garbage-collector.html) | Semi-space copying for young generation, mark-sweep for old generation |
+| [Chrome/V8](https://v8.dev/blog/trash-talk)                  | Semi-space copying for young generation, mark-compact for old generation |
+| [Firefox/SpiderMonkey](https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Internals/Garbage_collection) | Mark-sweep with generational collection and compaction       |
+| [Safari/WebKit](https://webkit.org/blog/7122/introducing-riptide-webkits-retreating-wavefront-concurrent-garbage-collector/) | Mark-sweep with generational collection                      |
+
+### Reference counting
+
+This suggestion comes up a lot in the Elm Discourse when GC is mentioned, because it's simple to implement. For example it does not move values around in the heap, so it doesn't have to worry about pointers in the stack becoming stale, which avoids lots of complexity. It's used in Swift, Perl and Python, but not in any ML-family languages or browser engines.
+
+The major drawback is that it performs some work for every *dead* value as well as every *live* value. In a language with immutable data, you have to create new values whenever you want to change something. This means there is much, much more garbage created compared to other language types. The number of live values tends to be very small when you do a GC. Therefore <u>Elm is basically a worst-case scenario for reference counting</u>. The other schemes only perform work for live values so they're more efficient in this use case.
+
+I didn't implement reference counting because of this performance concern, and because it doesn't seem to be used in any comparable runtimes. I felt I could create a tracing GC that was small enough. I ended up with <7kB so I'm happy with the decision.
+
+### Copying collector
+
+A copying collector maintains a *from-space* and *to-space*, copying live values from one to the other, then switching around *from-space* and *to-space*. The technique is sometimes known as "semi-space copying". It only performs work for live values, so is efficient for the youngest generation.
+
+Haskell extends this to many spaces instead of just two, which makes it more efficient. OCaml and V8 use it only for "young generation" values.
+
+This architecture should perform well for Elm, but I decided not to use it. If you use only two heap regions, the GC is not too complex but it doubles the heap size. If you use lots of regions, like Haskell does, it's more efficient in size, but you have to manage lots of regions. This seems to involve quite a bit of complexity overhead.
+
+I also didn't want to follow OCaml and V8 down the route of using a copying collector _and_ a mark-sweep.
+
+### Mark-sweep
+
+This is the most commonly-used architecture in the table above. In the *mark* phase, live values are marked and unmarked values are considered dead. In the *sweep* phase, all the dead space is added to the _free list_, so that it can be re-allocated later.
+
+The *sweep* phase performs work for dead values as well as live ones. That's why OCaml and V8 avoid it for the youngest generation that contains the most garbage. Here they use semi-space copying instead. But  again, for Elm in WebAssembly this kind of hybrid approach seems a bit complex.
+
+### Mark-compact
+
+Spoiler alert: **this is the one I implemented!**
+
+In the *mark* phase, live values are marked and unmarked values are considered dead. In the *compact* phase, dead spaces are filled by moving live values into them.
+
+![Fragmented values in heap getting compacted down to the bottom](./mark-compact.png)
+
+There is no need for a *sweep* phase because there is no "free list". All the free space is at the top of the heap! Nice and simple.
+
+Also note that the compaction only performs work for live values, not dead ones.
+
+With mark-compact, the heap naturally organises itself into generations. The oldest values end up at the bottom of the heap and the newest at the top. So we get a generational memory layout without the overhead of managing multiple regions of memory!
+
+
+
+## Minor GC
+
+Since Elm values are immutable, all pointers must point from younger to older values (at lower addresses).
+
+We can run a Minor GC on the young generation only, ignoring the older generation. It's very east to test whether a value is in the older generation. Just check if its address is below a threshold!
+
+![minor GC with mark compact](./mark-compact-minor.png)
+
+While tracing a value during minor GC, we can stop as soon as we see any address in the old generation. Everything in the old generation is considered "marked" for minor GC, and it can only point to other old generation values. So there is no need to trace any further. We already know the outcome. This should speed things up considerably.
+
+Compacting should also be fast simply because it only operates on live values, which are few and far between in the young generation.
+
+
 
 ## Mutable values in kernel code
 
-Some kernel code in the core modules needs to dynamically allocate values and mutate them. But this could result in old values pointing at newer ones, breaking some of the assumptions the GC relies on.
+The GC design relies on all values being immutable, but when we implement effect managers in WebAssembly, some of them will need to mutate heap-allocated values! Remember, Elm has _controlled effects_, but it does have effects! Does this mess everything up our lovely immutable GC?
 
-A solution that works here is to only mutate a _pointer_ to a value. Copy the value immutably, then switch the pointer to reference it instead of the old value. The pointer has fixed size so it can be outside the garbage-collected area.
+Nope!
 
-This would mean changes in the way some of the core modules work. The changes all look fairly minor except for [Scheduler.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Scheduler.js) and [Platform.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Platform.js).
+The solution here is to write the effect manager code so that it only mutates a _pointer_ to an immutable heap value instead of the value itself. The pointer does not have to be in the heap, and so is not subject to the immutability rules. And it's a fixed size.
+
+This is pretty similar to how the Elm runtime already handles `model` updates. Instead of mutating the model directly, you create a new one and then switch a reference that points at it.
+
+This would require changes in the way some of the core modules work, mainly [Scheduler.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Scheduler.js) and [Platform.js](https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Platform.js).
+
+
 
 ## Updating pointers in the call stack
 
-The GC also takes advantage of the fact that Elm functions are _pure_.
+The GC also takes advantage of the fact that Elm functions are pure.
 
-When resuming execution after a GC pause, we need to restore the state of the call stack to what it was before the pause. This is done using something I call "replay mode". When resuming execution, any function call that had completed before the pause is skipped and replaced with the return value it had previously.
+When resuming execution after a GC pause, the GC restores the state of the call stack to what it was before the pause.
 
-The call stack quickly gets to its original state, and we skip the vast majority of code execution and do no new allocations. It's quite powerful to be able to competely unwind the call stack and quickly restore it. It guarantees that all pointers in the stack and registers are referencing new, valid locations.
+Most GC's scan the stack and registers for stale pointers to heap values that have moved, and mutate them in place. It's tricky business at the best of times, but as far as I can tell, WebAssembly's semantics actually make it impossible! This is part of its security-focused design.
 
-Most GC's scan the stack and registers for stale pointers to heap values that have moved, and mutate them in place. It's tricky business at the best of times, but as far as I can tell, WebAssembly's semantics actually make it impossible!
+To solve this, I developed something I call "replay mode". When resuming execution, we can actually skip any function that had already returned a value before the GC pause. Instead of actually executing the call again, we just re-use the return value from last time. It's still in the heap.
+
+Part of the machinery for this is in the C function `Utils_apply`, which implements Elm function application (including partial application etc.) Before executing a function, it does a fast check to see if GC replay mode is active, and executes a different code branch if so.
+
+With this system, the call stack quickly gets to its original state, plus we skip the vast majority of code execution and do no new allocations. The old call stack with its stale pointers has been discarded. The brand new call stack is guaranteed only to be referencing new, valid memory locations.
 
 In order to implement "replay mode", the GC inserts special markers into the heap to keep track of which call allocated each value, and which are currently active. It's an implementation of a "stack map".
 
 For more detail, you can check out the output of the `gc_replay_test` [in your browser][unit-tests-gc], or take a look at the [test code](/src/test/gc_test.c) or the comments in the [source code](/src/kernel/gc.c).
 
+
+
 ## Scheduling collections
 
-We should be able to schedule most collections during the idle time just after an `update`. In this case, we don't need to pause at all. The "replay mode" described above is only needed if we run out of memory during an `update`.
+Hopefully we can schedule most collections during the idle time just after an `update`. If that works well, we won't need to have any GC pauses at all. The "replay mode" described above is only needed if we run out of memory during an `update`.
 
 &nbsp;
 
@@ -357,32 +424,4 @@ However there are some relatively simple compiler optimisations that could reduc
 
 &nbsp;
 
-# Alternatives to C
 
-## Rust
-
-I really wanted to use Rust. It's just generally a better language. Hey, it's even heavily influenced by Haskell and ML, just like Elm!
-
-But using Rust to implement Elm was difficult enough that I got frustrated and demotivated and stopped working on this project for a few weeks. This project is a hobby for me, so if I'm not enjoying it then it won't happen. And at some point it was either drop the project or switch to C.
-
-Rust is _definitely_ a better language... for handwritten code. But we're talking about _generated code_ from the Elm compiler. It's different in a few ways.
-
-Firstly, Elm's type system guarantees that a lot of potentially bad things can't happen. But the Rust compiler doesn't know that, so the extra strictness can really be a pain. We basically have to prove to Rust that some code that came out of the Elm compiler is type safe, even though we already know it is. This turned out to be tricky, and without much real benefit.
-
-Secondly, it's well known that "fighting the borrow checker" is something that everyone learning Rust goes through. And I have never used Rust for a real project before, so I experienced it too. Apparently you eventually learn how to deal with it. But the borrow checker isn't actually designed for garbage-collected code anyway, so it's quite a lot of pain and effort with not much reward at the end!
-
-Some of the patterns Rust encourages didn't seem to make sense to me in a garbage collected context. Rust encourages you to keep as many of your values as possible in the stack, which makes sense when you don't have a garbage collector - you want to destroy values as soon as you don't need them anymore. In Elm, a _lot_ more stuff is going to be allocated on the heap than in a normal Rust program and that should be OK.
-
-It really felt like at every turn, I was spending all my time _fooling_ Rust into believing my code was OK, and in the process, invalidating a lot of the extra help it should give me compared to C. I also had a couple of years experience with C from about 10 years ago, so that was a factor too. But to be clear, I had no burning desire to go back to it!
-
-## Direct to Wasm
-
-My first approach to this project was to directly generate WebAssembly from the Elm AST using a forked version of the compiler. I wrote a set of Haskell types to model a WebAssembly module, and created a WebAssembly DSL and code generator from that.
-
-I wrote a few of Elm's Kernel functions using the same Haskell DSL. So the Kernel code was actually written in Haskell that would generate WebAssembly.
-
-That all worked reasonably well. I got an example Elm program working, which implemented currying and closures.
-
-However as soon as I had my first real piece of debugging work to do, I realised it was pretty painful. That seems kind of obvious, but I'd thought the DSL would help a lot more than it did. Wasm is just so low-level I couldn't keep enough of it in my mind at one time to be useful for debugging.
-
-However I really learned a lot about WebAssembly by doing this.
