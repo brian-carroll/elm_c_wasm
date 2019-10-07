@@ -99,3 +99,9 @@ Rust is very good for _hand-written_ code that does _manual memory management_, 
 Also, a language implementation, particularly one with a GC, is going to involve a lot of `unsafe` Rust. That's quite advanced Rust programming. It would have been too hard for me to know when to go against the normal rules and when not to, on my very first Rust project. Someone who was proficient in Rust may have made a different decision.
 
 For all these reasons, I _very reluctantly_ realised that I had exhausted the alternatives and C was the only tool for this job. It's my first C project in about 10 years.
+
+# Further reading
+
+- [Elm data structures](./docs/data-structures.md)
+- [String encoding](./docs/string-encoding.md)
+- [Garbage Collector](./docs/gc.md)
