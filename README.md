@@ -2,15 +2,13 @@
 
 This repo is part of a project to compile Elm to WebAssembly, using C as an intermediate language.
 
-The project consists of two repos:
+It implements parts of Elm's [core libraries](https://package.elm-lang.org/packages/elm/core/latest/) needed for any compiled code to work, including:
 
-- This repo implements parts of Elm's [core libraries](https://package.elm-lang.org/packages/elm/core/latest/) needed for any compiled code to work
+- Byte level implementations of Elm data structures
+- Function application with currying etc., arithmetic operators (`+`,`-`,`*`,`/`), record updates and accessors.
+- A working garbage collector designed for Elm.
 
-  - Byte level implementations of Elm data structures
-  - Implementations of function application (with currying etc.), record updates and accessors, and arithmetic operators.
-  - A working garbage collector designed for Elm.
-
-- I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c) where I'm working on getting it to generate C instead of JavaScript. It's at a very early stage.
+I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c) where I'm working on getting it to generate C instead of JavaScript. It's at a very early stage.
 
 &nbsp;
 
