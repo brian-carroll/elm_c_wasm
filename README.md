@@ -100,6 +100,8 @@ Also, a language implementation, particularly one with a GC, is going to involve
 
 For all these reasons, I _very reluctantly_ realised that I had exhausted the alternatives and C was the only tool for this job. It's my first C project in about 10 years.
 
+&nbsp;
+
 # Further reading
 
 - [Elm data structures](./docs/data-structures.md)
