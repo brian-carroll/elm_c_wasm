@@ -45,13 +45,15 @@ For more details see the [header file](/src/kernel/types.h) defining the relevan
 
 [types-test]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--verbose
 
+&nbsp;
+
 ## Closures
 
 I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](/src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
 
 In a nutshell, the Closure data structure is a value that can be passed around an Elm program. It stores up any arguments that are partially applied to it, until it is "full". It also contains a function pointer, so that when the last argument is applied, the actual "evaluator" function can be called.
 
-A working example of all of this can be the tests for the `apply` operator. Check out the [source][utils-test-src] or [run the tests][utils-test-run] in your browser.
+A working example of all of this can be the tests for the `apply` operator. Read the [source][utils-test-src] or [run the tests][utils-test-run] in your browser.
 
 [utils-test-src]: /src/test/utils_test.c
 [utils-test-run]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--utils+--verbose
@@ -106,9 +108,7 @@ Find the index of the field ID in the FieldSet
 Change the pointer in the clone at the same index to point at the updated value
 ```
 
-Check out the [source][/src/kernel/utils.c] or [run the tests][utils-test-run] in your browser.
-
-&nbsp;
+Read the [source code](/src/kernel/utils.c) or [run the tests][utils-test-run] in your browser.
 
 &nbsp;
 
@@ -120,4 +120,4 @@ Many language implementations "unbox" integers, so they're represented directly 
 
 In this project I've avoided unboxing integers because it seems like it would be a major piece of work. I'd rather try to build a working implementation first, and optimise later.
 
-However there are some relatively simple compiler optimisations that could reduce the cost of boxing. For a start, we could translate an Elm expression like `a-(b+c)*d` into the equivalent expression in C, only boxing the final result rather than the result of each subexpression. This kind of thing should be limited to just the code generator. In fact the Elm compiler's JS code generator already has some [special handling for numerical operators](https://github.com/elm/compiler/blob/0.19.0/compiler/src/Generate/JavaScript/Expression.hs#L526).
+However there are some relatively simple compiler optimisations that could reduce the cost of boxing in the nearer term. For a start, we could translate an Elm expression like `a-(b+c)*d` into the equivalent expression in C, and box only the final result rather than the result of each subexpression. This optimisation should be limited to just the code generator. In fact the Elm compiler's JS code generator already has some [special handling for numerical operators](https://github.com/elm/compiler/blob/0.19.0/compiler/src/Generate/JavaScript/Expression.hs#L526).
