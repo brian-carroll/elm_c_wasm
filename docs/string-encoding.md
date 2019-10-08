@@ -2,21 +2,21 @@
 
 WebAssembly has no string primitives, so they have to be implemented at the byte level. Different source languages targeting WebAssembly may have different string representations, and WebAssembly needs to support that.
 
-The String struct defined in [types.h](/src/kernel/types.h) contains header and a sequence of bytes. There are various "encodings" of characters to bytes, and the modern _de facto_ standard is UTF-8. A lot of recently-developed languages use it as their default encoding (Go, Rust, etc.).
+The String struct defined in [types.h](/src/kernel/types.h) contains header and a sequence of bytes. There are various "encodings" of characters to bytes, and the modern _de facto_ standard is UTF-8. A lot of recently-developed languages use it as their default encoding (Go, Rust, etc.). But the best encoding to use also depends on what other systems you're interfacing to, and _Elm mainly interfaces to the Web APIs_. We'll get into all of this below.
 
 ## String representations in other languages
 
+### JavaScript
+
+[This article][js-string-encoding] gives a detailed description of JavaScript's string representation. The summary is that the ECMAScript standard allows for engines to use either UTF-16 or UCS-2, which are similar but slightly different. Most engines use UTF-16.
+
+[js-string-encoding]: https://mathiasbynens.be/notes/javascript-encoding
+
 ### Python
 
-The Python 3 Standard library has a Unicode type whose API is Unicode code points. But as per [PEP 393][pep-393], the underlying representation is a C structure that uses different storage formats depending on the maximum character value at creation time. It also holds metadata including length, a hash (for use in dictionary keys etc.), and the representation used.
+The Python 3 Standard library has a Unicode type whose API is Unicode code points. But as per [PEP 393][pep-393], the underlying representation is a C structure uses a variety of storage formats (ASCII, latin-1, UCS-2, UCS-4, or UTF8). The choice depends on various factors including the maximum character value at creation time. The structure also holds metadata including length, a hash (for use in dictionary keys etc.), and a tag indicating which encoding is used.
 
 [pep-393]: https://www.python.org/dev/peps/pep-0393/
-
-### Rust
-
-Rust's [String][rust-string] consists of "a pointer to some bytes, a length, and a capacity. The pointer points to an internal buffer String uses to store its data. The length is the number of bytes currently stored in the buffer, and the capacity is the size of the buffer in bytes." The internal representation is UTF-8. There are APIs to convert between bytes and strings.
-
-[rust-string]: https://doc.rust-lang.org/std/string/struct.String.html#representation
 
 ### Java
 
@@ -25,11 +25,11 @@ Similarly, Java's [JEP 254][jep-254] describes multiple string representations d
 [jep-254]: http://openjdk.java.net/jeps/254
 [java-string-density]: http://cr.openjdk.java.net/~shade/density/state-of-string-density-v1.txt
 
-### JavaScript
+### Rust
 
-[This article][js-string-encoding] gives a detailed description of JavaScript's string representation. The summary is that the ECMAScript standard allows for engines to use either UTF-16 or UCS-2, which are similar but slightly different. Most engines use UTF-16.
+Rust's [String][rust-string] consists of "a pointer to some bytes, a length, and a capacity. The pointer points to an internal buffer String uses to store its data. The length is the number of bytes currently stored in the buffer, and the capacity is the size of the buffer in bytes." The internal representation is UTF-8. There are APIs to convert between bytes and strings.
 
-[js-string-encoding]: https://mathiasbynens.be/notes/javascript-encoding
+[rust-string]: https://doc.rust-lang.org/std/string/struct.String.html#representation
 
 ### OCaml
 
