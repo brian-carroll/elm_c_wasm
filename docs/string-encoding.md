@@ -70,6 +70,12 @@ If Elm was targeting native compilation then UTF-8 would definitely be the way t
 
 UTF-16 has a bit of a bad reputation because of buggy implementations that have been done in the past. There are a lot of UTF-16 string APIs that confuse characters with code units, including JavaScript's (and in some cases, even Elm's!). But as far as I know it's perfectly possible to do a _good_ implementation.
 
+I feel like it might be a controversial thing to say but here goes:
+
+> I think UTF-8 is not the right choice for Elm in the browser environment, and that it should use UTF-16 instead.
+
+But I also think we should fix stuff like this:
+
 ```elm
 > s = "🙈🙉🙊"
 "🙈🙉🙊" : String
