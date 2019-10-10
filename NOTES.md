@@ -1,3 +1,69 @@
+# Evan's idea: vdom diffing in semi-space GC
+
+- The `view` is only a function of the `model`, so the new view can't contain references to the old view.
+- But two subsequent VDOM structures can both point to
+  - the same chunk of the model
+  - the same constants
+- The model is generated before the (new) view
+- This means the model has to be in a different memory region or the assumption that the whole view becomes dead after the next render is invalidated.
+
+* can I still maintain the invariant of new pointing to old _within regions_?
+* new-old ordering is important for
+  - mark: bailing early from trace
+  - compact: being able to iterate only in one direction
+
+## the real optimisation here is
+
+> don't move the old view during compaction because it's going to die soon anyway, guaranteed
+> don't even bother marking it!
+
+## Idea outline
+
+- mutator:
+
+  - just before the runtime calls `view`, it allocates a sentinel value, which initially has a `size` field of zero
+  - after `view` is finished, the runtime updates the sentinel with the size of the vdom that was just generated
+
+- mark:
+
+  - there are either 1 or 2 vdom trees to keep alive. 2 if we're in the diff
+  - they are special roots that are not traced normally
+  - only the actual root (sentinel) node is marked, not the whole tree. there's no need because the compactor knows about this
+
+- compact:
+  - I am doing a bottom-up scan through the heap and checking headers for size
+  - check if the current object is a vdom sentinel
+  - skip copying and just increment `from` by `vdom->size` as usual (but it's huge)
+  - sentinel contains a size field. skip the `from` pointer past it without copying (regardless of mark bit)
+  - sentinel may be marked or not
+    - if vdom is junk, continue as normal
+  - if it _is_ one of the ones I need to keep, then:
+    - the `from` pointer skips over it and keeps going
+    - the `to` pointer stays where it is and I naturally end up "jumping" things over the vdom
+    - when the `to` pointer gets too close to the `vdom`, _then_ jump `to` over the `vdom` (when the value to be moved is too big)
+    - jumping the `to` pointer requires an extra check before every move during compaction
+
+```
+  if (to + v->size >= vdom) {
+    to = vdom + vdom->header.size
+  }
+```
+
+## complications & edge cases
+
+- what if this GC is happening _during_ the `view` call or the diff?
+  - then we're at the top of the heap already
+  - either request more memory
+  - OR just do the damn compaction and carry on. hope it's rare.
+    - turn off the special case stuff? ugh
+- what if there's a big gap under the old vdom after I do the GC? Do I start allocating above or below it?
+  - If I go below then `GC_malloc` has to know about this and do a check, so it slows down all allocations slightly.
+  - fuck it, just allocate above and leave the gap, it's fine
+  - but if I leave the gap then I haven't freed up any room...
+  - is this another case where I just decide to move it? I can move it as a single block
+  - maybe the pointer that `GC_malloc` uses can be the bottom of the `vdom`. Then it doesn't slow anything down. The logic is _after_ it throws. If this is `vdom` then skip allocation pointer over it. If it's the end of the heap, trigger a collection
+    - I need to search through all the uses of `heap->end` and break some assumptions about it... some of them will become `max_alloc` or whatever I call it.
+
 # publish something
 
 - demos
