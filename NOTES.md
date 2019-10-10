@@ -51,18 +51,27 @@
 
 ## complications & edge cases
 
+- the `vdom` pointer that we're comparing `to` against, might not be the only one. Need to compare `to` against multiple pointers?
+
+  - no, there are only two of them and we hit them one at a time, so only compare against the lowest until you hit it, then update the pointer
+
 - what if this GC is happening _during_ the `view` call or the diff?
+
   - then we're at the top of the heap already
   - either request more memory
-  - OR just do the damn compaction and carry on. hope it's rare.
-    - turn off the special case stuff? ugh
-- what if there's a big gap under the old vdom after I do the GC? Do I start allocating above or below it?
+  - OR just go ahead and move it down. if we have enough memory for a few cycles, we only do it in some % of cases
+    - **Need to turn off the special case stuff** ... ugh
+
+- what if there's a big gap under the old vdom after I do the GC? Do I start allocating below it?
+
   - If I go below then `GC_malloc` has to know about this and do a check, so it slows down all allocations slightly.
   - fuck it, just allocate above and leave the gap, it's fine
   - but if I leave the gap then I haven't freed up any room...
   - is this another case where I just decide to move it? I can move it as a single block
   - maybe the pointer that `GC_malloc` uses can be the bottom of the `vdom`. Then it doesn't slow anything down. The logic is _after_ it throws. If this is `vdom` then skip allocation pointer over it. If it's the end of the heap, trigger a collection
     - I need to search through all the uses of `heap->end` and break some assumptions about it... some of them will become `max_alloc` or whatever I call it.
+
+- what if there are 2 vdoms with 2 gaps?
 
 # publish something
 
