@@ -1,4 +1,66 @@
-# Evan's idea: vdom diffing in semi-space GC
+# Evan's idea: vdom diffing in a semi-space region
+
+- GC state now has two special chunks. initialize to some size found by experiment later
+- the special area goes up at the top underneath the mark bits and offsets
+- heap->end maybe gets renamed but is the same for the mark-compact stuff
+- when normal space runs out, it triggers a mark compact
+- when normal space is really in trouble
+  - could move the vdom space upwards
+  - or request more memory and also move the vdom up
+- when vdom space runs out
+  - either do mark-compact on the normal space
+    - shrink normal space and expand into it
+    - maybe move the old vdom
+  - or just request more memory
+
+## moving the vdom
+
+- all pointers get adjusted by the amount we moved
+  - pointers within the vdom itself
+  - pointers to normal space
+- nothing else can possibly point to the vdom or anything inside it!
+
+## diff values
+
+- these are dead instantly, unlike the vdom itself
+- so it's really a vdom+diff area where the vdom and diff have different characteristics
+- any GC metadata for vdom should probably account for this
+- diff could be allocated in normal space
+  - you'd have something in normal space pointing upwards though
+- the diff is the only thing that can point at the vdom
+
+## finding steady-state "right size" for everything
+
+### normal space (mark-compact)
+
+- count the number of update cycles it takes to fill and work towards some target
+- target: should be able to do 8 updates without a minor GC
+- if we just overflowed and it's been less than 8 updates since the last minor then estimate how much space we'd need to get on target (update a running estimate using a lossy IIR filter)
+- mark the whole heap and calculate available space in old gen
+  - add up live space while marking, rather than a separate iteration through the mark bits
+- if enough space in old gen, do a major collection
+- if not, request the remainder from the system, rounded up to a page
+- if we don't get it, tough shit
+- if we do, move all the things _and_ do a major
+
+### vdom space
+
+- it's more about finding the maximum "ever", or at least max over some history of update cycles
+- if we ever run out of room, double current size straight away. this is serious shit.
+  - see if we can steal enough from normal space without GC _right now_ (selfish short term thinking, let normal space deal with the consequences)
+  - mark the normal area
+  - if minor GC is enough, do it
+  - if major GC is enough, do it and then ask system for more memory
+  - if major GC is not enough, get more memory first, do GC after rendering
+
+* To give back space slowly over time, keep track of a 'maximum size estimator'
+  - every update, reduce it by 1/128 of itself
+  - when actual needed size is larger than the esimator, bump it up to match that
+  - after every cycle check if estimator more than a page below what we currently have reserved. if we have too much room, give it back to normal space over the next one or two cycles
+
+---
+
+# vdom diffing in mark-compact GC
 
 - The `view` is only a function of the `model`, so the new view can't contain references to the old view.
 - But two subsequent VDOM structures can both point to
