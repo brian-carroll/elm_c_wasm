@@ -167,10 +167,8 @@ const elmWasmJs = (function() {
 
   function createWasmCallback(evaluator: number, freeVars: any[]) {
     return function wasmCallback() {
-      const requestSpaceInWasm = () => 123; // TODO: request actual space!
-      const executeWasmClosure = (addr: number) => 456; // TODO: implement this
       const nArgs = freeVars.length + arguments.length;
-      let nextIndex = requestSpaceInWasm();
+      let nextIndex = wasmExports.startWrite(); // TODO: how much??
       let childAddrs: number[] = [];
       const iter = (v: any) => {
         const update = writeValue(nextIndex, v);
@@ -188,14 +186,15 @@ const elmWasmJs = (function() {
         size: 3 + nArgs
       });
       const closureAddr = nextIndex;
-      const argsInfo = nArgs * ((1 + 1) << 16);
+      const argsInfo = nArgs * (1 + (1 << 16));
       mem32[nextIndex++] = header;
       mem32[nextIndex++] = argsInfo;
       mem32[nextIndex++] = evaluator;
       childAddrs.forEach(addr => {
         mem32[nextIndex++] = addr;
       });
-      const resultAddr = executeWasmClosure(closureAddr);
+      wasmExports.finishWrite(nextIndex);
+      const resultAddr = wasmExports.executeThunk(closureAddr);
       return readValue(resultAddr);
     };
   }
