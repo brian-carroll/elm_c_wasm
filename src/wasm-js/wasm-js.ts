@@ -41,6 +41,11 @@ const wasmFields = {
   1: 'stuff'
 };
 
+const wasmFieldGroups = {
+  thing$stuff: 1,
+  0: 'thing$stuff'
+};
+
 const wasmCtors = {
   0: 'Apple',
   1: 'Banana',
@@ -286,6 +291,10 @@ function writeValue(
       break;
     }
     case Tag.Record: {
+      const keys = Object.keys(value);
+      keys.sort();
+      body[0] = wasmFieldGroups[keys.join('$')];
+      children = keys.map(k => value[k]);
       break;
     }
     case Tag.Closure: {
