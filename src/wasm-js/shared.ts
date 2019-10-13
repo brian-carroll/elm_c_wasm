@@ -1,4 +1,5 @@
 import './elm-core';
+import { fieldGroupNames, appTypes } from './generated';
 
 export declare const mem32: Uint32Array;
 export declare const mem16: Uint16Array;
@@ -7,6 +8,7 @@ export declare const wasmExports: {
   getNil: () => number;
   getTrue: () => number;
   getFalse: () => number;
+  getNextFieldGroup: () => number;
   writeFloat: (addr: number, value: number) => void;
   readFloat: (addr: number) => number;
 };
@@ -53,8 +55,17 @@ const initConstAddrs = () => {
   };
 };
 
+const initFieldGroups = () => {
+  fieldGroupNames.forEach(name => {
+    const addr = wasmExports.getNextFieldGroup();
+    appTypes.fieldGroups[name] = addr;
+    appTypes.fieldGroups[addr] = name;
+  });
+};
+
 export const init = () => {
   wasmConstAddrs = initConstAddrs();
+  initFieldGroups();
 };
 
 export const CLOSURE_N_MASK = 0xffff0000;

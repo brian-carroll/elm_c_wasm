@@ -25,15 +25,14 @@ function encodeHeader({ tag, size }: Header): number {
 
 /**
  * Write a value to the Wasm memory and return the address where it was written
- * @param mem32 WebAssembly memory
- * @param maxIndex  Current index into the memory
+ * @param nextIndex Next available index into the memory
  * @param value  JavaScript Elm value to send to Wasm
  * @returns address written and next index to write
  */
 export function writeValue(
-  maxIndex: number,
+  nextIndex: number,
   value: any
-): { addr: number; maxIndex: number } {
+): { addr: number; nextIndex: number } {
   let tag: Tag;
 
   switch (typeof value) {
@@ -46,7 +45,7 @@ export function writeValue(
     case 'boolean':
       return {
         addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
-        maxIndex
+        nextIndex
       };
     case 'function':
       tag = Tag.Closure;
@@ -61,12 +60,12 @@ export function writeValue(
           tag = Tag.Record;
           break;
         case '[]':
-          return { addr: wasmConstAddrs.Nil, maxIndex };
+          return { addr: wasmConstAddrs.Nil, nextIndex };
         case '::':
           tag = Tag.List;
           break;
         case '#0':
-          return { addr: wasmConstAddrs.Unit, maxIndex };
+          return { addr: wasmConstAddrs.Unit, nextIndex };
         case '#2':
           tag = Tag.Tuple2;
           break;
@@ -82,7 +81,7 @@ export function writeValue(
   }
 
   let body: number[] = [];
-  let children: any[] = [];
+  let jsChildren: any[] = [];
   let writer: (addr: number) => number;
   switch (tag) {
     case Tag.Int: {
@@ -103,26 +102,28 @@ export function writeValue(
     }
     case Tag.Tuple2:
     case Tag.List: {
-      children = [value.a, value.b];
+      jsChildren = [value.a, value.b];
       break;
     }
     case Tag.Tuple3: {
-      children = [value.a, value.b, value.c];
+      jsChildren = [value.a, value.b, value.c];
       break;
     }
     case Tag.Custom: {
       const jsCtor: string = value.$;
       body[0] = appTypes.ctors[jsCtor];
       Object.keys(value).forEach(k => {
-        if (k !== '$') children.push(value[k]);
+        if (k !== '$') jsChildren.push(value[k]);
       });
       break;
     }
     case Tag.Record: {
       const keys = Object.keys(value);
       keys.sort();
-      body[0] = appTypes.fieldGroups[keys.join('$')];
-      children = keys.map(k => value[k]);
+      const fgName = keys.join('$');
+      const fgAddr = appTypes.fieldGroups[fgName];
+      body[0] = fgAddr;
+      jsChildren = keys.map(k => value[k]);
       break;
     }
     case Tag.Closure: {
@@ -130,33 +131,31 @@ export function writeValue(
     }
   }
 
-  let index = maxIndex;
-
   const childAddrs: number[] = [];
-  children.forEach(child => {
-    const update = writeValue(index, child);
+  jsChildren.forEach(child => {
+    const update = writeValue(nextIndex, child);
     childAddrs.push(update.addr);
-    index = update.maxIndex;
+    nextIndex = update.nextIndex;
   });
 
-  const currentAddr = index * WORD;
+  const currentAddr = nextIndex * WORD;
   if (writer) {
-    const size = 1 + writer((index + 1) * WORD);
-    mem32[index] = encodeHeader({ tag, size });
-    index += size;
+    const size = 1 + writer((nextIndex + 1) * WORD);
+    mem32[nextIndex] = encodeHeader({ tag, size });
+    nextIndex += size;
   } else {
-    const size = body.length + children.length;
-    mem32[index++] = encodeHeader({ tag, size });
+    const size = body.length + jsChildren.length;
+    mem32[nextIndex++] = encodeHeader({ tag, size });
     body.forEach(word => {
-      mem32[index++] = word;
+      mem32[nextIndex++] = word;
     });
     childAddrs.forEach(addr => {
-      mem32[index++] = addr;
+      mem32[nextIndex++] = addr;
     });
   }
 
   return {
     addr: currentAddr,
-    maxIndex: index
+    nextIndex
   };
 }
