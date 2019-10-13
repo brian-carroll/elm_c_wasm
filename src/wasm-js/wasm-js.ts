@@ -38,7 +38,7 @@ const wasmCtors = {
   Banana: 1
 };
 
-const wasmConstants = (() => {
+const wasmConstAddrs = (() => {
   const Unit: number = wasmInst.exports.getUnit();
   const Nil: number = wasmInst.exports.getNil();
   const True: number = wasmInst.exports.getTrue();
@@ -96,7 +96,7 @@ function readValue(addr: number) {
       return textDecoder.decode(bytes);
     }
     case Tag.List: {
-      return addr === wasmConstants.Nil
+      return addr === wasmConstAddrs.Nil
         ? _List_Nil
         : _List_Cons(readValue(mem32[index + 1]), readValue(mem32[index + 2]));
     }
@@ -114,7 +114,7 @@ function readValue(addr: number) {
       );
     }
     case Tag.Custom: {
-      const elmConst = wasmConstants[addr];
+      const elmConst = wasmConstAddrs[addr];
       if (elmConst) return elmConst;
       const wasmCtor = mem32[index + 1];
       const jsCtor = wasmCtors[wasmCtor];
@@ -170,14 +170,21 @@ function readValue(addr: number) {
 
 const writeString = (s: string) => (idx32: number) => {
   const offset = idx32 << 1;
-  let i = 0;
-  for (; i < s.length; i++) {
+  const len = s.length;
+  for (let i = 0; i < len; i++) {
     mem16[offset + i] = s.charCodeAt(i);
   }
-  if (s.length % 2) {
-    mem16[offset + i] = 0;
+  if (len % 2) {
+    mem16[offset + len] = 0;
   }
 };
+
+interface WasmBuilder {
+  size: number;
+  body: number[];
+  children: any[];
+  writer: (idx: number) => void;
+}
 
 /**
  * Write a value to the Wasm memory and return the address where it was written
@@ -201,7 +208,7 @@ function writeValue(
       break;
     case 'boolean':
       return {
-        addr: value ? wasmConstants.True : wasmConstants.False,
+        addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
         maxIndex
       };
     case 'function':
@@ -214,12 +221,12 @@ function writeValue(
           tag = Tag.Record;
           break;
         case '[]':
-          return { addr: wasmConstants.Nil, maxIndex };
+          return { addr: wasmConstAddrs.Nil, maxIndex };
         case '::':
           tag = Tag.List;
           break;
         case '#0':
-          return { addr: wasmConstants.Unit, maxIndex };
+          return { addr: wasmConstAddrs.Unit, maxIndex };
         case '#2':
           tag = Tag.Tuple2;
           break;
@@ -231,12 +238,6 @@ function writeValue(
           tag = Tag.Custom;
       }
     }
-  }
-  interface WasmBuilder {
-    size: number;
-    body: number[];
-    children: any[];
-    writer: (idx: number) => void;
   }
   const builder: WasmBuilder = {
     size: 0,
@@ -262,11 +263,9 @@ function writeValue(
       break;
     }
     case Tag.String: {
-      const s: string = value;
-      const len32 = (s.length + 1) >> 1;
-      const size = 1 + len32;
-      builder.header = encodeHeader({ tag, size });
-      builder.writer = writeString(s);
+      const len32 = (value.length + 1) >> 1; // number of 32-bit memory slots
+      builder.size = 1 + len32; // room for header
+      builder.writer = writeString(value);
       break;
     }
     case Tag.Tuple2:
@@ -293,7 +292,7 @@ function writeValue(
 
   let index = maxIndex;
 
-  // Write children
+  // Write children and get their addresses
   const childAddrs: number[] = [];
   builder.children.forEach(child => {
     const update = writeValue(index, child);
