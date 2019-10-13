@@ -14,9 +14,10 @@ import {
 import { appTypes } from './generated';
 
 const textDecoder = new TextDecoder('utf16le');
-export const elmFunctionWrappers = [f => f, f => f, F2, F3, F4];
+const identity = (f: Function) => f;
+export const elmFunctionWrappers = [identity, identity, F2, F3, F4];
 
-export function readValue(addr: number) {
+export function readValue(addr: number): any {
   const index = addr / WORD;
   const header = mem32[index];
   const tag: Tag = header & TAG_MASK;
@@ -66,7 +67,7 @@ export function readValue(addr: number) {
       if (elmConst) return elmConst;
       const wasmCtor = mem32[index + 1];
       const jsCtor = appTypes.ctors[wasmCtor];
-      const custom = { $: jsCtor };
+      const custom: Record<string, any> = { $: jsCtor };
       let fieldCharCode = 'a'.charCodeAt(0);
       for (let i = index + 2; i < index + size; i++) {
         const field = String.fromCharCode(fieldCharCode++);
@@ -76,7 +77,7 @@ export function readValue(addr: number) {
       return custom;
     }
     case Tag.Record: {
-      const record = {};
+      const record: Record<string, any> = {};
       const fgIndex = mem32[index + 1] / WORD;
       const fgSize = mem32[fgIndex];
       for (let i = 1; i <= fgSize; i++) {
@@ -94,7 +95,7 @@ export function readValue(addr: number) {
       const max_values = argsInfo & CLOSURE_MAX_MASK;
       const arity = max_values - n_values;
       const evaluator = mem32[index + 2];
-      const appliedArgs = [];
+      const appliedArgs: any[] = [];
       for (let i = index + 3; i < index + size; i++) {
         appliedArgs.push(readValue(mem32[i]));
       }

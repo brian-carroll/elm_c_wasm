@@ -26,7 +26,7 @@ export function writeValue(
   nextIndex: number,
   value: any
 ): { addr: number; nextIndex: number } {
-  let tag: Tag;
+  let tag: Tag = Tag.Unused;
 
   switch (typeof value) {
     case 'number':
@@ -75,7 +75,7 @@ export function writeValue(
 
   let body: number[] = [];
   let jsChildren: any[] = [];
-  let writer: (addr: number) => number;
+  let writer: ((addr: number) => number) | undefined;
   switch (tag) {
     case Tag.Int: {
       body[0] = value;
