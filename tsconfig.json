@@ -3,7 +3,6 @@
     "typeRoots": ["./node_modules/@types", "./node_modules/@babel"],
     "lib": ["es2015", "dom"],
     "target": "es2015",
-    // "outFile": "dist/www/elm-wasm.js"
     "noImplicitAny": true,
     "strictNullChecks": true
   },

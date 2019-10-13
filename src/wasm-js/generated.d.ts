@@ -28,9 +28,9 @@ interface IntToName {
   [int: number]: string;
 }
 
-export declare const fieldGroupNames: string[];
+declare const fieldGroupNames: string[];
 
-export declare const appTypes: {
+declare const appTypes: {
   fields: NameToInt & IntToName;
   fieldGroups: NameToInt & IntToName; // generated as empty {}, filled on app init
   ctors: NameToInt & IntToName;
