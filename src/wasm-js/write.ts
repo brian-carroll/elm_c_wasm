@@ -10,21 +10,14 @@ import {
 } from './shared';
 import { appTypes } from './generated';
 
-const writeString = (s: string) => (idx32: number): number => {
-  const offset = idx32 << 1;
-  const len = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
-  for (let i = 0; i < len; i++) {
-    mem16[offset + i] = s.charCodeAt(i);
-  }
-  return len >> 1;
-};
-
-function encodeHeader({ tag, size }: Header): number {
-  return tag | (size << SIZE_SHIFT);
-}
-
 /**
  * Write a value to the Wasm memory and return the address where it was written
+ *
+ * Wasm structures all have the same general layout
+ *   - header (containing the size in 32-bit words and a type tag)
+ *   - body data
+ *   - child pointers
+ *
  * @param nextIndex Next available index into the memory
  * @param value  JavaScript Elm value to send to Wasm
  * @returns address written and next index to write
@@ -85,11 +78,11 @@ export function writeValue(
   let writer: (addr: number) => number;
   switch (tag) {
     case Tag.Int: {
-      body[0] = value | 0;
+      body[0] = value;
       break;
     }
     case Tag.Float: {
-      writer = addr => {
+      writer = (addr: number) => {
         wasmExports.writeFloat(addr, value);
         return 2; // words written
       };
@@ -97,7 +90,7 @@ export function writeValue(
     }
     case Tag.Char:
     case Tag.String: {
-      writer = writeString(value);
+      writer = (addr: number) => writeString(value, addr);
       break;
     }
     case Tag.Tuple2:
@@ -158,4 +151,17 @@ export function writeValue(
     addr: currentAddr,
     nextIndex
   };
+}
+
+function encodeHeader({ tag, size }: Header): number {
+  return tag | (size << SIZE_SHIFT);
+}
+
+function writeString(s: string, idx32: number): number {
+  const offset = idx32 << 1;
+  const len = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
+  for (let i = 0; i < len; i++) {
+    mem16[offset + i] = s.charCodeAt(i);
+  }
+  return len >> 1;
 }
