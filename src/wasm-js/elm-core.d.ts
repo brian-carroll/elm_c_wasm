@@ -8,8 +8,6 @@ declare function _Utils_Tuple3<A, B, C>(
   c: C
 ): { $: '#2'; a: A; b: B; c: C };
 declare function _Utils_chr(c: string): String;
-declare const elm$core$Basics$True: { $: 'True' };
-declare const elm$core$Basics$False: { $: 'False' };
 
 /* Curry
  */
