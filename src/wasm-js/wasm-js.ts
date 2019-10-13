@@ -1,5 +1,7 @@
 import './elm-core';
 declare const wasmInst: WebAssembly.Instance;
+declare const mem32: Uint32Array;
+declare const mem16: Uint16Array;
 
 const elmFunctionWrappers = [f => f, f => f, F2, F3, F4];
 
@@ -62,29 +64,33 @@ const WORD = 4;
 const TAG_MASK = 0xf;
 const SIZE_MASK = 0xfffffff0;
 const SIZE_SHIFT = 4;
-function encodeHeader(tag: Tag, size: number): number {
+interface Header {
+  tag: Tag;
+  size: number;
+}
+function encodeHeader({ tag, size }: Header): number {
   return tag | (size << SIZE_SHIFT);
 }
 
-function readValue(memory: Uint32Array, addr: number) {
+function readValue(addr: number) {
   const index = addr / WORD;
-  const header = memory[index];
+  const header = mem32[index];
   const tag: Tag = header & TAG_MASK;
   const size = (header & SIZE_MASK) >> SIZE_SHIFT;
 
   switch (tag) {
     case Tag.Int: {
-      return memory[index + 1];
+      return mem32[index + 1];
     }
     case Tag.Float: {
       return wasmInst.exports.readFloat(addr + WORD);
     }
     case Tag.Char: {
       // blatant monoculturalism for now because this shit is confusing
-      return _Utils_chr(String.fromCharCode(memory[index + 1]));
+      return _Utils_chr(String.fromCharCode(mem32[index + 1]));
     }
     case Tag.String: {
-      let bytes = new Uint8Array(memory.slice(index + 1, size - 1));
+      let bytes = new Uint8Array(mem32.slice(index + 1, size - 1));
       const paddingBytes = bytes[-1];
       bytes = bytes.slice(0, size * WORD - paddingBytes);
       return textDecoder.decode(bytes);
@@ -92,60 +98,57 @@ function readValue(memory: Uint32Array, addr: number) {
     case Tag.List: {
       return addr === wasmConstants.Nil
         ? _List_Nil
-        : _List_Cons(
-            readValue(memory, memory[index + 1]),
-            readValue(memory, memory[index + 2])
-          );
+        : _List_Cons(readValue(mem32[index + 1]), readValue(mem32[index + 2]));
     }
     case Tag.Tuple2: {
       return _Utils_Tuple2(
-        readValue(memory, memory[index + 1]),
-        readValue(memory, memory[index + 2])
+        readValue(mem32[index + 1]),
+        readValue(mem32[index + 2])
       );
     }
     case Tag.Tuple3: {
       return _Utils_Tuple3(
-        readValue(memory, memory[index + 1]),
-        readValue(memory, memory[index + 2]),
-        readValue(memory, memory[index + 3])
+        readValue(mem32[index + 1]),
+        readValue(mem32[index + 2]),
+        readValue(mem32[index + 3])
       );
     }
     case Tag.Custom: {
       const elmConst = wasmConstants[addr];
       if (elmConst) return elmConst;
-      const wasmCtor = memory[index + 1];
+      const wasmCtor = mem32[index + 1];
       const jsCtor = wasmCtors[wasmCtor];
       const custom = { $: jsCtor };
       let fieldCharCode = 'a'.charCodeAt(0);
       for (let i = index + 2; i < index + size; i++) {
         const field = String.fromCharCode(fieldCharCode++);
-        const childAddr = memory[i];
-        custom[field] = readValue(memory, childAddr);
+        const childAddr = mem32[i];
+        custom[field] = readValue(childAddr);
       }
       return custom;
     }
     case Tag.Record: {
       const record = {};
-      const fgIndex = memory[index + 1] / WORD;
-      const fgSize = memory[fgIndex];
+      const fgIndex = mem32[index + 1] / WORD;
+      const fgSize = mem32[fgIndex];
       for (let i = 1; i <= fgSize; i++) {
-        const fieldId = memory[fgIndex + i];
-        const valAddr = memory[index + 1 + i];
+        const fieldId = mem32[fgIndex + i];
+        const valAddr = mem32[index + 1 + i];
         const fieldName = wasmFields[fieldId];
-        const value = readValue(memory, valAddr);
+        const value = readValue(valAddr);
         record[fieldName] = value;
       }
       return record;
     }
     case Tag.Closure: {
-      const argsInfo = memory[index + 1];
+      const argsInfo = mem32[index + 1];
       const n_values = argsInfo & CLOSURE_N_MASK;
       const max_values = argsInfo & CLOSURE_MAX_MASK;
       const arity = max_values - n_values;
-      const evaluator = memory[index + 2];
+      const evaluator = mem32[index + 2];
       const appliedArgs = [];
       for (let i = index + 3; i < index + size; i++) {
-        appliedArgs.push(readValue(memory, memory[i]));
+        appliedArgs.push(readValue(mem32[i]));
       }
       function wasmClosureCallback() {
         const privateArgs = appliedArgs.slice();
@@ -159,22 +162,36 @@ function readValue(memory: Uint32Array, addr: number) {
       return FN(wasmClosureCallback);
     }
     default:
-      throw new Error(`Tried to decode value with tag "${Tag[tag]}"`);
+      throw new Error(
+        `Tried to decode value with unsupported tag "${Tag[tag]}"`
+      );
   }
 }
 
+const writeString = (s: string) => (idx32: number) => {
+  const offset = idx32 << 1;
+  let i = 0;
+  for (; i < s.length; i++) {
+    mem16[offset + i] = s.charCodeAt(i);
+  }
+  if (s.length % 2) {
+    mem16[offset + i] = 0;
+  }
+};
+
 /**
  * Write a value to the Wasm memory and return the address where it was written
- * @param memory WebAssembly memory
+ * @param mem32 WebAssembly memory
  * @param maxIndex  Current index into the memory
  * @param value  JavaScript Elm value to send to Wasm
+ * @returns address written and next index to write
  */
 function writeValue(
-  memory: Uint32Array,
   maxIndex: number,
   value: any
 ): { addr: number; maxIndex: number } {
   let tag: Tag;
+
   switch (typeof value) {
     case 'number':
       tag = Number.isInteger(value) ? Tag.Int : Tag.Float; // UNSAFE!
@@ -215,72 +232,93 @@ function writeValue(
       }
     }
   }
+  interface WasmBuilder {
+    size: number;
+    body: number[];
+    children: any[];
+    writer: (idx: number) => void;
+  }
+  const builder: WasmBuilder = {
+    size: 0,
+    body: [],
+    children: [],
+    writer: undefined
+  };
 
   switch (tag) {
     case Tag.Int: {
-      const size = 2;
-      memory[maxIndex] = encodeHeader(tag, size);
-      memory[maxIndex + 1] = value | 0;
-      return { addr: maxIndex * WORD, maxIndex: maxIndex + size };
+      builder.size = 2;
+      builder.body = [value | 0];
+      break;
     }
     case Tag.Float: {
-      const size = 3;
-      memory[maxIndex] = encodeHeader(tag, size);
-      wasmInst.exports.writeFloat(maxIndex + 1, value);
-      return { addr: maxIndex * WORD, maxIndex: maxIndex + size };
+      builder.size = 3;
+      builder.writer = idx => wasmInst.exports.writeFloat(idx, value);
+      break;
     }
     case Tag.Char: {
-      const size = 2;
-      memory[maxIndex] = encodeHeader(tag, size);
-      const utf16 = [0, 1].map(i => value.charCodeAt(i));
-      const encoded32le = utf16[1] * (1 << 16) + utf16[0];
-      memory[maxIndex + 1] = encoded32le;
-      return { addr: maxIndex * WORD, maxIndex: maxIndex + size };
+      builder.size = 2;
+      builder.writer = writeString(value);
+      break;
     }
     case Tag.String: {
       const s: string = value;
-      const size = ((s.length + 1) >> 1) + 1;
-      memory[maxIndex] = encodeHeader(tag, size);
-      const mem16 = new Uint16Array(memory.slice(maxIndex + 1));
-      for (let i = 0; i < s.length; i++) {
-        mem16[i] = s.charCodeAt(i);
-      }
-      if (s.length % 2) {
-        mem16[s.length] = 2 << 8; // padding size indicator
-      }
-      return { addr: maxIndex * WORD, maxIndex: maxIndex + size };
+      const len32 = (s.length + 1) >> 1;
+      const size = 1 + len32;
+      builder.header = encodeHeader({ tag, size });
+      builder.writer = writeString(s);
+      break;
     }
     case Tag.Tuple2:
     case Tag.List: {
-      const size = 3;
-      const a = writeValue(memory, maxIndex, value.a);
-      const b = writeValue(memory, maxIndex, value.b);
-      const newIndex = b.maxIndex;
-      memory[newIndex] = encodeHeader(tag, size);
-      memory[newIndex + 1] = a.addr;
-      memory[newIndex + 2] = b.addr;
-      return { addr: newIndex * WORD, maxIndex: newIndex + size };
+      builder.size = 3;
+      builder.children = [value.a, value.b];
+      break;
     }
     case Tag.Tuple3: {
-      const size = 4;
-      const a = writeValue(memory, maxIndex, value.a);
-      const b = writeValue(memory, maxIndex, value.b);
-      const c = writeValue(memory, maxIndex, value.c);
-      const newIndex = c.maxIndex;
-      memory[newIndex] = encodeHeader(tag, size);
-      memory[newIndex + 1] = a.addr;
-      memory[newIndex + 2] = b.addr;
-      memory[newIndex + 3] = c.addr;
-      return { addr: newIndex * WORD, maxIndex: newIndex + size };
+      builder.size = 4;
+      builder.children = [value.a, value.b, value.c];
+      break;
     }
     case Tag.Custom: {
-      return null;
+      break;
     }
     case Tag.Record: {
-      return null;
+      break;
     }
     case Tag.Closure: {
-      return null;
+      break;
     }
   }
+
+  let index = maxIndex;
+
+  // Write children
+  const childAddrs: number[] = [];
+  builder.children.forEach(child => {
+    const update = writeValue(index, child);
+    childAddrs.push(update.addr);
+    index = update.maxIndex;
+  });
+
+  // Write current value
+  const currentValueIndex = index;
+  mem32[index] = encodeHeader({ tag, size: builder.size });
+  if (builder.writer) {
+    builder.writer(index + 1);
+    index += builder.size;
+  } else {
+    index++;
+    builder.body.forEach(word => {
+      mem32[index++] = word;
+    });
+    childAddrs.forEach(addr => {
+      mem32[index++] = addr;
+    });
+  }
+
+  return {
+    addr: currentValueIndex * WORD,
+    maxIndex: index
+  };
 }
