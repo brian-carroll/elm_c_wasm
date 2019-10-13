@@ -3,6 +3,16 @@ declare const wasmInst: WebAssembly.Instance;
 declare const mem32: Uint32Array;
 declare const mem16: Uint16Array;
 
+interface WasmExports {
+  getUnit: () => number;
+  getNil: () => number;
+  getTrue: () => number;
+  getFalse: () => number;
+  writeFloat: (addr: number, value: number) => void;
+  readFloat: (addr: number) => number;
+}
+declare const wasmExports: WasmExports;
+
 const elmFunctionWrappers = [f => f, f => f, F2, F3, F4];
 
 enum Tag {
@@ -39,10 +49,10 @@ const wasmCtors = {
 };
 
 const wasmConstAddrs = (() => {
-  const Unit: number = wasmInst.exports.getUnit();
-  const Nil: number = wasmInst.exports.getNil();
-  const True: number = wasmInst.exports.getTrue();
-  const False: number = wasmInst.exports.getFalse();
+  const Unit = wasmExports.getUnit();
+  const Nil = wasmExports.getNil();
+  const True = wasmExports.getTrue();
+  const False = wasmExports.getFalse();
   return {
     Unit,
     Nil,
@@ -83,11 +93,15 @@ function readValue(addr: number) {
       return mem32[index + 1];
     }
     case Tag.Float: {
-      return wasmInst.exports.readFloat(addr + WORD);
+      return wasmExports.readFloat(addr + WORD);
     }
     case Tag.Char: {
-      // blatant monoculturalism for now because this shit is confusing
-      return _Utils_chr(String.fromCharCode(mem32[index + 1]));
+      const idx16 = index << 1;
+      const word0 = mem16[idx16 + 1];
+      const word1 = mem16[idx16 + 2];
+      let s = String.fromCharCode(word0);
+      if (word1) s += String.fromCharCode(word1);
+      return _Utils_chr(s);
     }
     case Tag.String: {
       let bytes = new Uint8Array(mem32.slice(index + 1, size - 1));
@@ -168,23 +182,14 @@ function readValue(addr: number) {
   }
 }
 
-const writeString = (s: string) => (idx32: number) => {
+const writeString = (s: string) => (idx32: number): number => {
   const offset = idx32 << 1;
-  const len = s.length;
+  const len = s.length + (s.length % 2); // for odd length, write an extra word (NaN written as 0)
   for (let i = 0; i < len; i++) {
     mem16[offset + i] = s.charCodeAt(i);
   }
-  if (len % 2) {
-    mem16[offset + len] = 0;
-  }
+  return len >> 1;
 };
-
-interface WasmBuilder {
-  size: number;
-  body: number[];
-  children: any[];
-  writer: (idx: number) => void;
-}
 
 /**
  * Write a value to the Wasm memory and return the address where it was written
@@ -215,7 +220,10 @@ function writeValue(
       tag = Tag.Closure;
       break;
     case 'object': {
-      if (value instanceof String) tag = Tag.Char;
+      if (value instanceof String) {
+        tag = Tag.Char;
+        break;
+      }
       switch (value.$) {
         case undefined:
           tag = Tag.Record;
@@ -236,50 +244,45 @@ function writeValue(
         case '#0':
         default:
           tag = Tag.Custom;
+          break;
       }
     }
   }
-  const builder: WasmBuilder = {
-    size: 0,
-    body: [],
-    children: [],
-    writer: undefined
-  };
 
+  let body: number[] = [];
+  let children: any[] = [];
+  let writer: (addr: number) => number;
   switch (tag) {
     case Tag.Int: {
-      builder.size = 2;
-      builder.body = [value | 0];
+      body[0] = value | 0;
       break;
     }
     case Tag.Float: {
-      builder.size = 3;
-      builder.writer = idx => wasmInst.exports.writeFloat(idx, value);
+      writer = addr => {
+        wasmExports.writeFloat(addr, value);
+        return 2; // words written
+      };
       break;
     }
-    case Tag.Char: {
-      builder.size = 2;
-      builder.writer = writeString(value);
-      break;
-    }
+    case Tag.Char:
     case Tag.String: {
-      const len32 = (value.length + 1) >> 1; // number of 32-bit memory slots
-      builder.size = 1 + len32; // room for header
-      builder.writer = writeString(value);
+      writer = writeString(value);
       break;
     }
     case Tag.Tuple2:
     case Tag.List: {
-      builder.size = 3;
-      builder.children = [value.a, value.b];
+      children = [value.a, value.b];
       break;
     }
     case Tag.Tuple3: {
-      builder.size = 4;
-      builder.children = [value.a, value.b, value.c];
+      children = [value.a, value.b, value.c];
       break;
     }
     case Tag.Custom: {
+      body[0] = wasmCtors[value.$];
+      Object.keys(value).forEach(k => {
+        if (k !== '$') children.push(value[k]);
+      });
       break;
     }
     case Tag.Record: {
@@ -292,23 +295,22 @@ function writeValue(
 
   let index = maxIndex;
 
-  // Write children and get their addresses
   const childAddrs: number[] = [];
-  builder.children.forEach(child => {
+  children.forEach(child => {
     const update = writeValue(index, child);
     childAddrs.push(update.addr);
     index = update.maxIndex;
   });
 
-  // Write current value
-  const currentValueIndex = index;
-  mem32[index] = encodeHeader({ tag, size: builder.size });
-  if (builder.writer) {
-    builder.writer(index + 1);
-    index += builder.size;
+  const currentAddr = index * WORD;
+  if (writer) {
+    const size = 1 + writer((index + 1) * WORD);
+    mem32[index] = encodeHeader({ tag, size });
+    index += size;
   } else {
-    index++;
-    builder.body.forEach(word => {
+    const size = body.length + children.length;
+    mem32[index++] = encodeHeader({ tag, size });
+    body.forEach(word => {
       mem32[index++] = word;
     });
     childAddrs.forEach(addr => {
@@ -317,7 +319,7 @@ function writeValue(
   }
 
   return {
-    addr: currentValueIndex * WORD,
+    addr: currentAddr,
     maxIndex: index
   };
 }
