@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
-    "typeRoots": ["./node_modules/@types", "./node_modules/@babel"],
+    "typeRoots": ["./node_modules/@types", "src/wasm-js"],
     "lib": ["es2015", "dom"],
     "target": "es2015",
     "noImplicitAny": true,
     "strictNullChecks": true
   },
-  "include": ["src/wasm-js/*.ts"],
+  "files": ["src/wasm-js/wasm-js.ts"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }

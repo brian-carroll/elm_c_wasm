@@ -1,8 +1,55 @@
-import './elm-core';
-import './generated';
-import './wasm';
+/// <reference path = "elm-core.d.ts" />
+/// <reference path = "elm-wasm.d.ts" />
 
-const elmWasmJs = (function() {
+function createElmWasmJsInterface(
+  instance: WebAssembly.Instance,
+  memory: ArrayBuffer,
+  appTypes: ElmWasmAppTypes
+) {
+  /* --------------------------------------------------
+
+               INITIALISATION & CONSTANTS
+
+  -------------------------------------------------- */
+
+  const mem32 = new Uint32Array(memory);
+  const mem16 = new Uint16Array(memory);
+  const wasmExports: ElmWasmExports = instance.exports;
+
+  const wasmConstAddrs = (function() {
+    const Unit = wasmExports.getUnit();
+    const Nil = wasmExports.getNil();
+    const True = wasmExports.getTrue();
+    const False = wasmExports.getFalse();
+    return {
+      Unit,
+      Nil,
+      True,
+      False,
+      [Unit]: _Utils_Tuple0,
+      [Nil]: _List_Nil,
+      [True]: true,
+      [False]: false
+    };
+  })();
+
+  appTypes.fieldGroupNames.forEach(name => {
+    const addr = wasmExports.getNextFieldGroup();
+    appTypes.fieldGroups[name] = addr;
+    appTypes.fieldGroups[addr] = name;
+  });
+
+  const CLOSURE_N_MASK = 0xffff0000;
+  const CLOSURE_MAX_MASK = 0xffff0000;
+  const WORD = 4;
+  const TAG_MASK = 0xf;
+  const SIZE_MASK = 0xfffffff0;
+  const SIZE_SHIFT = 4;
+
+  const textDecoder = new TextDecoder('utf16le');
+  const identity = (f: Function) => f;
+  const elmFunctionWrappers = [identity, identity, F2, F3, F4];
+
   enum Tag {
     Int = 0x0,
     Float = 0x1,
@@ -27,47 +74,11 @@ const elmWasmJs = (function() {
     size: number;
   }
 
-  let wasmConstAddrs: ReturnType<typeof initConstAddrs>;
-  const initConstAddrs = () => {
-    const Unit = wasmExports.getUnit();
-    const Nil = wasmExports.getNil();
-    const True = wasmExports.getTrue();
-    const False = wasmExports.getFalse();
-    return {
-      Unit,
-      Nil,
-      True,
-      False,
-      [Unit]: _Utils_Tuple0,
-      [Nil]: _List_Nil,
-      [True]: true,
-      [False]: false
-    };
-  };
+  /* --------------------------------------------------
 
-  const initFieldGroups = () => {
-    fieldGroupNames.forEach(name => {
-      const addr = wasmExports.getNextFieldGroup();
-      appTypes.fieldGroups[name] = addr;
-      appTypes.fieldGroups[addr] = name;
-    });
-  };
+                READ ELM VALUE FROM WASM
 
-  const init = () => {
-    wasmConstAddrs = initConstAddrs();
-    initFieldGroups();
-  };
-
-  const CLOSURE_N_MASK = 0xffff0000;
-  const CLOSURE_MAX_MASK = 0xffff0000;
-  const WORD = 4;
-  const TAG_MASK = 0xf;
-  const SIZE_MASK = 0xfffffff0;
-  const SIZE_SHIFT = 4;
-
-  const textDecoder = new TextDecoder('utf16le');
-  const identity = (f: Function) => f;
-  const elmFunctionWrappers = [identity, identity, F2, F3, F4];
+  -------------------------------------------------- */
 
   function readValue(addr: number): any {
     const index = addr / WORD;
@@ -198,6 +209,12 @@ const elmWasmJs = (function() {
       return readValue(resultAddr);
     };
   }
+
+  /* --------------------------------------------------
+
+                WRITE ELM VALUES TO WASM
+
+  -------------------------------------------------- */
 
   let maxWriteIndex32: number;
   let maxWriteIndex16: number;
@@ -391,9 +408,14 @@ const elmWasmJs = (function() {
     return len >> 1;
   }
 
+  /* --------------------------------------------------
+
+                    EXPORTS
+
+  -------------------------------------------------- */
+
   return {
-    init,
     readValue,
     writeValue
   };
-})();
+}
