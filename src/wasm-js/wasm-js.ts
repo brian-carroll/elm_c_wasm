@@ -249,6 +249,9 @@ const elmWasmJs = (function() {
 
     switch (typeof value) {
       case 'number': {
+        // There's no good way to tell Int from Float at low level.
+        // This needs to be solved at some higher level.
+        // Create some lib like JSON.Encode & let user decide? Pity for it not to be automatic though!
         const isProbablyIntegerButUnsafe = value === (value | 0);
         tag = isProbablyIntegerButUnsafe ? Tag.Int : Tag.Float;
         break;
