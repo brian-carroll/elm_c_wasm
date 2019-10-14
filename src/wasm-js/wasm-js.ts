@@ -178,35 +178,20 @@ function createElmWasmJsInterface(
 
   function createWasmCallback(evaluator: number, freeVars: any[]) {
     return function wasmCallback() {
-      const nArgs = freeVars.length + arguments.length;
-      let nextIndex = wasmExports.startWrite(); // TODO: how much??
-      let childAddrs: number[] = [];
-      const iter = (v: any) => {
-        const update = writeValueHelp(nextIndex, v);
-        nextIndex = update.nextIndex;
-        childAddrs.push(update.addr);
-      };
-      for (let i = 0; i < freeVars.length; i++) {
-        iter(freeVars[i]);
-      }
-      for (let i = 0; i < arguments.length; i++) {
-        iter(arguments[i]);
-      }
-      const header = encodeHeader({
-        tag: Tag.Closure,
-        size: 3 + nArgs
+      let addr = 0;
+      const args = freeVars.concat(Array.from(arguments));
+      handleWasmWrite((startIndex: number) => {
+        const max_values = args.length << 16;
+        const n_values = args.length;
+        const builder: WasmBuilder = {
+          body: [n_values | max_values, evaluator],
+          jsChildren: args
+        };
+        const result = writeFromBuilder(startIndex, builder, Tag.Closure);
+        addr = result.addr;
+        return result.nextIndex;
       });
-      const closureAddr = nextIndex;
-      const argsInfo = nArgs * (1 + (1 << 16));
-      write32(nextIndex++, header);
-      write32(nextIndex++, argsInfo);
-      write32(nextIndex++, evaluator);
-      childAddrs.forEach(addr => {
-        write32(nextIndex++, addr);
-      });
-      wasmExports.finishWrite(nextIndex);
-      const resultAddr = wasmExports.executeThunk(closureAddr);
-      return readValue(resultAddr);
+      wasmExports.callClosure(addr);
     };
   }
 
@@ -219,33 +204,6 @@ function createElmWasmJsInterface(
   let maxWriteIndex32: number;
   let maxWriteIndex16: number;
 
-  /**
-   * Write a value to the Wasm memory and return the address where it was written
-   *
-   * @param value  JavaScript Elm value to send to Wasm
-   * @returns address written and next index to write
-   */
-  function writeValue(value: any) {
-    const addr = wasmExports.getWriteAddr();
-    const maxAddr = wasmExports.getMaxWriteAddr();
-    maxWriteIndex16 = maxAddr >> 1;
-    maxWriteIndex32 = maxWriteIndex16 >> 1;
-    const nextIndex = addr >> 2;
-
-    for (let attempts = 0; attempts < 2; attempts++) {
-      try {
-        writeValueHelp(nextIndex, value);
-        return;
-      } catch (e) {
-        // If Wasm heap is full, try again
-        // (Could ask it to grow. Would need some work on Wasm side.)
-        wasmExports.collectGarbage();
-      }
-    }
-    console.error(value);
-    throw new Error('Failed to write value to Wasm.');
-  }
-
   function write32(index: number, value: number) {
     if (index > maxWriteIndex32) throw new Error('Wasm heap overflow');
     mem32[index] = value;
@@ -254,6 +212,36 @@ function createElmWasmJsInterface(
   function write16(index: number, value: number) {
     if (index > maxWriteIndex16) throw new Error('Wasm heap overflow');
     mem16[index] = value;
+  }
+
+  function handleWasmWrite(writer: (nextIndex: number) => number) {
+    for (let attempts = 0; attempts < 2; attempts++) {
+      try {
+        const maxAddr = wasmExports.getMaxWriteAddr();
+        maxWriteIndex16 = maxAddr >> 1;
+        maxWriteIndex32 = maxAddr >> 2;
+        const addr = wasmExports.getWriteAddr();
+        const startIndex = addr >> 2;
+        const finishIndex = writer(startIndex);
+        wasmExports.finishedWritingAt(finishIndex << 2);
+        return;
+      } catch (e) {
+        wasmExports.collectGarbage();
+      }
+    }
+    throw new Error('Failed to write to Wasm.');
+  }
+
+  /**
+   * Write an Elm value to the Wasm memory
+   * Serialises to bytes before writing
+   * May throw an error
+   */
+  function writeValue(value: any) {
+    handleWasmWrite(nextIndex => {
+      const result = writeValueHelp(value, nextIndex);
+      return result.nextIndex;
+    });
   }
 
   function writeValueHelp(
@@ -267,13 +255,7 @@ function createElmWasmJsInterface(
     const tag: Tag = typeInfo.value;
     const builder = wasmBuilder(tag, value);
 
-    const currentAddr = nextIndex * WORD;
-    nextIndex = writeFromBuilder(nextIndex, builder, tag);
-
-    return {
-      addr: currentAddr,
-      nextIndex
-    };
+    return writeFromBuilder(nextIndex, builder, tag);
   }
 
   type TypeInfo =
@@ -409,12 +391,15 @@ function createElmWasmJsInterface(
     nextIndex: number,
     builder: WasmBuilder,
     tag: Tag
-  ): number {
+  ): { addr: number; nextIndex: number } {
     if ('writer' in builder) {
       const wordsWritten = builder.writer((nextIndex + 1) * WORD);
       const size = 1 + wordsWritten;
       write32(nextIndex, encodeHeader({ tag, size }));
-      nextIndex += size;
+      return {
+        addr: nextIndex,
+        nextIndex: nextIndex + size
+      };
     } else {
       const { body, jsChildren } = builder;
       const childAddrs: number[] = [];
@@ -424,6 +409,7 @@ function createElmWasmJsInterface(
         nextIndex = update.nextIndex;
       });
 
+      const addr = nextIndex;
       const size = 1 + body.length + childAddrs.length;
       write32(nextIndex++, encodeHeader({ tag, size }));
       body.forEach(word => {
@@ -432,8 +418,8 @@ function createElmWasmJsInterface(
       childAddrs.forEach(addr => {
         write32(nextIndex++, addr);
       });
+      return { addr, nextIndex };
     }
-    return nextIndex;
   }
 
   function encodeHeader({ tag, size }: Header): number {

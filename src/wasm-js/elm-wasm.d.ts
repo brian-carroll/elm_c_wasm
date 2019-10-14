@@ -12,8 +12,8 @@ interface ElmWasmExports {
   getWriteAddr: () => number;
   getMaxWriteAddr: () => number;
   startWrite: () => number;
-  finishWrite: (end: number) => void;
-  executeThunk: (addr: number) => number;
+  finishedWritingAt: (addr: number) => void;
+  callClosure: (addr: number) => number;
   collectGarbage: () => void;
 }
 
