@@ -182,7 +182,7 @@ function createElmWasmJsInterface(
       let nextIndex = wasmExports.startWrite(); // TODO: how much??
       let childAddrs: number[] = [];
       const iter = (v: any) => {
-        const update = writeValueRec(nextIndex, v);
+        const update = writeValueHelp(nextIndex, v);
         nextIndex = update.nextIndex;
         childAddrs.push(update.addr);
       };
@@ -222,12 +222,6 @@ function createElmWasmJsInterface(
   /**
    * Write a value to the Wasm memory and return the address where it was written
    *
-   * Wasm structures all have the same general layout
-   *   - header (containing the size in 32-bit words and a type tag)
-   *   - body data
-   *   - child pointers
-   *
-   * @param nextIndex Next available index into the memory
    * @param value  JavaScript Elm value to send to Wasm
    * @returns address written and next index to write
    */
@@ -237,15 +231,19 @@ function createElmWasmJsInterface(
     maxWriteIndex16 = maxAddr >> 1;
     maxWriteIndex32 = maxWriteIndex16 >> 1;
     const nextIndex = addr >> 2;
-    while (true) {
+
+    for (let attempts = 0; attempts < 2; attempts++) {
       try {
-        writeValueRec(nextIndex, value);
+        writeValueHelp(nextIndex, value);
         return;
       } catch (e) {
-        // If Wasm heap is full there is nothing sensible we can do except try again
+        // If Wasm heap is full, try again
+        // (Could ask it to grow. Would need some work on Wasm side.)
         wasmExports.collectGarbage();
       }
     }
+    console.error(value);
+    throw new Error('Failed to write value to Wasm.');
   }
 
   function write32(index: number, value: number) {
@@ -258,123 +256,170 @@ function createElmWasmJsInterface(
     mem16[index] = value;
   }
 
-  function writeValueRec(
+  function writeValueHelp(
     nextIndex: number,
     value: any
   ): { addr: number; nextIndex: number } {
-    let tag: Tag = Tag.Unused;
+    const typeInfo = detectElmType(value);
+    if (typeInfo.kind === 'constAddr') {
+      return { addr: typeInfo.value, nextIndex };
+    }
+    const tag: Tag = typeInfo.value;
+    const builder = wasmBuilder(tag, value);
 
-    switch (typeof value) {
+    const currentAddr = nextIndex * WORD;
+    nextIndex = writeFromBuilder(nextIndex, builder, tag);
+
+    return {
+      addr: currentAddr,
+      nextIndex
+    };
+  }
+
+  type TypeInfo =
+    | {
+        kind: 'tag';
+        value: Tag;
+      }
+    | {
+        kind: 'constAddr';
+        value: number;
+      };
+
+  function detectElmType(elmValue: any): TypeInfo {
+    let typeInfo: TypeInfo;
+    switch (typeof elmValue) {
       case 'number': {
         // There's no good way to tell Int from Float at low level.
         // This needs to be solved at some higher level.
         // Create some lib like JSON.Encode & let user decide? Pity for it not to be automatic though!
-        const isProbablyIntegerButUnsafe = value === (value | 0);
-        tag = isProbablyIntegerButUnsafe ? Tag.Int : Tag.Float;
-        break;
+        const isProbablyElmInt = elmValue === (elmValue | 0);
+        return {
+          kind: 'tag',
+          value: isProbablyElmInt ? Tag.Int : Tag.Float
+        };
       }
       case 'string':
-        tag = Tag.String;
-        break;
+        return { kind: 'tag', value: Tag.String };
+
       case 'boolean':
         return {
-          addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
-          nextIndex
+          kind: 'constAddr',
+          value: elmValue ? wasmConstAddrs.True : wasmConstAddrs.False
         };
+
       case 'function':
-        tag = Tag.Closure;
-        break;
+        return { kind: 'tag', value: Tag.Closure };
+
       case 'object': {
-        if (value instanceof String) {
-          tag = Tag.Char;
-          break;
+        if (elmValue instanceof String) {
+          return { kind: 'tag', value: Tag.Char };
         }
-        switch (value.$) {
+        switch (elmValue.$) {
           case undefined:
-            tag = Tag.Record;
-            break;
+            return { kind: 'tag', value: Tag.Record };
           case '[]':
-            return { addr: wasmConstAddrs.Nil, nextIndex };
+            return { kind: 'constAddr', value: wasmConstAddrs.Nil };
           case '::':
-            tag = Tag.List;
-            break;
+            return { kind: 'tag', value: Tag.List };
           case '#0':
-            return { addr: wasmConstAddrs.Unit, nextIndex };
+            return { kind: 'constAddr', value: wasmConstAddrs.Unit };
           case '#2':
-            tag = Tag.Tuple2;
-            break;
+            return { kind: 'tag', value: Tag.Tuple2 };
           case '#3':
-            tag = Tag.Tuple3;
-            break;
-          case '#0':
+            return { kind: 'tag', value: Tag.Tuple3 };
           default:
-            tag = Tag.Custom;
-            break;
+            return { kind: 'tag', value: Tag.Custom };
         }
       }
     }
+    console.error(elmValue);
+    throw new Error('Cannot determine type of Elm value');
+  }
 
-    let body: number[] = [];
-    let jsChildren: any[] = [];
-    let writer: ((addr: number) => number) | undefined;
+  type WasmBuilder =
+    | {
+        writer: (addr: number) => number;
+      }
+    | {
+        body: number[];
+        jsChildren: any[];
+      };
+
+  function wasmBuilder(tag: Tag, value: any): WasmBuilder {
     switch (tag) {
-      case Tag.Int: {
-        body[0] = value;
-        break;
-      }
-      case Tag.Float: {
-        writer = (addr: number) => {
-          wasmExports.writeFloat(addr, value);
-          return 2; // words written
+      case Tag.Int:
+        return {
+          body: [value],
+          jsChildren: []
         };
-        break;
-      }
+      case Tag.Float:
+        return {
+          writer: (addr: number) => {
+            wasmExports.writeFloat(addr, value);
+            return 2; // words written
+          }
+        };
       case Tag.Char:
-      case Tag.String: {
-        writer = (addr: number) => writeString(value, addr);
-        break;
-      }
+      case Tag.String:
+        return {
+          writer: (addr: number) => writeString(value, addr)
+        };
       case Tag.Tuple2:
-      case Tag.List: {
-        jsChildren = [value.a, value.b];
-        break;
-      }
-      case Tag.Tuple3: {
-        jsChildren = [value.a, value.b, value.c];
-        break;
-      }
+      case Tag.List:
+        return {
+          body: [],
+          jsChildren: [value.a, value.b]
+        };
+      case Tag.Tuple3:
+        return {
+          body: [],
+          jsChildren: [value.a, value.b, value.c]
+        };
       case Tag.Custom: {
         const jsCtor: string = value.$;
-        body[0] = appTypes.ctors[jsCtor];
+        const jsChildren: any[] = [];
         Object.keys(value).forEach(k => {
           if (k !== '$') jsChildren.push(value[k]);
         });
-        break;
+        return {
+          body: [appTypes.ctors[jsCtor]],
+          jsChildren
+        };
       }
       case Tag.Record: {
         const keys = Object.keys(value);
         keys.sort();
         const fgName = keys.join('$');
         const fgAddr = appTypes.fieldGroups[fgName];
-        body[0] = fgAddr;
-        jsChildren = keys.map(k => value[k]);
-        break;
+        return {
+          body: [fgAddr],
+          jsChildren: keys.map(k => value[k])
+        };
       }
       case Tag.Closure: {
         break;
       }
     }
+    console.error(value);
+    throw new Error(`Can't write to WebAssembly for tag "${Tag[tag]}"`);
+  }
 
-    const currentAddr = nextIndex * WORD;
-    if (writer) {
-      const wordsWritten = writer((nextIndex + 1) * WORD);
+  function writeFromBuilder(
+    nextIndex: number,
+    builder: WasmBuilder,
+    tag: Tag
+  ): number {
+    if ('writer' in builder) {
+      const wordsWritten = builder.writer((nextIndex + 1) * WORD);
       const size = 1 + wordsWritten;
       write32(nextIndex, encodeHeader({ tag, size }));
       nextIndex += size;
     } else {
+      const { body, jsChildren } = builder;
       const childAddrs: number[] = [];
       jsChildren.forEach(child => {
-        const update = writeValueRec(nextIndex, child);
+        const update = writeValueHelp(nextIndex, child);
         childAddrs.push(update.addr);
         nextIndex = update.nextIndex;
       });
@@ -388,11 +433,7 @@ function createElmWasmJsInterface(
         write32(nextIndex++, addr);
       });
     }
-
-    return {
-      addr: currentAddr,
-      nextIndex
-    };
+    return nextIndex;
   }
 
   function encodeHeader({ tag, size }: Header): number {
