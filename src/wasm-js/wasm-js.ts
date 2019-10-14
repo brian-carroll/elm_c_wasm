@@ -171,7 +171,7 @@ const elmWasmJs = (function() {
       let nextIndex = wasmExports.startWrite(); // TODO: how much??
       let childAddrs: number[] = [];
       const iter = (v: any) => {
-        const update = writeValue(nextIndex, v);
+        const update = writeValueRec(nextIndex, v);
         nextIndex = update.nextIndex;
         childAddrs.push(update.addr);
       };
@@ -187,17 +187,20 @@ const elmWasmJs = (function() {
       });
       const closureAddr = nextIndex;
       const argsInfo = nArgs * (1 + (1 << 16));
-      mem32[nextIndex++] = header;
-      mem32[nextIndex++] = argsInfo;
-      mem32[nextIndex++] = evaluator;
+      write32(nextIndex++, header);
+      write32(nextIndex++, argsInfo);
+      write32(nextIndex++, evaluator);
       childAddrs.forEach(addr => {
-        mem32[nextIndex++] = addr;
+        write32(nextIndex++, addr);
       });
       wasmExports.finishWrite(nextIndex);
       const resultAddr = wasmExports.executeThunk(closureAddr);
       return readValue(resultAddr);
     };
   }
+
+  let maxWriteIndex32: number;
+  let maxWriteIndex16: number;
 
   /**
    * Write a value to the Wasm memory and return the address where it was written
@@ -211,7 +214,34 @@ const elmWasmJs = (function() {
    * @param value  JavaScript Elm value to send to Wasm
    * @returns address written and next index to write
    */
-  function writeValue(
+  function writeValue(value: any) {
+    const addr = wasmExports.getWriteAddr();
+    const maxAddr = wasmExports.getMaxWriteAddr();
+    maxWriteIndex16 = maxAddr >> 1;
+    maxWriteIndex32 = maxWriteIndex16 >> 1;
+    const nextIndex = addr >> 2;
+    while (true) {
+      try {
+        writeValueRec(nextIndex, value);
+        return;
+      } catch (e) {
+        // If Wasm heap is full there is nothing sensible we can do except try again
+        wasmExports.collectGarbage();
+      }
+    }
+  }
+
+  function write32(index: number, value: number) {
+    if (index > maxWriteIndex32) throw new Error('Wasm heap overflow');
+    mem32[index] = value;
+  }
+
+  function write16(index: number, value: number) {
+    if (index > maxWriteIndex16) throw new Error('Wasm heap overflow');
+    mem16[index] = value;
+  }
+
+  function writeValueRec(
     nextIndex: number,
     value: any
   ): { addr: number; nextIndex: number } {
@@ -315,26 +345,27 @@ const elmWasmJs = (function() {
       }
     }
 
-    const childAddrs: number[] = [];
-    jsChildren.forEach(child => {
-      const update = writeValue(nextIndex, child);
-      childAddrs.push(update.addr);
-      nextIndex = update.nextIndex;
-    });
-
     const currentAddr = nextIndex * WORD;
     if (writer) {
-      const size = 1 + writer((nextIndex + 1) * WORD);
-      mem32[nextIndex] = encodeHeader({ tag, size });
+      const wordsWritten = writer((nextIndex + 1) * WORD);
+      const size = 1 + wordsWritten;
+      write32(nextIndex, encodeHeader({ tag, size }));
       nextIndex += size;
     } else {
-      const size = body.length + jsChildren.length;
-      mem32[nextIndex++] = encodeHeader({ tag, size });
+      const childAddrs: number[] = [];
+      jsChildren.forEach(child => {
+        const update = writeValueRec(nextIndex, child);
+        childAddrs.push(update.addr);
+        nextIndex = update.nextIndex;
+      });
+
+      const size = 1 + body.length + childAddrs.length;
+      write32(nextIndex++, encodeHeader({ tag, size }));
       body.forEach(word => {
-        mem32[nextIndex++] = word;
+        write32(nextIndex++, word);
       });
       childAddrs.forEach(addr => {
-        mem32[nextIndex++] = addr;
+        write32(nextIndex++, addr);
       });
     }
 
@@ -352,7 +383,7 @@ const elmWasmJs = (function() {
     const offset = idx32 << 1;
     const len = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
     for (let i = 0; i < len; i++) {
-      mem16[offset + i] = s.charCodeAt(i);
+      write16(offset + i, s.charCodeAt(i));
     }
     return len >> 1;
   }

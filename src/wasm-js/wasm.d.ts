@@ -8,7 +8,10 @@ declare const wasmExports: {
   getNextFieldGroup: () => number;
   writeFloat: (addr: number, value: number) => void;
   readFloat: (addr: number) => number;
+  getWriteAddr: () => number;
+  getMaxWriteAddr: () => number;
   startWrite: () => number;
   finishWrite: (end: number) => void;
   executeThunk: (addr: number) => number;
+  collectGarbage: () => void;
 };
