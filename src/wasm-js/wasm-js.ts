@@ -178,8 +178,11 @@ function createElmWasmJsInterface(
 
   function createWasmCallback(evaluator: number, freeVars: any[]) {
     return function wasmCallback() {
+      const args = freeVars.slice();
+      for (let i = 0; i < arguments.length; i++) {
+        args.push(arguments[i]);
+      }
       let addr = 0;
-      const args = freeVars.concat(Array.from(arguments));
       handleWasmWrite((startIndex: number) => {
         const max_values = args.length << 16;
         const n_values = args.length;
