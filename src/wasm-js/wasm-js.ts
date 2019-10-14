@@ -46,7 +46,7 @@ function createElmWasmJsInterface(
   const SIZE_MASK = 0xfffffff0;
   const SIZE_SHIFT = 4;
 
-  const textDecoder = new TextDecoder('utf16le');
+  const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
   const elmFunctionWrappers = [identity, identity, F2, F3, F4];
 
@@ -102,10 +102,10 @@ function createElmWasmJsInterface(
         return _Utils_chr(s);
       }
       case Tag.String: {
-        let bytes = new Uint8Array(mem32.slice(index + 1, size - 1));
-        const paddingBytes = bytes[-1];
-        bytes = bytes.slice(0, size * WORD - paddingBytes);
-        return textDecoder.decode(bytes);
+        const idx16 = index << 1;
+        let size16 = size << 1;
+        if (mem16[idx16 + size16 - 1] === 0) size16--;
+        return textDecoder.decode(mem16.slice(idx16, size16));
       }
       case Tag.List: {
         return addr === wasmConstAddrs.Nil
