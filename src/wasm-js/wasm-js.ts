@@ -188,7 +188,8 @@ function createElmWasmJsInterface(
         const n_values = args.length;
         const builder: WasmBuilder = {
           body: [n_values | max_values, evaluator],
-          jsChildren: args
+          jsChildren: args,
+          writer: null
         };
         const result = writeFromBuilder(startIndex, builder, Tag.Closure);
         addr = result.addr;
@@ -272,7 +273,6 @@ function createElmWasmJsInterface(
       };
 
   function detectElmType(elmValue: any): TypeInfo {
-    let typeInfo: TypeInfo;
     switch (typeof elmValue) {
       case 'number': {
         // There's no good way to tell Int from Float at low level.
@@ -324,11 +324,14 @@ function createElmWasmJsInterface(
 
   type WasmBuilder =
     | {
+        body: null;
+        jsChildren: null;
         writer: (addr: number) => number;
       }
     | {
         body: number[];
         jsChildren: any[];
+        writer: null;
       };
 
   function wasmBuilder(tag: Tag, value: any): WasmBuilder {
@@ -336,10 +339,13 @@ function createElmWasmJsInterface(
       case Tag.Int:
         return {
           body: [value],
-          jsChildren: []
+          jsChildren: [],
+          writer: null
         };
       case Tag.Float:
         return {
+          body: null,
+          jsChildren: null,
           writer: (addr: number) => {
             wasmExports.writeFloat(addr, value);
             return 2; // words written
@@ -348,18 +354,22 @@ function createElmWasmJsInterface(
       case Tag.Char:
       case Tag.String:
         return {
+          body: null,
+          jsChildren: null,
           writer: (addr: number) => writeString(value, addr)
         };
       case Tag.Tuple2:
       case Tag.List:
         return {
           body: [],
-          jsChildren: [value.a, value.b]
+          jsChildren: [value.a, value.b],
+          writer: null
         };
       case Tag.Tuple3:
         return {
           body: [],
-          jsChildren: [value.a, value.b, value.c]
+          jsChildren: [value.a, value.b, value.c],
+          writer: null
         };
       case Tag.Custom: {
         const jsCtor: string = value.$;
@@ -369,7 +379,8 @@ function createElmWasmJsInterface(
         });
         return {
           body: [appTypes.ctors[jsCtor]],
-          jsChildren
+          jsChildren,
+          writer: null
         };
       }
       case Tag.Record: {
@@ -379,7 +390,8 @@ function createElmWasmJsInterface(
         const fgAddr = appTypes.fieldGroups[fgName];
         return {
           body: [fgAddr],
-          jsChildren: keys.map(k => value[k])
+          jsChildren: keys.map(k => value[k]),
+          writer: null
         };
       }
       case Tag.Closure: {
@@ -395,7 +407,7 @@ function createElmWasmJsInterface(
     builder: WasmBuilder,
     tag: Tag
   ): { addr: number; nextIndex: number } {
-    if ('writer' in builder) {
+    if (builder.writer) {
       const wordsWritten = builder.writer((nextIndex + 1) * WORD);
       const size = 1 + wordsWritten;
       write32(nextIndex, encodeHeader({ tag, size }));
