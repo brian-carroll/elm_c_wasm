@@ -1,3 +1,14 @@
+/* --------------------------------------------------
+
+          ELM'S JAVASCRIPT KERNEL
+
+  TypeScript definitions for some values and functions
+    in Elm's generated JS.
+  Only includes things I need for the wrapper.
+  Doesn't cover `--optimize` mode
+
+  -------------------------------------------------- */
+
 declare function _List_Cons<H, T>(hd: H, tl: T): { $: '::'; a: H; b: T };
 declare const _List_Nil: { $: '[]' };
 declare const _Utils_Tuple0: { $: '#0' };
