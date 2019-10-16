@@ -2,10 +2,11 @@
 
           ELM'S JAVASCRIPT KERNEL
 
-  TypeScript definitions for some values and functions
+  TypeScript declarations for some values and functions
     in Elm's generated JS.
-  Only includes things I need for the wrapper.
-  Doesn't cover `--optimize` mode
+  Tells the TypeScript compiler that these values
+    are defined "globally" somewhere.
+  Doesn't cover `--optimize` mode.
 
   -------------------------------------------------- */
 

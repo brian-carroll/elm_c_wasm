@@ -301,20 +301,6 @@ function createElmWasmWrapper(
     });
   }
 
-  function writeValueHelp(
-    nextIndex: number,
-    value: any
-  ): { addr: number; nextIndex: number } {
-    const typeInfo = detectElmType(value);
-    if (typeInfo.kind === 'constAddr') {
-      return { addr: typeInfo.value, nextIndex };
-    }
-    const tag: Tag = typeInfo.value;
-    const builder = wasmBuilder(tag, value);
-
-    return writeFromBuilder(nextIndex, builder, tag);
-  }
-
   type TypeInfo =
     | {
         kind: 'tag';
@@ -325,13 +311,39 @@ function createElmWasmWrapper(
         value: number;
       };
 
+  type WasmBuilder =
+    | {
+        body: null;
+        jsChildren: null;
+        writer: (addr: number) => number;
+      }
+    | {
+        body: number[];
+        jsChildren: any[];
+        writer: null;
+      };
+
+  function writeValueHelp(
+    nextIndex: number,
+    value: any
+  ): { addr: number; nextIndex: number } {
+    const typeInfo: TypeInfo = detectElmType(value);
+    if (typeInfo.kind === 'constAddr') {
+      return { addr: typeInfo.value, nextIndex };
+    }
+    const tag: Tag = typeInfo.value;
+    const builder: WasmBuilder = wasmBuilder(tag, value);
+
+    return writeFromBuilder(nextIndex, builder, tag);
+  }
+
   function detectElmType(elmValue: any): TypeInfo {
     switch (typeof elmValue) {
       case 'number': {
         // There's no way to tell `1 : Int` from `1.0 : Float` at this low level. But `1.2` is definitely a Float.
         // So _for now_ take a _horribly unsafe_ guess, by checking if it's a round number or not.
         // Not cool. This is Elm! Long term, the ambiguity needs to be solved at some higher level.
-        // Maybe some lib like JSON.Encode so the app dev decides? Pity for it not to be automatic though!
+        // Maybe some lib like `JSON.Encode` so the app dev decides? Pity for it not to be automatic though!
         const isRoundNumberSoGuessInt = elmValue === (elmValue | 0);
         return {
           kind: 'tag',
@@ -375,18 +387,6 @@ function createElmWasmWrapper(
     console.error(elmValue);
     throw new Error('Cannot determine type of Elm value');
   }
-
-  type WasmBuilder =
-    | {
-        body: null;
-        jsChildren: null;
-        writer: (addr: number) => number;
-      }
-    | {
-        body: number[];
-        jsChildren: any[];
-        writer: null;
-      };
 
   function wasmBuilder(tag: Tag, value: any): WasmBuilder {
     switch (tag) {
@@ -449,7 +449,7 @@ function createElmWasmWrapper(
         };
       }
       case Tag.Closure: {
-        break;
+        break; // TODO
       }
     }
     console.error(value);
@@ -462,12 +462,13 @@ function createElmWasmWrapper(
     tag: Tag
   ): { addr: number; nextIndex: number } {
     if (builder.writer) {
-      const wordsWritten = builder.writer((nextIndex + 1) * WORD);
+      const headerIndex = nextIndex;
+      const wordsWritten = builder.writer((headerIndex + 1) * WORD);
       const size = 1 + wordsWritten;
-      write32(nextIndex, encodeHeader({ tag, size }));
+      write32(headerIndex, encodeHeader({ tag, size }));
       return {
-        addr: nextIndex,
-        nextIndex: nextIndex + size
+        addr: headerIndex,
+        nextIndex: headerIndex + size
       };
     } else {
       const { body, jsChildren } = builder;
@@ -478,14 +479,14 @@ function createElmWasmWrapper(
         nextIndex = update.nextIndex;
       });
 
-      const addr = nextIndex;
+      const addr = nextIndex >> 2;
       const size = 1 + body.length + childAddrs.length;
       write32(nextIndex++, encodeHeader({ tag, size }));
       body.forEach(word => {
         write32(nextIndex++, word);
       });
-      childAddrs.forEach(addr => {
-        write32(nextIndex++, addr);
+      childAddrs.forEach(pointer => {
+        write32(nextIndex++, pointer);
       });
       return { addr, nextIndex };
     }
@@ -501,7 +502,8 @@ function createElmWasmWrapper(
     for (let i = 0; i < len; i++) {
       write16(offset + i, s.charCodeAt(i));
     }
-    return len >> 1;
+    const wordsWritten = len >> 1;
+    return wordsWritten;
   }
 
   /* --------------------------------------------------
