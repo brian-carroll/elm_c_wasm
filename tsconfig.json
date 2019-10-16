@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "typeRoots": ["./node_modules/@types", "src/wasm-js"],
+    "lib": ["es2015", "dom"],
+    "target": "es2015",
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  },
+  "files": ["src/wrapper/wrapper.ts"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
+}

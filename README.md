@@ -14,6 +14,37 @@ I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-co
 
 &nbsp;
 
+# Current Status
+
+Here's roughly how I see the project progressing from here, as of October 2019. (Unless some big unknown bites me, which it might!)
+
+- [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][core-unit-tests].
+
+- [x] Do some initial exploration of C code generation in a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c). Understand how it works and what's involved.
+
+- [x] Implement a [Garbage Collector](./docs/gc.md) in C and compile it to Wasm. Prove it works using [in-browser unit tests][gc-unit-tests] and an [elm-benchmark app][benchmark].
+
+- [ ] Create a wrapper to connect a WebAssembly module to Elm's kernel JavaScript.
+
+  - Figure out what memory management issues exist related to crossing the language boundary. (What if Wasm's memory overflows when JS writes to it? Does Wasm need to refer to JS objects, and if so, how? How to deal with `onClick` handlers? etc.)
+  - Get a "hello world" app working with kernel entirely in JS and pure Elm entirely in Wasm. Very minimal Elm code, hand-compiled to C.
+
+- [ ] Finish code generation for the full Elm AST (outputting both C and JS)
+
+- [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
+
+- [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
+
+My general approach is to explore all the different pieces, then work on the biggest unknown until I understand the important issues and/or solved some problem. Once I feel like I understand that well, move on to the next biggest unknown.
+
+This means gradual progress on lots of pieces, with no end-to-end system for quite a long time. But I feel that focusing on the biggest unknowns first will lead to a good design and avoid going down dead ends. Not everyone likes this style but it works for me!
+
+[core-unit-tests]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose
+[gc-unit-tests]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose
+[benchmark]: https://brian-carroll.github.io/elm_c_wasm/benchmark/index.html
+
+&nbsp;
+
 # Documentation
 
 - [Demos](#demos)
@@ -31,15 +62,15 @@ I have built a few demos here: https://brian-carroll.github.io/elm_c_wasm/
 
 At this early stage, they're very primitive demos! Definitely not full Elm programs in Wasm!
 
-- [Unit tests for core libraries](https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose)
+- [Unit tests for core libraries][core-unit-tests]
 
   - You can see byte-level Elm data structures, arithmetic operations, record updates and accessors, and first-class functions in action.
 
-- [Unit tests for the GC](https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose)
+- [Unit tests for the GC][gc-unit-tests]
 
   - You can see print-outs of the heap, with byte-level Elm data structures, GC mark bits, etc.
 
-- [Performance micro-benchmarks](https://brian-carroll.github.io/elm_c_wasm/benchmark/index.html)
+- [Performance micro-benchmarks][benchmark]
 
   - Reported figures for the Wasm implementations are slower than JS. It's partly due to crossing back and forth across the JS/Wasm boundary on every iteration. Browsers can't optimise that very well yet, though Firefox seems much better at it than Chrome.
 

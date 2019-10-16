@@ -3,6 +3,13 @@
 .vs/
 .codelite/
 
+# npm
+package-lock.json
+node_modules/
+
+# typescript
+src/wrapper/*.js
+
 # Generated files
 *.wasm
 *.wat
