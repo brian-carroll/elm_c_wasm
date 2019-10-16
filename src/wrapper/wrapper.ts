@@ -498,11 +498,11 @@ function createElmWasmWrapper(
 
   function writeString(s: string, idx32: number): number {
     const offset = idx32 << 1;
-    const len = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
-    for (let i = 0; i < len; i++) {
+    const lenAligned = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
+    for (let i = 0; i < lenAligned; i++) {
       write16(offset + i, s.charCodeAt(i));
     }
-    const wordsWritten = len >> 1;
+    const wordsWritten = lenAligned >> 1;
     return wordsWritten;
   }
 
