@@ -26,12 +26,12 @@ Here's roughly how I see the project progressing from here, as of October 2019. 
 
 - [ ] Create a wrapper to connect a WebAssembly module to Elm's kernel JavaScript.
 
-  - Figure out what memory management issues exist related to crossing the language boundary. (What if JS sends so much data to Wasm that it needs a GC? How to deal with `onClick` handlers? etc.)
-  - Get a "hello world" app working with kernel entirely in JS and pure Elm entirely in Wasm.
+  - Figure out what memory management issues exist related to crossing the language boundary. (What if Wasm's memory overflows when JS writes to it? Does Wasm need to refer to JS objects, and if so, how? How to deal with `onClick` handlers? etc.)
+  - Get a "hello world" app working with kernel entirely in JS and pure Elm entirely in Wasm. Very minimal Elm code, hand-compiled to C.
 
-- [ ] Finish code generation for the full Elm AST (outputting both C _and_ JS)
+- [ ] Finish code generation for the full Elm AST (outputting both C and JS)
 
-- [ ] Start migrating more of the kernel to WebAssembly, like VirtualDom.
+- [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
 
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
 
