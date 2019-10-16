@@ -6,6 +6,6 @@
     "noImplicitAny": true,
     "strictNullChecks": true
   },
-  "files": ["src/wasm-js/wasm-js.ts"],
+  "files": ["src/wrapper/wrapper.ts"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }
