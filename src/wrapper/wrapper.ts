@@ -247,6 +247,7 @@ function createElmWasmWrapper(
         addr = result.addr;
         return result.nextIndex;
       });
+      if (!addr) throw new Error('Failed to write to Wasm');
       wasmExports.callClosure(addr);
     };
   }
@@ -285,7 +286,7 @@ function createElmWasmWrapper(
         wasmExports.collectGarbage();
       }
     }
-    throw new Error('Failed to write to Wasm.');
+    throw new Error('Failed to write to Wasm');
   }
 
   /**
