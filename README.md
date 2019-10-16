@@ -16,10 +16,6 @@ I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-co
 
 # Current Status
 
-My general approach is to explore all the different pieces, then work on the biggest unknown until I understand the important issues and/or solved some problem. Once I feel like I understand that well, move on to the next biggest unknown.
-
-This means gradual progress on lots of pieces, with no end-to-end system for quite a long time. But I feel that focusing on the biggest unknowns first will lead to a good design and avoid going down dead ends. Not everyone likes this style but it works for me!
-
 Here's roughly how I see the project progressing from here, as of October 2019. (Unless some big unknown bites me, which it might!)
 
 - [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][core-unit-tests]
@@ -38,6 +34,10 @@ Here's roughly how I see the project progressing from here, as of October 2019. 
 - [ ] Start migrating more of the kernel to WebAssembly, like VirtualDom.
 
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
+
+My general approach is to explore all the different pieces, then work on the biggest unknown until I understand the important issues and/or solved some problem. Once I feel like I understand that well, move on to the next biggest unknown.
+
+This means gradual progress on lots of pieces, with no end-to-end system for quite a long time. But I feel that focusing on the biggest unknowns first will lead to a good design and avoid going down dead ends. Not everyone likes this style but it works for me!
 
 [core-unit-tests]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose
 [gc-unit-tests]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose
