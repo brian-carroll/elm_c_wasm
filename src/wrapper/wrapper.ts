@@ -39,8 +39,14 @@ interface IntToName {
 /*********************************************************************************************
  * `createElmWasmWrapper`
  *
- * Create a wrapper around a Wasm instance, allowing it to talk to Elm kernel JS.
- * (WebAssembly doesn't support Web APIs directly yet. Have to go through JS.)
+ * Wrap a WebAssembly instance and connect it to Elm's kernel JavaScript.
+ * WebAssembly doesn't support Web APIs directly yet, so we need JS to implement most effects.
+ *
+ * After compiling TS to JS, this function definition must be inserted into Elm's generated JS.
+ * It should be the last thing before the `var` statement that assigns to the `main` value.
+ * From there, it can call any function in the generated JS and even overwrite some of them!
+ * The code insertion requires a build step for now - I'm using Makefiles and Bash scripts -
+ * but eventually the Elm compiler will do it.
  *
  * @param instance  A WebAssembly instance containing a compiled Elm app
  * @param memory    The `ArrayBuffer` representing the memory area shared between JS and Wasm
