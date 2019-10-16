@@ -275,13 +275,14 @@ function createElmWasmJsInterface(
   function detectElmType(elmValue: any): TypeInfo {
     switch (typeof elmValue) {
       case 'number': {
-        // There's no good way to tell Int from Float at low level.
-        // This needs to be solved at some higher level.
-        // Create some lib like JSON.Encode & let user decide? Pity for it not to be automatic though!
-        const isProbablyElmInt = elmValue === (elmValue | 0);
+        // There's no way to tell `1 : Int` from `1.0 : Float` at this low level. But `1.2` is definitely a Float.
+        // So _for now_ take a _horribly unsafe_ guess, by checking if it's a round number or not.
+        // Not cool. This is Elm! Long term, the ambiguity needs to be solved at some higher level.
+        // Maybe some lib like JSON.Encode so the app dev decides? Pity for it not to be automatic though!
+        const isRoundNumberSoGuessInt = elmValue === (elmValue | 0);
         return {
           kind: 'tag',
-          value: isProbablyElmInt ? Tag.Int : Tag.Float
+          value: isRoundNumberSoGuessInt ? Tag.Int : Tag.Float
         };
       }
       case 'string':
