@@ -64,8 +64,9 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
     }
   }
 
-  log_error("Failed to find field %d in record fieldgroup at %zx\n", search,
-            (size_t)fieldgroup);
+  log_error("Failed to find field %d in record fieldgroup at %zx\n",
+      search,
+      (size_t)fieldgroup);
 
   return 0;
 }
@@ -113,6 +114,11 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     // 'saturated' call. No need to allocate a new Closure.
     c = c_old;
     args = applied;
+  } else if (n_applied == 0) {
+    // a full closure (thunk)
+    // from JS wrapper (or resumed tailcall? not sure if this happens)
+    c = c_old;
+    args = c_old->values;
   } else {
     u8 n_old = c_old->n_values;
     u8 n_new = n_old + n_applied;
@@ -122,7 +128,6 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
     size_t size_new = size_old + size_applied;
 
     c = CAN_THROW(GC_malloc(size_new));
-
     GC_memcpy(c, c_old, size_old);
     GC_memcpy(&c->values[n_old], applied, size_applied);
     c->header = HEADER_CLOSURE(n_new);
@@ -226,8 +231,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
 // C doesn't have exceptions, would have to call out to JS.
 // For now it's a warning rather than error and returns False
 #ifdef DEBUG
-      fprintf(
-          stderr,
+      fprintf(stderr,
           "Warning: Trying to use `(==)` on functions.\nThere is no way to know if "
           "functions are \"the same\" in the "
           "Elm sense.\nRead more about this at "

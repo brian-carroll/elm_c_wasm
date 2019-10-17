@@ -9,12 +9,11 @@ interface ElmWasmExports {
   _getTrue: () => number;
   _getFalse: () => number;
   _getNextFieldGroup: () => number;
-  _getWriteAddr: () => number;
   _getMaxWriteAddr: () => number;
-  _readFloat: (addr: number) => number;
-  _writeFloat: (addr: number, value: number) => void;
-  _startWrite: () => number;
-  _finishedWritingAt: (addr: number) => void;
+  _getWriteAddr: () => number;
+  _finishWritingAt: (addr: number) => void;
+  _readF64: (addr: number) => number;
+  _writeF64: (addr: number, value: number) => void;
   _callClosure: (addr: number) => number;
   _collectGarbage: () => void;
 }
@@ -145,7 +144,7 @@ function createElmWasmWrapper(
         return mem32[index + 1];
       }
       case Tag.Float: {
-        return wasmExports._readFloat(addr + WORD);
+        return wasmExports._readF64(addr + WORD);
       }
       case Tag.Char: {
         const idx16 = index << 1;
@@ -236,8 +235,7 @@ function createElmWasmWrapper(
       for (let i = 0; i < arguments.length; i++) {
         args.push(arguments[i]);
       }
-      let addr = 0;
-      handleWasmWrite((startIndex: number) => {
+      const addr = handleWasmWrite((startIndex: number) => {
         const max_values = args.length << 16;
         const n_values = args.length;
         const builder: WasmBuilder = {
@@ -245,11 +243,8 @@ function createElmWasmWrapper(
           jsChildren: args,
           writer: null
         };
-        const result = writeFromBuilder(startIndex, builder, Tag.Closure);
-        addr = result.addr;
-        return result.nextIndex;
+        return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
-      if (!addr) throw new Error('Failed to write to Wasm');
       wasmExports._callClosure(addr);
     };
   }
@@ -273,17 +268,22 @@ function createElmWasmWrapper(
     mem16[index] = value;
   }
 
-  function handleWasmWrite(writer: (nextIndex: number) => number) {
+  interface WriteResult {
+    addr: number; // pointer we wrote the value to (8-bit)
+    nextIndex: number; // next available index for writing (32-bit)
+  }
+
+  function handleWasmWrite(writer: (nextIndex: number) => WriteResult): number {
     for (let attempts = 0; attempts < 2; attempts++) {
       try {
         const maxAddr = wasmExports._getMaxWriteAddr();
         maxWriteIndex16 = maxAddr >> 1;
         maxWriteIndex32 = maxAddr >> 2;
-        const addr = wasmExports._getWriteAddr();
-        const startIndex = addr >> 2;
-        const finishIndex = writer(startIndex);
-        wasmExports._finishedWritingAt(finishIndex << 2);
-        return;
+        const startAddr = wasmExports._getWriteAddr();
+        const startIndex = startAddr >> 2;
+        const result = writer(startIndex);
+        wasmExports._finishWritingAt(result.nextIndex << 2);
+        return result.addr;
       } catch (e) {
         wasmExports._collectGarbage();
       }
@@ -296,11 +296,8 @@ function createElmWasmWrapper(
    * Serialises to bytes before writing
    * May throw an error
    */
-  function writeValue(value: any) {
-    handleWasmWrite(nextIndex => {
-      const result = writeValueHelp(value, nextIndex);
-      return result.nextIndex;
-    });
+  function writeValue(value: any): number {
+    return handleWasmWrite(nextIndex => writeValueHelp(value, nextIndex));
   }
 
   type TypeInfo =
@@ -325,10 +322,7 @@ function createElmWasmWrapper(
         writer: null;
       };
 
-  function writeValueHelp(
-    nextIndex: number,
-    value: any
-  ): { addr: number; nextIndex: number } {
+  function writeValueHelp(nextIndex: number, value: any): WriteResult {
     const typeInfo: TypeInfo = detectElmType(value);
     if (typeInfo.kind === 'constAddr') {
       return { addr: typeInfo.value, nextIndex };
@@ -403,7 +397,7 @@ function createElmWasmWrapper(
           body: null,
           jsChildren: null,
           writer: (addr: number) => {
-            wasmExports._writeFloat(addr, value);
+            wasmExports._writeF64(addr, value);
             return 2; // words written
           }
         };
@@ -462,7 +456,7 @@ function createElmWasmWrapper(
     nextIndex: number,
     builder: WasmBuilder,
     tag: Tag
-  ): { addr: number; nextIndex: number } {
+  ): WriteResult {
     if (builder.writer) {
       const headerIndex = nextIndex;
       const wordsWritten = builder.writer((headerIndex + 1) * WORD);
