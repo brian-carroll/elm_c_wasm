@@ -2,7 +2,7 @@
 
 ## Value Headers
 
-Every Elm value has a header of 32 bits in size. It's defined in [types.h](./src/kernel/types.h)
+Every Elm value has a header of 32 bits in size. It's defined in [types.h](../src/kernel/types.h)
 
 ```
 -----------------------------------------------------
@@ -63,7 +63,7 @@ A working example of all of this can be the tests for the `apply` operator. Read
 
 ## Extensible Records
 
-A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). In this project they are split into two C structs, `Record` and `FieldSet`, defined in [types.h](./src/kernel/types.h).
+A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). In this project they are split into two C structs, `Record` and `FieldSet`, defined in [types.h](../src/kernel/types.h).
 
 Field names are represented as integer "field IDs". The compiler would convert every field name in the program to a unique ID, using the same kind of [optimisation][shortnames] the Elm 0.19 compiler uses to shorten fieldnames in `--optimize` mode.
 
@@ -97,7 +97,7 @@ The implementation is in [utils.c](/src/kernel/utils.c) (see `access_eval`). The
 
 Elm's record update syntax is `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
 
-Currently, Elm implements this using a [JavaScript function][js-update]. We do something similar here with a C function called `record_update`, found in [utils.c](./src/kernel/utils.c). A pseudo-code version is below.
+Currently, Elm implements this using a [JavaScript function][js-update]. We do something similar here with a C function called `record_update`, found in [utils.c](../src/kernel/utils.c). A pseudo-code version is below.
 
 [js-update]: https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Utils.js#L151
 
