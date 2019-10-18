@@ -22,22 +22,37 @@ describe('wrapper', () => {
   });
 
   describe('C interface', () => {
-    it('should have all required functions with correct arities', () => {
+    let asm;
+
+    beforeAll(() => {
       return createEmscriptenModule().then(Module => {
-        const { asm } = Module;
-        expect(asm._getUnit.length).toBe(0);
-        expect(asm._getNil.length).toBe(0);
-        expect(asm._getTrue.length).toBe(0);
-        expect(asm._getFalse.length).toBe(0);
-        expect(asm._getNextFieldGroup.length).toBe(0);
-        expect(asm._getMaxWriteAddr.length).toBe(0);
-        expect(asm._getWriteAddr.length).toBe(0);
-        expect(asm._finishWritingAt.length).toBe(1);
-        expect(asm._readF64.length).toBe(1);
-        expect(asm._writeF64.length).toBe(2);
-        expect(asm._callClosure.length).toBe(1);
-        expect(asm._collectGarbage.length).toBe(0);
+        asm = Module.asm;
       });
+    });
+
+    it('should have all required functions with correct arities', () => {
+      expect(asm._getUnit.length).toBe(0);
+      expect(asm._getNil.length).toBe(0);
+      expect(asm._getTrue.length).toBe(0);
+      expect(asm._getFalse.length).toBe(0);
+      expect(asm._getNextFieldGroup.length).toBe(0);
+      expect(asm._getMaxWriteAddr.length).toBe(0);
+      expect(asm._getWriteAddr.length).toBe(0);
+      expect(asm._finishWritingAt.length).toBe(1);
+      expect(asm._readF64.length).toBe(1);
+      expect(asm._writeF64.length).toBe(2);
+      expect(asm._callClosure.length).toBe(1);
+      expect(asm._collectGarbage.length).toBe(0);
+    });
+
+    it('should have correctly working getters', () => {
+      expect(typeof asm._getUnit()).toBe('number');
+      expect(typeof asm._getNil()).toBe('number');
+      expect(typeof asm._getTrue()).toBe('number');
+      expect(typeof asm._getFalse()).toBe('number');
+      expect(typeof asm._getNextFieldGroup()).toBe('number');
+      expect(typeof asm._getMaxWriteAddr()).toBe('number');
+      expect(typeof asm._getWriteAddr()).toBe('number');
     });
   });
 
