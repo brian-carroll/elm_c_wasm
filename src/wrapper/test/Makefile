@@ -3,7 +3,7 @@ KERNELS := $(shell find ../../kernel -name '*.c')
 .PHONY: all clean
 
 all: src/*.js build/wrapper.js build/mock-app.wasm
-	npx jest src/wrapper.spec.js
+	npx jasmine --config=jasmine.json
 
 clean:
 	rm -f build/* dist/*

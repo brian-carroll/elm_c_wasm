@@ -25,30 +25,18 @@ describe('wrapper', () => {
     it('should have all required functions with correct arities', () => {
       return createEmscriptenModule().then(Module => {
         const { asm } = Module;
-        const arities = {
-          _getUnit: 0,
-          _getNil: 0,
-          _getTrue: 0,
-          _getFalse: 0,
-          _getNextFieldGroup: 0,
-          _getMaxWriteAddr: 0,
-          _getWriteAddr: 0,
-          _finishWritingAt: 1,
-          _readF64: 1,
-          _writeF64: 2,
-          _callClosure: 1,
-          _collectGarbage: 0
-        };
-        Object.keys(arities).forEach(fname => {
-          const arity = arities[fname];
-          const f = asm[fname];
-          expect(`typeof ${fname} === '${typeof f}'`).toBe(
-            `typeof ${fname} === 'function'`
-          );
-          expect(`arity of ${fname} === ${f.length}`).toBe(
-            `arity of ${fname} === ${arity}`
-          );
-        });
+        expect(asm._getUnit.length).toBe(0);
+        expect(asm._getNil.length).toBe(0);
+        expect(asm._getTrue.length).toBe(0);
+        expect(asm._getFalse.length).toBe(0);
+        expect(asm._getNextFieldGroup.length).toBe(0);
+        expect(asm._getMaxWriteAddr.length).toBe(0);
+        expect(asm._getWriteAddr.length).toBe(0);
+        expect(asm._finishWritingAt.length).toBe(1);
+        expect(asm._readF64.length).toBe(1);
+        expect(asm._writeF64.length).toBe(2);
+        expect(asm._callClosure.length).toBe(1);
+        expect(asm._collectGarbage.length).toBe(0);
       });
     });
   });

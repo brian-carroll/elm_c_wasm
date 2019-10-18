@@ -1,5 +1,5 @@
 {
-  "spec_dir": "src/wrapper/test",
+  "spec_dir": "src",
   "spec_files": ["**/*spec.js"],
   "stopSpecOnExpectationFailure": false
 }
