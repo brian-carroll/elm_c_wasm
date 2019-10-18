@@ -4,10 +4,10 @@
 #define EMSCRIPTEN_KEEPALIVE
 #include <stdio.h>
 #endif
-#include "../../../kernel/gc-internals.h"
-#include "../../../kernel/gc.h"
-#include "../../../kernel/types.h"
-#include "../../../kernel/utils.h"
+#include "./gc-internals.h"
+#include "./gc.h"
+#include "./types.h"
+#include "./utils.h"
 
 extern GcState gc_state;
 
@@ -30,7 +30,7 @@ size_t EMSCRIPTEN_KEEPALIVE getWriteAddr() {
   return (size_t)gc_state.next_alloc;
 }
 size_t EMSCRIPTEN_KEEPALIVE finishWritingAt(size_t addr) {
-  gc_state.next_alloc = addr;
+  gc_state.next_alloc = (size_t*)addr;
 }
 
 extern const FieldGroup* appFieldGroups[];
@@ -51,7 +51,7 @@ void EMSCRIPTEN_KEEPALIVE writeF64(size_t addr, f64 value) {
 }
 
 size_t EMSCRIPTEN_KEEPALIVE callClosure(size_t addr) {
-  return Utils_apply((Closure*)addr, 0, NULL);
+  return (size_t)Utils_apply((Closure*)addr, 0, NULL);
 }
 
 size_t EMSCRIPTEN_KEEPALIVE collectGarbage() {
