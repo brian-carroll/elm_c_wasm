@@ -105,20 +105,37 @@ describe('wrapper', () => {
       });
     });
 
-    it('should correctly decode "Unit"', () => {
+    it('should correctly decode `()`', () => {
       expect(readValue(asm._getUnit())).toBe(_Utils_Tuple0);
     });
 
-    it('should correctly decode "Nil"', () => {
+    it('should correctly decode `[]`', () => {
       expect(readValue(asm._getNil())).toBe(_List_Nil);
     });
 
-    it('should correctly decode "True"', () => {
+    it('should correctly decode `True`', () => {
       expect(readValue(asm._getTrue())).toBe(true);
     });
 
-    it('should correctly decode "False"', () => {
+    it('should correctly decode `False`', () => {
       expect(readValue(asm._getFalse())).toBe(false);
+    });
+
+    it('should correctly decode `1234567 : Int`', () => {
+      expect(readValue(asm._get_test_int())).toBe(1234567);
+    });
+
+    it('should correctly decode `3.14159265 : Float`', () => {
+      expect(readValue(asm._get_test_float())).toBe(3.14159265);
+    });
+
+    it("should correctly decode `'A' : Char`", () => {
+      const actual = readValue(asm._get_test_char16());
+      expect(actual).toEqual(new String('A'));
+    });
+
+    it("should correctly decode `'🙌' : Char`", () => {
+      expect(readValue(asm._get_test_char32())).toEqual(new String('🙌'));
     });
 
     it('should decode the 3-field test record', () => {

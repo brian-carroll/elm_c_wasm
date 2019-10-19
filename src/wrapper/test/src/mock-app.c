@@ -10,6 +10,51 @@
 #include "../../../kernel/types.h"
 #include "../../../kernel/utils.h"
 
+/* ---------------------------------------------------------
+
+          TEST INT, FLOAT, CHAR
+
+--------------------------------------------------------- */
+
+const ElmInt test_int = {
+    .header = HEADER_INT,
+    .value = 1234567,
+};
+size_t EMSCRIPTEN_KEEPALIVE get_test_int() {
+  return (size_t)&test_int;
+}
+
+const ElmFloat test_float = {
+    .header = HEADER_FLOAT,
+    .value = 3.14159265,
+};
+size_t EMSCRIPTEN_KEEPALIVE get_test_float() {
+  return (size_t)&test_float;
+}
+
+ElmChar test_char16 = {
+    .header = HEADER_CHAR,
+    .words16[0] = 'A',
+};
+size_t EMSCRIPTEN_KEEPALIVE get_test_char16() {
+  return (size_t)&test_char16;
+}
+
+ElmChar test_char32 = {
+    .header = HEADER_CHAR,
+    .words16[0] = 0xd83d,
+    .words16[1] = 0xde4c,
+};
+size_t EMSCRIPTEN_KEEPALIVE get_test_char32() {
+  return (size_t)&test_char32;
+}
+
+/* ---------------------------------------------------------
+
+          TEST ELM RECORDS
+
+--------------------------------------------------------- */
+
 const FieldGroup address_firstName_lastName = {
     .size = 3,
     .fields = {123, 456, 789},
@@ -67,6 +112,18 @@ void* init_records() {
   rec_firstName_lastName = ctor_firstName_lastName(firstName2, lastName2);
   return NULL;
 }
+
+/* ---------------------------------------------------------
+
+          TEST ELM CUSTOM TYPES
+
+--------------------------------------------------------- */
+
+/* ---------------------------------------------------------
+
+          INITIALISE THE HEAP
+
+--------------------------------------------------------- */
 
 int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   const int exit_code = GC_init();

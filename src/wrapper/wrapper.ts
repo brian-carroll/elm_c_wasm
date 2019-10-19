@@ -152,23 +152,16 @@ function createElmWasmWrapper(
         return mem32[index + 1];
       }
       case Tag.Float: {
-        return wasmExports._readF64(addr + WORD);
+        return wasmExports._readF64(addr + 2 * WORD);
       }
-      case Tag.Char: {
-        const idx16 = index << 1;
-        const word0 = mem16[idx16 + 1];
-        const word1 = mem16[idx16 + 2];
-        let s = String.fromCharCode(word0);
-        if (word1) s += String.fromCharCode(word1);
-        return _Utils_chr(s);
-      }
+      case Tag.Char:
       case Tag.String: {
         const idx16 = (index + 1) << 1;
         let len16 = (size - 1) << 1;
         if (mem16[idx16 + len16 - 1] === 0) len16--;
         const words16 = mem16.slice(idx16, idx16 + len16);
         const jsString = textDecoder.decode(words16);
-        return jsString;
+        return tag === Tag.Char ? _Utils_chr(jsString) : jsString;
       }
       case Tag.List: {
         return addr === wasmConstAddrs.Nil

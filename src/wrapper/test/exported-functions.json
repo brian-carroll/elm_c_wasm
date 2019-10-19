@@ -12,5 +12,9 @@
   "callClosure",
   "collectGarbage",
   "get_rec_firstName_lastName",
-  "get_rec_address_firstName_lastName"
+  "get_rec_address_firstName_lastName",
+  "get_test_int",
+  "get_test_float",
+  "get_test_char16",
+  "get_test_char32"
 ]

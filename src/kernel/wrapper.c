@@ -41,7 +41,7 @@ size_t EMSCRIPTEN_KEEPALIVE getNextFieldGroup() {
   return (size_t)next;
 }
 
-size_t EMSCRIPTEN_KEEPALIVE readF64(size_t addr) {
+f64 EMSCRIPTEN_KEEPALIVE readF64(size_t addr) {
   f64* ptr = (f64*)addr;
   return *ptr;
 }

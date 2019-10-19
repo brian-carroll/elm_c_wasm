@@ -146,7 +146,7 @@ ElmInt* ctorElmInt(i32 value);
 
 typedef struct {
   Header header;
-  PADDING64
+  u32 padding;  // on both 32 and 64-bit platforms
   f64 value;
 } ElmFloat;
 ElmFloat* ctorElmFloat(f64 value);
@@ -161,7 +161,11 @@ typedef union {
 
 typedef struct {
   Header header;
-  i32 value;
+  union {
+    u32 value;
+    u16 words16[2];
+    u8 bytes[4];
+  };
 } ElmChar;
 ElmChar* ctorElmChar(u32 value);
 #define NEW_ELM_CHAR(value) CAN_THROW(ctorElmChar(value))
