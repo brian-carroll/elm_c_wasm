@@ -59,25 +59,27 @@ ElmChar* ctorElmChar(u32 value) {
 
 // see also NEW_ELM_STRING in header file
 ElmString* ctorElmString(size_t payload_bytes, char* str) {
-  size_t used_bytes =
-      sizeof(Header) + payload_bytes + (UTF == 8);  // 1 byte for padding size
+  size_t used_bytes = sizeof(Header) + payload_bytes +
+                      (STRING_ENCODING == UTF8);  // 1 byte for padding size
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
   ElmString* p = CAN_THROW(GC_malloc(aligned_bytes));
   size_t* words = (size_t*)p;  // the ElmString as an array of words
 
-#if UTF == 16
+#if STRING_ENCODING == UTF16
   if (payload_bytes & 2) {
     words[aligned_words - 1] = 0;  // odd number of UTF-16 words => zero out the last word
   }
-#elif UTF == 8
+#elif STRING_ENCODING == UTF8
   // Insert zero padding, and last byte indicating size of padding
   // Store padding size minus 1, so that if there's only 1 byte of padding,
   // it's a zero. (Zero-terminated strings are handy for debug etc.)
   size_t padding_bytes = aligned_bytes - (used_bytes - 1);
   size_t last_byte_value = padding_bytes - 1;
   words[aligned_words - 1] = last_byte_value << (SIZE_UNIT - 1) * 8;
+#else
+  static_assert(0, "Unknown STRING_ENCODING, don't know how to add padding.");
 #endif
 
   // Write header _after_ padding to avoid it getting overwritten for empty string
