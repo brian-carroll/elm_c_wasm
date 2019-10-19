@@ -1,4 +1,4 @@
-/// <reference path = "elm-core.d.ts" />
+/// <reference path = "globals.d.ts" />
 
 /**
  * Functions exported from the Wasm module
@@ -95,9 +95,10 @@ function createElmWasmWrapper(
   const CLOSURE_N_MASK = 0xffff0000;
   const CLOSURE_MAX_MASK = 0xffff0000;
   const WORD = 4;
-  const TAG_MASK = 0xf;
-  const SIZE_MASK = 0xfffffff0;
-  const SIZE_SHIFT = 4;
+  const TAG_MASK = 0xf0000000;
+  const TAG_SHIFT = 32 - 4;
+  const SIZE_MASK = 0x0fffffff;
+  const SIZE_SHIFT = 0;
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
@@ -136,8 +137,15 @@ function createElmWasmWrapper(
   function readValue(addr: number): any {
     const index = addr / WORD;
     const header = mem32[index];
-    const tag: Tag = header & TAG_MASK;
-    const size = (header & SIZE_MASK) >> SIZE_SHIFT;
+    const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
+    const size = (header & SIZE_MASK) >>> SIZE_SHIFT;
+
+    // console.log({
+    //   addr: addr.toString(16),
+    //   tag: Tag[tag] || tag.toString(16),
+    //   size: size.toString(16),
+    //   hex: bufferToHex(mem32.slice(index, index + size))
+    // });
 
     switch (tag) {
       case Tag.Int: {
@@ -155,10 +163,12 @@ function createElmWasmWrapper(
         return _Utils_chr(s);
       }
       case Tag.String: {
-        const idx16 = index << 1;
-        let size16 = size << 1;
-        if (mem16[idx16 + size16 - 1] === 0) size16--;
-        return textDecoder.decode(mem16.slice(idx16, size16));
+        const idx16 = (index + 1) << 1;
+        let len16 = (size - 1) << 1;
+        if (mem16[idx16 + len16 - 1] === 0) len16--;
+        const words16 = mem16.slice(idx16, idx16 + len16);
+        const jsString = textDecoder.decode(words16);
+        return jsString;
       }
       case Tag.List: {
         return addr === wasmConstAddrs.Nil
@@ -183,7 +193,7 @@ function createElmWasmWrapper(
       }
       case Tag.Custom: {
         const elmConst = wasmConstAddrs[addr]; // True/False/Unit
-        if (elmConst) return elmConst;
+        if (elmConst !== undefined) return elmConst;
         const wasmCtor = mem32[index + 1];
         const jsCtor = appTypes.ctors[wasmCtor];
         const custom: Record<string, any> = { $: jsCtor };
@@ -223,9 +233,7 @@ function createElmWasmWrapper(
         return FN(wasmCallback);
       }
       default:
-        throw new Error(
-          `Tried to decode value with unsupported tag "${Tag[tag]}"`
-        );
+        throw new Error(`Tried to decode value with unsupported tag ${tag}`);
     }
   }
 

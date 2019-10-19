@@ -51,3 +51,12 @@ declare function A4<A, B, C, D, E>(
   c: C,
   d: D
 ): E;
+
+/*----------------------------
+  TEST HELPER DECLARATIONS
+-----------------------------*/
+
+declare function bufferToHex(
+  buf: Uint16Array | Uint32Array,
+  bits?: 16 | 32
+): string;

@@ -29,7 +29,7 @@ size_t EMSCRIPTEN_KEEPALIVE getMaxWriteAddr() {
 size_t EMSCRIPTEN_KEEPALIVE getWriteAddr() {
   return (size_t)gc_state.next_alloc;
 }
-size_t EMSCRIPTEN_KEEPALIVE finishWritingAt(size_t addr) {
+void EMSCRIPTEN_KEEPALIVE finishWritingAt(size_t addr) {
   gc_state.next_alloc = (size_t*)addr;
 }
 
@@ -54,6 +54,6 @@ size_t EMSCRIPTEN_KEEPALIVE callClosure(size_t addr) {
   return (size_t)Utils_apply((Closure*)addr, 0, NULL);
 }
 
-size_t EMSCRIPTEN_KEEPALIVE collectGarbage() {
+void EMSCRIPTEN_KEEPALIVE collectGarbage() {
   GC_collect_full();
 }
