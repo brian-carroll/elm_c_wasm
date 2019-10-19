@@ -4,7 +4,7 @@ KERNELS=$(find ../../kernel -name '*.c')
 extra_opt=""
 # extra_opt="$extra_opt -DDEBUG"
 # extra_opt="$extra_opt -DDEBUG_LOG"
-extra_opt="$extra_opt -O3"
+# extra_opt="$extra_opt -O3"
 
 # extra_opt="$extra_opt -g4"
 # extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/benchmark/"

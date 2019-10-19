@@ -28,6 +28,23 @@ const appTypes = {
 };
 
 describe('wrapper', () => {
+  let asm;
+  let readValue;
+
+  beforeAll(() => {
+    // Wait for C `main` to run (don't use .then() method because it's not a Promise!!!)
+    return new Promise(resolve => {
+      const Module = createEmscriptenModule();
+      Module.postRun = () => {
+        asm = Module.asm;
+        const buffer = Module.buffer;
+        const wrapper = createElmWasmWrapper(buffer, asm, appTypes);
+        readValue = wrapper.readValue;
+        resolve();
+      };
+    });
+  });
+
   describe('test setup', () => {
     it('should load globals', () => {
       expect(typeof _List_Nil).toBe('object');
@@ -47,14 +64,6 @@ describe('wrapper', () => {
   });
 
   describe('C interface sanity checks', () => {
-    let asm;
-
-    beforeAll(() => {
-      return createEmscriptenModule().then(Module => {
-        asm = Module.asm;
-      });
-    });
-
     describe('wrapper exports', () => {
       const wrapperExportArities = {
         _getUnit: 0,
@@ -71,7 +80,7 @@ describe('wrapper', () => {
         _collectGarbage: 0
       };
       for (const [fName, arity] of Object.entries(wrapperExportArities)) {
-        it(`should have an export '${fName}' with arity ${arity}`, () => {
+        it(`should have an export ${fName} with arity ${arity}`, () => {
           expect(typeof asm[fName]).toBe('function');
           expect(asm[fName].length).toBe(arity);
         });
@@ -84,7 +93,7 @@ describe('wrapper', () => {
         _get_rec_firstName_lastName: 0
       };
       for (const [fName, arity] of Object.entries(testExportArities)) {
-        it(`should have an export '${fName}' with arity ${arity}`, () => {
+        it(`should have an export ${fName} with arity ${arity}`, () => {
           expect(typeof asm[fName]).toBe('function');
           expect(asm[fName].length).toBe(arity);
         });
@@ -93,18 +102,6 @@ describe('wrapper', () => {
   });
 
   describe('readValue', () => {
-    let asm;
-    let readValue;
-
-    beforeAll(() => {
-      return createEmscriptenModule().then(Module => {
-        asm = Module.asm;
-        const buffer = Module.buffer;
-        const wrapper = createElmWasmWrapper(buffer, asm, appTypes);
-        readValue = wrapper.readValue;
-      });
-    });
-
     it('should correctly decode `()`', () => {
       expect(readValue(asm._getUnit())).toBe(_Utils_Tuple0);
     });
@@ -134,7 +131,7 @@ describe('wrapper', () => {
       expect(actual).toEqual(new String('A'));
     });
 
-    it("should correctly decode `'🙌' : Char`", () => {
+    it('should correctly decode an emoji Char', () => {
       expect(readValue(asm._get_test_char32())).toEqual(new String('🙌'));
     });
 

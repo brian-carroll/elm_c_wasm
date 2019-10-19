@@ -1,3 +1,4 @@
+#include <assert.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -33,9 +34,10 @@ void EMSCRIPTEN_KEEPALIVE finishWritingAt(size_t addr) {
   gc_state.next_alloc = (size_t*)addr;
 }
 
-extern const FieldGroup* appFieldGroups[];
+FieldGroup** appFieldGroups;
 size_t nextFieldGroup = 0;
 size_t EMSCRIPTEN_KEEPALIVE getNextFieldGroup() {
+  assert(appFieldGroups != NULL);
   FieldGroup* next = appFieldGroups[nextFieldGroup];
   if (next != NULL) nextFieldGroup++;
   return (size_t)next;

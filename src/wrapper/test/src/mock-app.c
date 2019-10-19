@@ -9,6 +9,7 @@
 #include "../../../kernel/gc.h"
 #include "../../../kernel/types.h"
 #include "../../../kernel/utils.h"
+#include "../../../kernel/wrapper.h"
 
 /* ---------------------------------------------------------
 
@@ -63,7 +64,7 @@ const FieldGroup firstName_lastName = {
     .size = 2,
     .fields = {456, 789},
 };
-const FieldGroup* appFieldGroups[] = {
+const FieldGroup* fieldGroupsArray[] = {
     &address_firstName_lastName,
     &firstName_lastName,
     NULL,
@@ -127,6 +128,9 @@ void* init_records() {
 
 int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   const int exit_code = GC_init();
+  if (exit_code) return exit_code;
+
+  appFieldGroups = fieldGroupsArray;
 
   GC_register_root(&rec_address_firstName_lastName);
   GC_register_root(&rec_firstName_lastName);
