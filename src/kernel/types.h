@@ -174,6 +174,7 @@ typedef struct {
 } ElmString;
 ElmString* ctorElmString(size_t n, char* str);
 #define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
+#define UTF 16
 
 // CUSTOM
 
