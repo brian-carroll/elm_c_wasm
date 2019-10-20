@@ -1,3 +1,4 @@
+#include <assert.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -184,6 +185,21 @@ void* init_records() {
       ctor_address_firstName_lastName(address1, firstName1, lastName1);
   rec_firstName_lastName = ctor_firstName_lastName(firstName2, lastName2);
   return NULL;
+}
+
+/* ---------------------------------------------------------
+
+          EQUALITY
+
+--------------------------------------------------------- */
+void* test_equal_help(void* ptr1, void* ptr2) {
+  return A2(&Utils_eq, ptr1, ptr2);
+}
+size_t EMSCRIPTEN_KEEPALIVE test_equal(size_t addr1, size_t addr2) {
+  void* result = test_equal_help((void*)addr1, (void*)addr2);
+  // For the test, better to just throw rather than catching and doing GC
+  assert(result != pGcFull);
+  return result == &True;
 }
 
 /* ---------------------------------------------------------

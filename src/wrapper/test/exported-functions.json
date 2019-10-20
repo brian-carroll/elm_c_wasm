@@ -22,5 +22,6 @@
   "get_test_tuple2",
   "get_test_tuple3",
   "get_test_nothing",
-  "get_test_just_int"
+  "get_test_just_int",
+  "test_equal"
 ]

@@ -56,7 +56,7 @@ declare function A4<A, B, C, D, E>(
   TEST HELPER DECLARATIONS
 -----------------------------*/
 
-declare function bufferToHex(
-  buf: Uint16Array | Uint32Array,
+declare function formatHex(
+  arg: Uint16Array | Uint32Array | number | object,
   bits?: 16 | 32
-): string;
+): string | string[] | object;

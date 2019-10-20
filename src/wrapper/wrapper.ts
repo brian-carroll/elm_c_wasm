@@ -97,7 +97,7 @@ function createElmWasmWrapper(
   const CLOSURE_MAX_MASK = 0xffff0000;
   const WORD = 4;
   const TAG_MASK = 0xf0000000;
-  const TAG_SHIFT = 32 - 4;
+  const TAG_SHIFT = 28;
   const SIZE_MASK = 0x0fffffff;
   const SIZE_SHIFT = 0;
 
@@ -227,7 +227,10 @@ function createElmWasmWrapper(
         return FN(wasmCallback);
       }
       default:
-        throw new Error(`Tried to decode value with unsupported tag ${tag}`);
+        throw new Error(
+          'Tried to decode value with unsupported tag ' +
+            (Tag[tag] || '0x' + tag.toString(16))
+        );
     }
   }
 
@@ -283,10 +286,24 @@ function createElmWasmWrapper(
         maxWriteIndex32 = maxAddr >> 2;
         const startAddr = wasmExports._getWriteAddr();
         const startIndex = startAddr >> 2;
-        const result = writer(startIndex);
+        const result: WriteResult = writer(startIndex);
         wasmExports._finishWritingAt(result.nextIndex << 2);
+
+        // wasmExports._debugHeapState();
+        // console.log(
+        //   formatHex({
+        //     label: 'handleWasmWrite, after write',
+        //     maxAddr,
+        //     startAddr,
+        //     startIndex,
+        //     result
+        //   })
+        // );
+
         return result.addr;
       } catch (e) {
+        console.error(e);
+        console.warn('Triggering GC');
         wasmExports._collectGarbage();
       }
     }
@@ -299,7 +316,7 @@ function createElmWasmWrapper(
    * May throw an error
    */
   function writeValue(value: any): number {
-    return handleWasmWrite(nextIndex => writeValueHelp(value, nextIndex));
+    return handleWasmWrite(nextIndex => writeValueHelp(nextIndex, value));
   }
 
   type TypeInfo =
@@ -331,6 +348,17 @@ function createElmWasmWrapper(
     }
     const tag: Tag = typeInfo.value;
     const builder: WasmBuilder = wasmBuilder(tag, value);
+
+    // console.log(
+    //   formatHex({
+    //     label: 'writeValueHelp',
+    //     nextIndex,
+    //     value,
+    //     tag: Tag[tag],
+    //     builder,
+    //     bodyDecimal: builder.body && builder.body.map(x => x.toString(10))
+    //   })
+    // );
 
     return writeFromBuilder(nextIndex, builder, tag);
   }
@@ -399,8 +427,10 @@ function createElmWasmWrapper(
           body: null,
           jsChildren: null,
           writer: (addr: number) => {
-            wasmExports._writeF64(addr, value);
-            return 2; // words written
+            write32(addr >> 2, 0);
+            const afterPadding = addr + WORD;
+            wasmExports._writeF64(afterPadding, value);
+            return 3; // words written
           }
         };
       case Tag.Char:
@@ -460,15 +490,35 @@ function createElmWasmWrapper(
     tag: Tag
   ): WriteResult {
     if (builder.writer) {
+      /**
+       * Special cases: Float/Char/String (not 32-bit)
+       */
       const headerIndex = nextIndex;
-      const wordsWritten = builder.writer((headerIndex + 1) * WORD);
+      const addr = headerIndex << 2;
+      const wordsWritten = builder.writer(addr + WORD);
       const size = 1 + wordsWritten;
       write32(headerIndex, encodeHeader({ tag, size }));
+
+      // console.log(
+      //   formatHex({
+      //     label: 'writeFromBuilder, writer',
+      //     addr,
+      //     headerIndex,
+      //     wordsWritten,
+      //     tag: Tag[tag],
+      //     size,
+      //     encodedHeader: encodeHeader({ tag, size })
+      //   })
+      // );
+
       return {
-        addr: headerIndex,
+        addr,
         nextIndex: headerIndex + size
       };
     } else {
+      /**
+       * Normal cases (32-bit)
+       */
       const { body, jsChildren } = builder;
       const childAddrs: number[] = [];
       jsChildren.forEach(child => {
@@ -477,7 +527,7 @@ function createElmWasmWrapper(
         nextIndex = update.nextIndex;
       });
 
-      const addr = nextIndex >> 2;
+      const addr = nextIndex << 2;
       const size = 1 + body.length + childAddrs.length;
       write32(nextIndex++, encodeHeader({ tag, size }));
       body.forEach(word => {
@@ -491,7 +541,7 @@ function createElmWasmWrapper(
   }
 
   function encodeHeader({ tag, size }: Header): number {
-    return tag | (size << SIZE_SHIFT);
+    return (tag << TAG_SHIFT) | (size << SIZE_SHIFT);
   }
 
   function writeString(s: string, idx32: number): number {
