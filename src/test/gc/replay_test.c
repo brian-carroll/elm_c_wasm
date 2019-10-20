@@ -130,7 +130,7 @@ char* assert_heap_values(const char* description, const void* values[]) {
   if (bad_addr) {
     print_heap();
     sprintf(assert_heap_message,
-        "%s\nExpected %p to be " ZERO_PAD_HEX " but found " ZERO_PAD_HEX "\n",
+        "%s\nExpected %p to be " FORMAT_HEX " but found " FORMAT_HEX "\n",
         description,
         bad_addr,
         expected_value,

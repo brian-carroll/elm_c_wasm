@@ -11,6 +11,7 @@
   "writeF64",
   "callClosure",
   "collectGarbage",
+  "debugHeapState",
   "get_rec_firstName_lastName",
   "get_rec_address_firstName_lastName",
   "get_test_int",

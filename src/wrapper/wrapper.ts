@@ -16,6 +16,7 @@ interface ElmWasmExports {
   _writeF64: (addr: number, value: number) => void;
   _callClosure: (addr: number) => number;
   _collectGarbage: () => void;
+  _debugHeapState: () => void;
 }
 
 /**

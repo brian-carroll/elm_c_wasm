@@ -9,6 +9,9 @@
 #include "./gc.h"
 #include "./types.h"
 #include "./utils.h"
+#ifdef DEBUG
+#include "../test/gc/print-heap.h"
+#endif
 
 extern GcState gc_state;
 
@@ -59,3 +62,12 @@ size_t EMSCRIPTEN_KEEPALIVE callClosure(size_t addr) {
 void EMSCRIPTEN_KEEPALIVE collectGarbage() {
   GC_collect_full();
 }
+
+#ifdef DEBUG
+void EMSCRIPTEN_KEEPALIVE debugHeapState() {
+  printf("\n");
+  print_heap();
+  print_state();
+  printf("\n");
+}
+#endif
