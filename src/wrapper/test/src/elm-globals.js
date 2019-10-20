@@ -12,6 +12,10 @@ global._Utils_Tuple3 = function(a, b, c) {
 global._Utils_chr = function(c) {
   return new String(c);
 };
+global.elm$core$Maybe$Nothing = { $: 'Nothing' };
+global.elm$core$Maybe$Just = function(a) {
+  return { $: 'Just', a: a };
+};
 
 global.F = function(arity, fun, wrapper) {
   wrapper.a = arity;

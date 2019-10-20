@@ -109,6 +109,31 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_tuple3() {
 
 /* ---------------------------------------------------------
 
+          UNION/CUSTOM TYPES
+
+--------------------------------------------------------- */
+
+const Custom nothing = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = 123,
+};
+
+size_t EMSCRIPTEN_KEEPALIVE get_test_nothing() {
+  return (size_t)&nothing;
+}
+
+const Custom just_int = {
+    .header = HEADER_CUSTOM(1),
+    .ctor = 124,
+    .values = {&test_int},
+};
+
+size_t EMSCRIPTEN_KEEPALIVE get_test_just_int() {
+  return (size_t)&just_int;
+}
+
+/* ---------------------------------------------------------
+
           RECORDS
 
 --------------------------------------------------------- */
@@ -160,12 +185,6 @@ void* init_records() {
   rec_firstName_lastName = ctor_firstName_lastName(firstName2, lastName2);
   return NULL;
 }
-
-/* ---------------------------------------------------------
-
-          CUSTOM TYPES
-
---------------------------------------------------------- */
 
 /* ---------------------------------------------------------
 

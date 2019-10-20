@@ -1,4 +1,5 @@
 require('./elm-globals');
+const exportedFunctionNames = require('../exported-functions.json');
 global.TextDecoder = require('util').TextDecoder;
 global.bufferToHex = (buf, bits = 32) => {
   let hex = [];
@@ -14,7 +15,12 @@ const createElmWasmWrapper = require('../build/wrapper');
 const createEmscriptenModule = require('../build/mock-app');
 
 const appTypes = {
-  ctors: {},
+  ctors: {
+    Nothing: 123,
+    Just: 124,
+    123: 'Nothing',
+    124: 'Just'
+  },
   fields: {
     address: 123,
     firstName: 456,
@@ -64,35 +70,23 @@ describe('wrapper', () => {
   });
 
   describe('C interface sanity checks', () => {
-    describe('wrapper exports', () => {
-      const wrapperExportArities = {
-        _getUnit: 0,
-        _getNil: 0,
-        _getTrue: 0,
-        _getFalse: 0,
-        _getNextFieldGroup: 0,
-        _getMaxWriteAddr: 0,
-        _getWriteAddr: 0,
-        _finishWritingAt: 1,
-        _readF64: 1,
-        _writeF64: 2,
-        _callClosure: 1,
-        _collectGarbage: 0
-      };
-      for (const [fName, arity] of Object.entries(wrapperExportArities)) {
-        it(`should have an export ${fName} with arity ${arity}`, () => {
-          expect(typeof asm[fName]).toBe('function');
-          expect(asm[fName].length).toBe(arity);
-        });
-      }
-    });
+    const wrapperExportArities = {
+      _getUnit: 0,
+      _getNil: 0,
+      _getTrue: 0,
+      _getFalse: 0,
+      _getNextFieldGroup: 0,
+      _getMaxWriteAddr: 0,
+      _getWriteAddr: 0,
+      _finishWritingAt: 1,
+      _readF64: 1,
+      _writeF64: 2,
+      _callClosure: 1,
+      _collectGarbage: 0
+    };
 
-    describe('test exports', () => {
-      const testExportArities = {
-        _get_rec_address_firstName_lastName: 0,
-        _get_rec_firstName_lastName: 0
-      };
-      for (const [fName, arity] of Object.entries(testExportArities)) {
+    describe('wrapper exports', () => {
+      for (const [fName, arity] of Object.entries(wrapperExportArities)) {
         it(`should have an export ${fName} with arity ${arity}`, () => {
           expect(typeof asm[fName]).toBe('function');
           expect(asm[fName].length).toBe(arity);
@@ -149,11 +143,15 @@ describe('wrapper', () => {
         _Utils_Tuple2(1234567, 'A')
       );
     });
-    xit('should correctly decode `Nothing`', () => {
-      //
+    it('should correctly decode `Nothing`', () => {
+      expect(readValue(asm._get_test_nothing())).toEqual(
+        elm$core$Maybe$Nothing
+      );
     });
-    xit('should correctly decode `Just 1234567`', () => {
-      //
+    it('should correctly decode `Just 1234567`', () => {
+      expect(readValue(asm._get_test_just_int())).toEqual(
+        elm$core$Maybe$Just(1234567)
+      );
     });
 
     it('should correctly decode a record', () => {
