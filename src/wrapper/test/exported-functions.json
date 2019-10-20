@@ -19,6 +19,7 @@
   "get_test_char16",
   "get_test_char32",
   "get_test_string",
+  "get_test_list",
   "get_test_tuple2",
   "get_test_tuple3",
   "get_test_nothing",

@@ -136,17 +136,24 @@ function createElmWasmWrapper(
   -------------------------------------------------- */
 
   function readValue(addr: number): any {
-    const index = addr / WORD;
+    const index = addr >> 2;
     const header = mem32[index];
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
     const size = (header & SIZE_MASK) >>> SIZE_SHIFT;
 
-    // console.log({
-    //   addr: addr.toString(16),
-    //   tag: Tag[tag] || tag.toString(16),
-    //   size: size.toString(16),
-    //   hex: bufferToHex(mem32.slice(index, index + size))
-    // });
+    // wasmExports._debugHeapState();
+
+    // console.log(
+    //   formatHex({
+    //     label: 'readValue entrypoint',
+    //     index,
+    //     addr,
+    //     header,
+    //     tag: Tag[tag] || tag.toString(16),
+    //     size
+    //     // hex: mem32.slice(index, index + size)
+    //   })
+    // );
 
     switch (tag) {
       case Tag.Int: {
@@ -357,7 +364,7 @@ function createElmWasmWrapper(
     //     value,
     //     tag: Tag[tag],
     //     builder,
-    //     bodyDecimal: builder.body && builder.body.map(x => x.toString(10))
+    //     bodyDecimal: builder.body.map(x => x.toString(10))
     //   })
     // );
 

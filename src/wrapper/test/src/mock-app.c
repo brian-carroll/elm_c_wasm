@@ -11,6 +11,7 @@
 #include "../../../kernel/types.h"
 #include "../../../kernel/utils.h"
 #include "../../../kernel/wrapper.h"
+#include "../../../test/gc/print-heap.h"
 
 /* ---------------------------------------------------------
 
@@ -79,6 +80,24 @@ void* init_strings() {
 
 size_t EMSCRIPTEN_KEEPALIVE get_test_string() {
   return (size_t)firstName1;
+}
+
+/* ---------------------------------------------------------
+
+          LIST
+
+--------------------------------------------------------- */
+Cons* list0;
+Cons* list1;
+
+void* init_list() {
+  list1 = NEW_CONS(lastName1, pNil);
+  list0 = NEW_CONS(firstName1, list1);
+  return NULL;
+}
+
+size_t EMSCRIPTEN_KEEPALIVE get_test_list() {
+  return (size_t)list0;
 }
 
 /* ---------------------------------------------------------
@@ -217,6 +236,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   GC_register_root(&rec_address_firstName_lastName);
   GC_register_root(&rec_firstName_lastName);
   init_strings();
+  init_list();
   init_records();
 
   return exit_code;
