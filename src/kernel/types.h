@@ -245,6 +245,7 @@ typedef struct {
 // ANY ELM VALUE (for pointers in collections)
 typedef union {
   Header header;
+  u32 header_as_u32;
   ElmInt elm_int;
   ElmFloat elm_float;
   ElmChar elm_char;

@@ -227,29 +227,35 @@ describe('wrapper', () => {
       expectWasmEqual(asm._get_test_float(), 3.14159265);
     });
 
-    // it("should correctly encode `'A' : Char`", () => {
-    //   expectWasmEqual(asm._get_test_char16(), new String('A'));
-    // });
+    it("should correctly encode `'A' : Char`", () => {
+      expectWasmEqual(asm._get_test_char16(), new String('A'));
+    });
 
-    // it('should correctly encode an emoji Char', () => {
-    //   expectWasmEqual(asm._get_test_char32(), new String('🙌'));
-    // });
+    it('should correctly encode an emoji Char', () => {
+      expectWasmEqual(asm._get_test_char32(), new String('🙌'));
+    });
 
-    // it('should correctly encode `"firstName1" : String`', () => {
-    //   expectWasmEqual(asm._get_test_string(), 'firstName1');
-    // });
+    it('should correctly encode `"firstName1" : String`', () => {
+      expectWasmEqual(asm._get_test_string(), 'firstName1');
+    });
 
     // xit('should correctly encode `["firstName1", "lastName1"] : List String`', () => {
     //   // expectWasmEqual(asm._get_test_string(), 'firstName1');
     // });
 
-    // it("should correctly encode `(1234567, 'A')`", () => {
-    //   expectWasmEqual(asm._get_test_tuple2(), _Utils_Tuple2(1234567, 'A'));
-    // });
+    it("should correctly encode `(1234567, 'A')`", () => {
+      expectWasmEqual(
+        asm._get_test_tuple2(),
+        _Utils_Tuple2(1234567, new String('A'))
+      );
+    });
 
-    // it("should correctly encode `(1234567, 'A', 3.14159265)`", () => {
-    //   expectWasmEqual(asm._get_test_tuple2(), _Utils_Tuple2(1234567, 'A'));
-    // });
+    it("should correctly encode `(1234567, 'A', 3.14159265)`", () => {
+      expectWasmEqual(
+        asm._get_test_tuple3(),
+        _Utils_Tuple3(1234567, new String('A'), 3.14159265)
+      );
+    });
 
     // it('should correctly encode `Nothing`', () => {
     //   expectWasmEqual(asm._get_test_nothing(), elm$core$Maybe$Nothing);

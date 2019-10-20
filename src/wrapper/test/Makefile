@@ -6,7 +6,7 @@ all: src/*.js build/wrapper.js build/mock-app.wasm
 	npx jasmine --config=jasmine.json --reporter=jasmine-console-reporter
 
 clean:
-	rm -f build/* dist/*
+	rm -f build/*
 
 build/wrapper.js: ../wrapper.ts
 	@rm -f $@

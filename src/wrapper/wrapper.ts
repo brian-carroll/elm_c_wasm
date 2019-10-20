@@ -246,7 +246,7 @@ function createElmWasmWrapper(
         const builder: WasmBuilder = {
           body: [n_values | max_values, evaluator],
           jsChildren: args,
-          writer: null
+          bodyWriter: null
         };
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
@@ -296,7 +296,8 @@ function createElmWasmWrapper(
         //     maxAddr,
         //     startAddr,
         //     startIndex,
-        //     result
+        //     result,
+        //     wasmConstAddrs
         //   })
         // );
 
@@ -331,14 +332,14 @@ function createElmWasmWrapper(
 
   type WasmBuilder =
     | {
-        body: null;
-        jsChildren: null;
-        writer: (addr: number) => number;
+        body: [];
+        jsChildren: [];
+        bodyWriter: (bodyAddr: number) => number;
       }
     | {
         body: number[];
         jsChildren: any[];
-        writer: null;
+        bodyWriter: null;
       };
 
   function writeValueHelp(nextIndex: number, value: any): WriteResult {
@@ -420,15 +421,15 @@ function createElmWasmWrapper(
         return {
           body: [value],
           jsChildren: [],
-          writer: null
+          bodyWriter: null
         };
       case Tag.Float:
         return {
-          body: null,
-          jsChildren: null,
-          writer: (addr: number) => {
-            write32(addr >> 2, 0);
-            const afterPadding = addr + WORD;
+          body: [],
+          jsChildren: [],
+          bodyWriter: (bodyAddr: number) => {
+            write32(bodyAddr >> 2, 0);
+            const afterPadding = bodyAddr + WORD;
             wasmExports._writeF64(afterPadding, value);
             return 3; // words written
           }
@@ -436,22 +437,31 @@ function createElmWasmWrapper(
       case Tag.Char:
       case Tag.String:
         return {
-          body: null,
-          jsChildren: null,
-          writer: (addr: number) => writeString(value, addr)
+          body: [],
+          jsChildren: [],
+          bodyWriter: (bodyAddr: number) => {
+            const s: string = value;
+            const offset16 = bodyAddr >> 1;
+            const lenAligned = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
+            for (let i = 0; i < lenAligned; i++) {
+              write16(offset16 + i, s.charCodeAt(i));
+            }
+            const wordsWritten = lenAligned >> 1;
+            return wordsWritten;
+          }
         };
       case Tag.Tuple2:
       case Tag.List:
         return {
           body: [],
           jsChildren: [value.a, value.b],
-          writer: null
+          bodyWriter: null
         };
       case Tag.Tuple3:
         return {
           body: [],
           jsChildren: [value.a, value.b, value.c],
-          writer: null
+          bodyWriter: null
         };
       case Tag.Custom: {
         const jsCtor: string = value.$;
@@ -462,7 +472,7 @@ function createElmWasmWrapper(
         return {
           body: [appTypes.ctors[jsCtor]],
           jsChildren,
-          writer: null
+          bodyWriter: null
         };
       }
       case Tag.Record: {
@@ -473,7 +483,7 @@ function createElmWasmWrapper(
         return {
           body: [fgAddr],
           jsChildren: keys.map(k => value[k]),
-          writer: null
+          bodyWriter: null
         };
       }
       case Tag.Closure: {
@@ -489,13 +499,13 @@ function createElmWasmWrapper(
     builder: WasmBuilder,
     tag: Tag
   ): WriteResult {
-    if (builder.writer) {
+    if (builder.bodyWriter) {
       /**
        * Special cases: Float/Char/String (not 32-bit)
        */
       const headerIndex = nextIndex;
       const addr = headerIndex << 2;
-      const wordsWritten = builder.writer(addr + WORD);
+      const wordsWritten = builder.bodyWriter(addr + WORD);
       const size = 1 + wordsWritten;
       write32(headerIndex, encodeHeader({ tag, size }));
 
@@ -542,16 +552,6 @@ function createElmWasmWrapper(
 
   function encodeHeader({ tag, size }: Header): number {
     return (tag << TAG_SHIFT) | (size << SIZE_SHIFT);
-  }
-
-  function writeString(s: string, idx32: number): number {
-    const offset = idx32 << 1;
-    const lenAligned = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
-    for (let i = 0; i < lenAligned; i++) {
-      write16(offset + i, s.charCodeAt(i));
-    }
-    const wordsWritten = lenAligned >> 1;
-    return wordsWritten;
   }
 
   /* --------------------------------------------------
