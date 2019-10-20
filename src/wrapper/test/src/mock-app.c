@@ -13,7 +13,7 @@
 
 /* ---------------------------------------------------------
 
-          TEST INT, FLOAT, CHAR
+          INT, FLOAT, CHAR
 
 --------------------------------------------------------- */
 
@@ -52,7 +52,64 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_char32() {
 
 /* ---------------------------------------------------------
 
-          TEST ELM RECORDS
+          STRINGS
+
+--------------------------------------------------------- */
+
+ElmString* address1;
+ElmString* firstName1;
+ElmString* lastName1;
+ElmString* firstName2;
+ElmString* lastName2;
+
+void* init_strings() {
+  //                                             1 23 45 67 8  90
+  address1 = NEW_ELM_STRING(9, "a\0d\0d\0r\0001");
+  //                                                1 23 45 67 89 01 23 45 67 8  90
+  firstName1 = NEW_ELM_STRING(19, "f\0i\0r\0s\0t\0N\0a\0m\0e\0001");
+  //                                               1 23 45 67 89 01 23 45 6  78
+  lastName1 = NEW_ELM_STRING(17, "l\0a\0s\0t\0N\0a\0m\0e\0001");
+  //                                                1 23 45 67 89 01 23 45 67 8  90
+  firstName2 = NEW_ELM_STRING(19, "f\0i\0r\0s\0t\0N\0a\0m\0e\0002");
+  //                                               1 23 45 67 89 01 23 45 6  78
+  lastName2 = NEW_ELM_STRING(17, "l\0a\0s\0t\0N\0a\0m\0e\0002");
+  return NULL;
+}
+
+size_t EMSCRIPTEN_KEEPALIVE get_test_string() {
+  return (size_t)firstName1;
+}
+
+/* ---------------------------------------------------------
+
+          TUPLES
+
+--------------------------------------------------------- */
+
+const Tuple2 tuple2 = {
+    .header = HEADER_TUPLE2,
+    .a = &test_int,
+    .b = &test_char16,
+};
+
+size_t EMSCRIPTEN_KEEPALIVE get_test_tuple2() {
+  return (size_t)&tuple2;
+}
+
+const Tuple3 tuple3 = {
+    .header = HEADER_TUPLE3,
+    .a = &test_int,
+    .b = &test_char16,
+    .c = &test_float,
+};
+
+size_t EMSCRIPTEN_KEEPALIVE get_test_tuple3() {
+  return (size_t)&tuple3;
+}
+
+/* ---------------------------------------------------------
+
+          RECORDS
 
 --------------------------------------------------------- */
 
@@ -98,16 +155,6 @@ size_t EMSCRIPTEN_KEEPALIVE get_rec_firstName_lastName() {
   return (size_t)rec_firstName_lastName;
 }
 void* init_records() {
-  //                                             1 23 45 67 8  90
-  const ElmString* address1 = NEW_ELM_STRING(9, "a\0d\0d\0r\0001");
-  //                                                1 23 45 67 89 01 23 45 67 8  90
-  const ElmString* firstName1 = NEW_ELM_STRING(19, "f\0i\0r\0s\0t\0N\0a\0m\0e\0001");
-  //                                               1 23 45 67 89 01 23 45 6  78
-  const ElmString* lastName1 = NEW_ELM_STRING(17, "l\0a\0s\0t\0N\0a\0m\0e\0001");
-  //                                                1 23 45 67 89 01 23 45 67 8  90
-  const ElmString* firstName2 = NEW_ELM_STRING(19, "f\0i\0r\0s\0t\0N\0a\0m\0e\0002");
-  //                                               1 23 45 67 89 01 23 45 6  78
-  const ElmString* lastName2 = NEW_ELM_STRING(17, "l\0a\0s\0t\0N\0a\0m\0e\0002");
   rec_address_firstName_lastName =
       ctor_address_firstName_lastName(address1, firstName1, lastName1);
   rec_firstName_lastName = ctor_firstName_lastName(firstName2, lastName2);
@@ -116,7 +163,7 @@ void* init_records() {
 
 /* ---------------------------------------------------------
 
-          TEST ELM CUSTOM TYPES
+          CUSTOM TYPES
 
 --------------------------------------------------------- */
 
@@ -134,6 +181,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
 
   GC_register_root(&rec_address_firstName_lastName);
   GC_register_root(&rec_firstName_lastName);
+  init_strings();
   init_records();
 
   return exit_code;

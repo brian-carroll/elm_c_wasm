@@ -135,13 +135,38 @@ describe('wrapper', () => {
       expect(readValue(asm._get_test_char32())).toEqual(new String('🙌'));
     });
 
-    it('should decode the 3-field test record', () => {
+    it('should correctly decode `"firstName1" : String`', () => {
+      expect(readValue(asm._get_test_string())).toEqual('firstName1');
+    });
+
+    it("should correctly decode `(1234567, 'A')`", () => {
+      expect(readValue(asm._get_test_tuple2())).toEqual(
+        _Utils_Tuple2(1234567, 'A')
+      );
+    });
+    it("should correctly decode `(1234567, 'A', 3.14159265)`", () => {
+      expect(readValue(asm._get_test_tuple2())).toEqual(
+        _Utils_Tuple2(1234567, 'A')
+      );
+    });
+    xit('should correctly decode `Nothing`', () => {
+      //
+    });
+    xit('should correctly decode `Just 1234567`', () => {
+      //
+    });
+
+    it('should correctly decode a record', () => {
       const actual = readValue(asm._get_rec_address_firstName_lastName());
       expect(actual).toEqual({
         address: 'addr1',
         firstName: 'firstName1',
         lastName: 'lastName1'
       });
+    });
+
+    xit('should correctly make a callback from a Closure', () => {
+      //
     });
   });
 });
