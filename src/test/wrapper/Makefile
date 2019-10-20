@@ -8,9 +8,9 @@ all: src/*.js build/wrapper.js build/mock-app.wasm
 clean:
 	rm -f build/*
 
-build/wrapper.js: ../wrapper.ts
+build/wrapper.js: ../../kernel/wrapper/wrapper.ts
 	@rm -f $@
-	npx tsc ../wrapper.ts --outFile build/wrapper.js
+	npx tsc $< --outFile build/wrapper.js
 	echo 'module.exports = createElmWasmWrapper;' >> build/wrapper.js
 
 build/mock-app.wasm: build-wasm.sh src/mock-app.c $(KERNELS) ../../test/gc/print-heap.c
