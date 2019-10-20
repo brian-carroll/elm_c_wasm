@@ -51,3 +51,12 @@ declare function A4<A, B, C, D, E>(
   c: C,
   d: D
 ): E;
+
+/*----------------------------
+  TEST HELPER DECLARATIONS
+-----------------------------*/
+
+declare function formatHex(
+  arg: Uint16Array | Uint32Array | number | object,
+  bits?: 16 | 32
+): string | string[] | object;

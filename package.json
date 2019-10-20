@@ -25,6 +25,8 @@
   "homepage": "https://github.com/brian-carroll/elm_c_wasm#readme",
   "dependencies": {},
   "devDependencies": {
+    "jasmine": "^3.5.0",
+    "jasmine-console-reporter": "^3.1.0",
     "typescript": "^3.6.4"
   }
 }

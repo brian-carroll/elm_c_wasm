@@ -27,7 +27,7 @@ bool is_marked(void* p) {
 }
 
 void print_value(ElmValue* v) {
-  printf("| %14p | " ZERO_PAD_HEX " |  %c   |%5d | ",
+  printf("| " FORMAT_PTR " | " FORMAT_HEX " |  %c   |%5d | ",
       v,
       *((size_t*)v),
       is_marked(v) ? 'X' : ' ',
@@ -43,7 +43,17 @@ void print_value(ElmValue* v) {
       printf("Char 0x%8x", v->elm_char.value);
       break;
     case Tag_String:
+#if STRING_ENCODING == UTF16
+      printf("String \"");
+      size_t body_bytes = (v->header.size * SIZE_UNIT) - sizeof(Header);
+      for (size_t i = 0; i < body_bytes; i = i + 2) {
+        char c = v->elm_string.bytes[i];
+        if (c) printf("%c", c);
+      }
+      printf("\"");
+#else
       printf("String \"%s\"", v->elm_string.bytes);
+#endif
       break;
     case Tag_List:
       printf("Cons head: %p tail: %p", v->cons.head, v->cons.tail);
@@ -107,8 +117,13 @@ void print_value(ElmValue* v) {
 void print_heap() {
   GcState* state = &gc_state;
 
+#ifdef TARGET_64BIT
   printf("|    Address     |       Hex        | Mark | Size | Value\n");
   printf("| -------------- | ---------------- | ---- | ---- | -----\n");
+#else
+  printf("| Address  |   Hex    | Mark | Size | Value\n");
+  printf("| -------- | -------- | ---- | ---- | -----\n");
+#endif
 
   size_t* first_value = state->heap.start;
   size_t* next_value = first_value;
@@ -118,7 +133,7 @@ void print_heap() {
         // summarize big chunks of zeros
         while (*p == 0)
           p++;
-        printf("| %14p | " ZERO_PAD_HEX " |      |%5zd | (zeros)\n",
+        printf("| " FORMAT_PTR " | " FORMAT_HEX " |      |%5zd | (zeros)\n",
             next_value,
             (size_t)0,
             p - next_value);
@@ -133,7 +148,7 @@ void print_heap() {
         next_value++;
       }
     } else {
-      printf("| %14p | " ZERO_PAD_HEX " |  %c   |      |\n",
+      printf("| " FORMAT_PTR " | " FORMAT_HEX " |  %c   |      |\n",
           p,
           *p,
           is_marked(p) ? 'X' : ' ');

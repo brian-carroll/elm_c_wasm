@@ -5,9 +5,11 @@
 #define TEST_GC_PRINT_HEAP_H
 
 #ifdef TARGET_64BIT
-#define ZERO_PAD_HEX "%016zx"
+#define FORMAT_HEX "%016zx"
+#define FORMAT_PTR "%14p"
 #else
-#define ZERO_PAD_HEX "%08zx"
+#define FORMAT_HEX "%08zx"
+#define FORMAT_PTR "%8p"
 #endif
 
 bool is_marked(void* p);
