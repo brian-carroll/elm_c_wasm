@@ -141,20 +141,6 @@ function createElmWasmWrapper(
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
     const size = (header & SIZE_MASK) >>> SIZE_SHIFT;
 
-    // wasmExports._debugHeapState();
-
-    // console.log(
-    //   formatHex({
-    //     label: 'readValue entrypoint',
-    //     index,
-    //     addr,
-    //     header,
-    //     tag: Tag[tag] || tag.toString(16),
-    //     size
-    //     // hex: mem32.slice(index, index + size)
-    //   })
-    // );
-
     switch (tag) {
       case Tag.Int: {
         return mem32[index + 1];
@@ -270,13 +256,17 @@ function createElmWasmWrapper(
   let maxWriteIndex32: number;
   let maxWriteIndex16: number;
 
+  class HeapOverflowError extends Error {}
+
   function write32(index: number, value: number) {
-    if (index > maxWriteIndex32) throw new Error('Wasm heap overflow');
+    if (index > maxWriteIndex32)
+      throw new HeapOverflowError('Wasm heap overflow');
     mem32[index] = value;
   }
 
   function write16(index: number, value: number) {
-    if (index > maxWriteIndex16) throw new Error('Wasm heap overflow');
+    if (index > maxWriteIndex16)
+      throw new HeapOverflowError('Wasm heap overflow');
     mem16[index] = value;
   }
 
@@ -295,24 +285,13 @@ function createElmWasmWrapper(
         const startIndex = startAddr >> 2;
         const result: WriteResult = writer(startIndex);
         wasmExports._finishWritingAt(result.nextIndex << 2);
-
-        // wasmExports._debugHeapState();
-        // console.log(
-        //   formatHex({
-        //     label: 'handleWasmWrite, after write',
-        //     maxAddr,
-        //     startAddr,
-        //     startIndex,
-        //     result,
-        //     wasmConstAddrs
-        //   })
-        // );
-
         return result.addr;
       } catch (e) {
-        console.error(e);
-        console.warn('Triggering GC');
-        wasmExports._collectGarbage();
+        if (e instanceof HeapOverflowError) {
+          wasmExports._collectGarbage();
+        } else {
+          throw e;
+        }
       }
     }
     throw new Error('Failed to write to Wasm');
@@ -356,18 +335,6 @@ function createElmWasmWrapper(
     }
     const tag: Tag = typeInfo.value;
     const builder: WasmBuilder = wasmBuilder(tag, value);
-
-    // console.log(
-    //   formatHex({
-    //     label: 'writeValueHelp',
-    //     nextIndex,
-    //     value,
-    //     tag: Tag[tag],
-    //     builder,
-    //     bodyDecimal: builder.body.map(x => x.toString(10))
-    //   })
-    // );
-
     return writeFromBuilder(nextIndex, builder, tag);
   }
 
@@ -515,19 +482,6 @@ function createElmWasmWrapper(
       const wordsWritten = builder.bodyWriter(addr + WORD);
       const size = 1 + wordsWritten;
       write32(headerIndex, encodeHeader({ tag, size }));
-
-      // console.log(
-      //   formatHex({
-      //     label: 'writeFromBuilder, writer',
-      //     addr,
-      //     headerIndex,
-      //     wordsWritten,
-      //     tag: Tag[tag],
-      //     size,
-      //     encodedHeader: encodeHeader({ tag, size })
-      //   })
-      // );
-
       return {
         addr,
         nextIndex: headerIndex + size
