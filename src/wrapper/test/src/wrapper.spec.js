@@ -119,161 +119,103 @@ describe('wrapper', () => {
     });
   });
 
-  describe('readValue', () => {
-    it('should correctly decode `()`', () => {
-      expect(readValue(asm._getUnit())).toBe(_Utils_Tuple0);
-    });
-
-    it('should correctly decode `[]`', () => {
-      expect(readValue(asm._getNil())).toBe(_List_Nil);
-    });
-
-    it('should correctly decode `True`', () => {
-      expect(readValue(asm._getTrue())).toBe(true);
-    });
-
-    it('should correctly decode `False`', () => {
-      expect(readValue(asm._getFalse())).toBe(false);
-    });
-
-    it('should correctly decode `1234567 : Int`', () => {
-      expect(readValue(asm._get_test_int())).toBe(1234567);
-    });
-
-    it('should correctly decode `3.14159265 : Float`', () => {
-      expect(readValue(asm._get_test_float())).toBe(3.14159265);
-    });
-
-    it("should correctly decode `'A' : Char`", () => {
-      const actual = readValue(asm._get_test_char16());
-      expect(actual).toEqual(new String('A'));
-    });
-
-    it('should correctly decode an emoji Char', () => {
-      expect(readValue(asm._get_test_char32())).toEqual(new String('🙌'));
-    });
-
-    it('should correctly decode `"firstName1" : String`', () => {
-      expect(readValue(asm._get_test_string())).toEqual('firstName1');
-    });
-
-    it('should correctly decode `["firstName1", "lastName1"] : List String`', () => {
-      const listAddr = asm._get_test_list();
-      expect(readValue(listAddr)).toEqual(
-        _List_Cons('firstName1', _List_Cons('lastName1', _List_Nil))
-      );
-    });
-
-    it("should correctly decode `(1234567, 'A')`", () => {
-      expect(readValue(asm._get_test_tuple2())).toEqual(
-        _Utils_Tuple2(1234567, 'A')
-      );
-    });
-
-    it("should correctly decode `(1234567, 'A', 3.14159265)`", () => {
-      expect(readValue(asm._get_test_tuple2())).toEqual(
-        _Utils_Tuple2(1234567, 'A')
-      );
-    });
-
-    it('should correctly decode `Nothing`', () => {
-      expect(readValue(asm._get_test_nothing())).toEqual(
-        elm$core$Maybe$Nothing
-      );
-    });
-
-    it('should correctly decode `Just 1234567`', () => {
-      expect(readValue(asm._get_test_just_int())).toEqual(
-        elm$core$Maybe$Just(1234567)
-      );
-    });
-
-    it('should correctly decode a record', () => {
-      const actual = readValue(asm._get_rec_address_firstName_lastName());
-      expect(actual).toEqual({
+  const testCases = [
+    {
+      elmName: '()',
+      wasmGetter: '_getUnit',
+      jsValue: _Utils_Tuple0
+    },
+    {
+      elmName: '[]',
+      wasmGetter: '_getNil',
+      jsValue: _List_Nil
+    },
+    {
+      elmName: 'True',
+      wasmGetter: '_getTrue',
+      jsValue: true
+    },
+    {
+      elmName: 'False',
+      wasmGetter: '_getFalse',
+      jsValue: false
+    },
+    {
+      elmName: '1234567 : Int',
+      wasmGetter: '_get_test_int',
+      jsValue: 1234567
+    },
+    {
+      elmName: '3.14159265 : Float',
+      wasmGetter: '_get_test_float',
+      jsValue: 3.14159265
+    },
+    {
+      elmName: "'A' : Char",
+      wasmGetter: '_get_test_char16',
+      jsValue: _Utils_chr('A')
+    },
+    {
+      elmName: 'an emoji Char',
+      wasmGetter: '_get_test_char32',
+      jsValue: _Utils_chr('🙌')
+    },
+    {
+      elmName: '"firstName1" : String',
+      wasmGetter: '_get_test_string',
+      jsValue: 'firstName1'
+    },
+    {
+      elmName: '["firstName1", "lastName1"] : List String',
+      wasmGetter: '_get_test_list',
+      jsValue: _List_Cons('firstName1', _List_Cons('lastName1', _List_Nil))
+    },
+    {
+      elmName: "(1234567, 'A')",
+      wasmGetter: '_get_test_tuple2',
+      jsValue: _Utils_Tuple2(1234567, _Utils_chr('A'))
+    },
+    {
+      elmName: "(1234567, 'A', 3.14159265)",
+      wasmGetter: '_get_test_tuple3',
+      jsValue: _Utils_Tuple3(1234567, _Utils_chr('A'), 3.14159265)
+    },
+    {
+      elmName: 'Nothing',
+      wasmGetter: '_get_test_nothing',
+      jsValue: elm$core$Maybe$Nothing
+    },
+    {
+      elmName: 'Just 1234567',
+      wasmGetter: '_get_test_just_int',
+      jsValue: elm$core$Maybe$Just(1234567)
+    },
+    {
+      elmName: 'a record of strings',
+      wasmGetter: '_get_rec_address_firstName_lastName',
+      jsValue: {
         address: 'addr1',
         firstName: 'firstName1',
         lastName: 'lastName1'
+      }
+    }
+  ];
+
+  describe('readValue', () => {
+    testCases.forEach(({ elmName, wasmGetter, jsValue }) => {
+      it(`should correctly read ${elmName}`, () => {
+        const wasmAddr = asm[wasmGetter]();
+        expect(readValue(wasmAddr)).toEqual(jsValue);
       });
     });
   });
 
   describe('writeValue', () => {
-    function expectWasmEqual(wasmAddr, jsValue) {
-      const writtenAddr = writeValue(jsValue);
-      expect(asm._test_equal(wasmAddr, writtenAddr)).toBe(1);
-    }
-
-    it('should correctly encode `()`', () => {
-      expectWasmEqual(asm._getUnit(), _Utils_Tuple0);
-    });
-
-    it('should correctly encode `[]`', () => {
-      expectWasmEqual(asm._getNil(), _List_Nil);
-    });
-
-    it('should correctly encode `True`', () => {
-      expectWasmEqual(asm._getTrue(), true);
-    });
-
-    it('should correctly encode `False`', () => {
-      expectWasmEqual(asm._getFalse(), false);
-    });
-
-    it('should correctly encode `1234567 : Int`', () => {
-      expectWasmEqual(asm._get_test_int(), 1234567);
-    });
-
-    it('should correctly encode `3.14159265 : Float`', () => {
-      expectWasmEqual(asm._get_test_float(), 3.14159265);
-    });
-
-    it("should correctly encode `'A' : Char`", () => {
-      expectWasmEqual(asm._get_test_char16(), new String('A'));
-    });
-
-    it('should correctly encode an emoji Char', () => {
-      expectWasmEqual(asm._get_test_char32(), new String('🙌'));
-    });
-
-    it('should correctly encode `"firstName1" : String`', () => {
-      expectWasmEqual(asm._get_test_string(), 'firstName1');
-    });
-
-    it('should correctly encode `["firstName1", "lastName1"] : List String`', () => {
-      expectWasmEqual(
-        asm._get_test_list(),
-        _List_Cons('firstName1', _List_Cons('lastName1', _List_Nil))
-      );
-    });
-
-    it("should correctly encode `(1234567, 'A')`", () => {
-      expectWasmEqual(
-        asm._get_test_tuple2(),
-        _Utils_Tuple2(1234567, new String('A'))
-      );
-    });
-
-    it("should correctly encode `(1234567, 'A', 3.14159265)`", () => {
-      expectWasmEqual(
-        asm._get_test_tuple3(),
-        _Utils_Tuple3(1234567, new String('A'), 3.14159265)
-      );
-    });
-
-    it('should correctly encode `Nothing`', () => {
-      expectWasmEqual(asm._get_test_nothing(), elm$core$Maybe$Nothing);
-    });
-
-    it('should correctly encode `Just 1234567`', () => {
-      expectWasmEqual(asm._get_test_just_int(), elm$core$Maybe$Just(1234567));
-    });
-
-    it('should correctly encode a record', () => {
-      expectWasmEqual(asm._get_rec_address_firstName_lastName(), {
-        address: 'addr1',
-        firstName: 'firstName1',
-        lastName: 'lastName1'
+    testCases.forEach(({ elmName, wasmGetter, jsValue }) => {
+      it(`should correctly write ${elmName}`, () => {
+        const wasmAddr = asm[wasmGetter]();
+        const writtenAddr = writeValue(jsValue);
+        expect(asm._test_equal(wasmAddr, writtenAddr)).toBe(1);
       });
     });
   });
