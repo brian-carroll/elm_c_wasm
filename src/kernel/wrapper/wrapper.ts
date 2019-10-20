@@ -254,7 +254,8 @@ function createElmWasmWrapper(
         };
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
-      wasmExports._callClosure(addr);
+      const resultAddr = wasmExports._callClosure(addr);
+      return readValue(resultAddr);
     };
   }
 

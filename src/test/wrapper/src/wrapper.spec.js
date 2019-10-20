@@ -229,4 +229,13 @@ describe('wrapper', () => {
       });
     });
   });
+
+  describe('Closures', () => {
+    it('should be able to call a Wasm closure from JS', () => {
+      const wasmAddr = asm._get_increment_callback();
+      const callback = readValue(wasmAddr);
+      expect(callback(1)).toBe(2);
+      expect(callback(1000000)).toBe(1000001);
+    });
+  });
 });

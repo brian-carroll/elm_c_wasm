@@ -223,6 +223,27 @@ size_t EMSCRIPTEN_KEEPALIVE test_equal(size_t addr1, size_t addr2) {
 
 /* ---------------------------------------------------------
 
+          CLOSURE
+
+--------------------------------------------------------- */
+
+const ElmInt one = {
+    .header = HEADER_INT,
+    .value = 1,
+};
+
+Closure* increment;
+void* init_closure() {
+  // partial application
+  increment = A1(&Basics_add, &one);
+  return NULL;
+}
+size_t EMSCRIPTEN_KEEPALIVE get_increment_callback() {
+  return (size_t)increment;
+}
+
+/* ---------------------------------------------------------
+
           INITIALISE THE HEAP
 
 --------------------------------------------------------- */
@@ -238,6 +259,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   init_strings();
   init_list();
   init_records();
+  init_closure();
 
   return exit_code;
 }
