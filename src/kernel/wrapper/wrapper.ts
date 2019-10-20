@@ -93,8 +93,6 @@ function createElmWasmWrapper(
     appTypes.fieldGroups[addr] = name;
   });
 
-  const CLOSURE_N_MASK = 0xffff0000;
-  const CLOSURE_MAX_MASK = 0xffff0000;
   const WORD = 4;
   const TAG_MASK = 0xf0000000;
   const TAG_SHIFT = 28;
@@ -206,9 +204,9 @@ function createElmWasmWrapper(
         return record;
       }
       case Tag.Closure: {
-        const argsInfo = mem32[index + 1];
-        const n_values = argsInfo & CLOSURE_N_MASK;
-        const max_values = argsInfo & CLOSURE_MAX_MASK;
+        const idx16 = index << 1;
+        const n_values = mem16[idx16 + 2];
+        const max_values = mem16[idx16 + 3];
         const arity = max_values - n_values;
         const evaluator = mem32[index + 2];
         const freeVars: any[] = [];

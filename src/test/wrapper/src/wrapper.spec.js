@@ -1,10 +1,23 @@
 require('./elm-globals');
 global.TextDecoder = require('util').TextDecoder;
-global.formatHex = (arg, bits = 32) => {
+global.formatHex = formatHex;
+const createElmWasmWrapper = require('../build/wrapper');
+const createEmscriptenModule = require('../build/mock-app');
+
+/**
+ * Debug formatter
+ * Converts all numbers in a data structure to hex strings
+ * Accepts objects, TypedArrays, arrays, etc.
+ * Overall data structure is preserved. Strings, booleans etc pass through
+ *
+ * Example usage:
+ * ```ts
+ *  console.log(formatHex({ label: 'some description', addr, buffer, whatever }))
+ * ```
+ */
+function formatHex(arg, bits = 32) {
   if (typeof arg === 'number') {
-    const hexLength = bits / 4;
-    const pad = '0'.repeat(hexLength);
-    return (pad + arg.toString(16)).substr(-hexLength);
+    return arg.toString(16).padStart(bits / 4, '0');
   }
   if (arg instanceof Uint16Array) {
     let hex = [];
@@ -31,10 +44,7 @@ global.formatHex = (arg, bits = 32) => {
     return obj;
   }
   return arg;
-};
-
-const createElmWasmWrapper = require('../build/wrapper');
-const createEmscriptenModule = require('../build/mock-app');
+}
 
 const appTypes = {
   ctors: {
@@ -61,7 +71,7 @@ describe('wrapper', () => {
   let writeValue;
 
   beforeAll(() => {
-    // Wait for C `main` to run (don't use .then() method because it's not a Promise!!!)
+    // Wait for C `main` to run before creating the wrapper
     return new Promise(resolve => {
       const Module = createEmscriptenModule();
       Module.postRun = () => {
