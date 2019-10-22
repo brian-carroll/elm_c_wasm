@@ -1,4 +1,180 @@
-# Evan's idea: vdom diffing in a semi-space region
+# JS references in Wasm
+
+## initial notes
+
+- init
+
+  - pass in an object of imported functions
+
+- at run time
+
+  - keep JS values in JS, get a reference in Wasm
+    new tag Tag_JsValue carries an index into a JS array
+
+- memory management
+
+  - avoid memory leak with infinitely growing JS array
+  - need to have some kind of 'session' per update cycle
+  - JS array dies at the end of the session
+  - That will be the inbound call from the Elm runtime
+  - Need a JS `update` function with an array allocated in it that
+  - gets mutated as we go along, then thrown away.
+  - Wasm will get a ref to it and append results of kernel calls to it
+
+- TEA entrypoints
+
+  - init
+    - built-ins, Arrays and JSON, no Custom or Record
+    - compiler must be generating the JSON decoders? Maybe I can detect
+  - update
+    - messages (Elm only, maybe including Json.Value)
+    - call kernel fn for Cmd (kernel JS value)
+  - subs
+    - takes Elm, returns effects (kernel JS value) via kernel calls
+  - ports
+    - JSON decode. Should be JS refs until decoded
+    - Do the decoding in JS kernel, then write to Wasm
+  - view
+    - Elm model in, make calls to kernel for JS values
+    - Make calls to kernel to combine JS values together
+
+- Can I automatically detect "other" JS values outside the usual?
+  - Nope! No way to distinguish Record from any other object at runtime
+  - But I can identify Kernel calls from the compiler side
+
+`someFn = if thing then kernelFn1 else kernelFn2`
+
+- `someFn` is not identifiable as a kernel fn until runtime
+  but that's just a matter of its evaluator
+  need to import it on startup and give it the special evaluator
+
+## detailed notes
+
+- two JS arrays are involved
+  - JS array of Kernel functions
+  - JS 'heap' array
+- C side has an evaluator `call_js_kernel`
+  - `args[0]` of that evaluator is the index of the JS kernel fn
+    - as an ElmInt? yeah has to be, GC etc expects that.
+    - so a _particular_ kernel fun is a Closure where that kernel fn index is curried in.
+  - the rest of the `args[]` are Elm values to pass into that kernel fn. Some of them may have tag `Tag_JsRef`, referring to JS values previously inserted into the JS heap array
+  - the evaluator calls the one imported JS function and transfer the arg addresses to it
+    - a single pointer to its own Closure?
+      - Hard to get with current implementation
+      - a Closure doesn't even exist for saturated calls
+      - unless I **make sure it is always curried** somehow? At compile time I **generate a Closure for each kernel function, with the JS function index already curried in**.
+    - a single pointer to the `args[]` of the Closure?
+      - nope, need a size too... the arity is available on JS side anyway... but maybe not always...
+    - allocate a new copy of its own Closure?
+    - or maybe it sequentially calls that imported JS function with addresses to read? Need some start/stop mechanism. Imported JS fn can have two args, one of them could be "instruction" that is `enum { Start, AppendArg, Execute }`. This would implement some simple state machine.
+      - yeah but how does it know its own arity?
+  - finding out the arity of the kernel functions
+    - may not be easy from the compiler side. might need an initialisation phase where JS maps over the array of kernel functions and produces an array of arities, passing them into a Wasm export, which heap-allocates all the Closures and points a GC root at each one. Or a single GC root at a list of them.
+    - requires compiler to generate a JS array of all the kernel functions that are called somewhere, as well as another imported JS initialisation function called from C `main`, that creates the Wasm closures.
+    - Wasm kernel closures can still be added as roots before any allocation happens, could just mutate the root pointers during the init phase. This keeps a nice property of not being able to run out of memory during root init, and root init being able to be dynamic rather than generated (good for when we eventually get Wasm-only roots defined in compiler-opaque C kernel code) none of this matters much as they all need to be at the bottom of the heap before we run anything, and if we run out of space during init we need to grow the heap and that's that. (GC needs special case in its growing logic for this)
+    - otherwise the init phase could actually mutate the `max_args` of off-heap pre-curried Closures... they're not `const`.
+      - They don't have to be GC roots, which is nice
+      - need a C array of pointers to find these Closures if we're not creating them dynamically..
+      - since they're off-heap, `args[0]` could actually be an unboxed int cast to `void*`
+    - Init phase started by wasm or JS?
+      - it's initialising wasm stuff so it's more testable if I can mock out the JS part, so Wasm should be in control and JS should be simple.
+
+## Summary
+
+- Generating potentially-used kernel functions
+  - Generate a JS array of them
+  - Generate a C Closure for each one
+    - not `const`. Real names. Space pre-allocated for one arg.
+  - Generate a C array pointing to those closures
+- Init
+  - Somewhere in `main`, call an init function
+  - Loop through the array of Closures
+    - call JS with the index and get back an arity
+    - write this arity into the C Closure (+1)
+    - also write the index as first arg cast to `void*`
+- **NO NO NO**
+  - There's a problem!
+  - If I keep a "temporary" "JS heap" array for the duration of the `update` or `view` call and then dump it at the end, how do I know the model isn't storing some references to it? How do I know it's safe to deallocate??
+  - I can't really know this. I could build some kind of malloc for this array but it would have to be somehow tied to the main Wasm GC so that I could find JsRef values and keep them alive. Then free the right ones by overwriting those array slots with `undefined` and when I want to allocate another JsRef search for the first available slot.
+  - But... yuck
+
+# JS references with _thunks_
+
+- Still implement kernel functions on the C side with a single evaluator function, and partially-apply the kernel fn index at compile time.
+- But the C evaluator for those Closures just returns its own full Closure!
+- I definitely do have an actual Closure because there can't be a saturated call. It is always curried. So the evaluator knows it can search back N words from its args to find the Closure and just return it. (Also super-fast and simple to write!)
+- So now we have a "suspended" call to a kernel function that **doesn't have any external JS references except to that kernel function itself, which is permanent!** :)
+- When the Wasm module returns a `Cmd` from `update` it will be one of these suspended calls. JS can just evaluate them when they come out. Do a depth-first recursive traversal (as you would anyway) and evaluate each thunk as it comes out. Then bundle up the results into whatever data structure and pass them to Elm JS runtime.
+- The only thunks that can exist in the output from `update` or `view` are kernel things. Elm semantics don't allow zero-arg functions, they have to at least take `()`.
+- Any Elm data structures that are buried inside the `Cmd` or `node` (mainly lists) will just get converted to JS Elm as the runtime expects.
+- This all works because of Elm semantics. Pure Elm code cannot inspect the insides of kernel values anyway (`Cmd`, `VirtualDom.node`, etc.). So they might as well be suspended thunks, Elm code can't know the difference.
+- Goddammit it's beautiful!
+
+## Initialising the kernel Closures
+
+- Still need to do this.
+- On init, `main` calls out to a JS fn that returns arity of kernel function given its index in an array
+
+```js
+const kernelFns = [_Time_now, _VirtualDom_node];
+function getKernelFnArity(index) {
+  return kernelFns[index].a || 1;
+}
+```
+
+- This can go wrong in theory! If kernel functions are partially applied _in JS_, they look like they have arity 1. This is hopefully rare?
+- `_VirtualDom_node` is the only example I could find.
+- `_VirtualDom_on` is curried on the Elm side and that's OK. Only an issue if curried on JS side.
+- I searched `~/.elm/**/*.js` using regex and didn't find any other cases outside of VirtualDom
+
+```js
+const kernelFns = [_Time_now, _VirtualDom_node];
+function getKernelFnArity(index) {
+  const kernelFn = kernelFns[index];
+  return kernelFn.a || (kernelFn === _VirtualDom_node ? 3 : 1);
+}
+```
+
+This will work for initialisation.
+For actual application, could just apply each arg one at a time! That works in all cases.
+Or make a special case again for \_VirtualDom_node
+Or wrap \_VirtualDom_node
+
+```js
+function wrap_VirtualDom_node(one, two, three) {
+  return _VirtualDom_node(one)(two, three);
+}
+wrap_VirtualDom_node.a = 3;
+const index_VirtualDom_node = kernelFns.findIndex(f => f === _VirtualDom_node);
+if (index_VirtualDom_node !== -1) {
+  kernelFns[index_VirtualDom_node] = wrap_VirtualDom_node;
+}
+```
+
+```js
+args.reduce((f, arg) => f(arg), fun);
+```
+
+## Alternative implementation: near-infinite arity
+
+- Give the kernel Closures near-infinite arity (`0xffff`)
+- All kernel calls in Wasm will appear to be "partial", returning Closures without the need for any special-case code
+- Don't need any evaluator in Wasm, just make that pointer NULL
+  - or make it the actual index of the kernel function?! That feels like a bit of an abuse, but it will never get called in Wasm and it makes semantic sense!
+- When closures come out on the JS side, detect infinite arity instead of full closures. Other closures are probably Wasm callbacks creating messages.
+- Apply all available args, one at a time. When we run out of applied args, that's the result. Don't actually need to check the arity, the Elm compiler took care of that already. Program ouldn't type check if arities were wrong. `update` has to return a `Cmd Msg`, not a `Thing -> Cmd Msg`.
+- There's no awkward initialisation phase, no funny edge cases, and the suspended call comes for free. It "just works" in all cases.
+- Some of it _feels_ a bit hacky but I think that's just my assumptions being broken!
+
+## TODO
+
+- C side evaluator
+- JS side evaluator
+- example
+
+---
+
+# Evan's GC idea: vdom diffing in a semi-space region
 
 - GC state now has two special chunks. initialize to some size found by experiment later
 - the special area goes up at the top underneath the mark bits and offsets
