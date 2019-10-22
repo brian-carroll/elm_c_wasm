@@ -64,7 +64,8 @@ interface IntToName {
 function createElmWasmWrapper(
   wasmBuffer: ArrayBuffer,
   wasmExports: ElmWasmExports,
-  generatedAppTypes: GeneratedAppTypes
+  generatedAppTypes: GeneratedAppTypes,
+  kernelFunctions: Function[]
 ) {
   if (!(wasmBuffer instanceof ArrayBuffer))
     throw new Error('Expected wasmMemory to be an ArrayBuffer');
@@ -146,6 +147,13 @@ function createElmWasmWrapper(
 
   -------------------------------------------------- */
 
+  interface ClosureMetadata {
+    n_values: number;
+    max_values: number;
+    evaluator: number;
+    argsIndex: number;
+  }
+
   function readValue(addr: number): any {
     const index = addr >> 2;
     const header = mem32[index];
@@ -218,17 +226,18 @@ function createElmWasmWrapper(
       }
       case Tag.Closure: {
         const idx16 = index << 1;
-        const n_values = mem16[idx16 + 2];
-        const max_values = mem16[idx16 + 3];
-        const arity = max_values - n_values;
-        const evaluator = mem32[index + 2];
-        const freeVars: any[] = [];
-        for (let i = index + 3; i < index + size; i++) {
-          freeVars.push(readValue(mem32[i]));
+        const metadata: ClosureMetadata = {
+          n_values: mem16[idx16 + 2],
+          max_values: mem16[idx16 + 3],
+          evaluator: mem32[index + 2],
+          argsIndex: index + 3
+        };
+        const isKernelThunk = metadata.max_values === 0xffff;
+        if (isKernelThunk) {
+          return evalKernelThunk(metadata);
+        } else {
+          return createWasmCallback(metadata);
         }
-        const wasmCallback = createWasmCallback(evaluator, freeVars);
-        const FN = elmFunctionWrappers[arity];
-        return FN(wasmCallback);
       }
       default:
         throw new Error(
@@ -238,25 +247,47 @@ function createElmWasmWrapper(
     }
   }
 
-  function createWasmCallback(evaluator: number, freeVars: any[]) {
-    return function wasmCallback() {
+  function evalKernelThunk({
+    n_values,
+    evaluator,
+    argsIndex
+  }: ClosureMetadata) {
+    let kernelValue = kernelFunctions[evaluator];
+    for (let i = argsIndex; i < argsIndex + n_values; i++) {
+      const arg = readValue(mem32[i]);
+      kernelValue = kernelValue(arg);
+    }
+    return kernelValue as any;
+  }
+
+  function createWasmCallback({
+    n_values,
+    max_values,
+    evaluator,
+    argsIndex
+  }: ClosureMetadata) {
+    const arity = max_values - n_values;
+    const freeVars: any[] = [];
+    for (let i = argsIndex; i < argsIndex + n_values; i++) {
+      freeVars.push(readValue(mem32[i]));
+    }
+    const FN = elmFunctionWrappers[arity];
+    return FN(function wasmCallback() {
       const args = freeVars.slice();
       for (let i = 0; i < arguments.length; i++) {
         args.push(arguments[i]);
       }
+      const builder: WasmBuilder = {
+        body: [max_values | (max_values << 16), evaluator],
+        jsChildren: args,
+        bodyWriter: null
+      };
       const addr = handleWasmWrite((startIndex: number) => {
-        const max_values = args.length << 16;
-        const n_values = args.length;
-        const builder: WasmBuilder = {
-          body: [n_values | max_values, evaluator],
-          jsChildren: args,
-          bodyWriter: null
-        };
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
       const resultAddr = wasmExports._callClosure(addr);
       return readValue(resultAddr);
-    };
+    });
   }
 
   /* --------------------------------------------------
@@ -328,6 +359,8 @@ function createElmWasmWrapper(
         value: number;
       };
 
+  // Info needed to build most Wasm Elm types
+  // The shape is always the same, which helps JS engines to optimise
   type WasmBuilder =
     | {
         body: [];
