@@ -11,9 +11,14 @@ type alias Model =
     Int
 
 
+cmdTime : Cmd Msg
+cmdTime =
+    Task.perform GotTime Time.now
+
+
 init : () -> ( Model, Cmd Msg )
 init () =
-    ( 0, Task.perform GotTime Time.now )
+    ( 0, cmdTime )
 
 
 type Msg
@@ -25,7 +30,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GetTime ->
-            ( model, Task.perform GotTime Time.now )
+            ( model, cmdTime )
 
         GotTime posix ->
             ( Time.posixToMillis posix, Cmd.none )
