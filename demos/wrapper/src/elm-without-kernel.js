@@ -1,3 +1,19 @@
+/* -------------------------------------------------
+
+An Elm app without the kernel
+
+This is the part of the compiled JS code of Main.elm
+that comes from pure Elm code only.
+Kernel functions (whose names begin with underscores) are
+replaced with mocks.
+The plan is to manually translate this to C, compile
+that C to WebAssembly, and then connect the WebAssembly
+module to the _real_ Kernel using the wrapper I'm
+developing.
+This JavaScript gives me a good template to work with
+while I'm writing the C code, and the wrapper.
+-------------------------------------------------*/
+
 const util = require('util');
 
 function F(arity, fun, wrapper) {
