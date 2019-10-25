@@ -3,7 +3,9 @@
 
 #include "types.h"
 
-void* String_append_eval(void* args[]);
+void* String_append_eval(void* args[]);  // exposed for `++`
 const Closure String_append;
+
+const Closure String_fromInt;
 
 #endif
