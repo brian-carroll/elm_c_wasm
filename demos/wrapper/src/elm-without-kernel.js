@@ -279,12 +279,12 @@ const generatedAppTypes = {
   fieldGroupNames: ['init$subscriptions$update$view']
 };
 
-var author$project$WasmWrapper$element = createElmWasmWrapper.element(
+var author$project$WasmWrapper$element = createElmWasmWrapper(
   wasmBuffer,
   wasmExports,
   generatedAppTypes,
   jsKernelFunctions
-);
+).element;
 
 var author$project$Main$main = author$project$WasmWrapper$element({
   init: author$project$Main$init,
