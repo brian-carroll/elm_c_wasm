@@ -16,12 +16,15 @@ while I'm writing the C code, and the wrapper.
 
 const util = require('util');
 
+/***************************************
+    CURRYING
+****************************************/
+
 function F(arity, fun, wrapper) {
   wrapper.a = arity;
   wrapper.f = fun;
   return wrapper;
 }
-
 function F2(fun) {
   return F(2, fun, function(a) {
     return function(b) {
@@ -29,11 +32,13 @@ function F2(fun) {
     };
   });
 }
-
 function A2(fun, a, b) {
   return fun.a === 2 ? fun.f(a, b) : fun(a)(b);
 }
-var _Utils_Tuple0 = { $: '#0' };
+
+/***************************************
+    JS KERNEL
+****************************************/
 
 var _Json_succeed = function() {
   return {
@@ -41,32 +46,20 @@ var _Json_succeed = function() {
     arguments: Array.prototype.slice.call(arguments)
   };
 };
-var _String_fromNumber = function(x) {
-  return x.toString();
-};
-var _List_fromArray = function() {
-  return { $: '::', arguments: Array.prototype.slice.call(arguments) };
-};
 var _Platform_batch = function() {
   return {
     $: '_Platform_batch',
     arguments: Array.prototype.slice.call(arguments)
   };
 };
-var _List_Nil = { $: '[]' };
-
 var _Time_now = function() {
   return { $: '_Time_now', arguments: Array.prototype.slice.call(arguments) };
-};
-var _Utils_Tuple2 = function(a, b) {
-  return { $: '#2', a, b };
 };
 var _Platform_leaf = function _Platform_leaf(home) {
   return function(value) {
     return { $: '_Platform_leaf', home, value };
   };
 };
-
 var _Scheduler_succeed = function() {
   return {
     $: '_Scheduler_succeed',
@@ -85,24 +78,40 @@ var _VirtualDom_text = function() {
     arguments: Array.prototype.slice.call(arguments)
   };
 };
-
 var _VirtualDom_nodeNS = F2(function(namespace, tag) {
   return F2(function(factList, kidList) {
     return { $: '_VirtualDom_nodeNS', namespace, tag, factList, kidList };
   });
 });
 var _VirtualDom_node = _VirtualDom_nodeNS(undefined);
-
 var _VirtualDom_on = F2(function(key, handler) {
   return {
     $: '_VirtualDom_on',
     arguments: Array.prototype.slice.call(arguments)
   };
 });
-var elm$json$Json$Decode$succeed = _Json_succeed;
-var elm$core$Task$succeed = _Scheduler_succeed;
 
-// ----------- INIT -------------------
+/***************************************
+    WASM KERNEL
+****************************************/
+
+var _List_Nil = { $: '[]' };
+var _Utils_Tuple0 = { $: '#0' };
+var _String_fromNumber = function(x) {
+  return x.toString();
+};
+var _Utils_Tuple2 = function(a, b) {
+  return { $: '#2', a, b };
+};
+var _List_fromArray = function() {
+  return { $: '::', arguments: Array.prototype.slice.call(arguments) };
+};
+
+/***************************************
+    INIT
+****************************************/
+
+var elm$core$Task$succeed = _Scheduler_succeed;
 var elm$core$Task$command = _Platform_leaf('Task');
 var elm$core$Task$Perform = function(a) {
   return { $: 'Perform', a: a };
@@ -140,7 +149,10 @@ var author$project$Main$init = function(_n0) {
   return _Utils_Tuple2(0, author$project$Main$cmdTime);
 };
 
-// ------------- UPDATE -----------------
+/***************************************
+    UPDATE
+****************************************/
+
 var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 
@@ -160,7 +172,12 @@ var author$project$Main$update = F2(function(msg, model) {
     );
   }
 });
-// ---------------- VIEW ---------------
+
+/***************************************
+    VIEW
+****************************************/
+
+var elm$json$Json$Decode$succeed = _Json_succeed;
 var author$project$Main$GetTime = { $: 'GetTime' };
 var elm$html$Html$div = _VirtualDom_node('div');
 var elm$html$Html$br = _VirtualDom_node('br');
@@ -204,11 +221,18 @@ var author$project$Main$view = function(model) {
     ])
   );
 };
-// ---------------- SUBSCRIPTIONS -------------
+
+/***************************************
+    SUBSCRIPTIONS
+****************************************/
+
 var elm$core$Platform$Sub$batch = _Platform_batch;
 var elm$core$Platform$Sub$none = elm$core$Platform$Sub$batch(_List_Nil);
 
-// ----------------- MAIN ---------------------
+/***************************************
+    MAIN
+****************************************/
+
 var author$project$Main$main = author$project$WasmWrapper$element({
   init: author$project$Main$init,
   subscriptions: function(_n0) {
@@ -217,7 +241,11 @@ var author$project$Main$main = author$project$WasmWrapper$element({
   update: author$project$Main$update,
   view: author$project$Main$view
 });
-// --------------- TEST -----------------
+
+/***************************************
+    TEST
+****************************************/
+
 function log(description, object) {
   console.log(description, util.inspect(object, { depth: Infinity }));
 }
