@@ -37,7 +37,7 @@ function A2(fun, a, b) {
 }
 
 /***************************************
-    JS KERNEL
+    JS KERNEL CALLED FROM WASM
 ****************************************/
 
 var _Json_succeed = function() {
@@ -197,56 +197,44 @@ var elm$html$Html$Events$onClick = function(msg) {
   );
 };
 
-/***************************************
-    PROGRAM
-****************************************/
-
-var author$project$Main$GotTime = function(a) {
-  return { $: 'GotTime', a: a };
-};
-var author$project$Main$cmdTime = A2(
-  elm$core$Task$perform,
-  author$project$Main$GotTime,
-  elm$time$Time$now
-);
-
-var author$project$Main$init = function(_n0) {
-  return _Utils_Tuple2(0, author$project$Main$cmdTime);
-};
-
-var author$project$Main$update = F2(function(msg, model) {
-  if (msg.$ === 'GetTime') {
-    return _Utils_Tuple2(model, author$project$Main$cmdTime);
-  } else {
-    var posix = msg.a;
-    return _Utils_Tuple2(
-      elm$time$Time$posixToMillis(posix),
-      elm$core$Platform$Cmd$none
-    );
-  }
-});
-
-var author$project$Main$GetTime = { $: 'GetTime' };
-var author$project$Main$view = function(model) {
-  return A2(
-    elm$html$Html$div,
-    _List_Nil,
-    _List_fromArray([
-      elm$html$Html$text(elm$core$String$fromInt(model)),
-      A2(elm$html$Html$br, _List_Nil, _List_Nil),
-      A2(
-        elm$html$Html$button,
-        _List_fromArray([
-          elm$html$Html$Events$onClick(author$project$Main$GetTime)
-        ]),
-        _List_fromArray([elm$html$Html$text('Refresh')])
-      )
-    ])
-  );
-};
+// Browser
+var elm$browser$Browser$element = _Browser_element;
 
 /***************************************
     WRAPPER
+****************************************/
+
+function createElmWasmWrapper(
+  wasmBuffer,
+  wasmExports,
+  generatedAppTypes,
+  kernelFunctions
+) {
+  log('wrapper args', {
+    wasmBuffer,
+    wasmExports,
+    generatedAppTypes,
+    kernelFunctions
+  });
+
+  function element({ init, subscriptions, update, view }) {
+    // do the actual Wasm wrapping here
+    const wrapped_init = init;
+    const wrapped_subscriptions = subscriptions;
+    const wrapped_update = update;
+    const wrapped_view = view;
+    return elm$browser$Browser$element({
+      init: wrapped_init,
+      subscriptions: wrapped_subscriptions,
+      update: wrapped_update,
+      view: wrapped_view
+    });
+  }
+  return { element };
+}
+
+/***************************************
+    GENERATED WRAPPER CONFIG
 ****************************************/
 
 const wasmBuffer = new ArrayBuffer(123);
@@ -286,6 +274,55 @@ var author$project$WasmWrapper$element = createElmWasmWrapper(
   jsKernelFunctions
 ).element;
 
+/***************************************
+    PROGRAM
+****************************************/
+
+var author$project$Main$GetTime = { $: 'GetTime' };
+var author$project$Main$GotTime = function(a) {
+  return { $: 'GotTime', a: a };
+};
+
+var author$project$Main$cmdTime = A2(
+  elm$core$Task$perform,
+  author$project$Main$GotTime,
+  elm$time$Time$now
+);
+
+var author$project$Main$init = function(_n0) {
+  return _Utils_Tuple2(0, author$project$Main$cmdTime);
+};
+
+var author$project$Main$update = F2(function(msg, model) {
+  if (msg.$ === 'GetTime') {
+    return _Utils_Tuple2(model, author$project$Main$cmdTime);
+  } else {
+    var posix = msg.a;
+    return _Utils_Tuple2(
+      elm$time$Time$posixToMillis(posix),
+      elm$core$Platform$Cmd$none
+    );
+  }
+});
+
+var author$project$Main$view = function(model) {
+  return A2(
+    elm$html$Html$div,
+    _List_Nil,
+    _List_fromArray([
+      elm$html$Html$text(elm$core$String$fromInt(model)),
+      A2(elm$html$Html$br, _List_Nil, _List_Nil),
+      A2(
+        elm$html$Html$button,
+        _List_fromArray([
+          elm$html$Html$Events$onClick(author$project$Main$GetTime)
+        ]),
+        _List_fromArray([elm$html$Html$text('Refresh')])
+      )
+    ])
+  );
+};
+
 var author$project$Main$main = author$project$WasmWrapper$element({
   init: author$project$Main$init,
   subscriptions: function(_n0) {
@@ -303,7 +340,8 @@ function log(description, object) {
   console.log(`\n${description}\n`, util.inspect(object, { depth: Infinity }));
 }
 
-function elm$browser$Browser$element({ init, subscriptions, update, view }) {
+// called from JS, not Wasm
+function _Browser_element({ init, subscriptions, update, view }) {
   return function main() {
     log('init', init(_Utils_Tuple0));
     log('subscriptions', subscriptions(0));
@@ -311,35 +349,6 @@ function elm$browser$Browser$element({ init, subscriptions, update, view }) {
     log('update Got', A2(update, author$project$Main$GotTime(Date.now()), 0));
     log('view', view(0));
   };
-}
-
-function createElmWasmWrapper(
-  wasmBuffer,
-  wasmExports,
-  generatedAppTypes,
-  kernelFunctions
-) {
-  log('wrapper args', {
-    wasmBuffer,
-    wasmExports,
-    generatedAppTypes,
-    kernelFunctions
-  });
-
-  function element({ init, subscriptions, update, view }) {
-    // do the actual Wasm wrapping here
-    const wrapped_init = init;
-    const wrapped_subscriptions = subscriptions;
-    const wrapped_update = update;
-    const wrapped_view = view;
-    return elm$browser$Browser$element({
-      init: wrapped_init,
-      subscriptions: wrapped_subscriptions,
-      update: wrapped_update,
-      view: wrapped_view
-    });
-  }
-  return { element };
 }
 
 author$project$Main$main();
