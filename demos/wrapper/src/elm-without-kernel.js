@@ -92,6 +92,23 @@ var _VirtualDom_on = F2(function(key, handler) {
 });
 
 /***************************************
+    GENERATED KERNEL ARRAY
+****************************************/
+
+// JS will crash if anything not defined by now
+const jsKernelFunctions = [
+  _Json_succeed,
+  _Platform_batch,
+  _Platform_leaf,
+  _Scheduler_andThen,
+  _Scheduler_succeed,
+  _Time_now,
+  _VirtualDom_node,
+  _VirtualDom_on,
+  _VirtualDom_text
+];
+
+/***************************************
     ELM LIBRARIES
 ****************************************/
 
@@ -232,21 +249,42 @@ var author$project$Main$view = function(model) {
     WRAPPER
 ****************************************/
 
-const jsKernelFunctions = [
-  _Json_succeed,
-  _Platform_batch,
-  _Platform_leaf,
-  _Scheduler_andThen,
-  _Scheduler_succeed,
-  _Time_now,
-  _VirtualDom_node,
-  _VirtualDom_on,
-  _VirtualDom_text
-];
+const wasmBuffer = new ArrayBuffer(123);
+const wasmExports = {
+  /* stuff */
+};
+const generatedAppTypes = {
+  ctors: {
+    GetTime: 0,
+    GotTime: 1,
+    Normal: 2,
+    Perform: 3,
+    Posix: 4,
+    0: 'GetTime',
+    1: 'GotTime',
+    2: 'Normal',
+    3: 'Perform',
+    4: 'Posix'
+  },
+  fields: {
+    init: 1,
+    subscriptions: 2,
+    update: 3,
+    view: 4,
+    0: 'init',
+    1: 'subscriptions',
+    2: 'update',
+    3: 'view'
+  },
+  fieldGroupNames: ['init$subscriptions$update$view']
+};
 
-const ctors = ['GetTime', 'GotTime', 'Normal', 'Perform', 'Posix'];
-const fields = ['init', 'subscriptions', 'update', 'view'];
-const fieldGroupNames = ['init$subscriptions$update$view'];
+var author$project$WasmWrapper$element = createElmWasmWrapper(
+  wasmBuffer,
+  wasmExports,
+  generatedAppTypes,
+  jsKernelFunctions
+);
 
 var author$project$Main$main = author$project$WasmWrapper$element({
   init: author$project$Main$init,
@@ -264,15 +302,47 @@ var author$project$Main$main = author$project$WasmWrapper$element({
 function log(description, object) {
   console.log(description, util.inspect(object, { depth: Infinity }));
 }
-function author$project$WasmWrapper$element({
-  init,
-  subscriptions,
-  update,
-  view
-}) {
-  log('\ninit\n', init(_Utils_Tuple0));
-  log('\nsubscriptions\n', subscriptions(0));
-  log('\nupdate Get\n', A2(update, author$project$Main$GetTime, 0));
-  log('\nupdate Got\n', A2(update, author$project$Main$GotTime(Date.now()), 0));
-  log('\nview\n', view(0));
+
+function elm$browser$Browser$element({ init, subscriptions, update, view }) {
+  return function main() {
+    log('\ninit\n', init(_Utils_Tuple0));
+    log('\nsubscriptions\n', subscriptions(0));
+    log('\nupdate Get\n', A2(update, author$project$Main$GetTime, 0));
+    log(
+      '\nupdate Got\n',
+      A2(update, author$project$Main$GotTime(Date.now()), 0)
+    );
+    log('\nview\n', view(0));
+  };
 }
+
+function createElmWasmWrapper(
+  wasmBuffer,
+  wasmExports,
+  generatedAppTypes,
+  kernelFunctions
+) {
+  return function wrapper({ init, subscriptions, update, view }) {
+    log('wrapper args', {
+      wasmBuffer,
+      wasmExports,
+      generatedAppTypes,
+      kernelFunctions
+    });
+
+    // do the actual Wasm wrapping here
+    const wrapped_init = init;
+    const wrapped_subscriptions = subscriptions;
+    const wrapped_update = update;
+    const wrapped_view = view;
+
+    return elm$browser$Browser$element({
+      init: wrapped_init,
+      subscriptions: wrapped_subscriptions,
+      update: wrapped_update,
+      view: wrapped_view
+    });
+  };
+}
+
+author$project$Main$main();
