@@ -300,19 +300,16 @@ var author$project$Main$main = author$project$WasmWrapper$element({
 ****************************************/
 
 function log(description, object) {
-  console.log(description, util.inspect(object, { depth: Infinity }));
+  console.log(`\n${description}\n`, util.inspect(object, { depth: Infinity }));
 }
 
 function elm$browser$Browser$element({ init, subscriptions, update, view }) {
   return function main() {
-    log('\ninit\n', init(_Utils_Tuple0));
-    log('\nsubscriptions\n', subscriptions(0));
-    log('\nupdate Get\n', A2(update, author$project$Main$GetTime, 0));
-    log(
-      '\nupdate Got\n',
-      A2(update, author$project$Main$GotTime(Date.now()), 0)
-    );
-    log('\nview\n', view(0));
+    log('init', init(_Utils_Tuple0));
+    log('subscriptions', subscriptions(0));
+    log('update Get', A2(update, author$project$Main$GetTime, 0));
+    log('update Got', A2(update, author$project$Main$GotTime(Date.now()), 0));
+    log('view', view(0));
   };
 }
 
