@@ -279,7 +279,7 @@ const generatedAppTypes = {
   fieldGroupNames: ['init$subscriptions$update$view']
 };
 
-var author$project$WasmWrapper$element = createElmWasmWrapper(
+var author$project$WasmWrapper$element = createElmWasmWrapper.element(
   wasmBuffer,
   wasmExports,
   generatedAppTypes,
@@ -319,27 +319,27 @@ function createElmWasmWrapper(
   generatedAppTypes,
   kernelFunctions
 ) {
-  return function wrapper({ init, subscriptions, update, view }) {
-    log('wrapper args', {
-      wasmBuffer,
-      wasmExports,
-      generatedAppTypes,
-      kernelFunctions
-    });
+  log('wrapper args', {
+    wasmBuffer,
+    wasmExports,
+    generatedAppTypes,
+    kernelFunctions
+  });
 
+  function element({ init, subscriptions, update, view }) {
     // do the actual Wasm wrapping here
     const wrapped_init = init;
     const wrapped_subscriptions = subscriptions;
     const wrapped_update = update;
     const wrapped_view = view;
-
     return elm$browser$Browser$element({
       init: wrapped_init,
       subscriptions: wrapped_subscriptions,
       update: wrapped_update,
       view: wrapped_view
     });
-  };
+  }
+  return { element };
 }
 
 author$project$Main$main();
