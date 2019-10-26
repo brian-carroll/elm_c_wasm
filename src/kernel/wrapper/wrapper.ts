@@ -295,7 +295,11 @@ function wrapWasmElmApp(
   let maxWriteIndex32: number;
   let maxWriteIndex16: number;
 
-  class HeapOverflowError extends Error {}
+  function HeapOverflowError(message?: string) {
+    this.name = HeapOverflowError.name;
+    this.message = message || '';
+  }
+  HeapOverflowError.prototype = Error.prototype;
 
   function write32(index: number, value: number) {
     if (index > maxWriteIndex32)
