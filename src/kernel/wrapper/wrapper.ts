@@ -243,11 +243,8 @@ function wrapWasmElmApp(
     }
   }
 
-  function evalKernelThunk({
-    n_values,
-    evaluator,
-    argsIndex
-  }: ClosureMetadata) {
+  function evalKernelThunk(metadata: ClosureMetadata) {
+    const { n_values, evaluator, argsIndex } = metadata;
     let kernelValue = kernelFunctions[evaluator];
     for (let i = argsIndex; i < argsIndex + n_values; i++) {
       const arg = readWasmValue(mem32[i]);
@@ -256,12 +253,8 @@ function wrapWasmElmApp(
     return kernelValue as any;
   }
 
-  function createWasmCallback({
-    n_values,
-    max_values,
-    evaluator,
-    argsIndex
-  }: ClosureMetadata) {
+  function createWasmCallback(metadata: ClosureMetadata) {
+    const { n_values, max_values, evaluator, argsIndex } = metadata;
     const arity = max_values - n_values;
     const freeVars: any[] = [];
     for (let i = argsIndex; i < argsIndex + n_values; i++) {
