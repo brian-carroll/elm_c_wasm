@@ -265,12 +265,16 @@ const generatedAppTypes = {
   fieldGroupNames: ['init$subscriptions$update$view']
 };
 
-var author$project$WasmWrapper$element = wrapWasmElmApp(
-  wasmBuffer,
-  wasmExports,
-  generatedAppTypes,
-  jsKernelFunctions
-).element;
+var author$project$WasmWrapper$element = function(ignored_js_tea) {
+  return _Browser_element(
+    wrapWasmElmApp(
+      wasmBuffer,
+      wasmExports,
+      generatedAppTypes,
+      jsKernelFunctions
+    )
+  );
+};
 
 /***************************************
     PROGRAM
@@ -329,6 +333,33 @@ var author$project$Main$main = author$project$WasmWrapper$element({
   update: author$project$Main$update,
   view: author$project$Main$view
 });
+
+/***************************************
+    MOCK WRAPPER
+****************************************/
+
+function wrapWasmElmApp(
+  wasmBuffer,
+  wasmExports,
+  generatedAppTypes,
+  kernelFunctions
+) {
+  log('wrapper args', {
+    wasmBuffer,
+    wasmExports,
+    generatedAppTypes,
+    kernelFunctions
+  });
+
+  return {
+    init: author$project$Main$init,
+    subscriptions: function(_n0) {
+      return elm$core$Platform$Sub$none;
+    },
+    update: author$project$Main$update,
+    view: author$project$Main$view
+  };
+}
 
 /***************************************
     TEST
