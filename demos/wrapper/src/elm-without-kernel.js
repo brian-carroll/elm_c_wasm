@@ -141,13 +141,16 @@ var elm$core$Task$andThen = _Scheduler_andThen;
 var elm$core$Task$Perform = function(a) {
   return { $: 'Perform', a: a };
 };
+var elm$core$Task$map$inner = F2(function(func, a) {
+  return elm$core$Task$succeed(func(a));
+});
 var elm$core$Task$map = F2(function(func, taskA) {
-  return A2(
-    elm$core$Task$andThen,
-    function(a) {
-      return elm$core$Task$succeed(func(a));
-    },
-    taskA
+  var callback = elm$core$Task$map$inner(func);
+  return A2(elm$core$Task$andThen, callback, taskA);
+});
+var elm$core$Task$perform = F2(function(toMessage, task) {
+  return elm$core$Task$command(
+    elm$core$Task$Perform(A2(elm$core$Task$map, toMessage, task))
   );
 });
 
@@ -161,11 +164,6 @@ var elm$time$Time$posixToMillis = function(_n0) {
   return millis;
 };
 var elm$time$Time$now = _Time_now(elm$time$Time$millisToPosix);
-var elm$core$Task$perform = F2(function(toMessage, task) {
-  return elm$core$Task$command(
-    elm$core$Task$Perform(A2(elm$core$Task$map, toMessage, task))
-  );
-});
 
 // Json
 var elm$json$Json$Decode$succeed = _Json_succeed;

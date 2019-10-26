@@ -60,7 +60,7 @@ typedef struct {
 #endif
 
 // Header size field has units corresponding to this many bytes:
-#define SIZE_UNIT sizeof(size_t)
+#define SIZE_UNIT sizeof(void*)
 
 #define HEADER_INT \
   (Header) { .tag = Tag_Int, .size = sizeof(ElmInt) / SIZE_UNIT }
@@ -68,8 +68,11 @@ typedef struct {
   (Header) { .tag = Tag_Float, .size = sizeof(ElmFloat) / SIZE_UNIT }
 #define HEADER_CHAR \
   (Header) { .tag = Tag_Char, .size = sizeof(ElmChar) / SIZE_UNIT }
-#define HEADER_STRING(s) \
-  (Header) { .tag = Tag_String, .size = s }
+#define HEADER_STRING(utf16len)                                                     \
+  (Header) {                                                                        \
+    .tag = Tag_String,                                                              \
+    .size = (sizeof(Header) + (sizeof(u16) * utf16len) + SIZE_UNIT - 1) / SIZE_UNIT \
+  }
 #define HEADER_LIST \
   (Header) { .tag = Tag_List, .size = sizeof(Cons) / SIZE_UNIT }
 #define HEADER_TUPLE2 \
@@ -224,6 +227,7 @@ typedef struct {
                                  // and returns a pointer
   void* values[];
 } Closure;
+#define NEVER_EVALUATE 0xffff
 
 // GARBAGE COLLECTOR TYPES
 

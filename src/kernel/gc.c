@@ -145,10 +145,10 @@ int GC_init() {
   pointing to. If it moves the value, it will update the
   pointer to reference the new location.
 */
-void* GC_register_root(ElmValue** ptr_to_mutable_ptr) {
+void* GC_register_root(void** ptr_to_mutable_ptr) {
   GcState* state = &gc_state;
   state->roots = NEW_CONS(ptr_to_mutable_ptr, state->roots);
-  return ptr_to_mutable_ptr;  // anything but pGcFull
+  return ptr_to_mutable_ptr;  // return anything but pGcFull to show success
 }
 
 /* ====================================================

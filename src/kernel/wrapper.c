@@ -15,6 +15,36 @@
 
 extern GcState gc_state;
 
+FieldGroup** appFieldGroups;
+Record* mainRecord;
+
+/*
+    API exposed to C app
+*/
+void wrapper_register_mainRecord(Record* mainRecordFromApp) {
+  mainRecord = mainRecordFromApp;
+}
+
+void wrapper_register_fieldGroups(FieldGroup** fgArrayFromApp) {
+  appFieldGroups = fgArrayFromApp;
+}
+
+/*
+  API exposed to JS side of wrapper
+*/
+
+size_t EMSCRIPTEN_KEEPALIVE getMainRecord() {
+  return (size_t)mainRecord;
+};
+
+size_t nextFieldGroup = 0;
+size_t EMSCRIPTEN_KEEPALIVE getNextFieldGroup() {
+  assert(appFieldGroups != NULL);
+  FieldGroup* next = appFieldGroups[nextFieldGroup];
+  if (next != NULL) nextFieldGroup++;
+  return (size_t)next;
+}
+
 size_t EMSCRIPTEN_KEEPALIVE getUnit() {
   return (size_t)&Unit;
 }
@@ -35,15 +65,6 @@ size_t EMSCRIPTEN_KEEPALIVE getWriteAddr() {
 }
 void EMSCRIPTEN_KEEPALIVE finishWritingAt(size_t addr) {
   gc_state.next_alloc = (size_t*)addr;
-}
-
-FieldGroup** appFieldGroups;
-size_t nextFieldGroup = 0;
-size_t EMSCRIPTEN_KEEPALIVE getNextFieldGroup() {
-  assert(appFieldGroups != NULL);
-  FieldGroup* next = appFieldGroups[nextFieldGroup];
-  if (next != NULL) nextFieldGroup++;
-  return (size_t)next;
 }
 
 f64 EMSCRIPTEN_KEEPALIVE readF64(size_t addr) {
