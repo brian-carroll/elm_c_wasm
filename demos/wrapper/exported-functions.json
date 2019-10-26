@@ -1,0 +1,16 @@
+[
+  "getMainRecord",
+  "getUnit",
+  "getNil",
+  "getTrue",
+  "getFalse",
+  "getNextFieldGroup",
+  "getMaxWriteAddr",
+  "getWriteAddr",
+  "finishWritingAt",
+  "readF64",
+  "writeF64",
+  "callClosure",
+  "collectGarbage",
+  "debugHeapState"
+]

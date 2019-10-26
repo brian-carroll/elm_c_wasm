@@ -29,10 +29,7 @@ enum {
 
 FieldGroup fg_init_subscriptions_update_view = {
     .size = 4,
-    .fields[0] = FIELD_init,
-    .fields[1] = FIELD_subscriptions,
-    .fields[2] = FIELD_update,
-    .fields[3] = FIELD_view,
+    .fields = {FIELD_init, FIELD_subscriptions, FIELD_update, FIELD_view},
 };
 
 FieldGroup* app_field_groups[] = {
@@ -57,7 +54,7 @@ const Closure elm_core_Platform_Cmd_none = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_Platform_batch,
     .max_values = NEVER_EVALUATE,
-    .values[0] = &Nil,
+    .values = {&Nil},
 };
 const Closure elm_core_Platform_Sub_batch = {
     .header = HEADER_CLOSURE(0),
@@ -68,7 +65,7 @@ const Closure elm_core_Platform_Sub_none = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_Platform_batch,
     .max_values = NEVER_EVALUATE,
-    .values[0] = &Nil,
+    .values = {&Nil},
 };
 
 // Task
@@ -80,16 +77,23 @@ const Closure elm_core_Task_succeed = {
 };
 const ElmString literal_string_Task = {
     .header = HEADER_STRING(4),
-    .bytes[0] = 'T',
-    .bytes[2] = 'a',
-    .bytes[4] = 's',
-    .bytes[8] = 'k',
+    .bytes =
+        {
+            'T',
+            0,
+            'a',
+            0,
+            's',
+            0,
+            'k',
+            0,
+        },
 };
 const Closure elm_core_Task_command = {
     .header = HEADER_CLOSURE(1),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Platform_leaf,
-    .values[0] = &literal_string_Task,
+    .values = {&literal_string_Task},
 };
 const Closure elm_core_Task_andThen = {
     .header = HEADER_CLOSURE(0),
@@ -172,7 +176,7 @@ Closure elm_time_Time_now = {
     .header = HEADER_CLOSURE(1),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Time_now,
-    .values[0] = &elm_time_Time_millisToPosix,
+    .values = {&elm_time_Time_millisToPosix},
 };
 
 // Json
@@ -214,49 +218,74 @@ Closure elm_virtual_dom_VirtualDom_Normal = {
 
 ElmString literal_string_br = {
     .header = HEADER_STRING(2),
-    .bytes[0] = 'b',
-    .bytes[2] = 'r',
+    .bytes =
+        {
+            'b',
+            0,
+            'r',
+            0,
+        },
 };
-ElmString literal_string_button = {
-    .header = HEADER_STRING(6),
-    .bytes[0] = 'b',
-    .bytes[2] = 'u',
-    .bytes[4] = 't',
-    .bytes[6] = 't',
-    .bytes[8] = 'o',
-    .bytes[10] = 'n',
-};
+ElmString literal_string_button = {.header = HEADER_STRING(6),
+    .bytes = {
+        'b',
+        0,
+        'u',
+        0,
+        't',
+        0,
+        't',
+        0,
+        'o',
+        0,
+        'n',
+        0,
+    }};
 ElmString literal_string_div = {
     .header = HEADER_STRING(3),
-    .bytes[0] = 'd',
-    .bytes[2] = 'i',
-    .bytes[4] = 'v',
+    .bytes =
+        {
+            'd',
+            0,
+            'i',
+            0,
+            'v',
+            0,
+        },
 };
 ElmString literal_string_click = {
     .header = HEADER_STRING(5),
-    .bytes[0] = 'c',
-    .bytes[2] = 'l',
-    .bytes[4] = 'i',
-    .bytes[6] = 'c',
-    .bytes[8] = 'k',
+    .bytes =
+        {
+            'c',
+            0,
+            'l',
+            0,
+            'i',
+            0,
+            'c',
+            0,
+            'k',
+            0,
+        },
 };
 Closure elm_html_Html_br = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .max_values = NEVER_EVALUATE,
-    .values[0] = &literal_string_br,
+    .values = {&literal_string_br},
 };
 Closure elm_html_Html_button = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .max_values = NEVER_EVALUATE,
-    .values[0] = &literal_string_button,
+    .values = {&literal_string_button},
 };
 Closure elm_html_Html_div = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .max_values = NEVER_EVALUATE,
-    .values[0] = &literal_string_div,
+    .values = {&literal_string_div},
 };
 #define elm_html_Html_text elm_virtual_dom_VirtualDom_text
 
@@ -354,13 +383,23 @@ Closure author_project_Main_update = {
 
 ElmString literal_string_Refresh = {
     .header = HEADER_STRING(7),
-    .bytes[0] = 'R',
-    .bytes[2] = 'e',
-    .bytes[4] = 'f',
-    .bytes[6] = 'r',
-    .bytes[8] = 'e',
-    .bytes[10] = 's',
-    .bytes[12] = 'h',
+    .bytes =
+        {
+            'R',
+            0,
+            'e',
+            0,
+            'f',
+            0,
+            'r',
+            0,
+            'e',
+            0,
+            's',
+            0,
+            'h',
+            0,
+        },
 };
 
 // view
@@ -401,10 +440,13 @@ const Closure author_project_Main_subscriptions = {
 const Record main_record = {
     .header = HEADER_RECORD(4),
     .fieldgroup = &fg_init_subscriptions_update_view,
-    .values[0] = &author_project_Main_init,
-    .values[1] = &author_project_Main_subscriptions,
-    .values[2] = &author_project_Main_update,
-    .values[3] = &author_project_Main_view,
+    .values =
+        {
+            &author_project_Main_init,
+            &author_project_Main_subscriptions,
+            &author_project_Main_update,
+            &author_project_Main_view,
+        },
 };
 
 // C main (Wasm module initialisation)
