@@ -191,8 +191,8 @@ void* ctor_firstName_lastName(void* firstName, void* lastName) {
   return r;
 }
 
-ElmValue* rec_address_firstName_lastName;
-ElmValue* rec_firstName_lastName;
+void* rec_address_firstName_lastName;
+void* rec_firstName_lastName;
 size_t EMSCRIPTEN_KEEPALIVE get_rec_address_firstName_lastName() {
   return (size_t)rec_address_firstName_lastName;
 }
@@ -252,14 +252,14 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   const int exit_code = GC_init();
   if (exit_code) return exit_code;
 
-  appFieldGroups = fieldGroupsArray;
-
   GC_register_root(&rec_address_firstName_lastName);
   GC_register_root(&rec_firstName_lastName);
   init_strings();
   init_list();
   init_records();
   init_closure();
+
+  wrapper_register_fieldGroups(fieldGroupsArray);
 
   return exit_code;
 }

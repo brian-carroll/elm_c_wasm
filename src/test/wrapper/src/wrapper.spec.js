@@ -1,7 +1,7 @@
 require('./elm-globals');
 global.TextDecoder = require('util').TextDecoder;
 global.formatHex = formatHex;
-const createElmWasmWrapper = require('../build/wrapper');
+const wrapWasmElmApp = require('../build/wrapper');
 const createEmscriptenModule = require('../build/mock-app');
 
 /**
@@ -67,8 +67,8 @@ const generatedAppTypes = {
 
 describe('wrapper', () => {
   let asm;
-  let readValue;
-  let writeValue;
+  let readWasmValue;
+  let writeWasmValue;
 
   beforeAll(() => {
     // Wait for C `main` to run before creating the wrapper
@@ -77,9 +77,9 @@ describe('wrapper', () => {
       Module.postRun = () => {
         asm = Module.asm;
         const buffer = Module.buffer;
-        const wrapper = createElmWasmWrapper(buffer, asm, generatedAppTypes);
-        readValue = wrapper.readValue;
-        writeValue = wrapper.writeValue;
+        const wrapper = wrapWasmElmApp(buffer, asm, generatedAppTypes);
+        readWasmValue = wrapper.readWasmValue;
+        writeWasmValue = wrapper.writeWasmValue;
         resolve();
       };
     });
@@ -211,20 +211,20 @@ describe('wrapper', () => {
     }
   ];
 
-  describe('readValue', () => {
+  describe('readWasmValue', () => {
     testCases.forEach(({ elmName, wasmGetter, jsValue }) => {
       it(`should correctly read ${elmName}`, () => {
         const wasmAddr = asm[wasmGetter]();
-        expect(readValue(wasmAddr)).toEqual(jsValue);
+        expect(readWasmValue(wasmAddr)).toEqual(jsValue);
       });
     });
   });
 
-  describe('writeValue', () => {
+  describe('writeWasmValue', () => {
     testCases.forEach(({ elmName, wasmGetter, jsValue }) => {
       it(`should correctly write ${elmName}`, () => {
         const wasmAddr = asm[wasmGetter]();
-        const writtenAddr = writeValue(jsValue);
+        const writtenAddr = writeWasmValue(jsValue);
         expect(asm._test_equal(wasmAddr, writtenAddr)).toBe(1);
       });
     });
@@ -233,7 +233,7 @@ describe('wrapper', () => {
   describe('Closures', () => {
     it('should be able to call Wasm `increment` closure from JS', () => {
       const wasmAddr = asm._get_increment_callback();
-      const callback = readValue(wasmAddr);
+      const callback = readWasmValue(wasmAddr);
       expect(callback(1)).toBe(2);
       expect(callback(1000000)).toBe(1000001);
     });

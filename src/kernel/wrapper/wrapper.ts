@@ -4,6 +4,7 @@
  * Functions exported from the Wasm module
  */
 interface ElmWasmExports {
+  _getMainRecord: () => number;
   _getUnit: () => number;
   _getNil: () => number;
   _getTrue: () => number;
@@ -45,7 +46,7 @@ interface IntToName {
 }
 
 /*********************************************************************************************
- * `createElmWasmWrapper`
+ * `wrapWasmElmApp`
  *
  * Wrap a WebAssembly instance and connect it to Elm's kernel JavaScript.
  * WebAssembly doesn't support Web APIs directly yet, so we need JS to implement most effects.
@@ -60,7 +61,7 @@ interface IntToName {
  * @param kernelFunctions    Array of all JS kernel functions called by the Elm Wasm module
  *
  /********************************************************************************************/
-function createElmWasmWrapper(
+function wrapWasmElmApp(
   wasmBuffer: ArrayBuffer,
   wasmExports: ElmWasmExports,
   generatedAppTypes: GeneratedAppTypes,
@@ -111,6 +112,7 @@ function createElmWasmWrapper(
   const TAG_SHIFT = 28;
   const SIZE_MASK = 0x0fffffff;
   const SIZE_SHIFT = 0;
+  const NEVER_EVALUATE = 0xffff;
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
@@ -148,7 +150,7 @@ function createElmWasmWrapper(
     argsIndex: number;
   }
 
-  function readValue(addr: number): any {
+  function readWasmValue(addr: number): any {
     const index = addr >> 2;
     const header = mem32[index];
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
@@ -174,21 +176,21 @@ function createElmWasmWrapper(
         return addr === wasmConstAddrs.Nil
           ? _List_Nil
           : _List_Cons(
-              readValue(mem32[index + 1]),
-              readValue(mem32[index + 2])
+              readWasmValue(mem32[index + 1]),
+              readWasmValue(mem32[index + 2])
             );
       }
       case Tag.Tuple2: {
         return _Utils_Tuple2(
-          readValue(mem32[index + 1]),
-          readValue(mem32[index + 2])
+          readWasmValue(mem32[index + 1]),
+          readWasmValue(mem32[index + 2])
         );
       }
       case Tag.Tuple3: {
         return _Utils_Tuple3(
-          readValue(mem32[index + 1]),
-          readValue(mem32[index + 2]),
-          readValue(mem32[index + 3])
+          readWasmValue(mem32[index + 1]),
+          readWasmValue(mem32[index + 2]),
+          readWasmValue(mem32[index + 3])
         );
       }
       case Tag.Custom: {
@@ -201,7 +203,7 @@ function createElmWasmWrapper(
         for (let i = index + 2; i < index + size; i++) {
           const field = String.fromCharCode(fieldCharCode++);
           const childAddr = mem32[i];
-          custom[field] = readValue(childAddr);
+          custom[field] = readWasmValue(childAddr);
         }
         return custom;
       }
@@ -213,7 +215,7 @@ function createElmWasmWrapper(
           const fieldId = mem32[fgIndex + i];
           const valAddr = mem32[index + 1 + i];
           const fieldName = appTypes.fields[fieldId];
-          const value = readValue(valAddr);
+          const value = readWasmValue(valAddr);
           record[fieldName] = value;
         }
         return record;
@@ -226,7 +228,7 @@ function createElmWasmWrapper(
           evaluator: mem32[index + 2],
           argsIndex: index + 3
         };
-        const isKernelThunk = metadata.max_values === 0xffff;
+        const isKernelThunk = metadata.max_values === NEVER_EVALUATE;
         if (isKernelThunk) {
           return evalKernelThunk(metadata);
         } else {
@@ -248,7 +250,7 @@ function createElmWasmWrapper(
   }: ClosureMetadata) {
     let kernelValue = kernelFunctions[evaluator];
     for (let i = argsIndex; i < argsIndex + n_values; i++) {
-      const arg = readValue(mem32[i]);
+      const arg = readWasmValue(mem32[i]);
       kernelValue = kernelValue(arg);
     }
     return kernelValue as any;
@@ -263,7 +265,7 @@ function createElmWasmWrapper(
     const arity = max_values - n_values;
     const freeVars: any[] = [];
     for (let i = argsIndex; i < argsIndex + n_values; i++) {
-      freeVars.push(readValue(mem32[i]));
+      freeVars.push(readWasmValue(mem32[i]));
     }
     const FN = elmFunctionWrappers[arity];
     return FN(function wasmCallback() {
@@ -280,7 +282,7 @@ function createElmWasmWrapper(
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
       const resultAddr = wasmExports._callClosure(addr);
-      return readValue(resultAddr);
+      return readWasmValue(resultAddr);
     });
   }
 
@@ -308,8 +310,8 @@ function createElmWasmWrapper(
   }
 
   interface WriteResult {
-    addr: number; // pointer we wrote the value to (8-bit)
-    nextIndex: number; // next available index for writing (32-bit)
+    addr: number; // address the value was written to (8-bit resolution, handy for pointers)
+    nextIndex: number; // next available index for writing (32-bit resolution, handy for alignment)
   }
 
   function handleWasmWrite(writer: (nextIndex: number) => WriteResult): number {
@@ -339,8 +341,8 @@ function createElmWasmWrapper(
    * Serialises to bytes before writing
    * May throw an error
    */
-  function writeValue(value: any): number {
-    return handleWasmWrite(nextIndex => writeValueHelp(nextIndex, value));
+  function writeWasmValue(value: any): number {
+    return handleWasmWrite(nextIndex => writeWasmValueHelp(nextIndex, value));
   }
 
   type TypeInfo =
@@ -367,7 +369,7 @@ function createElmWasmWrapper(
         bodyWriter: null;
       };
 
-  function writeValueHelp(nextIndex: number, value: any): WriteResult {
+  function writeWasmValueHelp(nextIndex: number, value: any): WriteResult {
     const typeInfo: TypeInfo = detectElmType(value);
     if (typeInfo.kind === 'constAddr') {
       return { addr: typeInfo.value, nextIndex };
@@ -489,6 +491,9 @@ function createElmWasmWrapper(
         };
       }
       case Tag.Record: {
+        // JS doesn't have the concept of fieldgroups but Wasm does.
+        // It's a structure containing info about a specific Record type
+        // Need to look it up in the appTypes.
         const keys = Object.keys(value);
         keys.sort();
         const fgName = keys.join('$');
@@ -500,7 +505,12 @@ function createElmWasmWrapper(
         };
       }
       case Tag.Closure: {
-        break; // TODO
+        // No use-case for at the moment for sending functions
+        // to the Elm app at runtime.
+        // Calls to JS kernel functions are built-in at compile time.
+        // Callbacks to Elm functions are read out of Wasm, not written in.
+        // See the _readWasmValue_ case for Closures.
+        throw new Error('Cannot write Closures yet!');
       }
     }
     console.error(value);
@@ -532,7 +542,7 @@ function createElmWasmWrapper(
       const { body, jsChildren } = builder;
       const childAddrs: number[] = [];
       jsChildren.forEach(child => {
-        const update = writeValueHelp(nextIndex, child); // recurse
+        const update = writeWasmValueHelp(nextIndex, child); // recurse
         childAddrs.push(update.addr);
         nextIndex = update.nextIndex;
       });
@@ -560,8 +570,18 @@ function createElmWasmWrapper(
 
   -------------------------------------------------- */
 
+  const mainRecordAddr = wasmExports._getMainRecord();
+  const mainRecord = mainRecordAddr ? readWasmValue(mainRecordAddr) : {};
+
   return {
-    readValue,
-    writeValue
+    // Fields consumed by Browser.element
+    init: mainRecord.init,
+    subscriptions: mainRecord.subscriptions,
+    update: mainRecord.update,
+    view: mainRecord.view,
+
+    // Fields for testing & debug
+    readWasmValue,
+    writeWasmValue
   };
 }

@@ -11,7 +11,7 @@ clean:
 build/wrapper.js: ../../kernel/wrapper/wrapper.ts
 	@rm -f $@
 	npx tsc $< --outFile build/wrapper.js
-	echo 'module.exports = createElmWasmWrapper;' >> build/wrapper.js
+	echo 'module.exports = wrapWasmElmApp;' >> build/wrapper.js
 
 build/mock-app.wasm: build-wasm.sh src/mock-app.c $(KERNELS) ../../test/gc/print-heap.c
 	@rm -f $@

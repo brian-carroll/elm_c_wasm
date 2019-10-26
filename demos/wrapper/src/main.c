@@ -42,7 +42,7 @@ FieldGroup* app_field_groups[] = {
 
 /***********************************************
  *
- *                  ELM LIBRARIES
+ *               ELM LIBRARIES
  *
  ***********************************************/
 
@@ -291,7 +291,7 @@ Closure elm_html_Html_Events_onClick = {
  *
  ***********************************************/
 
-// types and constants
+// constructors and constants
 
 Custom author_project_Main_GetTime = {
     .header = HEADER_CUSTOM(0),

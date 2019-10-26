@@ -202,7 +202,7 @@ var elm$browser$Browser$element = _Browser_element;
     WRAPPER
 ****************************************/
 
-function createElmWasmWrapper(
+function wrapWasmElmApp(
   wasmBuffer,
   wasmExports,
   generatedAppTypes,
@@ -265,7 +265,7 @@ const generatedAppTypes = {
   fieldGroupNames: ['init$subscriptions$update$view']
 };
 
-var author$project$WasmWrapper$element = createElmWasmWrapper(
+var author$project$WasmWrapper$element = wrapWasmElmApp(
   wasmBuffer,
   wasmExports,
   generatedAppTypes,
