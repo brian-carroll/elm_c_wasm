@@ -12,15 +12,15 @@ void* List_append_eval(void* args[2]) {
 void* List_fromArray(size_t len, void* values[]) {
   void* space = GC_malloc(sizeof(Cons) * len);
   if (space == pGcFull) return pGcFull;
-  Cons* list = space;
+  Cons* cells = space;
   Cons* head = &Nil;
   for (size_t i = 0; i < len; ++i) {
-    list[i] = (Cons){
+    cells[i] = (Cons){
         .header = HEADER_LIST,
         .head = values[len - 1 - i],
         .tail = head,
     };
-    head = &list[i];
+    head = &cells[i];
   }
   return head;
 }
