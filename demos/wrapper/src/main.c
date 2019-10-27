@@ -510,5 +510,22 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   printf("%p author_project_Main_subscriptions\n", &author_project_Main_subscriptions);
   printf("%p main_record\n", &main_record);
 
+  printf("%p eval_Task_Perform\n", &eval_Task_Perform);
+  printf("%p eval_Task_map_inner\n", &eval_Task_map_inner);
+  printf("%p eval_Task_map\n", &eval_Task_map);
+  printf("%p eval_elm_core_Task_perform\n", &eval_elm_core_Task_perform);
+  printf("%p eval_elm_time_Time_Posix\n", &eval_elm_time_Time_Posix);
+  printf("%p eval_elm_time_Time_posixToMillis\n", &eval_elm_time_Time_posixToMillis);
+  printf("%p eval_elm_virtual_dom_VirtualDom_Normal\n",
+      &eval_elm_virtual_dom_VirtualDom_Normal);
+  printf("%p eval_elm_html_Html_Events_on\n", &eval_elm_html_Html_Events_on);
+  printf("%p eval_elm_html_Html_Events_onClick\n", &eval_elm_html_Html_Events_onClick);
+  printf("%p eval_author_project_Main_GotTime\n", &eval_author_project_Main_GotTime);
+  printf("%p eval_author_project_Main_init\n", &eval_author_project_Main_init);
+  printf("%p eval_author_project_Main_update\n", &eval_author_project_Main_update);
+  printf("%p eval_author_project_Main_view\n", &eval_author_project_Main_view);
+  printf("%p eval_author_project_Main_subscriptions\n",
+      &eval_author_project_Main_subscriptions);
+
   return exit_code;
 }
