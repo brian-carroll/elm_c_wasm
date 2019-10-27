@@ -135,7 +135,7 @@ void* eval_Task_map(void* args[2]) {
 }
 const Closure elm_core_Task_map = {
     .header = HEADER_CLOSURE(0),
-    .max_values = NEVER_EVALUATE,
+    .max_values = 2,
     .evaluator = &eval_Task_map,
 };
 // lower-case `perform` uses uppercase constructor `Perform`
