@@ -376,7 +376,7 @@ void* eval_author_project_Main_update(void* args[2]) {
   Custom* msg = args[0];
   void* model = args[1];
   if (msg->ctor == CTOR_GetTime) {
-    return NEW_TUPLE2(model, &author_project_Main_cmdTime);
+    return NEW_TUPLE2(model, author_project_Main_cmdTime);
   } else {
     void* posix = msg->values[0];
     return NEW_TUPLE2(
