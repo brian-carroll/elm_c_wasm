@@ -7,7 +7,7 @@
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
-#include "../test/gc/print-heap.h"
+#include "./debug.h"
 extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #else
 #define log_error(...)

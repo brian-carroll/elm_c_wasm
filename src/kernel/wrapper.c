@@ -3,15 +3,12 @@
 #include <emscripten/emscripten.h>
 #else
 #define EMSCRIPTEN_KEEPALIVE
-#include <stdio.h>
 #endif
+#include "./debug.h"
 #include "./gc-internals.h"
 #include "./gc.h"
 #include "./types.h"
 #include "./utils.h"
-#ifdef DEBUG
-#include "../test/gc/print-heap.h"
-#endif
 
 extern GcState gc_state;
 
@@ -84,11 +81,7 @@ void EMSCRIPTEN_KEEPALIVE collectGarbage() {
   GC_collect_full();
 }
 
-#ifdef DEBUG
 void EMSCRIPTEN_KEEPALIVE debugHeapState() {
-  printf("\n");
   print_heap();
   print_state();
-  printf("\n");
 }
-#endif

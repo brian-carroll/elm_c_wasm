@@ -1,8 +1,7 @@
-
 #include <stdbool.h>
-#include "../../kernel/types.h"
-#ifndef TEST_GC_PRINT_HEAP_H
-#define TEST_GC_PRINT_HEAP_H
+#include "./types.h"
+#ifndef ELM_KERNEL_DEBUG
+#define ELM_KERNEL_DEBUG
 
 #ifdef TARGET_64BIT
 #define FORMAT_HEX "%016zx"

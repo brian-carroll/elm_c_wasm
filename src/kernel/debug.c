@@ -1,10 +1,10 @@
-#include "print-heap.h"
+#include "./debug.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../kernel/gc-internals.h"
-#include "../../kernel/types.h"
+#include "./gc-internals.h"
+#include "./types.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else

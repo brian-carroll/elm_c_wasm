@@ -11,7 +11,7 @@
 #include "../../../kernel/types.h"
 #include "../../../kernel/utils.h"
 #include "../../../kernel/wrapper.h"
-#include "../../../test/gc/print-heap.h"
+#include "../../../kernel/debug.h"
 
 /* ---------------------------------------------------------
 

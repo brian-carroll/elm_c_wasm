@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../kernel/basics.h"
+#include "../kernel/debug.h"
 #include "../kernel/gc-internals.h"
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
-#include "./gc/print-heap.h"
 #include "./gc/replay_test.h"
 #include "./gc/stackmap_test.h"
 #include "./test.h"

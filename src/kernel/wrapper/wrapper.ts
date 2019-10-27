@@ -275,7 +275,8 @@ function wrapWasmElmApp(
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
       const resultAddr = wasmExports._callClosure(addr);
-      return readWasmValue(resultAddr);
+      const resultValue = readWasmValue(resultAddr);
+      return resultValue;
     });
   }
 

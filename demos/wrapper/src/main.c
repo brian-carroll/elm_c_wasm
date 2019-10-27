@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "../../../src/kernel/kernel.h"
 
 enum {
@@ -144,7 +145,7 @@ void* eval_elm_core_Task_perform(void* args[2]) {
   return A1(&elm_core_Task_command,
       A1(&elm_core_Task_Perform, A2(&elm_core_Task_map, toMessage, task)));
 }
-Closure elm_core_Task_perform = {
+const Closure elm_core_Task_perform = {
     .header = HEADER_CLOSURE(0),
     .max_values = 2,
     .evaluator = &eval_elm_core_Task_perform,
@@ -159,7 +160,7 @@ void* eval_elm_time_Time_Posix(void* args[1]) {
   p->values[0] = args[0];
   return p;
 };
-Closure elm_time_Time_Posix = {
+const Closure elm_time_Time_Posix = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_elm_time_Time_Posix,
@@ -170,12 +171,12 @@ void* eval_elm_time_Time_posixToMillis(void* args[1]) {
   void* millis = n0->values[0];
   return millis;
 }
-Closure elm_time_Time_posixToMillis = {
+const Closure elm_time_Time_posixToMillis = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_elm_time_Time_posixToMillis,
 };
-Closure elm_time_Time_now = {
+const Closure elm_time_Time_now = {
     .header = HEADER_CLOSURE(1),
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
@@ -185,7 +186,7 @@ Closure elm_time_Time_now = {
 
 // Json
 
-Closure elm_json_Json_Decode_succeed = {
+const Closure elm_json_Json_Decode_succeed = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Json_succeed,
@@ -193,13 +194,13 @@ Closure elm_json_Json_Decode_succeed = {
 
 // VirtualDom
 
-Closure elm_virtual_dom_VirtualDom_text = {
+const Closure elm_virtual_dom_VirtualDom_text = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_VirtualDom_text,
 };
 
-Closure elm_virtual_dom_VirtualDom_on = {
+const Closure elm_virtual_dom_VirtualDom_on = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_VirtualDom_on,
@@ -212,7 +213,7 @@ void* eval_elm_virtual_dom_VirtualDom_Normal(void* args[1]) {
   p->values[0] = args[0];
   return p;
 };
-Closure elm_virtual_dom_VirtualDom_Normal = {
+const Closure elm_virtual_dom_VirtualDom_Normal = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_elm_virtual_dom_VirtualDom_Normal,
@@ -220,7 +221,7 @@ Closure elm_virtual_dom_VirtualDom_Normal = {
 
 // Html
 
-ElmString literal_string_br = {
+const ElmString literal_string_br = {
     .header = HEADER_STRING(2),
     .bytes =
         {
@@ -230,7 +231,7 @@ ElmString literal_string_br = {
             0,
         },
 };
-ElmString literal_string_button = {.header = HEADER_STRING(6),
+const ElmString literal_string_button = {.header = HEADER_STRING(6),
     .bytes = {
         'b',
         0,
@@ -245,7 +246,7 @@ ElmString literal_string_button = {.header = HEADER_STRING(6),
         'n',
         0,
     }};
-ElmString literal_string_div = {
+const ElmString literal_string_div = {
     .header = HEADER_STRING(3),
     .bytes =
         {
@@ -257,7 +258,7 @@ ElmString literal_string_div = {
             0,
         },
 };
-ElmString literal_string_click = {
+const ElmString literal_string_click = {
     .header = HEADER_STRING(5),
     .bytes =
         {
@@ -273,21 +274,21 @@ ElmString literal_string_click = {
             0,
         },
 };
-Closure elm_html_Html_br = {
+const Closure elm_html_Html_br = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_br},
 };
-Closure elm_html_Html_button = {
+const Closure elm_html_Html_button = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_button},
 };
-Closure elm_html_Html_div = {
+const Closure elm_html_Html_div = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
@@ -303,7 +304,7 @@ void* eval_elm_html_Html_Events_on(void* args[2]) {
       event,
       A1(&elm_virtual_dom_VirtualDom_Normal, decoder));
 }
-Closure elm_html_Html_Events_on = {
+const Closure elm_html_Html_Events_on = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_elm_html_Html_Events_on,
     .max_values = 2,
@@ -315,7 +316,7 @@ void* eval_elm_html_Html_Events_onClick(void* args[1]) {
       &literal_string_click,
       A1(&elm_json_Json_Decode_succeed, msg));
 }
-Closure elm_html_Html_Events_onClick = {
+const Closure elm_html_Html_Events_onClick = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_elm_html_Html_Events_onClick,
     .max_values = 1,
@@ -329,7 +330,7 @@ Closure elm_html_Html_Events_onClick = {
 
 // constructors and constants
 
-Custom author_project_Main_GetTime = {
+const Custom author_project_Main_GetTime = {
     .header = HEADER_CUSTOM(0),
     .ctor = CTOR_GetTime,
 };
@@ -341,7 +342,7 @@ void* eval_author_project_Main_GotTime(void* args[1]) {
   p->values[0] = args[0];
   return p;
 };
-Closure author_project_Main_GotTime = {
+const Closure author_project_Main_GotTime = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_author_project_Main_GotTime,
@@ -356,14 +357,14 @@ void* init_author_project_Main_cmdTime() {
 
 // init
 
-ElmInt literal_int_0 = {
+const ElmInt literal_int_0 = {
     .header = HEADER_INT,
     .value = 0,
 };
 void* eval_author_project_Main_init(void* args[1]) {
   return NEW_TUPLE2(&literal_int_0, author_project_Main_cmdTime);
 }
-Closure author_project_Main_init = {
+const Closure author_project_Main_init = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_author_project_Main_init,
@@ -382,13 +383,13 @@ void* eval_author_project_Main_update(void* args[2]) {
         A1(&elm_time_Time_posixToMillis, posix), &elm_core_Platform_Cmd_none);
   }
 }
-Closure author_project_Main_update = {
+const Closure author_project_Main_update = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_author_project_Main_update,
     .max_values = 2,
 };
 
-ElmString literal_string_Refresh = {
+const ElmString literal_string_Refresh = {
     .header = HEADER_STRING(7),
     .bytes =
         {
@@ -425,7 +426,7 @@ void* eval_author_project_Main_view(void* args[1]) {
                   List_fromArray(1,
                       (void* []){A1(&elm_html_Html_text, &literal_string_Refresh)}))}));
 }
-Closure author_project_Main_view = {
+const Closure author_project_Main_view = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_author_project_Main_view,
     .max_values = 1,
@@ -468,6 +469,46 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
 
   wrapper_register_fieldGroups(app_field_groups);
   wrapper_register_mainRecord(&main_record);
+
+  printf("%p author_project_Main_cmdTime\n", author_project_Main_cmdTime);
+  printf("\n");
+  printf("%p elm_core_Platform_Cmd_batch\n", &elm_core_Platform_Cmd_batch);
+  printf("%p elm_core_Platform_Cmd_none\n", &elm_core_Platform_Cmd_none);
+  printf("%p elm_core_Platform_Sub_batch\n", &elm_core_Platform_Sub_batch);
+  printf("%p elm_core_Platform_Sub_none\n", &elm_core_Platform_Sub_none);
+  printf("%p elm_core_Task_succeed\n", &elm_core_Task_succeed);
+  printf("%p literal_string_Task\n", &literal_string_Task);
+  printf("%p elm_core_Task_command\n", &elm_core_Task_command);
+  printf("%p elm_core_Task_andThen\n", &elm_core_Task_andThen);
+  printf("%p elm_core_Task_Perform\n", &elm_core_Task_Perform);
+  printf("%p elm_core_Task_map_inner\n", &elm_core_Task_map_inner);
+  printf("%p elm_core_Task_map\n", &elm_core_Task_map);
+  printf("%p elm_core_Task_perform\n", &elm_core_Task_perform);
+  printf("%p elm_time_Time_Posix\n", &elm_time_Time_Posix);
+  printf("%p elm_time_Time_posixToMillis\n", &elm_time_Time_posixToMillis);
+  printf("%p elm_time_Time_now\n", &elm_time_Time_now);
+  printf("%p elm_json_Json_Decode_succeed\n", &elm_json_Json_Decode_succeed);
+  printf("%p elm_virtual_dom_VirtualDom_text\n", &elm_virtual_dom_VirtualDom_text);
+  printf("%p elm_virtual_dom_VirtualDom_on\n", &elm_virtual_dom_VirtualDom_on);
+  printf("%p elm_virtual_dom_VirtualDom_Normal\n", &elm_virtual_dom_VirtualDom_Normal);
+  printf("%p literal_string_br\n", &literal_string_br);
+  printf("%p literal_string_button\n", &literal_string_button);
+  printf("%p literal_string_div\n", &literal_string_div);
+  printf("%p literal_string_click\n", &literal_string_click);
+  printf("%p elm_html_Html_br\n", &elm_html_Html_br);
+  printf("%p elm_html_Html_button\n", &elm_html_Html_button);
+  printf("%p elm_html_Html_div\n", &elm_html_Html_div);
+  printf("%p elm_html_Html_Events_on\n", &elm_html_Html_Events_on);
+  printf("%p elm_html_Html_Events_onClick\n", &elm_html_Html_Events_onClick);
+  printf("%p author_project_Main_GetTime\n", &author_project_Main_GetTime);
+  printf("%p author_project_Main_GotTime\n", &author_project_Main_GotTime);
+  printf("%p literal_int_0\n", &literal_int_0);
+  printf("%p author_project_Main_init\n", &author_project_Main_init);
+  printf("%p author_project_Main_update\n", &author_project_Main_update);
+  printf("%p literal_string_Refresh\n", &literal_string_Refresh);
+  printf("%p author_project_Main_view\n", &author_project_Main_view);
+  printf("%p author_project_Main_subscriptions\n", &author_project_Main_subscriptions);
+  printf("%p main_record\n", &main_record);
 
   return exit_code;
 }

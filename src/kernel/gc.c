@@ -59,7 +59,7 @@
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
-#include "../test/gc/print-heap.h"
+#include "./debug.h"
 #else
 #define log_error(...)
 #endif

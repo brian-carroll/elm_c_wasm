@@ -9,7 +9,7 @@
 #include "../../../src/kernel/gc.h"
 #include "../../../src/kernel/types.h"
 #include "../../../src/kernel/utils.h"
-#include "../../../src/test/gc/print-heap.h"
+#include "../../../src/kernel/debug.h"
 
 extern GcState gc_state;
 
