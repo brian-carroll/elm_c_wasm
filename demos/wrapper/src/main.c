@@ -53,6 +53,7 @@ const Closure elm_core_Platform_Cmd_batch = {
 const Closure elm_core_Platform_Cmd_none = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_Platform_batch,
+    .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&Nil},
 };
@@ -64,6 +65,7 @@ const Closure elm_core_Platform_Sub_batch = {
 const Closure elm_core_Platform_Sub_none = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_Platform_batch,
+    .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&Nil},
 };
@@ -92,6 +94,7 @@ const ElmString literal_string_Task = {
 const Closure elm_core_Task_command = {
     .header = HEADER_CLOSURE(1),
     .max_values = NEVER_EVALUATE,
+    .n_values = 1,
     .evaluator = (void*)JS_Platform_leaf,
     .values = {&literal_string_Task},
 };
@@ -174,6 +177,7 @@ Closure elm_time_Time_posixToMillis = {
 };
 Closure elm_time_Time_now = {
     .header = HEADER_CLOSURE(1),
+    .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Time_now,
     .values = {&elm_time_Time_millisToPosix},
@@ -272,18 +276,21 @@ ElmString literal_string_click = {
 Closure elm_html_Html_br = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
+    .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_br},
 };
 Closure elm_html_Html_button = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
+    .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_button},
 };
 Closure elm_html_Html_div = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
+    .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_div},
 };

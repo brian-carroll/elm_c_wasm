@@ -4,14 +4,15 @@ KERNELS=$(find ../../src/kernel -name '*.c')
 extra_opt=""
 # extra_opt="$extra_opt -DDEBUG"
 # extra_opt="$extra_opt -DDEBUG_LOG"
-# extra_opt="$extra_opt -O3"
+extra_opt="$extra_opt -O3"
 
 # extra_opt="$extra_opt -g4"
-# extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/benchmark/"
+# extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/wrapper/"
 
 set -x
 
-#   ../../test/gc/print-heap.c \
+#   ../../src/test/gc/print-heap.c \
+
 emcc src/$FILENAME.c \
   $KERNELS \
   -o build/$FILENAME.html \
@@ -20,6 +21,6 @@ emcc src/$FILENAME.c \
   -s EXPORT_NAME='createEmscriptenModule' \
   -s EXPORTED_FUNCTIONS="$(cat ./exported-functions.json)" \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-  $extra_opt
+  $extra_opt 
 
 set +x
