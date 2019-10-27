@@ -384,7 +384,7 @@ function wrapWasmElmApp(
         // So _for now_ take a _horribly unsafe_ guess, by checking if it's a round number or not.
         // Not cool. This is Elm! Long term, the ambiguity needs to be solved at some higher level.
         // Maybe some lib like `JSON.Encode` so the app dev decides? Pity for it not to be automatic though!
-        const isRoundNumberSoGuessInt = elmValue === (elmValue | 0);
+        const isRoundNumberSoGuessInt = elmValue === Math.round(elmValue);
         return {
           kind: 'tag',
           value: isRoundNumberSoGuessInt ? Tag.Int : Tag.Float
@@ -586,33 +586,11 @@ function wrapWasmElmApp(
     ? readWasmValue(mainRecordAddr)
     : {};
 
-  // Provide some lines for debugger breakpoints
-  const init = (flags: any) => {
-    const result = mainRecord.init(flags);
-    console.log('init', flags, result);
-    return result;
-  };
-  const subscriptions = (model: any) => {
-    const result = mainRecord.subscriptions(model);
-    console.log('subscriptions', model, result);
-    return result;
-  };
-  const update = F2(function(msg, model) {
-    const result = A2(mainRecord.update, msg, model);
-    console.log('update', msg, model, result);
-    return result;
-  });
-  const view = (model: any) => {
-    const result = mainRecord.view(model);
-    console.log('view', model, result);
-    return result;
-  };
-
   const wrapper: Wrapper = {
-    init,
-    subscriptions,
-    update,
-    view,
+    init: mainRecord.init,
+    subscriptions: mainRecord.subscriptions,
+    update: mainRecord.update,
+    view: mainRecord.view,
     readWasmValue,
     writeWasmValue
   };

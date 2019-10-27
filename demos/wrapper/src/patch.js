@@ -1,4 +1,5 @@
 //============ start patch.js ===================
+console.log('start of patch.js');
 const generatedAppTypes = {
   ctors: {
     GetTime: 0,
@@ -37,14 +38,48 @@ const jsKernelFunctions = [
   _VirtualDom_text
 ];
 
-var author$project$WasmWrapper$element = function(_jsTeaRecord) {
+const wasmTeaRecord = wrapWasmElmApp(
+  EmscriptenModule.buffer,
+  EmscriptenModule.asm,
+  generatedAppTypes,
+  jsKernelFunctions
+);
+
+var author$project$WasmWrapper$element = function(jsTeaRecord) {
   // Ignore the JS implementation and swap in the Wasm implementation
-  const wasmTeaRecord = wrapWasmElmApp(
-    Module.buffer,
-    Module.asm,
-    generatedAppTypes,
-    jsKernelFunctions
-  );
-  return _Browser_element(wasmTeaRecord);
+  console.log('author$project$WasmWrapper$element');
+  // Provide some lines for debugger breakpoints
+  const init = flags => {
+    const resultWasm = wasmTeaRecord.init(flags);
+    const resultJs = jsTeaRecord.init(flags);
+    console.log('init', flags, '\n', resultWasm, resultJs);
+    return resultWasm;
+  };
+  const subscriptions = model => {
+    const resultWasm = wasmTeaRecord.subscriptions(model);
+    const resultJs = jsTeaRecord.subscriptions(model);
+    console.log('subscriptions', model, '\n', resultWasm, resultJs);
+    return resultWasm;
+  };
+  const update = F2(function(msg, model) {
+    const resultWasm = A2(wasmTeaRecord.update, msg, model);
+    const resultJs = A2(jsTeaRecord.update, msg, model);
+    console.log('update', msg, model, '\n', resultWasm, resultJs);
+    return resultWasm;
+  });
+  const view = model => {
+    const resultWasm = wasmTeaRecord.view(model);
+    const resultJs = jsTeaRecord.view(model);
+    console.log('view', model, '\n', resultWasm, resultJs);
+    return resultWasm;
+  };
+
+  return _Browser_element({
+    init,
+    subscriptions,
+    update,
+    view
+  });
 };
+console.log('end patch.js');
 //============ end patch.js ===================

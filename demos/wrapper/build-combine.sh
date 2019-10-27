@@ -28,11 +28,15 @@ init_code=$(cat src/init.js)
 
 echo "
 $emscripten_code
-var Module = createEmscriptenModule();
-Module.postRun = function() {
+console.log('created instance', EmscriptenModule);
+EmscriptenModule.postRun = function() {
+console.log('doing postRun');
 $elm_code
+console.log('after Elm code', Elm);
 $init_code
+console.log('after init code');
 };
+console.log('after postRun definition');
 " > dist/bundle.js
 
 # deploy_dir=../../../gh-pages/benchmark

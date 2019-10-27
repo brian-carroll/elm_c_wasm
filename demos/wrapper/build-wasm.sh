@@ -17,11 +17,10 @@ emcc src/$FILENAME.c \
   $KERNELS \
   -o build/$FILENAME.html \
   -Wno-incompatible-pointer-types-discards-qualifiers \
-  -s MODULARIZE=1 \
-  -s EXPORT_NAME='createEmscriptenModule' \
+  -s MODULARIZE_INSTANCE=1 \
+  -s EXPORT_NAME='EmscriptenModule' \
   -s EXPORTED_FUNCTIONS="$(cat ./exported-functions.json)" \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-  -s ASSERTIONS=1 \
   $extra_opt 
 
 set +x
