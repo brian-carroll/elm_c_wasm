@@ -567,18 +567,54 @@ function wrapWasmElmApp(
 
   -------------------------------------------------- */
 
+  interface MainRecord {
+    init: (flags: any) => any;
+    subscriptions: (model: any) => any;
+    update: (msg: any) => (model: any) => any;
+    view: (model: any) => any;
+  }
+
+  // Extra fields for test & debug, ignored by JS Kernel
+  interface Wrapper extends MainRecord {
+    readWasmValue: typeof readWasmValue;
+    writeWasmValue: typeof writeWasmValue;
+  }
+
   const mainRecordAddr = wasmExports._getMainRecord();
-  const mainRecord = mainRecordAddr ? readWasmValue(mainRecordAddr) : {};
+  const mainRecord: MainRecord = mainRecordAddr
+    ? readWasmValue(mainRecordAddr)
+    : {};
 
-  return {
-    // Fields consumed by Browser.element
-    init: mainRecord.init,
-    subscriptions: mainRecord.subscriptions,
-    update: mainRecord.update,
-    view: mainRecord.view,
+  // Provide some lines for debugger breakpoints
+  const init = (flags: any) => {
+    const result = mainRecord.init(flags);
+    console.log('init', flags, result);
+    return result;
+  };
+  const subscriptions = (model: any) => {
+    const result = mainRecord.subscriptions(model);
+    console.log('subscriptions', model, result);
+    return result;
+  };
+  const update = F2(function(msg, model) {
+    const result = A2(mainRecord.update, msg, model);
+    console.log('update', msg, model, result);
+    return result;
+  });
+  const view = (model: any) => {
+    const result = mainRecord.view(model);
+    console.log('view', model, result);
+    return result;
+  };
 
-    // Fields for testing & debug
+  const wrapper: Wrapper = {
+    init,
+    subscriptions,
+    update,
+    view,
     readWasmValue,
     writeWasmValue
   };
+
+  return wrapper;
 }

@@ -21,6 +21,7 @@ emcc src/$FILENAME.c \
   -s EXPORT_NAME='createEmscriptenModule' \
   -s EXPORTED_FUNCTIONS="$(cat ./exported-functions.json)" \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
+  -s ASSERTIONS=1 \
   $extra_opt 
 
 set +x
