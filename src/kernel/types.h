@@ -227,6 +227,7 @@ typedef struct {
                                  // and returns a pointer
   void* values[];
 } Closure;
+// Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
 
 // GARBAGE COLLECTOR TYPES

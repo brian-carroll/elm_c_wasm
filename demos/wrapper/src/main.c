@@ -417,14 +417,19 @@ void* eval_author_project_Main_view(void* args[1]) {
   return A2(&elm_html_Html_div,
       &Nil,
       List_fromArray(3,
-          (void* []){A1(&elm_html_Html_text, A1(&String_fromInt, model)),
+          (void* []){
+              A1(&elm_html_Html_text, A1(&String_fromInt, model)),
               A2(&elm_html_Html_br, &Nil, &Nil),
               A2(&elm_html_Html_button,
                   List_fromArray(1,
-                      (void* []){A1(
-                          &elm_html_Html_Events_onClick, &author_project_Main_GetTime)}),
+                      (void* []){
+                          A1(&elm_html_Html_Events_onClick, &author_project_Main_GetTime),
+                      }),
                   List_fromArray(1,
-                      (void* []){A1(&elm_html_Html_text, &literal_string_Refresh)}))}));
+                      (void* []){
+                          A1(&elm_html_Html_text, &literal_string_Refresh),
+                      })),
+          }));
 }
 const Closure author_project_Main_view = {
     .header = HEADER_CLOSURE(0),
