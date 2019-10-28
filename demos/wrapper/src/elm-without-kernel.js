@@ -11,7 +11,7 @@ that C to WebAssembly, and then connect the WebAssembly
 module to the _real_ Kernel using the wrapper I'm
 developing.
 This JavaScript gives me a good template to work with
-while I'm writing the C code, and the wrapper.
+while I'm writing the C code and the wrapper.
 -------------------------------------------------*/
 
 const util = require('util');

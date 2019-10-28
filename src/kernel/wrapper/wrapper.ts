@@ -24,25 +24,9 @@ interface ElmWasmExports {
  * App-specific type info known to Elm compiler
  */
 interface GeneratedAppTypes {
-  ctors: NameToInt & IntToName;
-  fields: NameToInt & IntToName;
+  ctors: string[];
+  fields: string[];
   fieldGroupNames: string[];
-}
-
-/**
- * Full app-specific type info known on initialisation
- */
-interface AppTypes {
-  ctors: NameToInt & IntToName;
-  fields: NameToInt & IntToName;
-  fieldGroups: NameToInt & IntToName;
-}
-
-interface NameToInt {
-  [name: string]: number;
-}
-interface IntToName {
-  [int: number]: string;
 }
 
 /*********************************************************************************************
@@ -96,16 +80,41 @@ function wrapWasmElmApp(
     };
   })();
 
+  /**
+   * Enum objects for app-specific type information
+   * Convert from arrays to objects so that we get
+   * fast mapping both ways, JS->Wasm and Wasm->JS
+   */
+  interface NameToInt {
+    [name: string]: number;
+  }
+  interface IntToName {
+    [int: number]: string;
+  }
+  interface AppTypes {
+    ctors: NameToInt & IntToName;
+    fields: NameToInt & IntToName;
+    fieldGroups: NameToInt & IntToName;
+  }
+
   const appTypes: AppTypes = {
-    ctors: generatedAppTypes.ctors,
-    fields: generatedAppTypes.fields,
-    fieldGroups: generatedAppTypes.fieldGroupNames.reduce((acc, name) => {
+    ctors: arrayToEnum(generatedAppTypes.ctors),
+    fields: arrayToEnum(generatedAppTypes.fields),
+    fieldGroups: generatedAppTypes.fieldGroupNames.reduce((enumObj, name) => {
       const addr = wasmExports._getNextFieldGroup();
-      acc[name] = addr;
-      acc[addr] = name;
-      return acc;
+      enumObj[name] = addr;
+      enumObj[addr] = name;
+      return enumObj;
     }, {})
   };
+
+  function arrayToEnum(names: string[]): NameToInt & IntToName {
+    return names.reduce((enumObj, name, index) => {
+      enumObj[name] = index;
+      enumObj[index] = name;
+      return enumObj;
+    }, {});
+  }
 
   const WORD = 4;
   const TAG_MASK = 0xf0000000;
@@ -266,7 +275,7 @@ function wrapWasmElmApp(
       }
       const n_values = args.length;
       if (n_values !== max_values) {
-        console.error({ metadata, args });
+        console.error({ wasmCallback, args });
         throw new Error(
           `Trying to call a Wasm Closure with ${n_values} args instead of ${max_values}!`
         );
@@ -281,10 +290,9 @@ function wrapWasmElmApp(
       });
       const resultAddr = wasmExports._callClosure(addr);
       const resultValue = readWasmValue(resultAddr);
-      console.log('wasmCallback', { evaluator, freeVars, args, resultValue });
       return resultValue;
     }
-    // Attach info needed in case we have to write this Closure back to Wasm
+    // Attach info in case we have to write this Closure back to Wasm
     wasmCallback.freeVars = freeVars;
     wasmCallback.evaluator = evaluator;
     wasmCallback.max_values = max_values;

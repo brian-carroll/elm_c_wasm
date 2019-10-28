@@ -77,7 +77,7 @@ static i32 ipow(i32 base, i32 ex) {
   }
   // Iterate over bits (<32 iterations)
   // Gradually reduce ex to 0, maintaining invariant `result*base^ex`
-  // Evantually `base^0=1`, so `result` must be original value of `base^ex`
+  // Eventually `base^0=1`, so `result` must be original value of `base^ex`
   // https://stackoverflow.com/a/101613
   i32 result = 1;
   while (1) {

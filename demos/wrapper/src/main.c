@@ -468,15 +468,17 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   int exit_code = GC_init();
   if (exit_code) return exit_code;
 
-  // NOTE: real codegen will have to account for heap overflow during init but meh
+  // NOTE: real codegen will have to account for heap overflow during init
   GC_register_root(&author_project_Main_cmdTime);
   init_author_project_Main_cmdTime();
 
   wrapper_register_fieldGroups(app_field_groups);
   wrapper_register_mainRecord(&main_record);
 
+  printf("Initialised top level values:\n");
   printf("%p author_project_Main_cmdTime\n", author_project_Main_cmdTime);
   printf("\n");
+  printf("Constant top level values:\n");
   printf("%p elm_core_Platform_Cmd_batch\n", &elm_core_Platform_Cmd_batch);
   printf("%p elm_core_Platform_Cmd_none\n", &elm_core_Platform_Cmd_none);
   printf("%p elm_core_Platform_Sub_batch\n", &elm_core_Platform_Sub_batch);
@@ -515,6 +517,8 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   printf("%p author_project_Main_subscriptions\n", &author_project_Main_subscriptions);
   printf("%p main_record\n", &main_record);
 
+  printf("\n");
+  printf("Closure evaluator functions:\n");
   printf("%p eval_Task_Perform\n", &eval_Task_Perform);
   printf("%p eval_Task_map_inner\n", &eval_Task_map_inner);
   printf("%p eval_Task_map\n", &eval_Task_map);

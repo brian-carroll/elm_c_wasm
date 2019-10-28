@@ -11,8 +11,6 @@ extra_opt="$extra_opt -O3"
 
 set -x
 
-#   ../../src/test/gc/print-heap.c \
-
 emcc src/$FILENAME.c \
   $KERNELS \
   -o build/$FILENAME.html \
