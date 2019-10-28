@@ -16,6 +16,6 @@ dist/bundle.js: build-combine.sh build/elm.js build/benchmark.wasm src/*.js
 build/elm.js: src/Main.elm
 	elm make src/Main.elm --output build/elm.js
 
-build/benchmark.wasm: build-wasm.sh $(KERNELS) src/benchmark.c ../../src/test/gc/print-heap.c
+build/benchmark.wasm: build-wasm.sh $(KERNELS) src/benchmark.c
 	dos2unix -q build-wasm.sh
 	bash build-wasm.sh

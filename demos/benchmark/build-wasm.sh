@@ -13,7 +13,6 @@ set -x
 
 emcc src/$FILENAME.c \
   $KERNELS \
-  ../../src/test/gc/print-heap.c \
   -o build/$FILENAME.html \
   -Wno-incompatible-pointer-types-discards-qualifiers \
   -s MODULARIZE=1 \

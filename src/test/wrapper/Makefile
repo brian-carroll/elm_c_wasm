@@ -13,7 +13,7 @@ build/wrapper.js: ../../kernel/wrapper/wrapper.ts
 	npx tsc $< --outFile build/wrapper.js
 	echo 'module.exports = wrapWasmElmApp;' >> build/wrapper.js
 
-build/mock-app.wasm: build-wasm.sh src/mock-app.c $(KERNELS) ../../test/gc/print-heap.c
+build/mock-app.wasm: build-wasm.sh src/mock-app.c $(KERNELS)
 	@rm -f $@
 	@dos2unix -q build-wasm.sh
 	bash build-wasm.sh
