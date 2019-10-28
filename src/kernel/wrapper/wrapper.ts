@@ -255,19 +255,24 @@ function wrapWasmElmApp(
 
   function createWasmCallback(metadata: ClosureMetadata) {
     const { n_values, max_values, evaluator, argsIndex } = metadata;
-    const arity = max_values - n_values;
     const freeVars: any[] = [];
     for (let i = argsIndex; i < argsIndex + n_values; i++) {
       freeVars.push(readWasmValue(mem32[i]));
     }
-    const FN = elmFunctionWrappers[arity];
-    return FN(function wasmCallback() {
+    function wasmCallback() {
       const args = freeVars.slice();
       for (let i = 0; i < arguments.length; i++) {
         args.push(arguments[i]);
       }
+      const n_values = args.length;
+      if (n_values !== max_values) {
+        console.error({ metadata, args });
+        throw new Error(
+          `Trying to call a Wasm Closure with ${n_values} args instead of ${max_values}!`
+        );
+      }
       const builder: WasmBuilder = {
-        body: [max_values | (max_values << 16), evaluator],
+        body: [(max_values << 16) | n_values, evaluator],
         jsChildren: args,
         bodyWriter: null
       };
@@ -276,8 +281,16 @@ function wrapWasmElmApp(
       });
       const resultAddr = wasmExports._callClosure(addr);
       const resultValue = readWasmValue(resultAddr);
+      console.log('wasmCallback', { evaluator, freeVars, args, resultValue });
       return resultValue;
-    });
+    }
+    // Attach info needed in case we have to write this Closure back to Wasm
+    wasmCallback.freeVars = freeVars;
+    wasmCallback.evaluator = evaluator;
+    wasmCallback.max_values = max_values;
+    const arity = max_values - n_values;
+    const FN = elmFunctionWrappers[arity];
+    return FN(wasmCallback);
   }
 
   /* --------------------------------------------------
@@ -324,9 +337,10 @@ function wrapWasmElmApp(
         wasmExports._finishWritingAt(result.nextIndex << 2);
         return result.addr;
       } catch (e) {
-        if (e instanceof HeapOverflowError) {
+        if (e.name === HeapOverflowError.name) {
           wasmExports._collectGarbage();
         } else {
+          console.error(e);
           throw e;
         }
       }
@@ -503,12 +517,26 @@ function wrapWasmElmApp(
         };
       }
       case Tag.Closure: {
-        // No use-case for at the moment for sending functions
-        // to the Elm app at runtime.
-        // Calls to JS kernel functions are built-in at compile time.
-        // Callbacks to Elm functions are read out of Wasm, not written in.
-        // See the _readWasmValue_ case for Closures.
-        throw new Error('Cannot write Closures yet!');
+        // The only Closures that get written back (so far) are Wasm constructor functions.
+        // They get passed to Task.map (Wasm) to wrap a value from JS runtime in a Msg constructor,
+        // in preparation for a call to `update`
+        // (This will break if JS tries to apply many args one at a time instead of all at once!
+        // That would require custom F2, F3... But I don't think it happens. Wait for a use case.)
+        const freeVars = value.freeVars;
+        const max_values = value.max_values;
+        const evaluator = value.evaluator;
+        if (!evaluator) {
+          console.error(value);
+          throw new Error(
+            "Can't write a Closure without a reference to a Wasm evaluator function!"
+          );
+        }
+        const n_values = freeVars.length;
+        return {
+          body: [(max_values << 16) | n_values, evaluator],
+          jsChildren: freeVars,
+          bodyWriter: null
+        };
       }
     }
     console.error(value);
