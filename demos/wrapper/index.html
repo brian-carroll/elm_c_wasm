@@ -1,7 +1,15 @@
 <html>
   <head>
     <style>
+      body {
+        background-color: #eee;
+      }
+      #blah-blah {
+        max-width: 500px;
+        margin: auto;
+      }
       #elm-container {
+        margin: auto;
         background-color: lightblue;
         padding: 20px;
         width: 100px;
@@ -9,58 +17,62 @@
     </style>
   </head>
   <body>
-    <h2>Simple Elm app in WebAssembly</h2>
-    <p>
-      Below, in the blue box, is a <u>very basic</u> first demo of the Elm
-      architecture working in WebAssembly. Click the button to refresh the
-      number displayed.
-    </p>
-    <p>
-      All pure Elm code is implemented in WebAssembly via C (including Elm parts
-      of core libraries). It was all translated by hand but the work will inform
-      upcoming (unofficial) compiler work.
-    </p>
-    <p>
-      Effectful code from <i>Time</i> and <i>VirtualDom</i> uses the JS
-      implementation from the standard libraries, since WebAssembly can't access
-      the relevant browser APIs directly.
-    </p>
-    <p>
-      <b>Known issue:</b>
-      <br />
-      This particular implementation uses 32-bit integers but
-      <i>Time.now</i> returns a number that is too large for that. The number
-      you see is actually the lower 32 bits of the timestamp in milliseconds! So
-      it's not a terribly <i>useful</i> app, but it does prove that a lot of
-      stuff is working!
-    </p>
+    <div id="blah-blah">
+      <h2>Simple Elm app in WebAssembly</h2>
+      <p>
+        Below, in the blue box, is a <u>very basic</u> first demo of the Elm
+        architecture working in WebAssembly. Click the button to refresh the
+        number displayed.
+      </p>
+      <p>
+        All pure Elm code is implemented in WebAssembly via C (including Elm
+        parts of core libraries). It was all translated by hand but the work
+        will inform upcoming (unofficial) compiler work.
+      </p>
+      <p>
+        Effectful code from <i>Time</i> and <i>VirtualDom</i> uses the JS
+        implementation from the standard libraries, since WebAssembly can't
+        access the relevant browser APIs directly.
+      </p>
+      <p>
+        <b>Known issue:</b>
+        <br />
+        This particular implementation uses 32-bit integers but
+        <i>Time.now</i> returns a number that is too large for that. The number
+        you see is actually the lower 32 bits of the timestamp in milliseconds!
+        So it's not a terribly <i>useful</i> app, but it does prove that a lot
+        of stuff is working!
+      </p>
 
-    <h4>Proof points:</h4>
-    <ul>
-      <li>
-        All Elm architecture functions implemented in WebAssembly
-      </li>
-      <li>
-        <i>VirtualDom</i> working. View generated in WebAssembly and sent to JS
-        for diffing and rendering.
-      </li>
-      <li>
-        <i>Cmd</i> working: Getting sent from Wasm to JS and returning a
-        <i>Msg</i> back.
-      </li>
-      <li>
-        Passing Elm datastructures back and forth between JS and WebAssembly
-      </li>
-      <li>
-        Passing Elm <i>function closures</i> back and forth between JS and
-        WebAssembly! (Due to the <i>Cmd</i> containing a <i>Msg</i> constructor)
-      </li>
-    </ul>
+      <h4>Proof points:</h4>
+      <ul>
+        <li>
+          All Elm architecture functions implemented in WebAssembly
+        </li>
+        <li>
+          <i>VirtualDom</i> working. View generated in WebAssembly and sent to
+          JS for diffing and rendering.
+        </li>
+        <li>
+          <i>Cmd</i> working: Getting sent from Wasm to JS and returning a
+          <i>Msg</i> back.
+        </li>
+        <li>
+          Passing Elm datastructures back and forth between JS and WebAssembly
+        </li>
+        <li>
+          Passing Elm <i>function closures</i> back and forth between JS and
+          WebAssembly! (Due to the <i>Cmd</i> containing a
+          <i>Msg</i> constructor)
+        </li>
+      </ul>
 
-    <p>
-      The actual Elm app is below. (You've been reading plain HTML till now!)<br />
-      Click the button to refresh the number shown.
-    </p>
+      <p>
+        The actual Elm app is below. (You've been reading plain HTML till
+        now!)<br />
+        Click the button to refresh the number shown.
+      </p>
+    </div>
     <br />
 
     <div id="elm-container">
