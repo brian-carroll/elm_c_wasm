@@ -1,0 +1,97 @@
+<html>
+  <head>
+    <style>
+      body {
+        background-color: #eee;
+      }
+      #blah-blah {
+        max-width: 500px;
+        margin: auto;
+      }
+      #elm-container {
+        margin: auto;
+        background-color: lightblue;
+        padding: 20px;
+        width: 100px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="blah-blah">
+      <h2>Simple Elm app in WebAssembly</h2>
+      <p>
+        Below, in the blue box, is a <u>very basic</u> first demo of a working
+        Elm app implemented (mostly) in WebAssembly rather than JavaScript.
+        Click the button to refresh the number displayed.
+      </p>
+
+      <h4>Proof points</h4>
+      <ul>
+        <li>
+          All Elm architecture functions implemented in WebAssembly
+        </li>
+        <li>
+          <i>VirtualDom</i> working. View generated in WebAssembly and sent to
+          JS for diffing and rendering.
+        </li>
+        <li>
+          <i>Cmd</i> working: Getting sent from Wasm to JS and returning a
+          <i>Msg</i> back.
+        </li>
+        <li>
+          Passing Elm datastructures back and forth between JS and WebAssembly
+        </li>
+        <li>
+          Passing Elm <i>function closures</i> back and forth between JS and
+          WebAssembly! (Due to the <i>Cmd</i> containing a
+          <i>Msg</i> constructor)
+        </li>
+      </ul>
+
+      <h4>Known issue</h4>
+      <p>
+        This particular implementation uses 32-bit integers but
+        <i>Time.now</i> returns a number that is too large for 32 bits! The
+        number you see is actually the lower 32 bits of a JS timestamp. Not
+        terribly useful, but it still proves that a lot of the major technical
+        hurdles have been overcome!
+      </p>
+
+      <h4>Links</h4>
+      <ul>
+        <li>
+          <a
+            href="https://github.com/brian-carroll/elm_c_wasm/tree/master/demos/wrapper"
+          >
+            Demo source code
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/brian-carroll/elm_c_wasm">
+            Code repo
+          </a>
+        </li>
+        <li>
+          <a
+            href="https://github.com/brian-carroll/elm_c_wasm/tree/master/docs"
+          >
+            Project Documentation
+          </a>
+        </li>
+      </ul>
+
+      <p>
+        The actual Elm app is below. (You've been reading plain HTML till
+        now!)<br />
+        Click the button to refresh the number shown.
+      </p>
+    </div>
+    <br />
+
+    <div id="elm-container">
+      <div id="main"></div>
+    </div>
+    <script src="dist/bundle.js"></script>
+  </body>
+</html>
