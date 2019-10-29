@@ -14,10 +14,10 @@ enum {
 };
 
 enum {
-  CTOR_SetCounter,
   CTOR_Normal,
   CTOR_Perform,
   CTOR_Posix,
+  CTOR_SetCounter,
 };
 
 enum {
@@ -77,18 +77,14 @@ const Closure elm_core_Task_succeed = {
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Scheduler_succeed,
 };
-const ElmString literal_string_Task = {
+const ElmString16 literal_string_Task = {
     .header = HEADER_STRING(4),
-    .bytes =
+    .words16 =
         {
-            'T',
-            0,
-            'a',
-            0,
-            's',
-            0,
-            'k',
-            0,
+            (u16)'T',
+            (u16)'a',
+            (u16)'s',
+            (u16)'k',
         },
 };
 const Closure elm_core_Task_command = {
@@ -195,57 +191,44 @@ const Closure elm_virtual_dom_VirtualDom_Normal = {
 
 // Html
 
-const ElmString literal_string_br = {
+const ElmString16 literal_string_h1 = {
     .header = HEADER_STRING(2),
-    .bytes =
+    .words16 =
         {
-            'b',
-            0,
-            'r',
-            0,
+            (u16)'h',
+            (u16)'1',
         },
 };
-const ElmString literal_string_button = {.header = HEADER_STRING(6),
-    .bytes = {
-        'b',
-        0,
-        'u',
-        0,
-        't',
-        0,
-        't',
-        0,
-        'o',
-        0,
-        'n',
-        0,
-    }};
-const ElmString literal_string_div = {
+const ElmString16 literal_string_button = {
+    .header = HEADER_STRING(6),
+    .words16 =
+        {
+            (u16)'b',
+            (u16)'u',
+            (u16)'t',
+            (u16)'t',
+            (u16)'o',
+            (u16)'n',
+        },
+};
+const ElmString16 literal_string_div = {
     .header = HEADER_STRING(3),
-    .bytes =
+    .words16 =
         {
-            'd',
-            0,
-            'i',
-            0,
-            'v',
-            0,
+            (u16)'d',
+            (u16)'i',
+            (u16)'v',
         },
 };
-const ElmString literal_string_click = {
+const ElmString16 literal_string_click = {
     .header = HEADER_STRING(5),
-    .bytes =
+    .words16 =
         {
-            'c',
-            0,
-            'l',
-            0,
-            'i',
-            0,
-            'c',
-            0,
-            'k',
-            0,
+            (u16)'c',
+            (u16)'l',
+            (u16)'i',
+            (u16)'c',
+            (u16)'k',
         },
 };
 const Closure elm_html_Html_h1 = {
@@ -253,7 +236,7 @@ const Closure elm_html_Html_h1 = {
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
-    .values = {&literal_string_br},
+    .values = {&literal_string_h1},
 };
 const Closure elm_html_Html_button = {
     .header = HEADER_CLOSURE(1),
@@ -369,7 +352,7 @@ const ElmInt literal_int_1 = {
 void* eval_author_project_Main_update(void* args[2]) {
   Custom* msg = args[0];
   ElmInt* newModel = msg->values[0];
-  void* cmd = A2(&Utils_eq, newModel, &literal_int_0) == &False
+  void* cmd = A2(&Utils_eq, newModel, &literal_int_0) == &True
                   ? &elm_core_Platform_Cmd_none
                   : A1(&author_project_Main_delayedSetCounter,
                         A2(&Basics_sub, newModel, &literal_int_1));
@@ -435,7 +418,7 @@ const ElmInt literal_int_5 = {
 
 void* eval_author_project_Main_view(void* args[1]) {
   void* model = args[0];
-  void* str = A2(&Utils_eq, model, &literal_int_0) == &False
+  void* str = A2(&Utils_eq, model, &literal_int_0) == &True
                   ? &literal_string_ClickTheButton
                   : A1(&String_fromInt, model);
   return A2(&elm_html_Html_div,
@@ -518,7 +501,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   printf("%p elm_virtual_dom_VirtualDom_text\n", &elm_virtual_dom_VirtualDom_text);
   printf("%p elm_virtual_dom_VirtualDom_on\n", &elm_virtual_dom_VirtualDom_on);
   printf("%p elm_virtual_dom_VirtualDom_Normal\n", &elm_virtual_dom_VirtualDom_Normal);
-  printf("%p literal_string_br\n", &literal_string_br);
+  printf("%p literal_string_h1\n", &literal_string_h1);
   printf("%p literal_string_button\n", &literal_string_button);
   printf("%p literal_string_div\n", &literal_string_div);
   printf("%p literal_string_click\n", &literal_string_click);

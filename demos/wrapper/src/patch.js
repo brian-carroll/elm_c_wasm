@@ -14,7 +14,7 @@
 // - All "field groups" (concrete Record types) used in the app
 //    Order must match a corresponding C array
 const appTypes = {
-  ctors: ['GetTime', 'GotTime', 'Normal', 'Perform', 'Posix'],
+  ctors: ['Normal', 'Perform', 'Posix', 'SetCounter'],
   fields: ['init', 'subscriptions', 'update', 'view'],
   fieldGroupNames: ['init$subscriptions$update$view']
 };
@@ -29,7 +29,7 @@ const jsKernelFunctions = [
   _Platform_leaf,
   _Scheduler_andThen,
   _Scheduler_succeed,
-  _Time_now,
+  _Process_sleep,
   _VirtualDom_node,
   _VirtualDom_on,
   _VirtualDom_text
@@ -56,7 +56,7 @@ var author$project$WasmWrapper$element = function(jsTeaRecord) {
   let subscriptions;
   let update;
   let view;
-  const debug = false;
+  const debug = true;
   if (!debug) {
     init = wasmTeaRecord.init;
     subscriptions = wasmTeaRecord.subscriptions;
