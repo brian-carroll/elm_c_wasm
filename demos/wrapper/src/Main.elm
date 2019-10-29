@@ -1,9 +1,9 @@
 module Main exposing (main)
 
-import Html exposing (Html, br, button, div, text)
+import Html exposing (Html, button, div, h1, text)
 import Html.Events exposing (onClick)
+import Process
 import Task
-import Time
 import WasmWrapper
 
 
@@ -11,37 +11,47 @@ type alias Model =
     Int
 
 
-cmdTime : Cmd Msg
-cmdTime =
-    Task.perform GotTime Time.now
-
-
 init : () -> ( Model, Cmd Msg )
 init () =
-    ( 0, cmdTime )
+    ( 0, Cmd.none )
 
 
 type Msg
-    = GetTime
-    | GotTime Time.Posix
+    = Start
+    | Decrement
+
+
+cmdDecrement =
+    Task.perform (\_ -> Decrement) (Process.sleep 1000)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GetTime ->
-            ( model, cmdTime )
+        Start ->
+            ( 5, cmdDecrement )
 
-        GotTime posix ->
-            ( Time.posixToMillis posix, Cmd.none )
+        Decrement ->
+            if model == 0 then
+                ( model, Cmd.none )
+
+            else
+                ( model - 1, cmdDecrement )
 
 
 view : Model -> Html Msg
 view model =
+    let
+        str =
+            if model == 0 then
+                "Click the button!"
+
+            else
+                String.fromInt model
+    in
     div []
-        [ text (String.fromInt model)
-        , br [] []
-        , button [ onClick GetTime ] [ text "Refresh" ]
+        [ h1 [] [ text str ]
+        , button [ onClick Start ] [ text "Start countdown" ]
         ]
 
 
