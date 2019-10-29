@@ -11,7 +11,7 @@ DEPLOY := $(ROOT)/../gh-pages
 
 KSOURCES := $(shell find $(KERNEL) -name '*.c')
 KHEADERS := $(shell find $(KERNEL) -name '*.h')
-TSOURCES := $(shell find $(TEST) -name '*.c')
+TSOURCES := $(shell find $(TEST) -name '*.c' | grep -v wrapper)
 THEADERS := $(shell find $(TEST) -name '*.h')
 SOURCES := $(KSOURCES) $(TSOURCES)
 HEADERS := $(KHEADERS) $(THEADERS)
@@ -69,17 +69,24 @@ build.log: $(SOURCES) $(HEADERS)
 benchmark:
 	cd $(ROOT)/demos/benchmark && make clean && make
 
+wrapper:
+	cd $(ROOT)/demos/wrapper && make clean && make
+
 gh-pages: CFLAGS=-Wall -O3
 gh-pages: clean www benchmark
-	mkdir -p $(DEPLOY)/dist/www
-	cp $(ROOT)/demos/index.html $(DEPLOY)
-	cp $(ROOT)/demos/favicon.png $(DEPLOY)
-	cp $(ROOT)/demos/benchmark/index.html $(DEPLOY)/benchmark/index.html
-	cp $(ROOT)/demos/benchmark/dist/* $(DEPLOY)/benchmark/dist/
+	mkdir -p $(DEPLOY)/unit-tests/dist/www
+	mkdir -p $(DEPLOY)/wrapper/dist
+	mkdir -p $(DEPLOY)/benchmark/dist
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
 	cp $(ROOT)/favicon.png $(DEPLOY)/unit-tests/
 	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www
 	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
+	cp $(ROOT)/demos/index.html $(DEPLOY)
+	cp $(ROOT)/demos/favicon.png $(DEPLOY)
+	cp $(ROOT)/demos/wrapper/index.html $(DEPLOY)/wrapper/index.html
+	cp $(ROOT)/demos/wrapper/dist/* $(DEPLOY)/wrapper/dist/
+	cp $(ROOT)/demos/benchmark/index.html $(DEPLOY)/benchmark/index.html
+	cp $(ROOT)/demos/benchmark/dist/* $(DEPLOY)/benchmark/dist/
 	cd $(DEPLOY) && git add . && git commit -m 'update' && git push
 
 

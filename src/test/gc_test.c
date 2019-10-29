@@ -58,7 +58,7 @@ void gc_test_reset() {
 }
 
 char alive_or_dead_msg[50];
-ElmValue* root_mutable_pointer;
+void* root_mutable_pointer;
 
 char* gc_mark_compact_test() {
   GcState* state = &gc_state;

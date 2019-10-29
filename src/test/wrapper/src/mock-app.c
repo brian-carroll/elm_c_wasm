@@ -6,12 +6,12 @@
 #include <stdio.h>
 #endif
 #include "../../../kernel/basics.h"
+#include "../../../kernel/debug.h"
 #include "../../../kernel/gc-internals.h"
 #include "../../../kernel/gc.h"
 #include "../../../kernel/types.h"
 #include "../../../kernel/utils.h"
 #include "../../../kernel/wrapper.h"
-#include "../../../kernel/debug.h"
 
 /* ---------------------------------------------------------
 
@@ -19,7 +19,7 @@
 
 --------------------------------------------------------- */
 
-const ElmInt test_int = {
+static const ElmInt test_int = {
     .header = HEADER_INT,
     .value = 1234567,
 };
@@ -27,7 +27,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_int() {
   return (size_t)&test_int;
 }
 
-const ElmFloat test_float = {
+static const ElmFloat test_float = {
     .header = HEADER_FLOAT,
     .value = 3.14159265,
 };
@@ -106,7 +106,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_list() {
 
 --------------------------------------------------------- */
 
-const Tuple2 tuple2 = {
+static const Tuple2 tuple2 = {
     .header = HEADER_TUPLE2,
     .a = &test_int,
     .b = &test_char16,
@@ -116,7 +116,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_tuple2() {
   return (size_t)&tuple2;
 }
 
-const Tuple3 tuple3 = {
+static const Tuple3 tuple3 = {
     .header = HEADER_TUPLE3,
     .a = &test_int,
     .b = &test_char16,
@@ -227,7 +227,7 @@ size_t EMSCRIPTEN_KEEPALIVE test_equal(size_t addr1, size_t addr2) {
 
 --------------------------------------------------------- */
 
-const ElmInt one = {
+static const ElmInt one = {
     .header = HEADER_INT,
     .value = 1,
 };
