@@ -12,7 +12,7 @@
         margin: auto;
         background-color: lightblue;
         padding: 20px;
-        width: 100px;
+        width: 300px;
         text-align: center;
       }
     </style>
@@ -49,15 +49,6 @@
         </li>
       </ul>
 
-      <h4>Known issue</h4>
-      <p>
-        This particular implementation uses 32-bit integers but
-        <i>Time.now</i> returns a number that is too large for 32 bits! The
-        number you see is actually the lower 32 bits of a JS timestamp. Not
-        terribly useful, but it still proves that a lot of the major technical
-        hurdles have been overcome!
-      </p>
-
       <h4>Links</h4>
       <ul>
         <li>
@@ -84,7 +75,7 @@
       <p>
         The actual Elm app is below. (You've been reading plain HTML till
         now!)<br />
-        Click the button to refresh the number shown.
+        Click the button to start a countdown.<br />
       </p>
     </div>
     <br />
