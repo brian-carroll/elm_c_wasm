@@ -199,6 +199,15 @@ const ElmString16 literal_string_h1 = {
             (u16)'1',
         },
 };
+
+const ElmString16 literal_string_br = {
+    .header = HEADER_STRING(2),
+    .words16 =
+        {
+            (u16)'b',
+            (u16)'r',
+        },
+};
 const ElmString16 literal_string_button = {
     .header = HEADER_STRING(6),
     .words16 =
@@ -237,6 +246,13 @@ const Closure elm_html_Html_h1 = {
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_h1},
+};
+const Closure elm_html_Html_br = {
+    .header = HEADER_CLOSURE(1),
+    .evaluator = (void*)JS_VirtualDom_node,
+    .n_values = 1,
+    .max_values = NEVER_EVALUATE,
+    .values = {&literal_string_br},
 };
 const Closure elm_html_Html_button = {
     .header = HEADER_CLOSURE(1),
@@ -418,9 +434,8 @@ const ElmInt literal_int_5 = {
 
 void* eval_author_project_Main_view(void* args[1]) {
   void* model = args[0];
-  void* str = A2(&Utils_eq, model, &literal_int_0) == &True
-                  ? &literal_string_ClickTheButton
-                  : A1(&String_fromInt, model);
+  int isZero = A2(&Utils_eq, model, &literal_int_0) == &True;
+  void* str = isZero ? &literal_string_ClickTheButton : A1(&String_fromInt, model);
   return A2(&elm_html_Html_div,
       &Nil,
       List_fromArray(2,
@@ -431,16 +446,18 @@ void* eval_author_project_Main_view(void* args[1]) {
                       (void* []){
                           A1(&elm_html_Html_text, str),
                       })),
-              A2(&elm_html_Html_button,
-                  List_fromArray(1,
-                      (void* []){
-                          A1(&elm_html_Html_Events_onClick,
-                              A1(&author_project_Main_SetCounter, &literal_int_5)),
-                      }),
-                  List_fromArray(1,
-                      (void* []){
-                          A1(&elm_html_Html_text, &literal_string_StartCountdown),
-                      })),
+              isZero
+                  ? A2(&elm_html_Html_button,
+                        List_fromArray(1,
+                            (void* []){
+                                A1(&elm_html_Html_Events_onClick,
+                                    A1(&author_project_Main_SetCounter, &literal_int_5)),
+                            }),
+                        List_fromArray(1,
+                            (void* []){
+                                A1(&elm_html_Html_text, &literal_string_StartCountdown),
+                            }))
+                  : A2(&elm_html_Html_br, &Nil, &Nil),
           }));
 }
 const Closure author_project_Main_view = {

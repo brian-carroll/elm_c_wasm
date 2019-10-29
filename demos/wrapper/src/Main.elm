@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-import Html exposing (Html, button, div, h1, text)
+import Html exposing (Html, br, button, div, h1, text)
 import Html.Events exposing (onClick)
 import Process
 import Task
@@ -53,8 +53,11 @@ update msg _ =
 view : Model -> Html Msg
 view model =
     let
+        isZero =
+            model == 0
+
         str =
-            if model == 0 then
+            if isZero then
                 "Click the button!"
 
             else
@@ -62,7 +65,11 @@ view model =
     in
     div []
         [ h1 [] [ text str ]
-        , button [ onClick (SetCounter 5) ] [ text "Start countdown" ]
+        , if isZero then
+            button [ onClick (SetCounter 5) ] [ text "Start countdown" ]
+
+          else
+            br [] []
         ]
 
 

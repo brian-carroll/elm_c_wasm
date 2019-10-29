@@ -172,6 +172,7 @@ var elm$virtual_dom$VirtualDom$Normal = function(a) {
 
 // Html
 var elm$html$Html$h1 = _VirtualDom_node('h1');
+var elm$html$Html$br = _VirtualDom_node('br');
 var elm$html$Html$button = _VirtualDom_node('button');
 var elm$html$Html$div = _VirtualDom_node('div');
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
@@ -307,7 +308,8 @@ var author$project$Main$update = F2(function(msg, _n0) {
 });
 
 var author$project$Main$view = function(model) {
-  var str = !model ? 'Click the button!' : elm$core$String$fromInt(model);
+  var isZero = !model;
+  var str = isZero ? 'Click the button!' : elm$core$String$fromInt(model);
   return A2(
     elm$html$Html$div,
     _List_Nil,
@@ -317,13 +319,15 @@ var author$project$Main$view = function(model) {
         _List_Nil,
         _List_fromArray([elm$html$Html$text(str)])
       ),
-      A2(
-        elm$html$Html$button,
-        _List_fromArray([
-          elm$html$Html$Events$onClick(author$project$Main$SetCounter(5))
-        ]),
-        _List_fromArray([elm$html$Html$text('Start countdown')])
-      )
+      isZero
+        ? A2(
+            elm$html$Html$button,
+            _List_fromArray([
+              elm$html$Html$Events$onClick(author$project$Main$SetCounter(5))
+            ]),
+            _List_fromArray([elm$html$Html$text('Start countdown')])
+          )
+        : A2(elm$html$Html$br, _List_Nil, _List_Nil)
     ])
   );
 };
