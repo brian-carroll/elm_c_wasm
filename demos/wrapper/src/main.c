@@ -7,15 +7,14 @@ enum {
   JS_Platform_leaf,
   JS_Scheduler_andThen,
   JS_Scheduler_succeed,
-  JS_Time_now,
+  JS_Process_sleep,
   JS_VirtualDom_node,
   JS_VirtualDom_on,
   JS_VirtualDom_text
 };
 
 enum {
-  CTOR_GetTime,
-  CTOR_GotTime,
+  CTOR_SetCounter,
   CTOR_Normal,
   CTOR_Perform,
   CTOR_Posix,
@@ -151,37 +150,12 @@ const Closure elm_core_Task_perform = {
     .evaluator = &eval_elm_core_Task_perform,
 };
 
-// Time
+// Process
 
-void* eval_elm_time_Time_Posix(void* args[1]) {
-  Custom* p = GC_malloc(sizeof(Custom) + sizeof(void*));
-  p->header = HEADER_CUSTOM(1);
-  p->ctor = CTOR_Posix;
-  p->values[0] = args[0];
-  return p;
-};
-const Closure elm_time_Time_Posix = {
+const Closure elm_core_Process_sleep = {
     .header = HEADER_CLOSURE(0),
-    .max_values = 1,
-    .evaluator = &eval_elm_time_Time_Posix,
-};
-#define elm_time_Time_millisToPosix elm_time_Time_Posix
-void* eval_elm_time_Time_posixToMillis(void* args[1]) {
-  Custom* n0 = args[0];
-  void* millis = n0->values[0];
-  return millis;
-}
-const Closure elm_time_Time_posixToMillis = {
-    .header = HEADER_CLOSURE(0),
-    .max_values = 1,
-    .evaluator = &eval_elm_time_Time_posixToMillis,
-};
-const Closure elm_time_Time_now = {
-    .header = HEADER_CLOSURE(1),
-    .n_values = 1,
     .max_values = NEVER_EVALUATE,
-    .evaluator = (void*)JS_Time_now,
-    .values = {&elm_time_Time_millisToPosix},
+    .evaluator = (void*)JS_Process_sleep,
 };
 
 // Json
@@ -274,7 +248,7 @@ const ElmString literal_string_click = {
             0,
         },
 };
-const Closure elm_html_Html_br = {
+const Closure elm_html_Html_h1 = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
@@ -330,30 +304,18 @@ const Closure elm_html_Html_Events_onClick = {
 
 // constructors and constants
 
-const Custom author_project_Main_GetTime = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = CTOR_GetTime,
-};
-
-void* eval_author_project_Main_GotTime(void* args[1]) {
+void* eval_author_project_Main_SetCounter(void* args[1]) {
   Custom* p = GC_malloc(sizeof(Custom) + sizeof(void*));
   p->header = HEADER_CUSTOM(1);
-  p->ctor = CTOR_GotTime;
+  p->ctor = CTOR_SetCounter;
   p->values[0] = args[0];
   return p;
 };
-const Closure author_project_Main_GotTime = {
+const Closure author_project_Main_SetCounter = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
-    .evaluator = &eval_author_project_Main_GotTime,
+    .evaluator = &eval_author_project_Main_SetCounter,
 };
-
-void* author_project_Main_cmdTime;
-void* init_author_project_Main_cmdTime() {
-  author_project_Main_cmdTime =
-      A2(&elm_core_Task_perform, &author_project_Main_GotTime, &elm_time_Time_now);
-  return NULL;
-}
 
 // init
 
@@ -362,7 +324,7 @@ const ElmInt literal_int_0 = {
     .value = 0,
 };
 void* eval_author_project_Main_init(void* args[1]) {
-  return NEW_TUPLE2(&literal_int_0, author_project_Main_cmdTime);
+  return NEW_TUPLE2(&literal_int_0, &elm_core_Platform_Cmd_none);
 }
 const Closure author_project_Main_init = {
     .header = HEADER_CLOSURE(0),
@@ -372,62 +334,129 @@ const Closure author_project_Main_init = {
 
 // update
 
+void* eval_author_project_Main_funcSentToJsAndBack(void* args[2]) {
+  void* next = args[0];
+  return A1(&author_project_Main_SetCounter, next);
+}
+const Closure author_project_Main_funcSentToJsAndBack = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = &eval_author_project_Main_funcSentToJsAndBack,
+};
+
+const ElmInt literal_int_1000 = {
+    .header = HEADER_INT,
+    .value = 1000,
+};
+void* eval_author_project_Main_delayedSetCounter(void* args[1]) {
+  void* next = args[0];
+  void* partiallyAppliedFuncSentToJsAndBack =
+      A1(&author_project_Main_funcSentToJsAndBack, next);
+  return A2(&elm_core_Task_perform,
+      partiallyAppliedFuncSentToJsAndBack,
+      A1(&elm_core_Process_sleep, &literal_int_1000));
+};
+const Closure author_project_Main_delayedSetCounter = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 1,
+    .evaluator = &eval_author_project_Main_delayedSetCounter,
+};
+
+const ElmInt literal_int_1 = {
+    .header = HEADER_INT,
+    .value = 1,
+};
 void* eval_author_project_Main_update(void* args[2]) {
   Custom* msg = args[0];
-  void* model = args[1];
-  if (msg->ctor == CTOR_GetTime) {
-    return NEW_TUPLE2(model, author_project_Main_cmdTime);
-  } else {
-    void* posix = msg->values[0];
-    return NEW_TUPLE2(
-        A1(&elm_time_Time_posixToMillis, posix), &elm_core_Platform_Cmd_none);
-  }
-}
+  ElmInt* newModel = msg->values[0];
+  void* cmd = A2(&Utils_eq, newModel, &literal_int_0) == &False
+                  ? &elm_core_Platform_Cmd_none
+                  : A1(&author_project_Main_delayedSetCounter,
+                        A2(&Basics_sub, newModel, &literal_int_1));
+  return NEW_TUPLE2(newModel, cmd);
+};
 const Closure author_project_Main_update = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_author_project_Main_update,
     .max_values = 2,
 };
 
-const ElmString literal_string_Refresh = {
-    .header = HEADER_STRING(7),
-    .bytes =
+// view
+
+const ElmString16 literal_string_ClickTheButton = {
+    .header = HEADER_STRING(17),
+    .words16 =
         {
-            'R',
-            0,
-            'e',
-            0,
-            'f',
-            0,
-            'r',
-            0,
-            'e',
-            0,
-            's',
-            0,
-            'h',
-            0,
+            (u16)'C',
+            (u16)'l',
+            (u16)'i',
+            (u16)'c',
+            (u16)'k',
+            (u16)' ',
+            (u16)'t',
+            (u16)'h',
+            (u16)'e',
+            (u16)' ',
+            (u16)'b',
+            (u16)'u',
+            (u16)'t',
+            (u16)'t',
+            (u16)'o',
+            (u16)'n',
+            (u16)'!',
         },
 };
 
-// view
+const ElmString16 literal_string_StartCountdown = {
+    .header = HEADER_STRING(15),
+    .words16 =
+        {
+            (u16)'S',
+            (u16)'t',
+            (u16)'a',
+            (u16)'r',
+            (u16)'t',
+            (u16)' ',
+            (u16)'c',
+            (u16)'o',
+            (u16)'u',
+            (u16)'n',
+            (u16)'t',
+            (u16)'d',
+            (u16)'o',
+            (u16)'w',
+            (u16)'n',
+        },
+};
+const ElmInt literal_int_5 = {
+    .header = HEADER_INT,
+    .value = 5,
+};
 
 void* eval_author_project_Main_view(void* args[1]) {
   void* model = args[0];
+  void* str = A2(&Utils_eq, model, &literal_int_0) == &False
+                  ? &literal_string_ClickTheButton
+                  : A1(&String_fromInt, model);
   return A2(&elm_html_Html_div,
       &Nil,
-      List_fromArray(3,
+      List_fromArray(2,
           (void* []){
-              A1(&elm_html_Html_text, A1(&String_fromInt, model)),
-              A2(&elm_html_Html_br, &Nil, &Nil),
+              A2(&elm_html_Html_h1,
+                  &Nil,
+                  List_fromArray(1,
+                      (void* []){
+                          A1(&elm_html_Html_text, str),
+                      })),
               A2(&elm_html_Html_button,
                   List_fromArray(1,
                       (void* []){
-                          A1(&elm_html_Html_Events_onClick, &author_project_Main_GetTime),
+                          A1(&elm_html_Html_Events_onClick,
+                              A1(&author_project_Main_SetCounter, &literal_int_5)),
                       }),
                   List_fromArray(1,
                       (void* []){
-                          A1(&elm_html_Html_text, &literal_string_Refresh),
+                          A1(&elm_html_Html_text, &literal_string_StartCountdown),
                       })),
           }));
 }
@@ -468,16 +497,9 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   int exit_code = GC_init();
   if (exit_code) return exit_code;
 
-  // NOTE: real codegen will have to account for heap overflow during init
-  GC_register_root(&author_project_Main_cmdTime);
-  init_author_project_Main_cmdTime();
-
   wrapper_register_fieldGroups(app_field_groups);
   wrapper_register_mainRecord(&main_record);
 
-  printf("Initialised top level values:\n");
-  printf("%p author_project_Main_cmdTime\n", author_project_Main_cmdTime);
-  printf("\n");
   printf("Constant top level values:\n");
   printf("%p elm_core_Platform_Cmd_batch\n", &elm_core_Platform_Cmd_batch);
   printf("%p elm_core_Platform_Cmd_none\n", &elm_core_Platform_Cmd_none);
@@ -491,9 +513,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   printf("%p elm_core_Task_map_inner\n", &elm_core_Task_map_inner);
   printf("%p elm_core_Task_map\n", &elm_core_Task_map);
   printf("%p elm_core_Task_perform\n", &elm_core_Task_perform);
-  printf("%p elm_time_Time_Posix\n", &elm_time_Time_Posix);
-  printf("%p elm_time_Time_posixToMillis\n", &elm_time_Time_posixToMillis);
-  printf("%p elm_time_Time_now\n", &elm_time_Time_now);
+  printf("%p elm_core_Process_sleep\n", &elm_core_Process_sleep);
   printf("%p elm_json_Json_Decode_succeed\n", &elm_json_Json_Decode_succeed);
   printf("%p elm_virtual_dom_VirtualDom_text\n", &elm_virtual_dom_VirtualDom_text);
   printf("%p elm_virtual_dom_VirtualDom_on\n", &elm_virtual_dom_VirtualDom_on);
@@ -502,17 +522,24 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   printf("%p literal_string_button\n", &literal_string_button);
   printf("%p literal_string_div\n", &literal_string_div);
   printf("%p literal_string_click\n", &literal_string_click);
-  printf("%p elm_html_Html_br\n", &elm_html_Html_br);
+  printf("%p elm_html_Html_h1\n", &elm_html_Html_h1);
   printf("%p elm_html_Html_button\n", &elm_html_Html_button);
   printf("%p elm_html_Html_div\n", &elm_html_Html_div);
   printf("%p elm_html_Html_Events_on\n", &elm_html_Html_Events_on);
   printf("%p elm_html_Html_Events_onClick\n", &elm_html_Html_Events_onClick);
-  printf("%p author_project_Main_GetTime\n", &author_project_Main_GetTime);
-  printf("%p author_project_Main_GotTime\n", &author_project_Main_GotTime);
+  printf("%p author_project_Main_SetCounter\n", &author_project_Main_SetCounter);
   printf("%p literal_int_0\n", &literal_int_0);
   printf("%p author_project_Main_init\n", &author_project_Main_init);
+  printf("%p author_project_Main_funcSentToJsAndBack\n",
+      &author_project_Main_funcSentToJsAndBack);
+  printf("%p literal_int_1000\n", &literal_int_1000);
+  printf("%p author_project_Main_delayedSetCounter\n",
+      &author_project_Main_delayedSetCounter);
+  printf("%p literal_int_1\n", &literal_int_1);
   printf("%p author_project_Main_update\n", &author_project_Main_update);
-  printf("%p literal_string_Refresh\n", &literal_string_Refresh);
+  printf("%p literal_string_ClickTheButton\n", &literal_string_ClickTheButton);
+  printf("%p literal_string_StartCountdown\n", &literal_string_StartCountdown);
+  printf("%p literal_int_5\n", &literal_int_5);
   printf("%p author_project_Main_view\n", &author_project_Main_view);
   printf("%p author_project_Main_subscriptions\n", &author_project_Main_subscriptions);
   printf("%p main_record\n", &main_record);
@@ -523,14 +550,17 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   printf("%p eval_Task_map_inner\n", &eval_Task_map_inner);
   printf("%p eval_Task_map\n", &eval_Task_map);
   printf("%p eval_elm_core_Task_perform\n", &eval_elm_core_Task_perform);
-  printf("%p eval_elm_time_Time_Posix\n", &eval_elm_time_Time_Posix);
-  printf("%p eval_elm_time_Time_posixToMillis\n", &eval_elm_time_Time_posixToMillis);
   printf("%p eval_elm_virtual_dom_VirtualDom_Normal\n",
       &eval_elm_virtual_dom_VirtualDom_Normal);
   printf("%p eval_elm_html_Html_Events_on\n", &eval_elm_html_Html_Events_on);
   printf("%p eval_elm_html_Html_Events_onClick\n", &eval_elm_html_Html_Events_onClick);
-  printf("%p eval_author_project_Main_GotTime\n", &eval_author_project_Main_GotTime);
+  printf(
+      "%p eval_author_project_Main_SetCounter\n", &eval_author_project_Main_SetCounter);
   printf("%p eval_author_project_Main_init\n", &eval_author_project_Main_init);
+  printf("%p eval_author_project_Main_funcSentToJsAndBack\n",
+      &eval_author_project_Main_funcSentToJsAndBack);
+  printf("%p eval_author_project_Main_delayedSetCounter\n",
+      &eval_author_project_Main_delayedSetCounter);
   printf("%p eval_author_project_Main_update\n", &eval_author_project_Main_update);
   printf("%p eval_author_project_Main_view\n", &eval_author_project_Main_view);
   printf("%p eval_author_project_Main_subscriptions\n",

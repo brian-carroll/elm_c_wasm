@@ -52,8 +52,11 @@ var _Platform_batch = function() {
     arguments: Array.prototype.slice.call(arguments)
   };
 };
-var _Time_now = function() {
-  return { $: '_Time_now', arguments: Array.prototype.slice.call(arguments) };
+var _Process_sleep = function() {
+  return {
+    $: '_Process_sleep',
+    arguments: Array.prototype.slice.call(arguments)
+  };
 };
 var _Platform_leaf = function _Platform_leaf(home) {
   return function(value) {
@@ -102,7 +105,7 @@ const jsKernelFunctions = [
   _Platform_leaf,
   _Scheduler_andThen,
   _Scheduler_succeed,
-  _Time_now,
+  _Process_sleep,
   _VirtualDom_node,
   _VirtualDom_on,
   _VirtualDom_text
@@ -154,16 +157,8 @@ var elm$core$Task$perform = F2(function(toMessage, task) {
   );
 });
 
-// Time
-var elm$time$Time$Posix = function(a) {
-  return { $: 'Posix', a: a };
-};
-var elm$time$Time$millisToPosix = elm$time$Time$Posix;
-var elm$time$Time$posixToMillis = function(_n0) {
-  var millis = _n0.a;
-  return millis;
-};
-var elm$time$Time$now = _Time_now(elm$time$Time$millisToPosix);
+// Process
+var elm$core$Process$sleep = _Process_sleep;
 
 // Json
 var elm$json$Json$Decode$succeed = _Json_succeed;
@@ -176,7 +171,7 @@ var elm$virtual_dom$VirtualDom$Normal = function(a) {
 };
 
 // Html
-var elm$html$Html$br = _VirtualDom_node('br');
+var elm$html$Html$h1 = _VirtualDom_node('h1');
 var elm$html$Html$button = _VirtualDom_node('button');
 var elm$html$Html$div = _VirtualDom_node('div');
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
@@ -280,46 +275,54 @@ var author$project$WasmWrapper$element = function(ignored_js_tea) {
     PROGRAM
 ****************************************/
 
-var author$project$Main$GetTime = { $: 'GetTime' };
-var author$project$Main$GotTime = function(a) {
-  return { $: 'GotTime', a: a };
+var author$project$Main$SetCounter = function(a) {
+  return { $: 'SetCounter', a: a };
 };
-
-var author$project$Main$cmdTime = A2(
-  elm$core$Task$perform,
-  author$project$Main$GotTime,
-  elm$time$Time$now
-);
 
 var author$project$Main$init = function(_n0) {
-  return _Utils_Tuple2(0, author$project$Main$cmdTime);
+  return _Utils_Tuple2(0, elm$core$Platform$Cmd$none);
 };
 
-var author$project$Main$update = F2(function(msg, model) {
-  if (msg.$ === 'GetTime') {
-    return _Utils_Tuple2(model, author$project$Main$cmdTime);
-  } else {
-    var posix = msg.a;
-    return _Utils_Tuple2(
-      elm$time$Time$posixToMillis(posix),
-      elm$core$Platform$Cmd$none
-    );
-  }
+var author$project$Main$funcSentToJsAndBack = F2(function(next, _n0) {
+  return author$project$Main$SetCounter(next);
+});
+
+var author$project$Main$delayedSetCounter = function(next) {
+  var partiallyAppliedFuncSentToJsAndBack = author$project$Main$funcSentToJsAndBack(
+    next
+  );
+  return A2(
+    elm$core$Task$perform,
+    partiallyAppliedFuncSentToJsAndBack,
+    elm$core$Process$sleep(1000)
+  );
+};
+
+var author$project$Main$update = F2(function(msg, _n0) {
+  var newModel = msg.a;
+  var cmd = !newModel
+    ? elm$core$Platform$Cmd$none
+    : author$project$Main$delayedSetCounter(newModel - 1);
+  return _Utils_Tuple2(newModel, cmd);
 });
 
 var author$project$Main$view = function(model) {
+  var str = !model ? 'Click the button!' : elm$core$String$fromInt(model);
   return A2(
     elm$html$Html$div,
     _List_Nil,
     _List_fromArray([
-      elm$html$Html$text(elm$core$String$fromInt(model)),
-      A2(elm$html$Html$br, _List_Nil, _List_Nil),
+      A2(
+        elm$html$Html$h1,
+        _List_Nil,
+        _List_fromArray([elm$html$Html$text(str)])
+      ),
       A2(
         elm$html$Html$button,
         _List_fromArray([
-          elm$html$Html$Events$onClick(author$project$Main$GetTime)
+          elm$html$Html$Events$onClick(author$project$Main$SetCounter(5))
         ]),
-        _List_fromArray([elm$html$Html$text('Refresh')])
+        _List_fromArray([elm$html$Html$text('Start countdown')])
       )
     ])
   );
@@ -374,8 +377,7 @@ function _Browser_element({ init, subscriptions, update, view }) {
   return function main() {
     log('init', init(_Utils_Tuple0));
     log('subscriptions', subscriptions(0));
-    log('update Get', A2(update, author$project$Main$GetTime, 0));
-    log('update Got', A2(update, author$project$Main$GotTime(Date.now()), 0));
+    log('update', A2(update, author$project$Main$SetCounter, 5));
     log('view', view(0));
   };
 }

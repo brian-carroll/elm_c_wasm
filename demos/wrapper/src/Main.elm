@@ -11,13 +11,13 @@ type alias Model =
     Int
 
 
+type Msg
+    = SetCounter Int
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( 0, Cmd.none )
-
-
-type Msg
-    = SetCounter Int
 
 
 funcSentToJsAndBack : Int -> () -> Msg
