@@ -12,31 +12,42 @@ type alias Model =
 
 
 init : () -> ( Model, Cmd Msg )
-init () =
+init _ =
     ( 0, Cmd.none )
 
 
 type Msg
-    = Start
-    | Decrement
+    = SetCounter Int
 
 
-cmdDecrement =
-    Task.perform (\_ -> Decrement) (Process.sleep 1000)
+funcSentToJsAndBack : Int -> () -> Msg
+funcSentToJsAndBack next _ =
+    SetCounter next
+
+
+delayedSetCounter : Int -> Cmd Msg
+delayedSetCounter next =
+    let
+        partiallyAppliedFuncSentToJsAndBack : () -> Msg
+        partiallyAppliedFuncSentToJsAndBack =
+            funcSentToJsAndBack next
+    in
+    Task.perform partiallyAppliedFuncSentToJsAndBack (Process.sleep 1000)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update msg _ =
     case msg of
-        Start ->
-            ( 5, cmdDecrement )
+        SetCounter newModel ->
+            let
+                cmd =
+                    if newModel == 0 then
+                        Cmd.none
 
-        Decrement ->
-            if model == 0 then
-                ( model, Cmd.none )
-
-            else
-                ( model - 1, cmdDecrement )
+                    else
+                        delayedSetCounter (newModel - 1)
+            in
+            ( newModel, cmd )
 
 
 view : Model -> Html Msg
@@ -51,7 +62,7 @@ view model =
     in
     div []
         [ h1 [] [ text str ]
-        , button [ onClick Start ] [ text "Start countdown" ]
+        , button [ onClick (SetCounter 5) ] [ text "Start countdown" ]
         ]
 
 
