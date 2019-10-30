@@ -36,11 +36,20 @@
           JS for diffing and rendering.
         </li>
         <li>
-          <i>Cmd</i> working: Getting sent from Wasm to JS and returning a
-          <i>Msg</i> back.
+          <i>onClick</i> working. Sending a callback function out to JS, having
+          it attached to a DOM node, and receiving a Msg back in Wasm. Done in a
+          way that avoids any memory management issues.
         </li>
         <li>
-          Passing Elm datastructures back and forth between JS and WebAssembly
+          <i>Cmd</i> working. Sending from Wasm update function to JS Kernel
+          code and receiving a Msg back in Wasm.
+        </li>
+
+        <li>
+          Passing Elm datastructures back and forth between JS and WebAssembly,
+          done in a way that avoids memory memory management issues. (Important
+          since JS and Wasm have separate Garbage Collectors in this
+          implementation)
         </li>
         <li>
           Passing Elm <i>function closures</i> back and forth between JS and
