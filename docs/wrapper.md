@@ -1,24 +1,20 @@
 # The WebAssembly/JavaScript interface
 
-## What's this document about?
 
-- The aim of this project is to gradually implement the Elm language in WebAssembly.
-- But currently Wasm is still in MVP stage and does not have direct access to browser APIs like the DOM, `XmlHttpRequest`, `Date`, and so on.
-- This means that for the moment, in order to get an Elm app working, Elm's effectful Kernel code needs to remain in JavaScript
-- Normally an Elm app compiles to just one language - JavaScript. But now we have two different compile targets that need to work together - JavaScript and WebAssembly.
-- In order for those two parts of the app to work well together, we need some kind of back-and-forth communication between the two.
-- This document outlines how that works.
+
+The aim of this project is to gradually implement the Elm language in WebAssembly. But currently Wasm is still in MVP stage and does not have direct access to browser APIs like the DOM, `XmlHttpRequest`, `Date`, and so on. This means that for now, Elm's effectful Kernel code needs to remain in JavaScript
+
+Normally an Elm app compiles to just one language - JavaScript. But now we have two different compile targets that need to work together - JavaScript and WebAssembly. This document outlines how that works.
+
+
 
 ## Where to draw the line between JS and Wasm?
 
-It's pretty clear that user application code written in Elm should be compiled to WebAssembly. But what about the standard libraries?
+OK, so we know we need to keep _some_ things in JavaScript. But which things exactly?
 
-For the purposes of this discussion it is useful to divide Elm's standard library code into several categories.
+To analyse this question, it's useful to divide Elm's standard library code into several categories.
 
-- JavaScript calling Web APIs
-- JavaScript for managing effects
-- JavaScript for pure low-level operations
-- Elm code in the standard libraries
+
 
 ### JavaScript calling Web APIs
 
@@ -26,7 +22,7 @@ Many of the effectful moduels in the standard libraries interact directly with W
 
 This includes packages like `elm/browser`, `elm/http` and `elm/virtual-dom`. They need to stay in JavaScript.
 
-## JavaScript for managing effects
+### JavaScript for managing effects
 
 Some Kernel modules from `elm/core` do not use Web APIs directly but are heavily involved in scheduling and managing effects. In particular, `Scheduler.js` `Platform.js`, and `Process.js`.
 
@@ -48,11 +44,21 @@ For example, when the WebAssembly module wants to create a `List`, it shouldn't 
 
 ### Elm code in the standard libraries
 
-Finally, lots of the code in `elm/core` is written in pure Elm. This includes modules such as `Tuple`, `Maybe`, `Result`, `Dict`, `Set`, and `Array`.
+Lots of the code in `elm/core` and other standard libraries are written in pure Elm. This includes modules such as `Tuple`, `Maybe`, `Result`, `Dict`, `Set`, and `Array`.
 
 These can just be compiled like any other Elm file, along with user application code. So they'll end up in the WebAssembly module, not in JavaScript.
 
 For now, in this project, all Elm code is "hand-compiled" to C. But eventually my [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c) should be able to do it! 🦄
+
+## 
+
+## Architecture
+
+![](C:\Users\brian\Code\wasm\c\codelite\docs\JS-Wasm-wrapper.png)
+
+
+
+
 
 ## What are the key issues?
 
