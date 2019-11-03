@@ -146,32 +146,27 @@ Wasm can only refer to things using numbers, so the wrapper stores a JS array of
 
 ### Int vs Float ambiguity
 
-If the Elm runtime passes a JavaScript `number` to the app through the WebAssembly wrapper, the wrapper can't accurately detect whether it's supposed to be an `Int` or a `Float` in Elm. JavaScript doesn't make any distinction between the two. Currently I don't have a reliable workaround for this!
+If the Elm runtime passes a JavaScript `number` to the app through the WebAssembly wrapper, the wrapper can't accurately detect whether it's supposed to be an `Int` or a `Float` in Elm. JavaScript doesn't make any distinction between the two. Currently I don't have a reliable solution for this!
 
-Currently I'm "making do" with an unsafe temporary workaround. The wrapper checks for whole numbers and assumes they should be written to Wasm as `Int`. But this breaks for `Float` values that happen to be round numbers! So it's obviously not a proper solution.
+For the moment, I'm "making do" with an unsafe temporary workaround. The wrapper checks for _whole_ numbers and assumes they should be written to Wasm as `Int`. But this does the wrong thing for `Float` values that happen to be round numbers!
 
-There are a two possible solutions
+I can see two possible solutions
 
 1. Get type info from the compiler to help with encoding
-   - This is difficult! The Elm compiler doesn't provide much type information to the back-end that generates the actual output code. For example you can't tell the type of a value based on what function it's being passed to. (Beacuse what would that even *mean* in JS?)
-   - It might be possible to trick the compiler into revealing this kind of information by `exposing` message constructor functions. Then their types might be written to an `.elmi` file. Not a great solution though.
-   - If the code generator _did_ know the parameter types of functions and values, it would also enable _unboxed integers_.
-   
+   - This is difficult! The Elm compiler doesn't provide much type information to the back-end that generates the JavaScript output code. For example if the runtime wanted to send the app a `Msg` containing a number, and we knew the particular `Msg` constructor function accepts `Float`, we can use that info to encode correctly. Unfortunately the code generator doesn't have this information. (It's not crucial for generating JS, the only currently-supported compile target.)
+   - It might be possible to trick the compiler into revealing this kind of information by `exposing` the message constructor functions. Then their types might be written to an `.elmi` file. It's not a great solution though.
 2. Use some Elm code to help with encoding
-   
    - I haven't thought this through fully. But it should be possible for the app to provide `elm/bytes` encoders for its `Msg` types that would make it easier to know where the `Int` and `Float` values are. Obviously this is a workaround for compiler limitations, but it might unlock progress while those limitations are still there.
-   
-   
 
 ### Tuple vs Record ambiguity
 
 In `--optimize` mode, the generated JS for `( 123, "hello" )` is identical to the JS for `{ a = 123, b = "hello" }`
 
-This causes an ambiguity similar to the `Int`/`Float` ambiguity described above. The solutions are similar. We need type info from either the compiler or the app code.
+This causes an ambiguity similar to the `Int`/`Float` ambiguity described above. The solutions are similar. We need type info from either the compiler or the app code. In unoptimized mode, Tuple has an extra property that allows us to distinguish it.
 
 
 
-## Rejected Idea: JS "working set"
+## Rejected Idea: "working set" for JS kernel values
 
 Before I thought of treating Kernel calls as thunks, I had another plan. It didn't work, but I thought I'd share in case it saves someone else pain in the future!
 
