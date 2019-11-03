@@ -136,20 +136,58 @@ When the Elm app (in Wasm) makes a call to a Kernel function like `VirtualDom.te
 
 So in summary, we are doing effects in JS and not Wasm, so we'd prefer not to have to write Wasm representations of effect values. Therefore we _defer_ the actual call to the Kernel function until we're passing through the wrapper. Inside the Wasm Elm app, it just looks like a `Closure`, which is something the Wasm app knows how to handle.
 
-In the implementation, all Kernel `Closure`s are given an "almost infinite" arity to ensure they're always considered to be partially-applied and the Wasm code never evaluates them (`max_values=0xffff`).
+In the implementation, all Kernel `Closure`s are given an "almost infinite" arity (`max_values=0xffff`) to ensure they're always considered to be "partially applied", which means the Wasm code will never evaluate them.
 
-Wasm can only refer to things using numbers, so the wrapper stores an array of JS Kernel functions. Wasm refers to a particular Kernel function by its index in that array. The array index is stored in the `evaluator` field instead of the address of a C function.
+Wasm can only refer to things using numbers, so the wrapper stores a JS array of Kernel functions and Wasm uses its index in that array. The array index is stored in the `evaluator` field of the `Closure`, where we would otherwise store the address of a C function (but JS kernel calls never get evaluated in C).
 
 
 
 ## Known issues
 
-- Int vs Float ambiguity
-  - unboxed integers
-  - compiler changes, more type info
-  - short term workaround/hack
-- Tuple2 vs Record ambiguity
+### Int vs Float ambiguity
 
-## Rejected Ideas
+If the Elm runtime passes a JavaScript `number` to the app through the WebAssembly wrapper, the wrapper can't accurately detect whether it's supposed to be an `Int` or a `Float` in Elm. JavaScript doesn't make any distinction between the two. Currently I don't have a reliable workaround for this!
 
-- heap array
+Currently I'm "making do" with an unsafe temporary workaround. The wrapper checks for whole numbers and assumes they should be written to Wasm as `Int`. But this breaks for `Float` values that happen to be round numbers! So it's obviously not a proper solution.
+
+There are a two possible solutions
+
+1. Get type info from the compiler to help with encoding
+   - This is difficult! The Elm compiler doesn't provide much type information to the back-end that generates the actual output code. For example you can't tell the type of a value based on what function it's being passed to. (Beacuse what would that even *mean* in JS?)
+   - It might be possible to trick the compiler into revealing this kind of information by `exposing` message constructor functions. Then their types might be written to an `.elmi` file. Not a great solution though.
+   - If the code generator _did_ know the parameter types of functions and values, it would also enable _unboxed integers_.
+   
+2. Use some Elm code to help with encoding
+   
+   - I haven't thought this through fully. But it should be possible for the app to provide `elm/bytes` encoders for its `Msg` types that would make it easier to know where the `Int` and `Float` values are. Obviously this is a workaround for compiler limitations, but it might unlock progress while those limitations are still there.
+   
+   
+
+### Tuple vs Record ambiguity
+
+In `--optimize` mode, the generated JS for `( 123, "hello" )` is identical to the JS for `{ a = 123, b = "hello" }`
+
+This causes an ambiguity similar to the `Int`/`Float` ambiguity described above. The solutions are similar. We need type info from either the compiler or the app code.
+
+
+
+## Rejected Idea: JS "working set"
+
+Before I thought of treating Kernel calls as thunks, I had another plan. It didn't work, but I thought I'd share in case it saves someone else pain in the future!
+
+Functions like `update` and `view` need some way to work with temporary Kernel values that exist in JS-land but not in Wasm-land. Lower-level `update` functions could create ten `Cmd` values, pass them around the program before finally returning just one from the top-level `update`. In the case of `view`, we need to create a whole _tree_ of JS values tied together using `List`s and `Strings` that _do_ have Wasm representations. And, some parts of the view could be created only to be thrown away later.
+
+The original idea for dealing with this was to immediately call out to JS to get the effect value but put it in a "working set" array in JS. Then I'd send the index of that JS value to Wasm, wrapped in some new C structure that could be called `JsRef` or something. Wasm functions could work with the `JsRef` values and put them into `List`s and so on.
+
+The problem with this idea is memory management. It's very hard to know when it's OK to _delete_ something from this "working set" array of JS objects. We first need to know that no Wasm value is still referring to it. The program could have thrown that `JsRef` into the Model, or into a `Closure` that'll get passed to the runtime and back again later, or anything. It's certainly _possible_ to know that. The Wasm GC has this kind of info. But now we're expanding the scope of the GC beyond the boundaries of Wasm and into JS-land!
+
+Oh dear, this is starting to sound horrible all of a sudden! I do _not_ want to have to debug this thing.
+
+But wait, what if JS values were represented as _thunks_ on the Wasm side?
+
+Now Wasm only needs references to _permanent_ functions on the JS side. There are no dynamically created values, so no memory management issue. We don't actually create any effect values until they're finally returned from `update`, `view` and friends.
+
+Once we've thrown a value over the fence to JS, it gets materialised on the other side as a JS value, so Wasm can forget about it. It's garbage. If JS ever needs to send it back, it will just write a new copy.
+
+Thunks are by far the safer and more maintainable solution.
+
