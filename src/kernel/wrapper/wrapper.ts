@@ -528,7 +528,7 @@ function wrapWasmElmApp(
         // The only Closures that get written back (so far) are Wasm constructor functions.
         // They get passed to Task.map (Wasm) to wrap a value from JS runtime in a Msg constructor,
         // in preparation for a call to `update`
-        // (This will break if JS tries to apply many args one at a time instead of all at once!
+        // (This will break if JS tries to partially apply an arg before writing to Wasm!
         // That would require custom F2, F3... But I don't think it happens. Wait for a use case.)
         const freeVars = value.freeVars;
         const max_values = value.max_values;
@@ -536,7 +536,8 @@ function wrapWasmElmApp(
         if (!evaluator) {
           console.error(value);
           throw new Error(
-            "Can't write a Closure without a reference to a Wasm evaluator function!"
+            "Can't write a Closure without a reference to a Wasm evaluator function!" +
+              ' Writing arbitrary JS functions is not supported'
           );
         }
         const n_values = freeVars.length;

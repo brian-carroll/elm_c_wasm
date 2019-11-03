@@ -135,7 +135,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_tuple3() {
 
 const Custom nothing = {
     .header = HEADER_CUSTOM(0),
-    .ctor = 123,
+    .ctor = 0,
 };
 
 size_t EMSCRIPTEN_KEEPALIVE get_test_nothing() {
@@ -144,7 +144,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_nothing() {
 
 const Custom just_int = {
     .header = HEADER_CUSTOM(1),
-    .ctor = 124,
+    .ctor = 1,
     .values = {&test_int},
 };
 
@@ -160,11 +160,11 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_just_int() {
 
 const FieldGroup address_firstName_lastName = {
     .size = 3,
-    .fields = {123, 456, 789},
+    .fields = {0, 1, 2},
 };
 const FieldGroup firstName_lastName = {
     .size = 2,
-    .fields = {456, 789},
+    .fields = {1, 2},
 };
 const FieldGroup* fieldGroupsArray[] = {
     &address_firstName_lastName,
