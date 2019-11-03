@@ -10,7 +10,7 @@
   "finishWritingAt",
   "readF64",
   "writeF64",
-  "callClosure",
+  "evalClosure",
   "collectGarbage",
   "debugHeapState",
   "get_rec_firstName_lastName",

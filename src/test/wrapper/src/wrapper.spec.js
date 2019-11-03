@@ -115,7 +115,7 @@ describe('wrapper', () => {
       _finishWritingAt: 1,
       _readF64: 1,
       _writeF64: 2,
-      _callClosure: 1,
+      _evalClosure: 1,
       _collectGarbage: 0
     };
 

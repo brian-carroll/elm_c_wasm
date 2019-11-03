@@ -15,7 +15,7 @@ interface ElmWasmExports {
   _finishWritingAt: (addr: number) => void;
   _readF64: (addr: number) => number;
   _writeF64: (addr: number, value: number) => void;
-  _callClosure: (addr: number) => number;
+  _evalClosure: (addr: number) => number;
   _collectGarbage: () => void;
   _debugHeapState: () => void;
 }
@@ -288,7 +288,7 @@ function wrapWasmElmApp(
       const addr = handleWasmWrite((startIndex: number) => {
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
-      const resultAddr = wasmExports._callClosure(addr);
+      const resultAddr = wasmExports._evalClosure(addr);
       const resultValue = readWasmValue(resultAddr);
       return resultValue;
     }

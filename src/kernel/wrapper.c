@@ -73,7 +73,7 @@ void EMSCRIPTEN_KEEPALIVE writeF64(size_t addr, f64 value) {
   *ptr = value;
 }
 
-size_t EMSCRIPTEN_KEEPALIVE callClosure(size_t addr) {
+size_t EMSCRIPTEN_KEEPALIVE evalClosure(size_t addr) {
   return (size_t)Utils_apply((Closure*)addr, 0, NULL);
 }
 
