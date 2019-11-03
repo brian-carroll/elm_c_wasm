@@ -6,116 +6,187 @@ This means that for now, some of Elm's Kernel code needs to remain in JavaScript
 
 Let's do some analysis on this in the context of Elm, draw some conclusions, and discuss the solution implemented in this project.
 
-
-
-## Where to draw the line between JS and Wasm?
+## What goes in JS and what goes in Wasm?
 
 To analyse this question, it's useful to divide Elm code into several categories.
 
-### Application code
+### Elm application code
 
-Well, this is the easy one. It's all in Elm. It can't directly call Web APIs, because those are *effects* and only the Elm runtime can do effects. Application code can only _specify_ which effects should be run. So it's fine to implement all of the app code in WebAssembly. In fact, if we didn't, that would kind of be the end of this project!
+Well, this is the easy one. It's all in Elm. It can't directly call Web APIs, because those are _effects_ and only the Elm runtime can do effects. So it's fine to implement all of the app code in WebAssembly. And otherwise there wouldn't be much to do in this project!
 
-Decision: This category of code belongs in **WebAssembly**.
+<u>Conclusion</u>: This code belongs in **WebAssembly**.
 
 ### Elm code in the standard libraries
 
 Lots of the code in `elm/core` and other standard libraries is written in pure Elm. This includes modules such as `Tuple`, `Maybe`, `Result`, `Dict`, `Set`, and `Array`. These can just be compiled like any other Elm file, along with user application code. So they'll end up in WebAssembly too.
 
-> <u>Note</u>: For now, all Elm code is "hand-compiled" to C. But eventually my [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c) should be able to do it! 🦄 Hand compiling small programs makes sense in this prototyping stage.
-
-Decision: This category of code belongs in **WebAssembly**.
-
-
+<u>Conclusion</u>: This code belongs in **WebAssembly**.
 
 ### Kernel code that calls Web APIs
 
-This is the stuff that definitely has to be in JavaScript due to limitations of the WebAssembly MVP. It includes kernel code from `elm/virtual-dom` and almost any package that can give you a `Cmd` or `Task` value, like `elm/http`, `elm/time`, and so on.
+This is the stuff that definitely has to be in JavaScript for now due to limitations of the WebAssembly MVP. It includes kernel code from `elm/virtual-dom` and almost any package that can give you a `Cmd` or `Task` value, like `elm/http`, `elm/time`, and so on.
 
-> In some cases there is a possiblity of moving *parts* of kernel files into WebAssembly. VirtualDom creation and diffing, for example. Only the "patching" part of VirtualDom *needs* to be in JS. So this categorisation doesn't necessarily follow the same boundaries as the existing files. But for the most part, it does.
+> In some cases there is a possiblity of moving _parts_ of kernel files into WebAssembly. VirtualDom creation and diffing, for example. Only the "patching" part of VirtualDom _needs_ to be in JS. So this categorisation doesn't necessarily follow the same boundaries as the existing files. But for the most part, it does.
 
-Decision: This category of code belongs in **JavaScript**.
-
-
+<u>Conclusion</u>: This code belongs in **JavaScript**.
 
 ### Kernel code for the effects runtime
 
-This category is often what people mean when they talk about "the Elm runtime". It's the part of `elm/core` that manages and schedules the effects that you request from your program. It's responsible for making calls to your `init`, `update`,  `subscriptions`, and `view`. When those functions return a `Cmd`, `Sub`, or VirtualDom tree, this is the code that schedules and dispatches the effects, and calls you back with any resulting messages.
+This category is often what people mean when they talk about "the Elm runtime". It's the part of `elm/core` that manages and schedules the effects that you request from your program. It's responsible for making calls to your `init`, `update`, `subscriptions`, and `view`. When those functions return a `Cmd`, `Sub`, or VirtualDom tree, this is the code that schedules and dispatches the effects, and calls you back with any resulting messages.
 
 The main files involved are `Scheduler.js`, `Platform.js`, and `Process.js`. They don't use Web APIs themselves, so this code could be implemented in WebAssembly _or_ JavaScript. The choice is not quite as obvious as for the other categories mentioned here!
 
-I've spent quite a bit of time and effort investigating this (because it's interesting!) But I concluded that porting this code to WebAssembly is a huge amount of effort for not much benefit. The thing is, the effects runtime is intimately connected with the "effect manager" kernel code, most of which _does_ have to be implemented in JS. So if we built WebAssembly implementations of `Scheduler.js` and friends, they would be doing an _awful lot_ of back-and-forth across the language boundary. So I think it's best to just leave it in JavaScript too. (Besides, this code is pretty difficult stuff that's easy to get wrong!)
+I've spent quite a bit of time and effort investigating this but I concluded that porting this code to WebAssembly is a huge amount of effort for not much benefit. The effects runtime is intimately connected with the "effect manager" kernel code, most of which _does_ have to be implemented in JS. So if we built WebAssembly implementations of `Scheduler.js` and friends, they would be doing an _awful lot_ of back-and-forth across the language boundary.
 
-Decision: This category of code belongs in **JavaScript**.
+<u>Conclusion</u>: This code belongs in **JavaScript**.
 
 ### Kernel code for low-level data structures
 
 There's lots of Kernel JavaScript code in `elm/core` that is not for effects at all, but for low-level data structures and operations. This includes JavaScript files in `elm/core` such as `Basics.js`, `List.js`, `Tuple.js`, `Char.js`, `String.js`, `Bitwise.js`, and `Utils.js`.
 
-Many of the lowest-level operations in Elm need to be written directly in the _target language_ so that everything else can be built on top of them. However for us, the main target is WebAssembly, not JavaScript. So these low-level operations should be written in C.
+Many of the lowest-level operations in Elm need to be written directly in the _target language_ so that everything else can be built on top of them. But here we have _two_ compile targets. Both the WebAssembly side and the JavaScript side need to use basic Elm structures like lists, tuples, etc.
 
-For example, when the WebAssembly module wants to create a `List`, it shouldn't have to call out to JavaScript! Instead we just have C implementations of things like the _cons_ operator `::`. You can see parts I've written so far [here](../src/kernel).
-
-However it's worth noting that the effects runtime and the effect managers do use `List` and `Tuple` and so on. So we need it in JavaScript too! We end up with two copies of the same basic functionality. There's not much we can do about this, it comes from the fact that we have two target languages.
-
-Decision: This category of code belongs in **WebAssembly *and* JavaScript**!
+<u>Conclusion</u>: This code must be duplicated in **both WebAssembly _and_ JavaScript**!
 
 
 
 ## Architecture
 
-Based on the analysis above, here's what the system ends up looking like:
+Based on the analysis above, here's how the system ends up looking:
 
-![](C:\Users\brian\Code\wasm\c\codelite\docs\JS-Wasm-wrapper.png)
+![Diagram. Effectful kernel code on the left. Pure functional WebAssembly module on the right with a wrapper around it to interface to JS. JS calls Wasm for init, update, subscriptions, view. Wasm calls JS to get effects.](./images/JS-Wasm-wrapper.png)
 
-So the split is *roughly* "pure code on one side and effectful code on the other". That's nice because Elm already makes a sharp distinction between those two things! 
+The split is roughly "pure code in WebAssembly and effectful code in JavaScript" (apart from the low-level data structures stuff). This lines up pretty nicely with existing important concepts in Elm.
 
-> The key thing that makes this work out neatly is the choice to keep the "effects runtime" in JavaScript.
-
-
+This also helps to illustrate why the effects runtime should go on the JavaScript side, even though it doesn't use Web APIs. The implementation gets much simpler when the Wasm/JS boundary lines up with the existing pure/effectful boundary.
 
 
 
-Need to give people a more <u>concrete</u> picture of what's going on
+# Wrapper
 
-- I'm using TypeScript just as a way to write less-buggy JS. Not heavily dependent on it. I've made sure the generated JS is basically the same thing with type annotations stripped out.
-- for some types, we need hints from the compiler to be able to convert between the representations
-- wrapper reading and writing bytes and stuff.
-  - writing
-    - detecting Elm type of JS things
-    - if it's a tree, write children first
-    - encode into bytes
-    - handle heap overflows and retries
-- main record
+The "wrapper" shown in the diagram above is the "glue code" that translates between Wasm data structures and JS data structures, and allows JS and Wasm functions to call each other.
+
+The web platform provides _low level_ tools for JS/Wasm interaction. A Wasm module can "import" functions from JS and "export" functions to JS. But those functions can only use integers or floats as arguments and return values. No strings, no arrays, no objects, etc.
+
+We need to build abstractions on top of this low level API so that the boundary becomes "invisible" to the Elm program.
+
+The rest of this document details how that works.
+
+
+
+## Wrapper implementation outline
+
+The wrapper is implemented in JavaScript.
+
+I thought about trying to use `elm/bytes` but it's not suitable for several reasons. Firstly, it can't encode Elm functions into the byte-level `Closure` structures that I use on the Wasm side. Secondly, the wrapper needs to call some exported functions from the WebAssembly module, which can't be done in Elm. And thirdly, it's cleanest if the wrapper is something _outside_ of the Elm program itself, rather than being mingled in with the JS kernel or Wasm app.
+
+> I actually use TypeScript as a source language, just to help make sure the JavaScript is correct. But if required, the TypeScript code could easily be abandoned and replaced with the JavaScript version. I've made sure it's readable.
+
+
+
+Here's the Elm code representing the wrapper:
+
+```elm
+module WasmWrapper exposing (element)
+import Browser
+
+element :
+  { init : flags -> (model, Cmd msg)
+  , view : model -> Html msg
+  , update : msg -> model -> ( model, Cmd msg )
+  , subscriptions : model -> Sub msg
+  }
+  -> Program flags model msg
+element mainRecord =
+    Browser.element mainRecord
+```
+
+In the Elm source code, the wrapper just looks like it does nothing. In fact that's the whole point!
+
+However the "compiler" knows about this module and treats it specially. The actual implementation of `WasmWrapper.element` reads `mainRecord` from the WebAssembly module, converts it to the equivalent JavaScript object, and passes that on to `Browser.element`, an effectful Kernel JavaScript function.
+
+> I say "compiler" but at this stage it's really a set of Bash scripts and a lot of hand-coding!
+
+
+
+OK let's run through that again, a bit more slowly! Here's what's happening in a bit more detail:
+
+- When the program is initialised, it calls an exported getter function on the Wasm module called `getMainRecord()`, that returns the address of the `mainRecord` in the Wasm module's memory.
+- The JS wrapper reads the data at the corresponding index in the `ArrayBuffer` corresponding to the Wasm module's memory. From the header bytes, it knows it's a Record with 4 key/value pairs. From the body, it is able to find the names of the 4 keys and the addresses of each of the 4 values.
+- On reading each of the 4 values in the record, the wrapper recognises the `Closure` data structure and creates a JavaScript callback function from it. This takes a bit of explaining so let's look at it in the next section.
+
+
+
+## Elm functions in WebAssembly
+
+To understand how we pass functions across the JS/Wasm boundary, we need to take a look at the Closure data structure. I've written about this before but it's worth a refresher.
+
+The C language doesn't allow you to pass functions around a program or partially apply them. But it does have _function pointers_. So we can represent Elm functions as a data structure called `Closure`, which contains a pointer to the "evalutator function", and pointers to any partially-applied arguments. This structure can be used by the "apply" operator for partial application, higher-order functions, etc.
+
+Let's take for example the partially applied Elm function `(+) 5 : Int -> Int`, which adds 5 to any integer.
+
+The header word indicates that it's a `Closure` with a `size` of 4 words. It has one applied argument (`n_values=1`) and expects 2 in total (`max_values=2`). The `evaluator` field points to the C function `Basics_add_eval`, which will be called when the last argument is applied. The `values[0]` field points to the partially applied argument `literal_int_5`.
+
+![Diagram of the Wasm data structures for Closure and Int](./images/closure-example.png)
+
+<u>Note</u>: Integers are implemented as data structures with headers, because it helps with built-in typeclasses like `number` and `comparable`.
+
+For further reading you can check out the documentation on [Elm data structures in WebAssembly](./data-structures.md), my [blog post on Closures](https://dev.to/briancarroll/elm-functions-in-webassembly-50ak), the source code for [`Utils_apply`](../src/kernel/utils.c), and the C structures representing Elm types in [types.h](../src/kernel/types.h).
+
+
+
+## Calls from JS to Wasm
+
+The only calls that are made from the JS runtime to the Wasm app are `init`, `update`, `subscriptions`, `view` and `Msg` constructors (which wrap the result of a `Cmd` before calling `update`). All of these functions are implemented in WebAssembly.
+
+
+
+
+
+## Encoding and decoding Elm values
+
+The Wasm and JS sides of the system need to make calls to each other, passing Elm data structures back and forth. But they each have their own *representations* of those Elm data structures, so we will need to translate between the two.
+
+To get data from WebAssembly to JS, the JS wrapper will _read_ bytes from the Wasm memory and decode them into a JavaScript value. It just needs an address to start reading from.
+
+
+
+For details of the byte-level data structures, see the documentation on [Elm data structures in WebAssembly](./data-structures.md).
+
+
+
+- ambiguous cases and what to do about them
+- closures
+- app specific types - keep it brief
+- Calls from JS to Wasm
+
+- on program initialisation, read the 4 TEA callback Closures out of Wasm
+- any time you want to make a call, write the arguments into memory, then write a Wasm Closure that points to those arguments,
+- Then pass the address of that Closure to a dispatcher `callClosure(addr)`
+
+## Calls from Wasm to JS
+
+- suspended calls
+- array of kernel functions
+
+## Build system
+
 - WasmWrapper.elm
 - build scripts
 
 
 
+## Ambiguities in JS representations
+
+- Int vs Float
+  - unboxed integers
+  - compiler changes, more type info
+  - short term workaround/hack
+- Tuple2 vs Record
 
 
-## What are the key issues?
 
-- With the standard Elm compiler, both the generated code and the Kernel code are in the same language - JavaScript.
-- But now we have Elm code compiled to WebAssembly and Kernel code in JavaScript.
-- This means that there are two completely different sets of representations for Elm values like Lists, Tuples, Records, functions, etc.
-- For documentation on how the Elm data types are implemented in WebAssembly, [click here](./data-structures.md)
+## Rejected Ideas
 
-- Wasm
+- heap array
 
-  - sources
-    - user Elm code
-    - std lib Elm code
-    - pure modules from std lib JS kernel, translated to C
-  - value representations
-    - byte-level structures, implemented in C
-  - memory management
-    - Custom WebAssembly Garbage Collector
-
-- JS
-  - sources
-    - effectful modules from std lib JS kernel
-  - value representations
-    - JS structures as per standard Elm
-  - memory management
-    - JavaScript engine's Garbage Collector
