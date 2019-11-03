@@ -64,7 +64,7 @@ Spoiler alert: **this is the one I implemented!**
 
 In the _mark_ phase, live values are marked and unmarked values are considered dead. In the _compact_ phase, dead spaces are filled by moving live values into them.
 
-![Fragmented values in heap getting compacted down to the bottom](./mark-compact.png)
+![Fragmented values in heap getting compacted down to the bottom](./images/mark-compact.png)
 
 There is no need for a _sweep_ phase because there is no "free list". All the free space is at the top of the heap! Nice and simple. And the compaction only performs work for live values, not dead ones, which is what we want.
 
@@ -78,7 +78,7 @@ Since Elm values are immutable, all pointers must point from younger to older va
 
 We can run a Minor GC on the young generation only, ignoring the older generation. It's very east to test whether a value is in the older generation. Just check if its address is below a threshold!
 
-![minor GC with mark compact](./mark-compact-minor.png)
+![minor GC with mark compact](./images/mark-compact-minor.png)
 
 While tracing a value during minor GC, we can stop as soon as we see any address in the old generation. Everything in the old generation is considered "marked" for minor GC, and it can only point to other old generation values. So there is no need to trace any further. We already know the outcome. This should speed things up considerably.
 
