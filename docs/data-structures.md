@@ -2,7 +2,7 @@
 
 ## Value Headers
 
-Every Elm value has a header of 32 bits in size. It's defined in [types.h](../src/kernel/types.h)
+Every Elm value has a header of 32 bits in size. It's defined in [types.h](/src/kernel/types.h)
 
 ```
 -----------------------------------------------------
@@ -49,11 +49,15 @@ For more details see the [header file](/src/kernel/types.h) defining the relevan
 
 ## Closures
 
-I previously wrote a [blog post][blogpost] about how to implement Elm first-class functions in WebAssembly. The Closure data structure in [types.h](/src/kernel/types.h) is based on those ideas, although it has evolved slightly in the meantime.
+The C language doesn't allow you to pass functions around as values, nor to "partially apply" them. But it does allow _function pointers_ to be passed around as values. We represent an Elm function as a data structure called `Closure` that contains a pointer to a C function and pointers to any partially-applied arguments. This structure is used by the "function application" operator [`Utils_apply`](/src/kernel/utils.c), which implements features like partial application, higher-order functions, and so on.
 
-In a nutshell, the Closure data structure is a value that can be passed around an Elm program. It stores up any arguments that are partially applied to it, until it is "full". It also contains a function pointer, so that when the last argument is applied, the actual "evaluator" function can be called.
+Let's look at the Wasm representation of the partially applied Elm function `(+) 5 : Int -> Int`. This function adds 5 to any integer, and its representation is shown in the diagram below.
 
-A working example of all of this can be the tests for the `apply` operator. Read the [source][utils-test-src] or [run the tests][utils-test-run] in your browser.
+The header indicates that it's a `Closure` with a `size` of 4 words (a "word" being 32 bits). It has one applied value (`n_values=1`) and expects 2 values to be applied in total (`max_values=2`). The `evaluator` field points to the C function `Basics_add_eval`, which will be called when the last argument is applied. The `values[0]` field points to the partially applied argument `literal_int_5`.
+
+![Diagram of the Wasm data structures for Closure and Int](C:/Users/brian/Code/wasm/c/codelite/docs/images/closure-example.png)
+
+A working example of all of this can be the tests for the `apply` operator. Read the [source][utils-test-src] or [run the tests][utils-test-run] in your browser. You can also check out a [blog post][blogpost] I wrote about how to implement Elm first-class functions in WebAssembly. (The implementation of `n_values` and `max_values` has changed since the post was written but otherwise it's the same.)
 
 [utils-test-src]: /src/test/utils_test.c
 [utils-test-run]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--utils+--verbose
@@ -63,7 +67,7 @@ A working example of all of this can be the tests for the `apply` operator. Read
 
 ## Extensible Records
 
-A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). In this project they are split into two C structs, `Record` and `FieldSet`, defined in [types.h](../src/kernel/types.h).
+A good intro to Elm extensible records can be found [here](https://elm-lang.org/docs/records#access). In this project they are split into two C structs, `Record` and `FieldSet`, defined in [types.h](/src/kernel/types.h).
 
 Field names are represented as integer "field IDs". The compiler would convert every field name in the program to a unique ID, using the same kind of [optimisation][shortnames] the Elm 0.19 compiler uses to shorten fieldnames in `--optimize` mode.
 
@@ -97,7 +101,7 @@ The implementation is in [utils.c](/src/kernel/utils.c) (see `access_eval`). The
 
 Elm's record update syntax is `r2 = { r1 | field1 = newVal1, field2 = newVal2 }`
 
-Currently, Elm implements this using a [JavaScript function][js-update]. We do something similar here with a C function called `record_update`, found in [utils.c](../src/kernel/utils.c). A pseudo-code version is below.
+Currently, Elm implements this using a [JavaScript function][js-update]. We do something similar here with a C function called `record_update`, found in [utils.c](/src/kernel/utils.c). A pseudo-code version is below.
 
 [js-update]: https://github.com/elm/core/blob/1.0.2/src/Elm/Kernel/Utils.js#L151
 

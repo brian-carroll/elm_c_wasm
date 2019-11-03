@@ -2,13 +2,17 @@
 
 The aim of this project is to gradually implement the Elm language in WebAssembly. But currently Wasm is still in MVP stage and does not have direct access to browser APIs like the DOM, `XmlHttpRequest`, `Date`, and so on. (A few WebAssembly proposals need to get implemented first, such as [GC](https://github.com/WebAssembly/gc/blob/master/proposals/gc/Overview.md#host-types) and [type imports](https://github.com/WebAssembly/proposal-type-imports/blob/master/proposals/type-imports/Overview.md).)
 
-This means that for now, some of Elm's Kernel code needs to remain in JavaScript. The rest can be implemented in WebAssembly, but that means we have two different compile targets that need to work together! That's something new in Elm and it presents a few challenges that we need to overcome.
+This means that for now, some of Elm's Kernel code needs to remain in JavaScript. The rest can be implemented in WebAssembly, but that means we have two different compile targets that need to work together!
 
-Let's do some analysis on this in the context of Elm, draw some conclusions, and discuss the solution implemented in this project.
+Later we'll do a detailed analysis of what needs to stay in JavaScript and what can go in WebAssembly, but let's get a quick overview first.
 
-## What goes in JS and what goes in Wasm?
+Essentially we have the Elm app in WebAssembly and the effectful "Elm runtime" in JavaScript. The only Kernel code on the WebAssembly side is what's required to implement the Elm data types: integers, floats, characters, strings, lists, tuples, records, custom types, and functions.
 
-To analyse this question, it's useful to divide Elm code into several categories.
+![Diagram. Effectful kernel code on the left. Pure functional WebAssembly module on the right with a wrapper around it to interface to JS. JS calls Wasm for init, update, subscriptions, view. Wasm calls JS to get effects.](./images/JS-Wasm-wrapper.png)
+
+## Analysis of the JS/Wasm split
+
+This section provides some further analysis of the JS/Wasm split shown in the above diagram. Feel free to skip ahead to the [next section](#wrapper) if that already makes sense to you!
 
 ### Elm application code
 
@@ -48,47 +52,22 @@ Many of the lowest-level operations in Elm need to be written directly in the _t
 
 <u>Conclusion</u>: This code must be duplicated in **both WebAssembly _and_ JavaScript**!
 
-
-
-## Architecture
-
-Based on the analysis above, here's how the system ends up looking:
-
-![Diagram. Effectful kernel code on the left. Pure functional WebAssembly module on the right with a wrapper around it to interface to JS. JS calls Wasm for init, update, subscriptions, view. Wasm calls JS to get effects.](./images/JS-Wasm-wrapper.png)
-
-The split is roughly "pure code in WebAssembly and effectful code in JavaScript" (apart from the low-level data structures stuff). This lines up pretty nicely with existing important concepts in Elm.
-
-This also helps to illustrate why the effects runtime should go on the JavaScript side, even though it doesn't use Web APIs. The implementation gets much simpler when the Wasm/JS boundary lines up with the existing pure/effectful boundary.
-
-
-
 # Wrapper
 
-The "wrapper" shown in the diagram above is the "glue code" that translates between Wasm data structures and JS data structures, and allows JS and Wasm functions to call each other.
+The "wrapper" shown in the architecture diagram above is the "glue code" that translates between Wasm data structures and JS data structures, and allows JS and Wasm functions to call each other.
 
-The web platform provides _low level_ tools for JS/Wasm interaction. A Wasm module can "import" functions from JS and "export" functions to JS. But those functions can only use integers or floats as arguments and return values. No strings, no arrays, no objects, etc.
+The web platform provides _low level_ tools for JS/Wasm interaction - a Wasm module can "import" functions from JS and "export" functions to JS. But those functions can only operate on integers and floats. There's no built-in support for strings, arrays, objects, etc. So we need to build abstractions on top of this low level API so that we can pass Elm values back and forth, making the JS/Wasm split "invisible" to the Elm program.
 
-We need to build abstractions on top of this low level API so that the boundary becomes "invisible" to the Elm program.
-
-The rest of this document details how that works.
-
-
+The rest of this document details how the wrapper works.
 
 ## Wrapper implementation outline
 
-The wrapper is implemented in JavaScript.
-
-I thought about trying to use `elm/bytes` but it's not suitable for several reasons. Firstly, it can't encode Elm functions into the byte-level `Closure` structures that I use on the Wasm side. Secondly, the wrapper needs to call some exported functions from the WebAssembly module, which can't be done in Elm. And thirdly, it's cleanest if the wrapper is something _outside_ of the Elm program itself, rather than being mingled in with the JS kernel or Wasm app.
-
-> I actually use TypeScript as a source language, just to help make sure the JavaScript is correct. But if required, the TypeScript code could easily be abandoned and replaced with the JavaScript version. I've made sure it's readable.
-
-
-
-Here's the Elm code representing the wrapper:
+The Elm code representing the wrapper is very simple:
 
 ```elm
 module WasmWrapper exposing (element)
 import Browser
+import Html exposing (Html)
 
 element :
   { init : flags -> (model, Cmd msg)
@@ -103,90 +82,74 @@ element mainRecord =
 
 In the Elm source code, the wrapper just looks like it does nothing. In fact that's the whole point!
 
-However the "compiler" knows about this module and treats it specially. The actual implementation of `WasmWrapper.element` reads `mainRecord` from the WebAssembly module, converts it to the equivalent JavaScript object, and passes that on to `Browser.element`, an effectful Kernel JavaScript function.
+However the "compiler" <sup>(see notes)</sup> knows about this module and treats it specially. The actual implementation of `WasmWrapper.element` reads `mainRecord` from the WebAssembly module, converts it to the equivalent JavaScript object, and passes that on to `Browser.element`, an effectful Kernel function implemented in JavaScript.
 
-> I say "compiler" but at this stage it's really a set of Bash scripts and a lot of hand-coding!
-
-
-
-OK let's run through that again, a bit more slowly! Here's what's happening in a bit more detail:
+Here's what happens in a bit more detail:
 
 - When the program is initialised, it calls an exported getter function on the Wasm module called `getMainRecord()`, that returns the address of the `mainRecord` in the Wasm module's memory.
 - The JS wrapper reads the data at the corresponding index in the `ArrayBuffer` corresponding to the Wasm module's memory. From the header bytes, it knows it's a Record with 4 key/value pairs. From the body, it is able to find the names of the 4 keys and the addresses of each of the 4 values.
 - On reading each of the 4 values in the record, the wrapper recognises the `Closure` data structure and creates a JavaScript callback function from it. This takes a bit of explaining so let's look at it in the next section.
 
-
+> **Notes**
+>
+> I mention "compiler" above, but for now it's just a [Bash script](../demos/wrapper/build-combine.sh) that modifies the official compiler's JS output, merging some other JS files into it.
+>
+> I thought about using `elm/bytes` but it's not really suited to this situation. For one thing, we need to send _functions_ back and forth as well as data. Also there are some low-level interactions with the Wasm module itself that need to be written in JS.
+>
+> I actually use TypeScript as a source language, just to help make sure the JavaScript is correct. But if required, the TypeScript code could easily be abandoned and replaced with the JavaScript version. I've made sure it's readable.
 
 ## Elm functions in WebAssembly
 
-To understand how we pass functions across the JS/Wasm boundary, we need to take a look at the Closure data structure. I've written about this before but it's worth a refresher.
+To understand how we pass functions across the JS/Wasm boundary, we need to take a look at how Elm functions are implemented on the Wasm side.
 
-The C language doesn't allow you to pass functions around a program or partially apply them. But it does have _function pointers_. So we can represent Elm functions as a data structure called `Closure`, which contains a pointer to the "evalutator function", and pointers to any partially-applied arguments. This structure can be used by the "apply" operator for partial application, higher-order functions, etc.
+The C language doesn't allow you to pass functions around as values, nor to "partially apply" them. But it does allow _function pointers_ to be passed around as values. We represent an Elm function as a data structure called `Closure` that contains a pointer to a C function and pointers to any partially-applied arguments. This structure is used by the "function application" operator, which implements features like partial application, higher-order functions, and so on.
 
-Let's take for example the partially applied Elm function `(+) 5 : Int -> Int`, which adds 5 to any integer.
+Let's look at the Wasm representation of the partially applied Elm function `(+) 5 : Int -> Int`. This function adds 5 to any integer, and its representation is shown in the diagram below.
 
-The header word indicates that it's a `Closure` with a `size` of 4 words. It has one applied argument (`n_values=1`) and expects 2 in total (`max_values=2`). The `evaluator` field points to the C function `Basics_add_eval`, which will be called when the last argument is applied. The `values[0]` field points to the partially applied argument `literal_int_5`.
+The header indicates that it's a `Closure` with a `size` of 4 words (a "word" being 32 bits). It has one applied value (`n_values=1`) and expects 2 values to be applied in total (`max_values=2`). The `evaluator` field points to the C function `Basics_add_eval`, which will be called when the last argument is applied. The `values[0]` field points to the partially applied argument `literal_int_5`.
 
 ![Diagram of the Wasm data structures for Closure and Int](./images/closure-example.png)
 
-<u>Note</u>: Integers are implemented as data structures with headers, because it helps with built-in typeclasses like `number` and `comparable`.
+<u>Note</u>: Elm `Int` is implemented as a data structure with a header, because it helps with "constrained type variables" like `number` and `comparable`. There are more efficient ways integers could be represented in the future.
 
-For further reading you can check out the documentation on [Elm data structures in WebAssembly](./data-structures.md), my [blog post on Closures](https://dev.to/briancarroll/elm-functions-in-webassembly-50ak), the source code for [`Utils_apply`](../src/kernel/utils.c), and the C structures representing Elm types in [types.h](../src/kernel/types.h).
-
-
-
-## Calls from JS to Wasm
-
-The only calls that are made from the JS runtime to the Wasm app are `init`, `update`, `subscriptions`, `view` and `Msg` constructors (which wrap the result of a `Cmd` before calling `update`). All of these functions are implemented in WebAssembly.
+For further reading you can check out the documentation on [Elm data structures in WebAssembly](./data-structures.md), my [blog post on Closures](https://dev.to/briancarroll/elm-functions-in-webassembly-50ak), the source for the function application operator [`Utils_apply`](../src/kernel/utils.c), and the [C structures for all the Elm types](../src/kernel/types.h).
 
 
 
+## Calls from JS runtime to Wasm app
 
+The only calls that are made from the JS runtime to the Wasm app are `init`, `update`, `subscriptions`, `view` and `Msg` constructors. (A `Msg` constructor is a function that wraps the result of a `Cmd` before calling `update`. The simplest case is a single-parameter constructor from a custom `type` definition, but it can be more complex.)
 
-## Encoding and decoding Elm values
+The Wrapper reads these functions from the Wasm memory as `Closure`s, and creates JS function closures from them.
 
-The Wasm and JS sides of the system need to make calls to each other, passing Elm data structures back and forth. But they each have their own *representations* of those Elm data structures, so we will need to translate between the two.
-
-To get data from WebAssembly to JS, the JS wrapper will _read_ bytes from the Wasm memory and decode them into a JavaScript value. It just needs an address to start reading from.
-
-
-
-For details of the byte-level data structures, see the documentation on [Elm data structures in WebAssembly](./data-structures.md).
+The JS closure remembers the Wasm `evaluator` function pointer and any partially-applied arguments. When called, it encodes any JS arguments to bytes, writes them to the Wasm memory, and creates a new copy of the `Closure`. It then calls the exported Wasm function `evalClosure`, which evaluates the `Closure` and returns the address of the result. The wrapper then reads the value at that address, converts it to a JavaScript representation, and returns it to the Elm runtime.
 
 
 
-- ambiguous cases and what to do about them
-- closures
-- app specific types - keep it brief
-- Calls from JS to Wasm
+## Calls from Wasm app to JS runtime
 
-- on program initialisation, read the 4 TEA callback Closures out of Wasm
-- any time you want to make a call, write the arguments into memory, then write a Wasm Closure that points to those arguments,
-- Then pass the address of that Closure to a dispatcher `callClosure(addr)`
+The only calls that are made from the Wasm app to the JS runtime are Kernel calls that return descriptions of effects, such as `Cmd`, `Task`, or `VirtualDom.Node`. We don't have any Wasm representation of these values because we are implementing effects in JS only.
 
-## Calls from Wasm to JS
+Instead we represent all effect values as "thunks". These are unevaluated `Closure`s that never actually get evaluated in WebAssembly. They are only evaluated by the JavaScript wrapper when it needs to transform it to a JS representation. If you've ever used Haskell, you'll be familiar with the concept of thunks.
 
-- suspended calls
-- array of kernel functions
+When the Elm app (in Wasm) makes a call to a Kernel function like `VirtualDom.text "hello"`, it evaluates to a `Closure` that represents 'whatever value results from calling the JS function `_VirtualDom_text` with argument "hello"'. Since the `VirtualDom.Node` type is opaque in Elm anyway, no Elm function can ever know the difference. These thunks can be nested to any depth. When the `view` function eventually returns to the runtime, the wrapper will want to convert its return value to JS. When it notices that the return value is an unevaluated Kernel call, it will actually *evaluate* the call and get the return value of the JavaScript kernel function.
 
-## Build system
+So in summary, we are doing effects in JS and not Wasm, so we'd prefer not to have to write Wasm representations of effect values. Therefore we _defer_ the actual call to the Kernel function until we're passing through the wrapper. Inside the Wasm Elm app, it just looks like a `Closure`, which is something the Wasm app knows how to handle.
 
-- WasmWrapper.elm
-- build scripts
+In the implementation, all Kernel `Closure`s are given an "almost infinite" arity to ensure they're always considered to be partially-applied and the Wasm code never evaluates them (`max_values=0xffff`).
+
+Wasm can only refer to things using numbers, so the wrapper stores an array of JS Kernel functions. Wasm refers to a particular Kernel function by its index in that array. The array index is stored in the `evaluator` field instead of the address of a C function.
 
 
 
-## Ambiguities in JS representations
+## Known issues
 
-- Int vs Float
+- Int vs Float ambiguity
   - unboxed integers
   - compiler changes, more type info
   - short term workaround/hack
-- Tuple2 vs Record
-
-
+- Tuple2 vs Record ambiguity
 
 ## Rejected Ideas
 
 - heap array
-

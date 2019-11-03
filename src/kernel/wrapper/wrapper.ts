@@ -528,7 +528,9 @@ function wrapWasmElmApp(
         // The only Closures that get written back (so far) are Wasm constructor functions.
         // They get passed to Task.map (Wasm) to wrap a value from JS runtime in a Msg constructor,
         // in preparation for a call to `update`
-        // (This will break if JS tries to partially apply an arg before writing to Wasm!
+        // If attaching properties to JS functions causes de-optimisation in JS engines,
+        // it might actually be worth implementing Task.map and Cmd.map in JS rather than Wasm.
+        // (This code will break if JS tries to partially apply an arg before writing to Wasm!
         // That would require custom F2, F3... But I don't think it happens. Wait for a use case.)
         const freeVars = value.freeVars;
         const max_values = value.max_values;
