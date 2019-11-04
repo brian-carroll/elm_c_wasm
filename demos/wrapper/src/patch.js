@@ -52,50 +52,7 @@ const wasmTeaRecord = wrapWasmElmApp(
 // but _before_ author$project$Main$main
 var author$project$WasmWrapper$element = function(jsTeaRecord) {
   // Ignore the JS app implementation and swap in the Wasm implementation
-  let init;
-  let subscriptions;
-  let update;
-  let view;
-  const debug = true;
-  if (!debug) {
-    init = wasmTeaRecord.init;
-    subscriptions = wasmTeaRecord.subscriptions;
-    update = wasmTeaRecord.update;
-    view = wasmTeaRecord.view;
-  } else {
-    // Log out some debug info and provide handy places to put breakpoints
-    init = flags => {
-      const resultWasm = wasmTeaRecord.init(flags);
-      const resultJs = jsTeaRecord.init(flags);
-      console.log('init', flags, '\n', resultWasm, resultJs);
-      return resultWasm;
-    };
-    subscriptions = model => {
-      const resultWasm = wasmTeaRecord.subscriptions(model);
-      const resultJs = jsTeaRecord.subscriptions(model);
-      console.log('subscriptions', model, '\n', resultWasm, resultJs);
-      return resultWasm;
-    };
-    update = F2(function(msg, model) {
-      const resultWasm = A2(wasmTeaRecord.update, msg, model);
-      const resultJs = A2(jsTeaRecord.update, msg, model);
-      console.log('update', msg, model, '\n', resultWasm, resultJs);
-      return resultWasm;
-    });
-    view = model => {
-      const resultWasm = wasmTeaRecord.view(model);
-      const resultJs = jsTeaRecord.view(model);
-      console.log('view', model, '\n', resultWasm, resultJs);
-      return resultWasm;
-    };
-  }
-  // As promised in WasmWrapper.elm, we use Browser.element
-  // to make a `Program` out of the app's TEA functions.
-  return _Browser_element({
-    init,
-    subscriptions,
-    update,
-    view
-  });
+  // As promised in WasmWrapper.elm, use Browser.element to make a `Program`
+  return _Browser_element(wasmTeaRecord);
 };
 //============ end patch.js ===================
