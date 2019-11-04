@@ -343,9 +343,9 @@ const Closure author_project_Main_funcSentToJsAndBack = {
     .evaluator = &eval_author_project_Main_funcSentToJsAndBack,
 };
 
-const ElmInt literal_int_1000 = {
-    .header = HEADER_INT,
-    .value = 1000,
+const ElmFloat literal_float_1234_5 = {
+    .header = HEADER_FLOAT,
+    .value = 1234.5,
 };
 void* eval_author_project_Main_delayedSetCounter(void* args[1]) {
   void* next = args[0];
@@ -353,7 +353,7 @@ void* eval_author_project_Main_delayedSetCounter(void* args[1]) {
       A1(&author_project_Main_funcSentToJsAndBack, next);
   return A2(&elm_core_Task_perform,
       partiallyAppliedFuncSentToJsAndBack,
-      A1(&elm_core_Process_sleep, &literal_int_1000));
+      A1(&elm_core_Process_sleep, &literal_float_1234_5));
 };
 const Closure author_project_Main_delayedSetCounter = {
     .header = HEADER_CLOSURE(0),
@@ -532,7 +532,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   printf("%p author_project_Main_init\n", &author_project_Main_init);
   printf("%p author_project_Main_funcSentToJsAndBack\n",
       &author_project_Main_funcSentToJsAndBack);
-  printf("%p literal_int_1000\n", &literal_int_1000);
+  printf("%p literal_float_1234_5\n", &literal_float_1234_5);
   printf("%p author_project_Main_delayedSetCounter\n",
       &author_project_Main_delayedSetCounter);
   printf("%p literal_int_1\n", &literal_int_1);

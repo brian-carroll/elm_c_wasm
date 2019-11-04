@@ -32,7 +32,7 @@ delayedSetCounter next =
         partiallyAppliedFuncSentToJsAndBack =
             funcSentToJsAndBack next
     in
-    Task.perform partiallyAppliedFuncSentToJsAndBack (Process.sleep 1000)
+    Task.perform partiallyAppliedFuncSentToJsAndBack (Process.sleep 1234.5)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
