@@ -132,9 +132,13 @@ This provides a nice solution for our calls from Wasm to JavaScript kernel funct
 
 Our Wasm `update` returns a value of type `( Model, Cmd Msg )`, where the `Cmd Msg` will be an unevaluated thunk. But on its way from the Wasm app to the runtime in JS, it passes through the wrapper, whose job is to convert Wasm values to equivalent JS values. In the case of a Kernel thunk, we'll convert it to JS by just evaluating it!
 
-This is really neat. Firstly, it means the WebAssembly module doesn't need to have any specific code for various effectful Kernel modules. Secondly it cleanly separates the memory management on each side. And finally, the whole thing is completely transparent to the Elm app.
+This is really neat. Firstly, it means the WebAssembly module doesn't need to have any specific code for various effectful Kernel modules. Secondly it cleanly separates the memory management on each side because none of the values in the JS array ever need to be deleted - they are "permanent" functions, not dynamic values. And finally, the whole thing is completely transparent to the Elm app.
 
-However there are a couple of details to get right here. Let's take a look.
+
+
+### Implementation details
+
+There are a couple of important details to get right here.
 
 1. We need some way to make sure the Wasm app never actually evaluates the Closure.
 2. The `evaluator` field is supposed to be a C function pointer. But we want to call a JS Kernel function, not a C function!
@@ -192,13 +196,27 @@ enum {
 
 
 
+### Summary
+
+- The JS runtime calls the Wasm `update` function through the wrapper.
+- `update` makes some calls to JS Kernel functions, but these calls are deferred using thunks.
+- When `update` returns a `( Model, Cmd Msg )` to the wrapper, it gets decoded to JavaScript values that the runtime can understand.
+- Any thunks in the `Cmd Msg` get evaluated by the wrapper
+  - It recognises a Kernel thunk by the fact that it has `max_values=65535`
+  - It uses the `evaluator` field to look up the appropriate JS function in the generated array.
+  - It then decodes any of the arguments held in the `Closure` and applies them to the JS Kernel function.
+  - This process is repeated recursively. (Some of the arguments in the `Closure` may also be thunks.)
+- The JS version of the `( Model, Cmd Msg )` tuple is then passed back to the JS runtime, which will treat it as it would in any other Elm program. It can't tell the difference!
+
+
+
 ## Known issues
 
 ### Int / Float ambiguity
 
-If the Elm runtime passes a JavaScript `number` to the app through the WebAssembly wrapper, the wrapper can't accurately detect whether it's supposed to be an `Int` or a `Float` in Elm. JavaScript doesn't make any distinction between the two. Currently I don't have a reliable solution for this!
+If the wrapper receives a JavaScript `number` from the JS runtime, it can't accurately detect whether it's supposed to be an `Int` or a `Float` in Elm. JavaScript doesn't make any distinction between the two. Currently I don't have a reliable solution for this!
 
-For the moment, I'm "making do" with an unsafe temporary workaround. The wrapper checks for _whole_ numbers and assumes they should be written to Wasm as `Int`. But this does the wrong thing for `Float` values that happen to be round numbers!
+For the moment, I'm "making do" with an unsafe temporary workaround. The current iteration of the wrapper checks for _whole_ numbers and assumes they should be written to Wasm as `Int`. But this can go wrong for `Float` values that happen to be round numbers!
 
 I can see two possible solutions
 
@@ -208,10 +226,14 @@ I can see two possible solutions
 2. Use some Elm code to help with encoding
    - I haven't thought this through fully. But it should be possible for the app to provide `elm/bytes` encoders for its `Msg` types that would make it easier to know where the `Int` and `Float` values are. Obviously this is a workaround for compiler limitations, but it might unlock progress while those limitations are still there.
 
+
+
 ### Tuple / Record ambiguity
 
 In `--optimize` mode, the generated JS for `( 123, "hello" )` is identical to the JS for `{ a = 123, b = "hello" }`
 
-This causes an ambiguity similar to the `Int`/`Float` ambiguity described above. The solutions are similar. We need type info from either the compiler or the app code. In unoptimized mode, Tuple has an extra property that allows us to distinguish it.
+This causes an ambiguity similar to the `Int`/`Float` ambiguity described above. The solutions are similar. We need type info from either the compiler or the app code.
+
+In unoptimized mode, Tuple has an extra property (`$`) that allows us to distinguish it.
 
 
