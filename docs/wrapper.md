@@ -208,6 +208,12 @@ enum {
   - This process is repeated recursively. (Some of the arguments in the `Closure` may also be thunks.)
 - The JS version of the `( Model, Cmd Msg )` tuple is then passed back to the JS runtime, which will treat it as it would in any other Elm program. It can't tell the difference!
 
+This solution is nice because
+
+- We don't _want_ to implement effect values in WebAssembly. It's cleaner if it's all in JS.
+- We _can't_ implement effect values in WebAssembly because it would involve writing JS closures to WebAssembly, which we can't do.
+- It cleanly separates the Garbage Collection on each side because the only JS references on the WebAssembly side are permanent, not dynamic.
+
 
 
 ## Known issues
