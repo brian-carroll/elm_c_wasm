@@ -1,3 +1,5 @@
+
+
 # The WebAssembly/JavaScript interface
 
 The aim of this project is to gradually implement the Elm language in WebAssembly. But currently Wasm is still in MVP stage and does not have direct access to browser APIs like the DOM, `XmlHttpRequest`, `Date`, and so on. (A few WebAssembly proposals need to get implemented first, such as [GC](https://github.com/WebAssembly/gc/blob/master/proposals/gc/Overview.md#host-types) and [type imports](https://github.com/WebAssembly/proposal-type-imports/blob/master/proposals/type-imports/Overview.md).)
@@ -89,57 +91,110 @@ If this was an `update` call then the result would be a tuple of a model and a c
 
 ## Calls from Wasm app to JS runtime
 
-The only calls that are made from the Wasm app to the JS runtime are Kernel calls that return descriptions of effects, such as `Cmd`, `Task`, or `VirtualDom.Node`. But there's no Wasm representation of these values because we decided not to implement this stuff in Wasm!
+The only calls that are made from the Wasm app to the JS runtime are Kernel calls that return "effect values": descriptions of effects such as `Cmd`, `Task`, or `VirtualDom.Node`.
 
-Instead we represent all effect values as "thunks": `Closure`s that never actually get evaluated in WebAssembly. A thunk represents a value that will _eventually_ be evaluated, but not until it gets decoded by the wrapper.
+But there's a challenge here. It would be nice if we didn't have to implement these effect values in WebAssembly at all. That gives us a nice decoupling between the two sides. Also, some of the effect values contain JS functions, and we don't have the ability to pass arbitrary JS functions _in_ to WebAssembly. Going the other way is fine, but we can't inspect the [scopes](https://css-tricks.com/javascript-scope-closures/) of a JS closure.
 
-They are only evaluated by the JavaScript wrapper when it's converting a return value from `update`, `view` and friends. If you've ever used Haskell, you'll be familiar with the concept of thunks.
+I thought of two possible approaches to achieve this:
+
+1. Maintain a JavaScript array of effect values, and let the WebAssembly module refer to them by their _index_ in that array, which is just an integer.
+> The trouble with this approach is that it's hard to know when it's safe to _delete_ values from that JS array! We'd need to be sure that nothing in Wasm is holding a copy of that reference. That would require some extension to our custom WebAssembly Garbage Collector to help manage this JS array as well as the Wasm heap! That's quite a lot of work and it's likely to be very hard to debug.
+
+2. Use _thunks_ in WebAssembly to represent the effect values. This is the approach I've implemented, and has some very nice properties! It needs a bit of explanation though. We'll get into it below.
 
 
 
-```markdown
-need a concrete example
-ideally combining effects in lists or some shit (maybe don't need?)
-VirtualDom is the obvious choice but don't want to draw too much attention to that
+### Thunks
 
-Fuck it, do vdom and explain shit
-fuck it's a bit of a cunt though
+So... what's a thunk?
 
+Well, like most programming terms, it's used slightly differently in different languages, runtimes, etc. But it generally refers to some sort of delayed calculation.
+
+Remember the `Closure` data structure from earlier? We said that it holds all of the partially-applied arguments for a function, along with some reference to an underlying "evaluator function" that actually calculates the final result. We only call the evaluator function when the last argument is applied.
+
+So normally, we never have any use for a Closure that contains _all_ of the arguments. As soon as the last argument is available, it's time to actually make the call. But what if we create a Closure that *does* contain the full set of the arguments, but decide not to actually calculate the result?
+
+Well that's what I mean by a _thunk_. It's a *suspended* function call. All the info we need for a call that we want to make later, but not now.
+
+For example, our Elm app in Wasm might want to make a call like `Process.sleep 1234.5`. Here's what that might look like as a thunk. Note that `n_values` is the same as `max_values`.
+
+![Diagram of a Wasm Closure containing a full set of arguments](./images/thunk-effect-real-arity.png)
+
+Here, `&literal_float_1234_5` is the address of a data structure holding a constant `Float`. I haven't drawn it out but it's similar to the `literal_int_5` from earlier. You can check out the [demo source code](/demos/wrapper/src/main.c) for full details.
+
+If you're curious about other variations on this general idea, see [Wikipedia](https://en.wikipedia.org/wiki/Thunk) and the [Haskell wiki](https://wiki.haskell.org/Thunk).
+
+
+
+### Using thunks for effects
+
+This provides a nice solution for our calls from Wasm to JavaScript kernel functions. When our Wasm `update`  wants to call a JS Kernel function to get an effect value, we can _defer_ that call.
+
+Our Wasm `update` returns a value of type `( Model, Cmd Msg )`, where the `Cmd Msg` will be an unevaluated thunk. But on its way from the Wasm app to the runtime in JS, it passes through the wrapper, whose job is to convert Wasm values to equivalent JS values. In the case of a Kernel thunk, we'll convert it to JS by just evaluating it!
+
+This is really neat. Firstly, it means the WebAssembly module doesn't need to have any specific code for various effectful Kernel modules. Secondly it cleanly separates the memory management on each side. And finally, the whole thing is completely transparent to the Elm app.
+
+However there are a couple of details to get right here. Let's take a look.
+
+1. We need some way to make sure the Wasm app never actually evaluates the Closure.
+2. The `evaluator` field is supposed to be a C function pointer. But we want to call a JS Kernel function, not a C function!
+
+There are many ways to make sure the Wasm app never evaluates the Closure. We _could_ generate special code for these cases. But it would be nice if we didn't have to.
+
+Luckily there is a simple solution. We can just "lie" to the Wasm module and give the `Closure` a `max_values` field that is higher than the real arity of the JS function. The only thing `max_values` is actually used for is to know when we have enough arguments to call the underlying C function. But in this case we *never* want to call any underlying C function, we want just want to collect the arguments in the `Closure`! So we might as well just set `max_values` to the maximum possible value, which happens to be 65535.
+
+This way, any time an argument is applied to it in Wasm, it will look like a partial application, and we'll just get another `Closure`! The behaviour just emerges "for free" from existing functionality.
+
+> By the way, there's no need to worry that a program might apply the wrong number of arguments by mistake! If `update` tried to apply the wrong number of arguments to an effect, it would end up returning the wrong type. (Perhaps `Float -> Cmd Msg` instead of `Cmd Msg`). So the program will never make it past the type checker, and we'll never have to generate Wasm code for it!
+
+Now our "thunk" for `Process.sleep 1234.5` changes to the following:
+
+![Diagram of a Wasm Closure with max_values set to 65535](./images/thunk-effect-max-arity.png)
+
+
+
+The second issue is that the `evaluator` is not actually a pointer to a C function. But that's OK. We know we're never going to evaluate it in C anyway! Instead we're going to let the JS wrapper evaluate it.
+
+But we still need some data in the `evaluator` field so that the wrapper knows which JS function to call.
+
+The solution is for the compiler to generate a JavaScript array of all the Kernel functions the app needs to call. And on the C side, generate a `Closure` for each JS Kernel function whose `evaluator` field is really an index of that JS array. (We just type-cast it to look like a pointer). Then when the wrapper wants to evaluate the thunk, it can look up the array to get the function, and apply whatever arguments it finds in the `Closure`.
+
+To make the C code readable, we'll give meaningful names to the JS array indices using an `enum`.
+
+```js
+// elm.js
+const jsKernelFunctions = [
+  _Json_succeed,
+  _Platform_batch,
+  _Platform_leaf,
+  _Scheduler_andThen,
+  _Scheduler_succeed,
+  _Process_sleep,
+  _VirtualDom_node,
+  _VirtualDom_on,
+  _VirtualDom_text
+];
 ```
-
-
-
-compile time
-
-- bake in JS closures
-
-runtime
-
-- update calls some effect thing
-- it gets treated as a partial call even if all arguments are actually present
-- 
-
-
-
-
-
-
-
-
-
-When the Elm app (in Wasm) makes a call to a Kernel function like `VirtualDom.text "hello"`, it gets back a `Closure` that represents 'whatever value results from calling the JS function `_VirtualDom_text` with argument "hello"'. Since the `VirtualDom.Node` type is opaque in Elm anyway, no Elm function can ever know the difference. These thunks can be nested to any depth. When the `view` function eventually returns to the runtime, the wrapper will want to convert its return value to JS. When it notices that the return value is an unevaluated Kernel call, it will actually *evaluate* the call and get the return value of the JavaScript kernel function.
-
-So in summary, we are doing effects in JS and not Wasm, so we'd prefer not to have to write Wasm representations of effect values. Therefore we _defer_ the actual call to the Kernel function until we're passing through the wrapper. Inside the Wasm Elm app, it just looks like a `Closure`, which is something the Wasm app knows how to handle.
-
-In the implementation, all Kernel `Closure`s are given an "almost infinite" arity (`max_values=0xffff`) to ensure they're always considered to be "partially applied", which means the Wasm code will never evaluate them.
-
-Wasm can only refer to things using numbers, so the wrapper stores a JS array of Kernel functions and Wasm uses its index in that array. The array index is stored in the `evaluator` field of the `Closure`, where we would otherwise store the address of a C function (but JS kernel calls never get evaluated in C).
+```c
+// main.c
+enum {
+  JS_Json_succeed,
+  JS_Platform_batch,
+  JS_Platform_leaf,
+  JS_Scheduler_andThen,
+  JS_Scheduler_succeed,
+  JS_Process_sleep,
+  JS_VirtualDom_node,
+  JS_VirtualDom_on,
+  JS_VirtualDom_text
+};
+```
 
 
 
 ## Known issues
 
-### Int vs Float ambiguity
+### Int / Float ambiguity
 
 If the Elm runtime passes a JavaScript `number` to the app through the WebAssembly wrapper, the wrapper can't accurately detect whether it's supposed to be an `Int` or a `Float` in Elm. JavaScript doesn't make any distinction between the two. Currently I don't have a reliable solution for this!
 
@@ -153,30 +208,10 @@ I can see two possible solutions
 2. Use some Elm code to help with encoding
    - I haven't thought this through fully. But it should be possible for the app to provide `elm/bytes` encoders for its `Msg` types that would make it easier to know where the `Int` and `Float` values are. Obviously this is a workaround for compiler limitations, but it might unlock progress while those limitations are still there.
 
-### Tuple vs Record ambiguity
+### Tuple / Record ambiguity
 
 In `--optimize` mode, the generated JS for `( 123, "hello" )` is identical to the JS for `{ a = 123, b = "hello" }`
 
 This causes an ambiguity similar to the `Int`/`Float` ambiguity described above. The solutions are similar. We need type info from either the compiler or the app code. In unoptimized mode, Tuple has an extra property that allows us to distinguish it.
 
 
-
-## Rejected Idea: "working set" for JS kernel values
-
-Before I thought of treating Kernel calls as thunks, I had another plan. It didn't work, but I thought I'd share in case it saves someone else pain in the future!
-
-Functions like `update` and `view` need some way to work with temporary Kernel values. Lower-level `update` functions could create ten `Cmd` values, pass them around the program before finally returning just one from the top-level `update`. In the case of `view`, we need to create a whole tree of JS values intermingled with Wasm `List`s and `String`s. Some parts of the view could be created only to be thrown away later by an `if` expression.
-
-The original idea for dealing with this was to immediately call out to JS to get the effect value but put it in a "working set" array in JS. Then I'd send the index of that JS value to Wasm, wrapped in some C structure that could be called `JsRef` or something. Wasm functions could work with the `JsRef` values.
-
-The problem with this idea is memory management. It's very hard to know when it's OK to _delete_ something from this "working set" array of JS objects. We need to know that no Wasm value is still referring to it. The program could have put that `JsRef` into the Model, or into a `Closure` that'll get passed to the runtime and back again later. Dealing with this would require an extension to the GC to manage the "working set" array as well as the Wasm memory.
-
-Oh dear. This is all possible, but it's going to be a _nightmare_ to debug!
-
-But wait, what if JS values were represented as _thunks_ on the Wasm side?
-
-Now Wasm only needs references to _permanent_ functions on the JS side. It doesn't handle any dynamically created JS values, so there's no memory management issue. The JS kernel values are only "materialised" as they pass through the JS wrapper on their way to the runtime.
-
-Once we've send a value from Wasm to JS, it gets materialised on the JS side and managed by the JavaScript GC, so Wasm can forget about it. It's garbage. If JS ever needs to send it back, it will just write a new copy.
-
-This completely decouples the memory management on either side of the JS/Wasm boundary, which is great!
