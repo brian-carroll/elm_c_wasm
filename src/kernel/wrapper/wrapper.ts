@@ -362,8 +362,14 @@ function wrapWasmElmApp(
    * Serialises to bytes before writing
    * May throw an error
    */
-  function writeWasmValue(value: any): number {
-    return handleWasmWrite(nextIndex => writeWasmValueHelp(nextIndex, value));
+  function writeWasmValue(nextIndex: number, value: any): WriteResult {
+    const typeInfo: TypeInfo = detectElmType(value);
+    if (typeInfo.kind === 'constAddr') {
+      return { addr: typeInfo.value, nextIndex };
+    }
+    const tag: Tag = typeInfo.value;
+    const builder: WasmBuilder = wasmBuilder(tag, value);
+    return writeFromBuilder(nextIndex, builder, tag);
   }
 
   type TypeInfo =
@@ -389,16 +395,6 @@ function wrapWasmElmApp(
         jsChildren: any[];
         bodyWriter: null;
       };
-
-  function writeWasmValueHelp(nextIndex: number, value: any): WriteResult {
-    const typeInfo: TypeInfo = detectElmType(value);
-    if (typeInfo.kind === 'constAddr') {
-      return { addr: typeInfo.value, nextIndex };
-    }
-    const tag: Tag = typeInfo.value;
-    const builder: WasmBuilder = wasmBuilder(tag, value);
-    return writeFromBuilder(nextIndex, builder, tag);
-  }
 
   function detectElmType(elmValue: any): TypeInfo {
     switch (typeof elmValue) {
@@ -580,7 +576,7 @@ function wrapWasmElmApp(
       const { body, jsChildren } = builder;
       const childAddrs: number[] = [];
       jsChildren.forEach(child => {
-        const update = writeWasmValueHelp(nextIndex, child); // recurse
+        const update = writeWasmValue(nextIndex, child); // recurse
         childAddrs.push(update.addr);
         nextIndex = update.nextIndex;
       });
@@ -618,7 +614,7 @@ function wrapWasmElmApp(
   // Extra fields for test & debug, ignored by JS Kernel
   interface Wrapper extends MainRecord {
     readWasmValue: typeof readWasmValue;
-    writeWasmValue: typeof writeWasmValue;
+    writeWasmValue: (value: any) => number;
   }
 
   const mainRecordAddr = wasmExports._getMainRecord();
@@ -631,8 +627,10 @@ function wrapWasmElmApp(
     subscriptions: mainRecord.subscriptions,
     update: mainRecord.update,
     view: mainRecord.view,
+    // functions for testing
     readWasmValue,
-    writeWasmValue
+    writeWasmValue: value =>
+      handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value))
   };
 
   return wrapper;
