@@ -37,7 +37,7 @@ const jsKernelFunctions = [
 
 // Apply the wrapper to the Wasm module, passing the config params too
 // wrapWasmElmApp must be in scope where this code is inserted.
-const wasmTeaRecord = wrapWasmElmApp(
+const wasmMainRecord = wrapWasmElmApp(
   EmscriptenModule.buffer, // The `ArrayBuffer` memory block shared between JS and Wasm
   EmscriptenModule.asm, // Object of exported functions from the Wasm module
   appTypes, // App-specific type info passed from Elm compiler to this wrapper
@@ -50,9 +50,9 @@ const wasmTeaRecord = wrapWasmElmApp(
 // We're relying on this code being inserted in the right place by the
 // build script `build-combine.sh`. That's _after_ the original `var`,
 // but _before_ author$project$Main$main
-var author$project$WasmWrapper$element = function(jsTeaRecord) {
+var author$project$WasmWrapper$element = function(jsMainRecord) {
   // Ignore the JS app implementation and swap in the Wasm implementation
   // As promised in WasmWrapper.elm, use Browser.element to make a `Program`
-  return _Browser_element(wasmTeaRecord);
+  return _Browser_element(wasmMainRecord);
 };
 //============ end patch.js ===================
