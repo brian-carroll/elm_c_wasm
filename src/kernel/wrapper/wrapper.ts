@@ -208,9 +208,9 @@ function wrapWasmElmApp(
         const wasmCtor = mem32[index + 1];
         const jsCtor = appTypes.ctors[wasmCtor];
         const custom: Record<string, any> = { $: jsCtor };
-        let fieldCharCode = 'a'.charCodeAt(0);
+        const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
         for (let i = index + 2; i < index + size; i++) {
-          const field = String.fromCharCode(fieldCharCode++);
+          const field = fieldNames[i];
           const childAddr = mem32[i];
           custom[field] = readWasmValue(childAddr);
         }
@@ -220,10 +220,11 @@ function wrapWasmElmApp(
         const record: Record<string, any> = {};
         const fgIndex = mem32[index + 1] >> 2;
         const fgSize = mem32[fgIndex];
+        const fields = appTypes.fields;
         for (let i = 1; i <= fgSize; i++) {
           const fieldId = mem32[fgIndex + i];
           const valAddr = mem32[index + 1 + i];
-          const fieldName = appTypes.fields[fieldId];
+          const fieldName = fields[fieldId];
           const value = readWasmValue(valAddr);
           record[fieldName] = value;
         }
