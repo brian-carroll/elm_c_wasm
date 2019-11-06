@@ -38,10 +38,10 @@ const jsKernelFunctions = [
 // Apply the wrapper to the Wasm module, passing the config params too
 // wrapWasmElmApp must be in scope where this code is inserted.
 const wasmTeaRecord = wrapWasmElmApp(
-  EmscriptenModule.buffer,
-  EmscriptenModule.asm,
-  appTypes,
-  jsKernelFunctions
+  EmscriptenModule.buffer, // The `ArrayBuffer` memory block shared between JS and Wasm
+  EmscriptenModule.asm, // Object of exported functions from the Wasm module
+  appTypes, // App-specific type info passed from Elm compiler to this wrapper
+  jsKernelFunctions // Array of all JS kernel functions called by the Elm Wasm module
 );
 
 // Swap in the wrapped Wasm app instead of the generated JS app

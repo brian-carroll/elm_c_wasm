@@ -73,11 +73,15 @@ view model =
         ]
 
 
+subscriptions _ =
+    Sub.none
+
+
 main : Program () Model Msg
 main =
     WasmWrapper.element
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
