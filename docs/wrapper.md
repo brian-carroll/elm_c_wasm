@@ -211,7 +211,7 @@ So our thunk for `Process.sleep 1234.5` is actually implemented with `max_values
 
 The second issue is that the `evaluator` is not actually a pointer to a C function. But that's OK. Now that we have a ridiculously high value for `max_values`, the Wasm module will never try to evaluate the call. So it will never have any reason to try to dereference that pointer. We can put whatever we like in there.
 
-The logical thing to do with the `evaluator` field is to put some information in it that lets the wrapper know which JS function to call. The solution is for the compiler to generate a JavaScript array of all the Kernel functions the app could call. The `evaluator` field can be an index into that array so the wrapper can just [look up the right function](https://github.com/brian-carroll/elm_c_wasm/blob/8a9479df950f408bf7574e834fcb51a245836d8e/src/kernel/wrapper/wrapper.ts#L257).
+The logical thing to do with the `evaluator` field is to put some information in it that lets the wrapper know which JS function to call. The solution is for the compiler to generate a JavaScript array of all the Kernel functions the app could call. The `evaluator` field can be an index into that array so the wrapper can just [look up the right function](https://github.com/brian-carroll/elm_c_wasm/blob/84d30c73fd302e3e065df56977b3e3d1dedbb4fe/src/kernel/wrapper/wrapper.ts#L258).
 
 In C, we'll generate a `Closure` for each JS Kernel function and put a value into the `evaluator` field that matches the corresponding index of the JS array. To make the C code more readable, we'll give meaningful names to these integers using an `enum`.
 
