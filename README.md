@@ -19,20 +19,15 @@ I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-co
 Here's roughly how I see the project progressing from here, as of October 2019. (Unless some big unknown bites me, which it might!)
 
 - [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][core-unit-tests].
-
 - [x] Do some initial exploration of C code generation in a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c). Understand how it works and what's involved.
-
 - [x] Implement a [Garbage Collector](./docs/gc.md) in C and compile it to Wasm. Prove it works using [in-browser unit tests][gc-unit-tests] and an [elm-benchmark app][benchmark].
-
-- [ ] Create a wrapper to connect a WebAssembly module to Elm's kernel JavaScript.
+- [x] Create a wrapper to connect a WebAssembly module to Elm's kernel JavaScript.
 
   - Figure out what memory management issues exist related to crossing the language boundary. (What if Wasm's memory overflows when JS writes to it? Does Wasm need to refer to JS objects, and if so, how? How to deal with `onClick` handlers? etc.)
   - Get a "hello world" app working with kernel entirely in JS and pure Elm entirely in Wasm. Very minimal Elm code, hand-compiled to C.
-
 - [ ] Finish code generation for the full Elm AST (outputting both C and JS)
-
+	- Test on an example app. Perhaps Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), probably something smaller first
 - [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
-
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
 
 My general approach is to explore all the different pieces, then work on the biggest unknown until I understand the important issues and/or solved some problem. Once I feel like I understand that well, move on to the next biggest unknown.
