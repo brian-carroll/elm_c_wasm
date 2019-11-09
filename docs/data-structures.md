@@ -55,7 +55,7 @@ Let's look at the Wasm representation of the partially applied Elm function `(+)
 
 The header indicates that it's a `Closure` with a `size` of 4 words (a "word" being 32 bits). It has one applied value (`n_values=1`) and expects 2 values to be applied in total (`max_values=2`). The `evaluator` field points to the C function `Basics_add_eval`, which will be called when the last argument is applied. The `values[0]` field points to the partially applied argument `literal_int_5`.
 
-![Diagram of the Wasm data structures for Closure and Int](C:/Users/brian/Code/wasm/c/codelite/docs/images/closure-example.png)
+![Diagram of the Wasm data structures for Closure and Int](./images/closure-example.png)
 
 A working example of all of this can be the tests for the `apply` operator. Read the [source][utils-test-src] or [run the tests][utils-test-run] in your browser. You can also check out a [blog post][blogpost] I wrote about how to implement Elm first-class functions in WebAssembly. (The implementation of `n_values` and `max_values` has changed since the post was written but otherwise it's the same.)
 

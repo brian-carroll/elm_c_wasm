@@ -114,7 +114,7 @@ The header indicates that it's a `Closure` with a `size` of 4 words (a "word" be
 
 ![Diagram of the Wasm data structures for Closure and Int](./images/closure-example.png)
 
-> **Note:** Elm's `Int` is implemented as a data structure with a header, which it helps with "constrained type variables" like `number` and `comparable`. There are more efficient ways integers could be represented in the future.
+> **Note:** Elm's `Int` is implemented as a data structure with a header, which helps with "constrained type variables" like `number` and `comparable`. There are more efficient ways integers could be represented in the future.
 
 For further reading you can check out the documentation on [Elm data structures in WebAssembly](./data-structures.md), my [blog post on Closures](https://dev.to/briancarroll/elm-functions-in-webassembly-50ak), the source for the function application operator [`Utils_apply`](../src/kernel/utils.c), and the [C structures for all the Elm types](../src/kernel/types.h).
 
@@ -277,13 +277,30 @@ I can see two possible solutions
 2. Use some Elm code to help with encoding
    - I haven't thought this through fully. But it should be possible for the app to provide `elm/bytes` encoders for its `Msg` types that would make it easier to know where the `Int` and `Float` values are. Obviously this is a workaround for compiler limitations, but it might unlock progress while those limitations are still there.
 
+### Integer size inconsistencies
+
+I tried to build a demo based on `Time.now` but it didn't work because it returns an integer that needs 41 bits to represent and I've implemented only 32-bit integers in WebAssembly. The `Time` module might need an alternative implementation for WebAssembly that might not be compatible with the JavaScript version.
+
+I could have used 64 bit integers but there are a few drawbacks to that:
+
+- If integers are a different size from pointers, it's very hard to implement "unboxed integers" later, so integer-based code will always be slow forever.
+- JavaScript can't actually handle a full 64 bit integer, it only goes up to 53 bits before being represented as a floating-point number.
+- The 64-bit integer is the only Wasm number type that can't be passed from Wasm to JS. You'd have to read it out as two 32-bit numbers and recombine on the JS side.
+- The `elm/core` `Bitwise` module relies on 32-bit integers.
+
+So I don't think it's feasible to do a WebAssembly implementation whose integers are consistent with the JavaScript version. There's no way to hide this from the application programmer while also making things efficient and fast.
+
+
+
 ### Tuple / Record ambiguity
 
 In `--optimize` mode, the generated JS for `( 123, "hello" )` is identical to the JS for `{ a = 123, b = "hello" }`
 
 This causes an ambiguity similar to the `Int`/`Float` ambiguity described above. The solutions are similar. We need type info from either the compiler or the app code.
 
-In unoptimized mode, Tuple has an extra property (`$`) that allows us to distinguish it.
+In unoptimized mode, Tuple has an extra property (`$`) that allows us to distinguish it
+
+
 
 ## Links
 
