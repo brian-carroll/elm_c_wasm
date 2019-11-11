@@ -1,6 +1,6 @@
 #include "../replay_test.h"
 
-static const ElmInt zero = {
+static ElmInt zero = {
     .header = HEADER_INT,
     .value = 0,
 };
@@ -55,7 +55,7 @@ char* test_replay_tce_saturated_iter2() {
   closure_spec_iter2.values[0] = int4;
 
   // HEAP BEFORE GC
-  const void* heap_before_spec[] = {
+  void* heap_before_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
       },
@@ -110,7 +110,7 @@ char* test_replay_tce_saturated_iter2() {
   closure_spec_iter2.values[0] = h + 2 * sizeof(GcStackMap);
 
   // HEAP AFTER GC
-  const void* heap_after_spec[] = {
+  void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
           .newer = h + sizeof(GcStackMap),

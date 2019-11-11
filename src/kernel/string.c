@@ -29,7 +29,7 @@ void* String_append_eval(void* args[2]) {
 
   return s;
 }
-const Closure String_append = {
+Closure String_append = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &String_append_eval,
     .max_values = 2,
@@ -48,7 +48,7 @@ static void* String_fromInt_eval(void* args[1]) {
   }
   return s;
 }
-const Closure String_fromInt = {
+Closure String_fromInt = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &String_fromInt_eval,
     .max_values = 1,

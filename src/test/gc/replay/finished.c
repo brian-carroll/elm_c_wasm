@@ -36,7 +36,7 @@ char* test_replay_finished() {
   void* h = gc_state.heap.start;
 
   // HEAP BEFORE GC
-  const void* heap_before_spec[] = {
+  void* heap_before_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
       },
@@ -74,7 +74,7 @@ char* test_replay_finished() {
       memcmp(result2, &expected_result, expected_result.header.size * SIZE_UNIT) == 0);
 
   // HEAP AFTER GC
-  const void* heap_after_spec[] = {
+  void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
           .newer = h + sizeof(GcStackMap),

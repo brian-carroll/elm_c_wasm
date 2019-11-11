@@ -5,19 +5,19 @@
 #endif
 // #include <stdio.h>
 #include "../../../src/kernel/basics.h"
+#include "../../../src/kernel/debug.h"
 #include "../../../src/kernel/gc-internals.h"
 #include "../../../src/kernel/gc.h"
 #include "../../../src/kernel/types.h"
 #include "../../../src/kernel/utils.h"
-#include "../../../src/kernel/debug.h"
 
 extern GcState gc_state;
 
-const ElmInt literal_0 = {
+ElmInt literal_0 = {
     .header = HEADER_INT,
     .value = 0,
 };
-const ElmInt literal_1 = {
+ElmInt literal_1 = {
     .header = HEADER_INT,
     .value = 1,
 };
@@ -40,11 +40,11 @@ void* eval_tce_count(void* args[1], void** gc_tce_data) {
   }
 }
 
-const Closure count;  // pre-declaration for circular dependency
+Closure count;  // pre-declaration for circular dependency
 void* eval_count(void* args[1]) {
   return GC_tce_eval(&eval_tce_count, &count, args);
 }
-const Closure count = {
+Closure count = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_count,
     .max_values = 1,
@@ -90,7 +90,7 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
   return (int)result->header.tag;  // makes no sense but it's the right type
 }
 
-const Closure count_no_tce;  // pre-declaration for circular dependency
+Closure count_no_tce;  // pre-declaration for circular dependency
 // int level = 0;
 
 void* eval_count_no_tce(void* args[]) {
@@ -107,7 +107,7 @@ void* eval_count_no_tce(void* args[]) {
   }
 }
 
-const Closure count_no_tce = {
+Closure count_no_tce = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_count_no_tce,
     .max_values = 1,

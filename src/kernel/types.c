@@ -116,14 +116,14 @@ u32 custom_params(Custom* c) {
   return (total_size - before_pointers) / sizeof(void*);
 }
 
-const Cons Nil = {.header = HEADER_LIST, .head = NULL, .tail = NULL};
-const Custom Unit = {.header = HEADER_CUSTOM(0), .ctor = 0};
-const Custom True = {.header = HEADER_CUSTOM(0), .ctor = 1};
-const Custom False = {.header = HEADER_CUSTOM(0), .ctor = 0};
-const GcException GcFull = {.header = HEADER_GC_EXCEPTION};
+Cons Nil = {.header = HEADER_LIST, .head = NULL, .tail = NULL};
+Custom Unit = {.header = HEADER_CUSTOM(0), .ctor = 0};
+Custom True = {.header = HEADER_CUSTOM(0), .ctor = 1};
+Custom False = {.header = HEADER_CUSTOM(0), .ctor = 0};
+GcException GcFull = {.header = HEADER_GC_EXCEPTION};
 
-const void* pNil = &Nil;
-const void* pUnit = &Unit;
-const void* pTrue = &True;
-const void* pFalse = &False;
-const void* pGcFull = &GcFull;
+void* pNil = &Nil;
+void* pUnit = &Unit;
+void* pTrue = &True;
+void* pFalse = &False;
+void* pGcFull = &GcFull;

@@ -17,7 +17,7 @@ static int brk(void* ptr) {
 }
 #endif
 
-static const size_t ALL_ONES = -1;  // 0xfffff...
+static size_t ALL_ONES = -1;  // 0xfffff...
 
 /* ====================================================
 
@@ -84,12 +84,12 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
 
   // This calculation is in bytes, not words, to prevent
   // truncation errors for smaller blocks (<1 word of bitmap)
-  const size_t bytes_per_word = sizeof(void*);
+  size_t bytes_per_word = sizeof(void*);
   size_t heap_bytes = heap_words * bytes_per_word;
 
-  const size_t bitmap_bytes_per_block = GC_BLOCK_BYTES / GC_WORD_BITS;
-  const size_t offset_bytes_per_block = bytes_per_word;
-  const size_t block_plus_overhead_bytes =
+  size_t bitmap_bytes_per_block = GC_BLOCK_BYTES / GC_WORD_BITS;
+  size_t offset_bytes_per_block = bytes_per_word;
+  size_t block_plus_overhead_bytes =
       GC_BLOCK_BYTES + bitmap_bytes_per_block + offset_bytes_per_block;
 
   // A fractional block needs the overhead of a full block

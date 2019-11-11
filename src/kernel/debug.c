@@ -199,7 +199,7 @@ void print_state() {
   print_bitmap();
 }
 
-void log_error(const char* fmt, ...) {
+void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   print_heap();

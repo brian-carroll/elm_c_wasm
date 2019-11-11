@@ -61,7 +61,7 @@ char* test_replay_apply_alloc_failed() {
   Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
 
   // HEAP AFTER GC
-  const void* heap_after_spec[] = {
+  void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
           .newer = h + sizeof(GcStackMap),

@@ -1,11 +1,11 @@
 #include "../replay_test.h"
 
-static const ElmInt zero = {
+static ElmInt zero = {
     .header = HEADER_INT,
     .value = 0,
 };
 
-static const Closure full_spec = {
+static Closure full_spec = {
     .header = HEADER_CLOSURE(2),
     .max_values = 2,
     .n_values = 2,
@@ -38,7 +38,7 @@ char* test_replay_tce_saturated_iter1() {
   void* h = gc_state.heap.start;
 
   // HEAP BEFORE GC
-  const void* heap_before_spec[] = {
+  void* heap_before_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
       },
@@ -71,7 +71,7 @@ char* test_replay_tce_saturated_iter1() {
   Utils_apply(&mock_func_tail, 2, (void* []){&zero, NULL});
 
   // HEAP AFTER GC
-  const void* heap_after_spec[] = {
+  void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
           .newer = h + sizeof(GcStackMap),
