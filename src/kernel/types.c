@@ -110,6 +110,16 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
   return p;
 }
 
+Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
+  Record* r = GC_malloc(sizeof(Record) + n_children * sizeof(void*));
+  r->header = HEADER_RECORD(n_children);
+  r->fieldgroup = fg;
+  for (size_t i = 0; i < n_children; ++i) {
+    r->values[i] = children[i];
+  }
+  return r;
+}
+
 u32 custom_params(Custom* c) {
   u32 total_size = c->header.size * SIZE_UNIT;
   u32 before_pointers = sizeof(Header) + sizeof(u32);

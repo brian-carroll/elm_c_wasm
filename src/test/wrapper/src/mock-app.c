@@ -259,7 +259,7 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   init_records();
   init_closure();
 
-  wrapper_register_fieldGroups(fieldGroupsArray);
+  Wrapper_registerFieldGroups(fieldGroupsArray);
 
   return exit_code;
 }

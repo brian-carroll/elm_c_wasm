@@ -13,16 +13,16 @@
 extern GcState gc_state;
 
 FieldGroup** appFieldGroups;
-Record* mainRecord;
+void** mainGcRoot;
 
 /*
     API exposed to C app
 */
-void wrapper_register_mainRecord(Record* mainRecordFromApp) {
-  mainRecord = mainRecordFromApp;
+void Wrapper_registerMainRecord(void** mainGcRootFromApp) {
+  mainGcRoot = mainGcRootFromApp;
 }
 
-void wrapper_register_fieldGroups(FieldGroup** fgArrayFromApp) {
+void Wrapper_registerFieldGroups(FieldGroup** fgArrayFromApp) {
   appFieldGroups = fgArrayFromApp;
 }
 
@@ -31,7 +31,7 @@ void wrapper_register_fieldGroups(FieldGroup** fgArrayFromApp) {
 */
 
 size_t EMSCRIPTEN_KEEPALIVE getMainRecord() {
-  return (size_t)mainRecord;
+  return (size_t)(*mainGcRoot);
 };
 
 size_t nextFieldGroup = 0;

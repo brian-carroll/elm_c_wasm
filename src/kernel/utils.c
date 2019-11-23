@@ -1,4 +1,5 @@
 #include "./utils.h"
+#include <assert.h>
 #include <string.h>
 #include "./gc.h"
 #include "./list.h"
@@ -12,6 +13,17 @@ extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #else
 #define log_error(...)
 #endif
+
+void Utils_initGlobal(void** global, void* (*init_func)()) {
+  GC_register_root(global);
+  if ((*global = init_func()) != pGcFull) return;
+
+  GC_collect_full();
+  if ((*global = init_func()) != pGcFull) return;
+
+  // fprintf(stderr, "Heap overflow initialising global at %p", global);
+  assert(0);
+}
 
 void* Utils_destruct_index(ElmValue* v, size_t index) {
   // Destructure by index: custom, cons, or tuple
@@ -71,18 +83,12 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
   return 0;
 }
 
-static void* access_eval(void* args[2]) {
-  ElmInt* field = (ElmInt*)args[0];
+void* Utils_access_eval(void* args[2]) {
+  u32 field = (u32)(size_t)args[0];  // unboxed!
   Record* record = (Record*)args[1];
-
-  u32 index = fieldgroup_search(record->fieldgroup, field->value);
+  u32 index = fieldgroup_search(record->fieldgroup, field);
   return record->values[index];
 }
-const Closure Utils_access = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &access_eval,
-    .max_values = 2,
-};
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   Record* r_new = Utils_clone(r);

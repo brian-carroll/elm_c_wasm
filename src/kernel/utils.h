@@ -4,7 +4,6 @@
 #include "types.h"
 
 const Closure Utils_eq;
-const Closure Utils_access;
 const Closure Utils_append;
 const Closure Utils_compare;
 
@@ -20,6 +19,7 @@ const Custom Utils_GT;
 void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
 void* Utils_clone(void* x);
+void* Utils_access_eval(void* args[2]);
 
 #define A1(f, a) CAN_THROW(Utils_apply(f, 1, (void* []){a}))
 #define A2(f, a, b) CAN_THROW(Utils_apply(f, 2, (void* []){a, b}))

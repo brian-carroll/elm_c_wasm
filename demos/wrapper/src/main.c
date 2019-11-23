@@ -479,17 +479,29 @@ const Closure author_project_Main_subscriptions = {
 
 // Elm main (export to JS wrapper)
 
-const Record main_record = {
-    .header = HEADER_RECORD(4),
-    .fieldgroup = &fg_init_subscriptions_update_view,
-    .values =
-        {
-            &author_project_Main_init,
-            &author_project_Main_subscriptions,
-            &author_project_Main_update,
-            &author_project_Main_view,
-        },
+void* eval_wasm_WasmWrapper_element(void* args[1]) {
+  return args[0];
+}
+Closure wasm_WasmWrapper_element = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0,
+    .max_values = 1,
+    .evaluator = &eval_wasm_WasmWrapper_element,
 };
+
+#define author_project_Main_main (*ptr_author_project_Main_main)
+void* ptr_author_project_Main_main;
+void* init_author_project_Main_main() {
+  return A1(&wasm_WasmWrapper_element,
+      ctorRecord(&fg_init_subscriptions_update_view,
+          4,
+          (void* []){
+              &author_project_Main_init,
+              &author_project_Main_subscriptions,
+              &author_project_Main_update,
+              &author_project_Main_view,
+          }));
+}
 
 // C main (Wasm module initialisation)
 
@@ -497,8 +509,10 @@ int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
   int exit_code = GC_init();
   if (exit_code) return exit_code;
 
-  wrapper_register_fieldGroups(app_field_groups);
-  wrapper_register_mainRecord(&main_record);
+  Utils_initGlobal(&ptr_author_project_Main_main, &init_author_project_Main_main);
+
+  Wrapper_registerFieldGroups(app_field_groups);
+  Wrapper_registerMainRecord(&ptr_author_project_Main_main);
 
   printf("Constant top level values:\n");
   printf("%p elm_core_Platform_Cmd_batch\n", &elm_core_Platform_Cmd_batch);

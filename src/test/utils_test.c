@@ -78,7 +78,13 @@ char* test_records() {
   r2->values[2] = NEW_ELM_FLOAT(1.0);
 
   // The actual accessor function
-  Closure* access_someField = A1(&Utils_access, NEW_ELM_INT(someField));
+  u8 mem_accessor[sizeof(Closure) + sizeof(void*)];
+  Closure* access_someField = (Closure*)mem_accessor;
+  access_someField->header = HEADER_CLOSURE(1);
+  access_someField->max_values = 2;
+  access_someField->n_values = 1;
+  access_someField->evaluator = &Utils_access_eval;
+  access_someField->values[0] = (void*)(size_t)someField;
 
   ElmInt* int1 = A1(access_someField, r1);
   ElmInt* int2 = A1(access_someField, r2);

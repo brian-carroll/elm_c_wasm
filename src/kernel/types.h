@@ -216,6 +216,7 @@ typedef struct {
   FieldGroup* fieldgroup;
   void* values[];
 } Record;
+Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]);
 
 /*
  Elm compiler generates
