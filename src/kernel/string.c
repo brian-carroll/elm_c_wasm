@@ -5,6 +5,17 @@
 #include "types.h"
 
 // local utility function
+#if STRING_ENCODING == UTF16
+size_t String_bytes(ElmString* s) {
+  u32 size = s->header.size;
+  u32 size16 = size * SIZE_UNIT / 2;
+  u16* words16 = (u16*)s;
+  u16 last = words16[size16 - 1];
+  size_t len16 = last ? (size16 - 2) : (size16 - 3);
+  size_t len8 = len16 < 1;
+  return len8;
+}
+#else
 size_t String_bytes(ElmString* s) {
   size_t total_bytes = (size_t)(s->header.size * SIZE_UNIT);
   u8* struct_bytes = (u8*)s;
@@ -12,6 +23,7 @@ size_t String_bytes(ElmString* s) {
   size_t len = (total_bytes - sizeof(Header)) - (size_t)(last_byte + 1);
   return len;
 }
+#endif
 
 void* String_append_eval(void* args[2]) {
   ElmString* a = args[0];

@@ -318,6 +318,30 @@ char* test_strings() {
   }
 
 #ifdef TARGET_64BIT
+#if STRING_ENCODING == UTF16
+  mu_assert("0-byte string should have correct body & padding",
+      memcmp(str0->bytes, "\0\0\0\0", (str0->header.size * 8) - 4) == 0);
+  mu_assert("1-byte string should have correct body & padding",
+      memcmp(str1->bytes, "1\0\0\0", (str1->header.size * 8) - 4) == 0);
+  mu_assert("2-byte string should have correct body & padding",
+      memcmp(str2->bytes, "12\0\0", (str2->header.size * 8) - 4) == 0);
+  mu_assert("3-byte string should have correct body & padding",
+      memcmp(str3->bytes, "123", (str3->header.size * 8) - 4) == 0);
+  mu_assert("4-byte string should have correct body & padding",
+      memcmp(str4->bytes, "1234\0\0\0\0", (str4->header.size * 8) - 4) == 0);
+  mu_assert("5-byte string should have correct body & padding",
+      memcmp(str5->bytes, "12345\0\0\0\0\0\0\0", (str5->header.size * 8) - 4) == 0);
+  mu_assert("7-byte string should have correct body & padding",
+      memcmp(str7->bytes, "1234567\0\0\0\0\0", (str7->header.size * 8) - 4) == 0);
+  mu_assert("8-byte string should have correct body & padding",
+      memcmp(str8->bytes, "12345678\0\0\0\0", (str8->header.size * 8) - 4) == 0);
+  mu_assert("9-byte string should have correct body & padding",
+      memcmp(str9->bytes, "123456789\0\0\0", (str9->header.size * 8) - 4) == 0);
+  mu_assert("N-byte string should have correct body & padding",
+      memcmp(strN->bytes,
+          "The quick brown fox jumped over the lazy dog, yeah.",
+          (strN->header.size * 8) - 4) == 0);
+#else
   mu_assert("0-byte string should have correct body & padding",
       memcmp(str0->bytes, "\0\0\0\3", (str0->header.size * 8) - 4) == 0);
   mu_assert("1-byte string should have correct body & padding",
@@ -340,12 +364,17 @@ char* test_strings() {
       memcmp(strN->bytes,
           "The quick brown fox jumped over the lazy dog, yeah.",
           (strN->header.size * 8) - 4) == 0);
+#endif
 
   mu_assert("0-byte string should have correct size field", str0->header.size == 1);
   mu_assert("1-byte string should have correct size field", str1->header.size == 1);
   mu_assert("2-byte string should have correct size field", str2->header.size == 1);
   mu_assert("3-byte string should have correct size field", str3->header.size == 1);
+#if STRING_ENCODING == UTF16
+  mu_assert("4-byte string should have correct size field", str4->header.size == 1);
+#else
   mu_assert("4-byte string should have correct size field", str4->header.size == 2);
+#endif
   mu_assert("5-byte string should have correct size field", str5->header.size == 2);
   mu_assert("7-byte string should have correct size field", str7->header.size == 2);
   mu_assert("8-byte string should have correct size field", str8->header.size == 2);
