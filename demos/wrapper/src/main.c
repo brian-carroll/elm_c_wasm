@@ -368,7 +368,7 @@ ElmInt literal_int_1 = {
 void* eval_author_project_Main_update(void* args[2]) {
   Custom* msg = args[0];
   ElmInt* newModel = msg->values[0];
-  void* cmd = A2(&Utils_eq, newModel, &literal_int_0) == &True
+  void* cmd = A2(&Utils_equal, newModel, &literal_int_0) == &True
                   ? &elm_core_Platform_Cmd_none
                   : A1(&author_project_Main_delayedSetCounter,
                         A2(&Basics_sub, newModel, &literal_int_1));
@@ -434,7 +434,7 @@ ElmInt literal_int_5 = {
 
 void* eval_author_project_Main_view(void* args[1]) {
   void* model = args[0];
-  int isZero = A2(&Utils_eq, model, &literal_int_0) == &True;
+  int isZero = A2(&Utils_equal, model, &literal_int_0) == &True;
   void* str = isZero ? &literal_string_ClickTheButton : A1(&String_fromInt, model);
   return A2(&elm_html_Html_div,
       &Nil,

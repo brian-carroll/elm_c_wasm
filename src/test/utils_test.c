@@ -247,38 +247,38 @@ char* test_eq(void) {
     printf("\n");
   }
 
-  mu_assert("Expect: () == ()", A2(&Utils_eq, &Unit, &Unit) == &True);
+  mu_assert("Expect: () == ()", A2(&Utils_equal, &Unit, &Unit) == &True);
 
-  mu_assert("Expect: True == True", A2(&Utils_eq, &True, &True) == &True);
-  mu_assert("Expect: False == False", A2(&Utils_eq, &False, &False) == &True);
-  mu_assert("Expect: True /= False", A2(&Utils_eq, &True, &False) == &False);
-  mu_assert("Expect: False /= True", A2(&Utils_eq, &False, &True) == &False);
+  mu_assert("Expect: True == True", A2(&Utils_equal, &True, &True) == &True);
+  mu_assert("Expect: False == False", A2(&Utils_equal, &False, &False) == &True);
+  mu_assert("Expect: True /= False", A2(&Utils_equal, &True, &False) == &False);
+  mu_assert("Expect: False /= True", A2(&Utils_equal, &False, &True) == &False);
 
   ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
   ElmInt three = (ElmInt){.header = HEADER_INT, .value = 3};
 
-  mu_assert("Expect: 2 == 2", A2(&Utils_eq, &two, &two) == &True);
-  mu_assert("Expect: 2 /= 3", A2(&Utils_eq, &two, &three) == &False);
+  mu_assert("Expect: 2 == 2", A2(&Utils_equal, &two, &two) == &True);
+  mu_assert("Expect: 2 /= 3", A2(&Utils_equal, &two, &three) == &False);
 
   ElmFloat* f = NEW_ELM_FLOAT(123.456);
   ElmFloat* f1 = NEW_ELM_FLOAT(123.456);
   ElmFloat* f2 = NEW_ELM_FLOAT(2.0);
-  mu_assert("Expect: 123.456 == 123.456 (by reference)", A2(&Utils_eq, f, f) == &True);
-  mu_assert("Expect: 123.456 == 123.456 (by value)", A2(&Utils_eq, f, f1) == &True);
-  mu_assert("Expect: 123.456 /= 2.0", A2(&Utils_eq, f, f2) == &False);
+  mu_assert("Expect: 123.456 == 123.456 (by reference)", A2(&Utils_equal, f, f) == &True);
+  mu_assert("Expect: 123.456 == 123.456 (by value)", A2(&Utils_equal, f, f1) == &True);
+  mu_assert("Expect: 123.456 /= 2.0", A2(&Utils_equal, f, f2) == &False);
 
   ElmChar a1 = (ElmChar){.header = HEADER_CHAR, .value = 'A'};
   ElmChar a2 = (ElmChar){.header = HEADER_CHAR, .value = 'A'};
   ElmChar b = (ElmChar){.header = HEADER_CHAR, .value = 'B'};
-  mu_assert("Expect: 'A' == 'A', by reference", A2(&Utils_eq, &a1, &a1) == &True);
-  mu_assert("Expect: 'A' == 'A', by value", A2(&Utils_eq, &a1, &a2) == &True);
-  mu_assert("Expect: 'A' /= 'B'", A2(&Utils_eq, &a1, &b) == &False);
+  mu_assert("Expect: 'A' == 'A', by reference", A2(&Utils_equal, &a1, &a1) == &True);
+  mu_assert("Expect: 'A' == 'A', by value", A2(&Utils_equal, &a1, &a2) == &True);
+  mu_assert("Expect: 'A' /= 'B'", A2(&Utils_equal, &a1, &b) == &False);
 
   if (verbose) {
     printf("\n");
     printf("Different types: compiler will reject, but `==` can give False anyway\n");
   }
-  mu_assert("Expect: True /= 3", A2(&Utils_eq, &True, &three) == &False);
+  mu_assert("Expect: True /= 3", A2(&Utils_equal, &True, &three) == &False);
 
   ElmString* hello1 = NEW_ELM_STRING(5, "hello");
   ElmString* hello2 = NEW_ELM_STRING(5, "hello");
@@ -300,12 +300,12 @@ char* test_eq(void) {
   }
 
   mu_assert("Expect: \"hello\" == \"hello\" (by reference)",
-      A2(&Utils_eq, hello1, hello1) == &True);
+      A2(&Utils_equal, hello1, hello1) == &True);
   mu_assert("Expect: \"hello\" == \"hello\" (by value)",
-      A2(&Utils_eq, hello1, hello2) == &True);
-  mu_assert("Expect: \"hello\" /= \"world\"", A2(&Utils_eq, hello1, world) == &False);
-  mu_assert("Expect: \"hello\" /= \"hello_\"", A2(&Utils_eq, hello1, hello_) == &False);
-  mu_assert("Expect: \"hello_\" /= \"hello\"", A2(&Utils_eq, hello_, hello1) == &False);
+      A2(&Utils_equal, hello1, hello2) == &True);
+  mu_assert("Expect: \"hello\" /= \"world\"", A2(&Utils_equal, hello1, world) == &False);
+  mu_assert("Expect: \"hello\" /= \"hello_\"", A2(&Utils_equal, hello1, hello_) == &False);
+  mu_assert("Expect: \"hello_\" /= \"hello\"", A2(&Utils_equal, hello_, hello1) == &False);
 
   if (verbose) printf("\nList equality\n");
   Cons* cons2 = NEW_CONS(&two, &Nil);
@@ -316,17 +316,17 @@ char* test_eq(void) {
   Cons* cons32 = NEW_CONS(&three, cons2);
   Cons* cons22 = NEW_CONS(&two, cons2);
 
-  mu_assert("Expect: [] == []", A2(&Utils_eq, &Nil, &Nil) == &True);
-  mu_assert("Expect: [] /= [2]", A2(&Utils_eq, &Nil, cons2) == &False);
-  mu_assert("Expect: [2] /= []", A2(&Utils_eq, cons2, &Nil) == &False);
-  mu_assert("Expect: [2] == [2] (by ref)", A2(&Utils_eq, cons2, cons2) == &True);
-  mu_assert("Expect: [2] == [2] (by value)", A2(&Utils_eq, cons2, cons2a) == &True);
-  mu_assert("Expect: [2] /= [3]", A2(&Utils_eq, cons2, cons3) == &False);
-  mu_assert("Expect: [2] /= [2,3]", A2(&Utils_eq, cons2, cons23) == &False);
-  mu_assert("Expect: [2,3] == [2,3] (by ref)", A2(&Utils_eq, cons23, cons23) == &True);
-  mu_assert("Expect: [2,3] == [2,3] (by value)", A2(&Utils_eq, cons23, cons23a) == &True);
-  mu_assert("Expect: [3,2] /= [2,2]", A2(&Utils_eq, cons32, cons22) == &False);
-  mu_assert("Expect: [2,3] /= [2,2]", A2(&Utils_eq, cons23, cons22) == &False);
+  mu_assert("Expect: [] == []", A2(&Utils_equal, &Nil, &Nil) == &True);
+  mu_assert("Expect: [] /= [2]", A2(&Utils_equal, &Nil, cons2) == &False);
+  mu_assert("Expect: [2] /= []", A2(&Utils_equal, cons2, &Nil) == &False);
+  mu_assert("Expect: [2] == [2] (by ref)", A2(&Utils_equal, cons2, cons2) == &True);
+  mu_assert("Expect: [2] == [2] (by value)", A2(&Utils_equal, cons2, cons2a) == &True);
+  mu_assert("Expect: [2] /= [3]", A2(&Utils_equal, cons2, cons3) == &False);
+  mu_assert("Expect: [2] /= [2,3]", A2(&Utils_equal, cons2, cons23) == &False);
+  mu_assert("Expect: [2,3] == [2,3] (by ref)", A2(&Utils_equal, cons23, cons23) == &True);
+  mu_assert("Expect: [2,3] == [2,3] (by value)", A2(&Utils_equal, cons23, cons23a) == &True);
+  mu_assert("Expect: [3,2] /= [2,2]", A2(&Utils_equal, cons32, cons22) == &False);
+  mu_assert("Expect: [2,3] /= [2,2]", A2(&Utils_equal, cons23, cons22) == &False);
 
   if (verbose) printf("\nTuple equality\n");
   Tuple2* tuple23 = NEW_TUPLE2(&two, &three);
@@ -334,11 +334,11 @@ char* test_eq(void) {
   Tuple2* tuple32 = NEW_TUPLE2(&three, &two);
   Tuple2* tuple22 = NEW_TUPLE2(&two, &two);
 
-  mu_assert("Expect: (2,3) == (2,3) (by ref)", A2(&Utils_eq, tuple23, tuple23) == &True);
+  mu_assert("Expect: (2,3) == (2,3) (by ref)", A2(&Utils_equal, tuple23, tuple23) == &True);
   mu_assert(
-      "Expect: (2,3) == (2,3) (by value)", A2(&Utils_eq, tuple23, tuple23a) == &True);
-  mu_assert("Expect: (3,2) /= (2,2)", A2(&Utils_eq, tuple32, tuple22) == &False);
-  mu_assert("Expect: (2,3) /= (2,2)", A2(&Utils_eq, tuple23, tuple22) == &False);
+      "Expect: (2,3) == (2,3) (by value)", A2(&Utils_equal, tuple23, tuple23a) == &True);
+  mu_assert("Expect: (3,2) /= (2,2)", A2(&Utils_equal, tuple32, tuple22) == &False);
+  mu_assert("Expect: (2,3) /= (2,2)", A2(&Utils_equal, tuple23, tuple22) == &False);
 
   ElmInt one = (ElmInt){.header = HEADER_INT, .value = 1};
   Tuple3* tuple123 = NEW_TUPLE3(&one, &two, &three);
@@ -349,12 +349,12 @@ char* test_eq(void) {
   Tuple3* tuple112 = NEW_TUPLE3(&one, &one, &two);
 
   mu_assert(
-      "Expect: (1,2,3) == (1,2,3) (by ref)", A2(&Utils_eq, tuple123, tuple123) == &True);
+      "Expect: (1,2,3) == (1,2,3) (by ref)", A2(&Utils_equal, tuple123, tuple123) == &True);
   mu_assert("Expect: (1,2,3) == (1,2,3) (by value)",
-      A2(&Utils_eq, tuple123, tuple123a) == &True);
-  mu_assert("Expect: (1,1,1) /= (2,1,1)", A2(&Utils_eq, tuple111, tuple211) == &False);
-  mu_assert("Expect: (1,1,1) /= (1,2,1)", A2(&Utils_eq, tuple111, tuple121) == &False);
-  mu_assert("Expect: (1,1,1) /= (1,1,2)", A2(&Utils_eq, tuple111, tuple112) == &False);
+      A2(&Utils_equal, tuple123, tuple123a) == &True);
+  mu_assert("Expect: (1,1,1) /= (2,1,1)", A2(&Utils_equal, tuple111, tuple211) == &False);
+  mu_assert("Expect: (1,1,1) /= (1,2,1)", A2(&Utils_equal, tuple111, tuple121) == &False);
+  mu_assert("Expect: (1,1,1) /= (1,1,2)", A2(&Utils_equal, tuple111, tuple112) == &False);
 
   u32 big_list_size = 123;
   if (verbose) printf("\nLong list equality (recursive, %d elements)\n", big_list_size);
@@ -367,9 +367,9 @@ char* test_eq(void) {
     bigList3 = NEW_CONS(&one, bigList3);
   }
   mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]",
-      A2(&Utils_eq, bigList1, bigList2) == &True);
+      A2(&Utils_equal, bigList1, bigList2) == &True);
   mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]",
-      A2(&Utils_eq, bigList1, bigList3) == &False);
+      A2(&Utils_equal, bigList1, bigList3) == &False);
 
   if (verbose) printf("\nCustom type equality\n");
   u8 mem_1_1A[sizeof(Custom) + 2 * sizeof(void*)];
@@ -392,15 +392,15 @@ char* test_eq(void) {
   custom_1_1B->values[1] = &b;
 
   mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (ref)",
-      A2(&Utils_eq, custom_1_1A, custom_1_1A) == &True);
+      A2(&Utils_equal, custom_1_1A, custom_1_1A) == &True);
   mu_assert("Expect: Ctor1 1 'A' == Ctor1 1 'A' (value)",
-      A2(&Utils_eq, custom_1_1A, custom_1_1A_clone) == &True);
+      A2(&Utils_equal, custom_1_1A, custom_1_1A_clone) == &True);
   mu_assert("Expect: Ctor1 1 'A' /= Ctor2 1 'A'",
-      A2(&Utils_eq, custom_1_1A, custom_2_1A) == &False);
+      A2(&Utils_equal, custom_1_1A, custom_2_1A) == &False);
   mu_assert("Expect: Ctor1 1 'A' /= Ctor1 2 'A'",
-      A2(&Utils_eq, custom_1_1A, custom_1_2A) == &False);
+      A2(&Utils_equal, custom_1_1A, custom_1_2A) == &False);
   mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'",
-      A2(&Utils_eq, custom_1_1A, custom_1_1B) == &False);
+      A2(&Utils_equal, custom_1_1A, custom_1_1B) == &False);
 
   if (verbose) printf("\nRecord equality\n");
   u8 mem_fs[sizeof(FieldGroup) + 2 * sizeof(void*)];
@@ -429,11 +429,11 @@ char* test_eq(void) {
     printf("rec13  = %s\n", hex(rec13, sizeof(mem_rec12)));
   }
   mu_assert(
-      "Expect: {a=1, b=2} == {a=1, b=2} (ref)", A2(&Utils_eq, rec12, rec12) == &True);
+      "Expect: {a=1, b=2} == {a=1, b=2} (ref)", A2(&Utils_equal, rec12, rec12) == &True);
   mu_assert(
-      "Expect: {a=1, b=2} == {a=1, b=2} (value)", A2(&Utils_eq, rec12, rec12a) == &True);
-  mu_assert("Expect: {a=1, b=2} /= {a=2, b=2}", A2(&Utils_eq, rec12, rec22) == &False);
-  mu_assert("Expect: {a=1, b=2} /= {a=1, b=3}", A2(&Utils_eq, rec12, rec13) == &False);
+      "Expect: {a=1, b=2} == {a=1, b=2} (value)", A2(&Utils_equal, rec12, rec12a) == &True);
+  mu_assert("Expect: {a=1, b=2} /= {a=2, b=2}", A2(&Utils_equal, rec12, rec22) == &False);
+  mu_assert("Expect: {a=1, b=2} /= {a=1, b=3}", A2(&Utils_equal, rec12, rec13) == &False);
 
   return NULL;
 }

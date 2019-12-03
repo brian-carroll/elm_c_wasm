@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-Closure Utils_eq;
+Closure Utils_equal;
 Closure Utils_append;
 Closure Utils_compare;
 
@@ -20,6 +20,7 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
 void* Utils_clone(void* x);
 void* Utils_access_eval(void* args[2]);
+void Utils_initGlobal(void** global, void* (*init_func)());
 
 #define A1(f, a) CAN_THROW(Utils_apply(f, 1, (void* []){a}))
 #define A2(f, a, b) CAN_THROW(Utils_apply(f, 2, (void* []){a, b}))

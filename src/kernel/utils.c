@@ -272,7 +272,7 @@ static void* eq_eval(void* args[2]) {
 
   return stack == pGcFull ? pGcFull : isEqual ? &True : &False;
 }
-Closure Utils_eq = {
+Closure Utils_equal = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eq_eval,
     .max_values = 2,

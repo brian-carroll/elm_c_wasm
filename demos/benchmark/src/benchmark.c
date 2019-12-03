@@ -26,7 +26,7 @@ void* eval_tce_count(void* args[1], void** gc_tce_data) {
   while (1) {
     ElmInt* remaining = args[0];
     // printf("tce loop, remaining = %d\n", remaining->value);
-    if (A2(&Utils_eq, remaining, (void*)&literal_0) == &True) {
+    if (A2(&Utils_equal, remaining, (void*)&literal_0) == &True) {
       // printf("tce returning Unit at %p with tag %d\n", &Unit, Unit.header.tag);
       return &Unit;
     } else {
@@ -97,7 +97,7 @@ void* eval_count_no_tce(void* args[]) {
   // level++;
   ElmInt* remaining = args[0];
   // printf("eval_count_no_tce level %d, remaining=%d\n", level, remaining->value);
-  if (A2(&Utils_eq, remaining, &literal_0) == &True) {
+  if (A2(&Utils_equal, remaining, &literal_0) == &True) {
     // printf("eval_count_no_tce returning Unit at %p with tag %d\n", &Unit,
     //  Unit.header.tag);
     return &Unit;

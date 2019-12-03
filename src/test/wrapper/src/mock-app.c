@@ -212,7 +212,7 @@ void* init_records() {
 
 --------------------------------------------------------- */
 void* test_equal_help(void* ptr1, void* ptr2) {
-  return A2(&Utils_eq, ptr1, ptr2);
+  return A2(&Utils_equal, ptr1, ptr2);
 }
 size_t EMSCRIPTEN_KEEPALIVE test_equal(size_t addr1, size_t addr2) {
   void* result = test_equal_help((void*)addr1, (void*)addr2);
