@@ -9,7 +9,7 @@
 // need to pass global name into expression generator
 
 // var $author$project$TestModule$outerScopeValue = /* Int */1;
-const ElmInt author_project_TestModule_outerScopeValue = {
+ElmInt author_project_TestModule_outerScopeValue = {
     .header = HEADER_INT,
     .value = 1,
 };
@@ -22,10 +22,11 @@ const ElmInt author_project_TestModule_outerScopeValue = {
 void* eval_author_project_TestModule_closure(void* args[2]) {
   void* a = args[0];
   void* b = args[1];
-  return A2(&elm_core_Basics_add, &author_project_TestModule_outerScopeValue,
-            A2(&elm_core_Basics_add, a, b));
+  return A2(&elm_core_Basics_add,
+      &author_project_TestModule_outerScopeValue,
+      A2(&elm_core_Basics_add, a, b));
 }
-const Closure author_project_TestModule_closure = {
+Closure author_project_TestModule_closure = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_author_project_TestModule_closure,
     .max_values = 2,

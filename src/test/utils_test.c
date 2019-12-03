@@ -356,7 +356,7 @@ char* test_eq(void) {
   mu_assert("Expect: (1,1,1) /= (1,2,1)", A2(&Utils_eq, tuple111, tuple121) == &False);
   mu_assert("Expect: (1,1,1) /= (1,1,2)", A2(&Utils_eq, tuple111, tuple112) == &False);
 
-  const u32 big_list_size = 123;
+  u32 big_list_size = 123;
   if (verbose) printf("\nLong list equality (recursive, %d elements)\n", big_list_size);
   Cons* bigList1 = NEW_CONS(&one, &Nil);
   Cons* bigList2 = NEW_CONS(&one, &Nil);

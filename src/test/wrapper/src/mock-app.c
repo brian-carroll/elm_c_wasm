@@ -19,7 +19,7 @@
 
 --------------------------------------------------------- */
 
-static const ElmInt test_int = {
+static ElmInt test_int = {
     .header = HEADER_INT,
     .value = 1234567,
 };
@@ -27,7 +27,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_int() {
   return (size_t)&test_int;
 }
 
-static const ElmFloat test_float = {
+static ElmFloat test_float = {
     .header = HEADER_FLOAT,
     .value = 3.14159265,
 };
@@ -106,7 +106,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_list() {
 
 --------------------------------------------------------- */
 
-static const Tuple2 tuple2 = {
+static Tuple2 tuple2 = {
     .header = HEADER_TUPLE2,
     .a = &test_int,
     .b = &test_char16,
@@ -116,7 +116,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_tuple2() {
   return (size_t)&tuple2;
 }
 
-static const Tuple3 tuple3 = {
+static Tuple3 tuple3 = {
     .header = HEADER_TUPLE3,
     .a = &test_int,
     .b = &test_char16,
@@ -133,7 +133,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_tuple3() {
 
 --------------------------------------------------------- */
 
-const Custom nothing = {
+Custom nothing = {
     .header = HEADER_CUSTOM(0),
     .ctor = 0,
 };
@@ -142,7 +142,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_nothing() {
   return (size_t)&nothing;
 }
 
-const Custom just_int = {
+Custom just_int = {
     .header = HEADER_CUSTOM(1),
     .ctor = 1,
     .values = {&test_int},
@@ -158,15 +158,15 @@ size_t EMSCRIPTEN_KEEPALIVE get_test_just_int() {
 
 --------------------------------------------------------- */
 
-const FieldGroup address_firstName_lastName = {
+FieldGroup address_firstName_lastName = {
     .size = 3,
     .fields = {0, 1, 2},
 };
-const FieldGroup firstName_lastName = {
+FieldGroup firstName_lastName = {
     .size = 2,
     .fields = {1, 2},
 };
-const FieldGroup* fieldGroupsArray[] = {
+FieldGroup* fieldGroupsArray[] = {
     &address_firstName_lastName,
     &firstName_lastName,
     NULL,
@@ -227,7 +227,7 @@ size_t EMSCRIPTEN_KEEPALIVE test_equal(size_t addr1, size_t addr2) {
 
 --------------------------------------------------------- */
 
-static const ElmInt one = {
+static ElmInt one = {
     .header = HEADER_INT,
     .value = 1,
 };
@@ -249,7 +249,7 @@ size_t EMSCRIPTEN_KEEPALIVE get_increment_callback() {
 --------------------------------------------------------- */
 
 int EMSCRIPTEN_KEEPALIVE main(int argc, char** argv) {
-  const int exit_code = GC_init();
+  int exit_code = GC_init();
   if (exit_code) return exit_code;
 
   GC_register_root(&rec_address_firstName_lastName);

@@ -45,24 +45,24 @@ FieldGroup* app_field_groups[] = {
 
 // Platform
 
-const Closure elm_core_Platform_Cmd_batch = {
+Closure elm_core_Platform_Cmd_batch = {
     .header = HEADER_CLOSURE(0),
     .evaluator = (void*)JS_Platform_batch,
     .max_values = NEVER_EVALUATE,
 };
-const Closure elm_core_Platform_Cmd_none = {
+Closure elm_core_Platform_Cmd_none = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_Platform_batch,
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&Nil},
 };
-const Closure elm_core_Platform_Sub_batch = {
+Closure elm_core_Platform_Sub_batch = {
     .header = HEADER_CLOSURE(0),
     .evaluator = (void*)JS_Platform_batch,
     .max_values = NEVER_EVALUATE,
 };
-const Closure elm_core_Platform_Sub_none = {
+Closure elm_core_Platform_Sub_none = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_Platform_batch,
     .n_values = 1,
@@ -72,12 +72,12 @@ const Closure elm_core_Platform_Sub_none = {
 
 // Task
 
-const Closure elm_core_Task_succeed = {
+Closure elm_core_Task_succeed = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Scheduler_succeed,
 };
-const ElmString16 literal_string_Task = {
+ElmString16 literal_string_Task = {
     .header = HEADER_STRING(4),
     .words16 =
         {
@@ -87,14 +87,14 @@ const ElmString16 literal_string_Task = {
             (u16)'k',
         },
 };
-const Closure elm_core_Task_command = {
+Closure elm_core_Task_command = {
     .header = HEADER_CLOSURE(1),
     .max_values = NEVER_EVALUATE,
     .n_values = 1,
     .evaluator = (void*)JS_Platform_leaf,
     .values = {&literal_string_Task},
 };
-const Closure elm_core_Task_andThen = {
+Closure elm_core_Task_andThen = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Scheduler_andThen,
@@ -106,7 +106,7 @@ void* eval_Task_Perform(void* args[1]) {
   p->values[0] = args[0];
   return p;
 }
-const Closure elm_core_Task_Perform = {
+Closure elm_core_Task_Perform = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_Task_Perform,
@@ -117,7 +117,7 @@ void* eval_Task_map_inner(void* args[2]) {
   void* a = args[1];
   return A1(&elm_core_Task_succeed, A1(func, a));
 }
-const Closure elm_core_Task_map_inner = {
+Closure elm_core_Task_map_inner = {
     .header = HEADER_CLOSURE(0),
     .max_values = 2,
     .evaluator = &eval_Task_map_inner,
@@ -128,7 +128,7 @@ void* eval_Task_map(void* args[2]) {
   Closure* callback = A1(&elm_core_Task_map_inner, func);
   return A2(&elm_core_Task_andThen, callback, taskA);
 }
-const Closure elm_core_Task_map = {
+Closure elm_core_Task_map = {
     .header = HEADER_CLOSURE(0),
     .max_values = 2,
     .evaluator = &eval_Task_map,
@@ -140,7 +140,7 @@ void* eval_elm_core_Task_perform(void* args[2]) {
   return A1(&elm_core_Task_command,
       A1(&elm_core_Task_Perform, A2(&elm_core_Task_map, toMessage, task)));
 }
-const Closure elm_core_Task_perform = {
+Closure elm_core_Task_perform = {
     .header = HEADER_CLOSURE(0),
     .max_values = 2,
     .evaluator = &eval_elm_core_Task_perform,
@@ -148,7 +148,7 @@ const Closure elm_core_Task_perform = {
 
 // Process
 
-const Closure elm_core_Process_sleep = {
+Closure elm_core_Process_sleep = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Process_sleep,
@@ -156,7 +156,7 @@ const Closure elm_core_Process_sleep = {
 
 // Json
 
-const Closure elm_json_Json_Decode_succeed = {
+Closure elm_json_Json_Decode_succeed = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Json_succeed,
@@ -164,13 +164,13 @@ const Closure elm_json_Json_Decode_succeed = {
 
 // VirtualDom
 
-const Closure elm_virtual_dom_VirtualDom_text = {
+Closure elm_virtual_dom_VirtualDom_text = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_VirtualDom_text,
 };
 
-const Closure elm_virtual_dom_VirtualDom_on = {
+Closure elm_virtual_dom_VirtualDom_on = {
     .header = HEADER_CLOSURE(0),
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_VirtualDom_on,
@@ -183,7 +183,7 @@ void* eval_elm_virtual_dom_VirtualDom_Normal(void* args[1]) {
   p->values[0] = args[0];
   return p;
 };
-const Closure elm_virtual_dom_VirtualDom_Normal = {
+Closure elm_virtual_dom_VirtualDom_Normal = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_elm_virtual_dom_VirtualDom_Normal,
@@ -191,7 +191,7 @@ const Closure elm_virtual_dom_VirtualDom_Normal = {
 
 // Html
 
-const ElmString16 literal_string_h1 = {
+ElmString16 literal_string_h1 = {
     .header = HEADER_STRING(2),
     .words16 =
         {
@@ -200,7 +200,7 @@ const ElmString16 literal_string_h1 = {
         },
 };
 
-const ElmString16 literal_string_br = {
+ElmString16 literal_string_br = {
     .header = HEADER_STRING(2),
     .words16 =
         {
@@ -208,7 +208,7 @@ const ElmString16 literal_string_br = {
             (u16)'r',
         },
 };
-const ElmString16 literal_string_button = {
+ElmString16 literal_string_button = {
     .header = HEADER_STRING(6),
     .words16 =
         {
@@ -220,7 +220,7 @@ const ElmString16 literal_string_button = {
             (u16)'n',
         },
 };
-const ElmString16 literal_string_div = {
+ElmString16 literal_string_div = {
     .header = HEADER_STRING(3),
     .words16 =
         {
@@ -229,7 +229,7 @@ const ElmString16 literal_string_div = {
             (u16)'v',
         },
 };
-const ElmString16 literal_string_click = {
+ElmString16 literal_string_click = {
     .header = HEADER_STRING(5),
     .words16 =
         {
@@ -240,28 +240,28 @@ const ElmString16 literal_string_click = {
             (u16)'k',
         },
 };
-const Closure elm_html_Html_h1 = {
+Closure elm_html_Html_h1 = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_h1},
 };
-const Closure elm_html_Html_br = {
+Closure elm_html_Html_br = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_br},
 };
-const Closure elm_html_Html_button = {
+Closure elm_html_Html_button = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
     .max_values = NEVER_EVALUATE,
     .values = {&literal_string_button},
 };
-const Closure elm_html_Html_div = {
+Closure elm_html_Html_div = {
     .header = HEADER_CLOSURE(1),
     .evaluator = (void*)JS_VirtualDom_node,
     .n_values = 1,
@@ -277,7 +277,7 @@ void* eval_elm_html_Html_Events_on(void* args[2]) {
       event,
       A1(&elm_virtual_dom_VirtualDom_Normal, decoder));
 }
-const Closure elm_html_Html_Events_on = {
+Closure elm_html_Html_Events_on = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_elm_html_Html_Events_on,
     .max_values = 2,
@@ -289,7 +289,7 @@ void* eval_elm_html_Html_Events_onClick(void* args[1]) {
       &literal_string_click,
       A1(&elm_json_Json_Decode_succeed, msg));
 }
-const Closure elm_html_Html_Events_onClick = {
+Closure elm_html_Html_Events_onClick = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_elm_html_Html_Events_onClick,
     .max_values = 1,
@@ -310,7 +310,7 @@ void* eval_author_project_Main_SetCounter(void* args[1]) {
   p->values[0] = args[0];
   return p;
 };
-const Closure author_project_Main_SetCounter = {
+Closure author_project_Main_SetCounter = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_author_project_Main_SetCounter,
@@ -318,14 +318,14 @@ const Closure author_project_Main_SetCounter = {
 
 // init
 
-const ElmInt literal_int_0 = {
+ElmInt literal_int_0 = {
     .header = HEADER_INT,
     .value = 0,
 };
 void* eval_author_project_Main_init(void* args[1]) {
   return NEW_TUPLE2(&literal_int_0, &elm_core_Platform_Cmd_none);
 }
-const Closure author_project_Main_init = {
+Closure author_project_Main_init = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_author_project_Main_init,
@@ -337,13 +337,13 @@ void* eval_author_project_Main_funcSentToJsAndBack(void* args[2]) {
   void* next = args[0];
   return A1(&author_project_Main_SetCounter, next);
 }
-const Closure author_project_Main_funcSentToJsAndBack = {
+Closure author_project_Main_funcSentToJsAndBack = {
     .header = HEADER_CLOSURE(0),
     .max_values = 2,
     .evaluator = &eval_author_project_Main_funcSentToJsAndBack,
 };
 
-const ElmFloat literal_float_1234_5 = {
+ElmFloat literal_float_1234_5 = {
     .header = HEADER_FLOAT,
     .value = 1234.5,
 };
@@ -355,13 +355,13 @@ void* eval_author_project_Main_delayedSetCounter(void* args[1]) {
       partiallyAppliedFuncSentToJsAndBack,
       A1(&elm_core_Process_sleep, &literal_float_1234_5));
 };
-const Closure author_project_Main_delayedSetCounter = {
+Closure author_project_Main_delayedSetCounter = {
     .header = HEADER_CLOSURE(0),
     .max_values = 1,
     .evaluator = &eval_author_project_Main_delayedSetCounter,
 };
 
-const ElmInt literal_int_1 = {
+ElmInt literal_int_1 = {
     .header = HEADER_INT,
     .value = 1,
 };
@@ -374,7 +374,7 @@ void* eval_author_project_Main_update(void* args[2]) {
                         A2(&Basics_sub, newModel, &literal_int_1));
   return NEW_TUPLE2(newModel, cmd);
 };
-const Closure author_project_Main_update = {
+Closure author_project_Main_update = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_author_project_Main_update,
     .max_values = 2,
@@ -382,7 +382,7 @@ const Closure author_project_Main_update = {
 
 // view
 
-const ElmString16 literal_string_ClickTheButton = {
+ElmString16 literal_string_ClickTheButton = {
     .header = HEADER_STRING(17),
     .words16 =
         {
@@ -406,7 +406,7 @@ const ElmString16 literal_string_ClickTheButton = {
         },
 };
 
-const ElmString16 literal_string_StartCountdown = {
+ElmString16 literal_string_StartCountdown = {
     .header = HEADER_STRING(15),
     .words16 =
         {
@@ -427,7 +427,7 @@ const ElmString16 literal_string_StartCountdown = {
             (u16)'n',
         },
 };
-const ElmInt literal_int_5 = {
+ElmInt literal_int_5 = {
     .header = HEADER_INT,
     .value = 5,
 };
@@ -460,7 +460,7 @@ void* eval_author_project_Main_view(void* args[1]) {
                   : A2(&elm_html_Html_br, &Nil, &Nil),
           }));
 }
-const Closure author_project_Main_view = {
+Closure author_project_Main_view = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_author_project_Main_view,
     .max_values = 1,
@@ -471,7 +471,7 @@ const Closure author_project_Main_view = {
 void* eval_author_project_Main_subscriptions(void* args[1]) {
   return &elm_core_Platform_Sub_none;
 }
-const Closure author_project_Main_subscriptions = {
+Closure author_project_Main_subscriptions = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_author_project_Main_subscriptions,
     .max_values = 1,

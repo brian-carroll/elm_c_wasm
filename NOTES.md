@@ -1,3 +1,15 @@
+# const
+
+- I get loads of warnings about const, do they matter?
+- compiling full kernel and its tests, get almost no change in WebAssembly text version except for some test code for `fib` and `fibHelp`!
+  - putting their evaluators inside another struct, a map for function names.
+  - not likely to generate code like this.
+- Removing `const` makes no difference to `.wat` for the wrapper demo.
+- same results experimenting with gcc native binary
+
+- conclusion: const is not terribly useful for generated code but once you introduce it you have to get it right _everywhere_. And the rules for pointers and double pointers are insanely confusing. Also I haven't had a single problem that it would have solved.
+- fugeddaboutit
+
 # JS references in Wasm
 
 ## initial notes

@@ -25,7 +25,7 @@ char* test_replay_saturated() {
   void* h = gc_state.heap.start;
 
   // HEAP BEFORE GC
-  const void* heap_before_spec[] = {
+  void* heap_before_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
       },
@@ -52,7 +52,7 @@ char* test_replay_saturated() {
   Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
 
   // HEAP AFTER GC
-  const void* heap_after_spec[] = {
+  void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
           .newer = h + sizeof(GcStackMap),

@@ -11,7 +11,7 @@ char* test_replay_apply_alloc_failed();
 
 Tag mock_func_ops[10];  // list of operations for the mock function, encoded as tags
 char mock_func_err[1024];
-const u32 INT_OFFSET = 256000;
+u32 INT_OFFSET = 256000;
 
 static void* eval_mock_func_tce(void* args[2], void** gc_tce_data) {
   ElmInt* last_alloc = args[0];
@@ -49,11 +49,11 @@ static void* eval_mock_func_tce(void* args[2], void** gc_tce_data) {
   }
 }
 
-const Closure mock_func_tail;
+Closure mock_func_tail;
 void* eval_mock_func_tail(void* args[2]) {
   return GC_tce_eval(&eval_mock_func_tce, &mock_func_tail, args);
 }
-const Closure mock_func_tail = {
+Closure mock_func_tail = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_mock_func_tail,
     .max_values = 2,
@@ -89,7 +89,7 @@ void* eval_mock_func(void* args[2]) {
   }
 }
 
-const Closure mock_func = {
+Closure mock_func = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_mock_func,
     .max_values = 2,
@@ -97,7 +97,7 @@ const Closure mock_func = {
 
 char assert_heap_message[1024];
 
-char* assert_heap_values(const char* description, const void* values[]) {
+char* assert_heap_values(char* description, void* values[]) {
   size_t* heap_value = gc_state.heap.start;
   size_t i = 0;
   size_t* bad_addr = NULL;

@@ -13,13 +13,13 @@
 #include "../test.h"
 
 char* replay_scenario_tests();
-const Closure mock_func;
+Closure mock_func;
 void* eval_mock_func(void**);
-const Closure mock_func_tail;
+Closure mock_func_tail;
 void* eval_mock_func_tail(void* args[]);
-char* assert_heap_values(const char* description, const void* values[]);
+char* assert_heap_values(char* description, void* values[]);
 extern GcState gc_state;
 extern Tag mock_func_ops[10];
-extern const u32 INT_OFFSET;
+extern u32 INT_OFFSET;
 
 #endif

@@ -46,7 +46,7 @@ char* test_replay_curried() {
   void* h = gc_state.heap.start;
 
   // HEAP BEFORE GC
-  const void* heap_before_spec[] = {
+  void* heap_before_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
       },
@@ -76,7 +76,7 @@ char* test_replay_curried() {
   Utils_apply(curried, 1, (void* []){NULL});
 
   // HEAP AFTER GC
-  const void* heap_after_spec[] = {
+  void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
           .newer = h + sizeof(GcStackMap) + 2 * sizeof(Closure) + 3 * sizeof(void*),

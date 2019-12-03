@@ -195,9 +195,9 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       size_t* a_words = (size_t*)pa;
       size_t* b_words = (size_t*)pb;
 #ifdef TARGET_64BIT
-      const size_t start = 0;  // first word contains header AND some chars
+      size_t start = 0;  // first word contains header AND some chars
 #else
-      const size_t start = 1;  // first word is just header, already compared it
+      size_t start = 1;  // first word is just header, already compared it
 #endif
       for (size_t i = start; i < pa->header.size; ++i) {
         if (a_words[i] != b_words[i]) return 0;
@@ -272,7 +272,7 @@ static void* eq_eval(void* args[2]) {
 
   return stack == pGcFull ? pGcFull : isEqual ? &True : &False;
 }
-const Closure Utils_eq = {
+Closure Utils_eq = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eq_eval,
     .max_values = 2,
@@ -293,7 +293,7 @@ static void* append_eval(void* args[2]) {
       return args[0];
   }
 }
-const Closure Utils_append = {
+Closure Utils_append = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &append_eval,
     .max_values = 2,
@@ -376,7 +376,7 @@ static void* compare_eval(void* args[2]) {
   ElmValue* y = args[1];
   return compare_help(x, y);
 }
-const Closure Utils_compare = {
+Closure Utils_compare = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &compare_eval,
     .max_values = 2,
@@ -387,7 +387,7 @@ static void* lt_eval(void* args[2]) {
   ElmValue* y = args[1];
   return (compare_help(x, y) == &Utils_LT) ? &True : &False;
 }
-const Closure Utils_lt = {
+Closure Utils_lt = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &lt_eval,
     .max_values = 2,
@@ -398,7 +398,7 @@ static void* le_eval(void* args[2]) {
   ElmValue* y = args[1];
   return (compare_help(x, y) != &Utils_GT) ? &True : &False;
 }
-const Closure Utils_le = {
+Closure Utils_le = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &le_eval,
     .max_values = 2,
@@ -409,7 +409,7 @@ static void* gt_eval(void* args[2]) {
   ElmValue* y = args[1];
   return (compare_help(x, y) == &Utils_GT) ? &True : &False;
 }
-const Closure Utils_gt = {
+Closure Utils_gt = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &gt_eval,
     .max_values = 2,
@@ -420,21 +420,21 @@ static void* ge_eval(void* args[2]) {
   ElmValue* y = args[1];
   return (compare_help(x, y) != &Utils_LT) ? &True : &False;
 }
-const Closure Utils_ge = {
+Closure Utils_ge = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &ge_eval,
     .max_values = 2,
 };
 
-const Custom Utils_LT = {
+Custom Utils_LT = {
     .header = HEADER_CUSTOM(0),
     .ctor = -1,
 };
-const Custom Utils_EQ = {
+Custom Utils_EQ = {
     .header = HEADER_CUSTOM(0),
     .ctor = 0,
 };
-const Custom Utils_GT = {
+Custom Utils_GT = {
     .header = HEADER_CUSTOM(0),
     .ctor = 1,
 };

@@ -17,7 +17,7 @@ static void* add_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-const Closure Basics_add = {
+Closure Basics_add = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &add_eval,
     .max_values = 2,
@@ -38,7 +38,7 @@ static void* sub_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-const Closure Basics_sub = {
+Closure Basics_sub = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &sub_eval,
     .max_values = 2,
@@ -59,7 +59,7 @@ static void* mul_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-const Closure Basics_mul = {
+Closure Basics_mul = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &mul_eval,
     .max_values = 2,
@@ -109,7 +109,7 @@ static void* pow_eval(void* args[2]) {
     return NEW_ELM_INT(i);
   }
 }
-const Closure Basics_pow = {
+Closure Basics_pow = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &pow_eval,
     .max_values = 2,

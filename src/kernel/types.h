@@ -279,19 +279,19 @@ typedef union {
 
 // STATIC CONSTANTS
 
-const GcException GcFull;
-const void* pGcFull;
+GcException GcFull;
+void* pGcFull;
 
-const Cons Nil;
-const void* pNil;
+Cons Nil;
+void* pNil;
 
-const Custom Unit;
-const void* pUnit;
+Custom Unit;
+void* pUnit;
 
-const Custom False;
-const void* pFalse;
+Custom False;
+void* pFalse;
 
-const Custom True;
-const void* pTrue;
+Custom True;
+void* pTrue;
 
 #endif  // #ifndef ELM_KERNEL_TYPES

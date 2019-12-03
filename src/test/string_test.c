@@ -92,7 +92,7 @@ char* string_append_test() {
   }
 
   mu_assert("Expect: \"hello\" ++ \" world\" == \"hello world\"",
-      strcmp((const char*)hw->bytes, "hello world") == 0);
+      strcmp((char*)hw->bytes, "hello world") == 0);
 
   return NULL;
 }
