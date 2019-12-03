@@ -6,6 +6,6 @@
 void* String_append_eval(void* args[]);  // exposed for `++`
 Closure String_append;
 
-Closure String_fromInt;
+Closure String_fromNumber;
 
 #endif

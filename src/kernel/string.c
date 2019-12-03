@@ -47,21 +47,41 @@ Closure String_append = {
     .max_values = 2,
 };
 
-static void* String_fromInt_eval(void* args[1]) {
-  ElmInt* box = args[0];
+static void* fromInt(ElmInt* box) {
   i32 unboxed = box->value;
   char buf[12];  // enough for -2147483648
-  size_t ascii_len = (size_t)sprintf(buf, "%d", unboxed);
-  size_t utf16_len = ascii_len << 1;
-  ElmString* s = (NEW_ELM_STRING(utf16_len, NULL));
+  size_t n_chars = (size_t)snprintf(buf, sizeof(buf), "%d", unboxed);
+  ElmString* s = NEW_ELM_STRING(n_chars, NULL);
   u16* utf16 = (u16*)s->bytes;
-  for (size_t i = 0; i < ascii_len; i++) {
+  for (size_t i = 0; i < n_chars; i++) {
     utf16[i] = (u16)buf[i];
   }
   return s;
 }
-Closure String_fromInt = {
+
+static void* fromFloat(ElmFloat* box) {
+  f64 unboxed = box->value;
+  char dummy[1];
+  size_t n_chars = (size_t)snprintf(dummy, sizeof(dummy), "%g", unboxed);
+  ElmString* tmp = NEW_ELM_STRING((n_chars + 1) / 2, NULL);
+  ElmString* s = NEW_ELM_STRING(n_chars, NULL);
+  snprintf(tmp->bytes, n_chars, "%g", unboxed);
+  u16* utf16 = (u16*)s->bytes;
+  for (size_t i = 0; i < n_chars; i++) {
+    utf16[i] = (u16)tmp->bytes[i];
+  }
+  return s;
+}
+
+static void* String_fromNumber_eval(void* args[1]) {
+  Number* box = args[0];
+  if (pa->i.header.tag == Tag_Int) {
+    return fromInt(box);
+  }
+  return fromFloat(box);
+}
+Closure String_fromNumber = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &String_fromInt_eval,
+    .evaluator = &String_fromNumber_eval,
     .max_values = 1,
 };
