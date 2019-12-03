@@ -29,8 +29,6 @@ void* Utils_destruct_index(ElmValue* v, size_t index) {
   // Destructure by index: custom, cons, or tuple
   // Dynamic type check needed, since Cons and tuples are using "special-case" structs
   // and compiler code gen doesn't have type info to distinguish them from generic Custom
-  // All cases except Custom should compile to same assembly. But it's more robust than
-  // 'if'
   void** children;
   switch (v->header.tag) {
     case Tag_Custom:
@@ -53,7 +51,7 @@ void* Utils_destruct_index(ElmValue* v, size_t index) {
 
 void* Utils_clone(void* x) {
   Header* h = (Header*)x;
-  if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 1)) return x;
+  if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 0)) return x;
   size_t n_bytes = SIZE_UNIT * (size_t)h->size;
   ElmValue* x_new = CAN_THROW(GC_malloc(n_bytes));
   GC_memcpy(x_new, x, n_bytes);

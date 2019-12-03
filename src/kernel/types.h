@@ -217,6 +217,7 @@ typedef struct {
   void* values[];
 } Record;
 Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]);
+#define NEW_RECORD(fg, n, c) CAN_THROW(ctorRecord(fg, n, c))
 
 /*
  Elm compiler generates
@@ -236,6 +237,10 @@ typedef struct {
 } Closure;
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
+
+Closure* ctorClosure(
+    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]);
+#define NEW_CLOSURE(n, m, e, v) CAN_THROW(ctorClosure(n, m, e, v))
 
 // GARBAGE COLLECTOR TYPES
 

@@ -5,9 +5,9 @@ enum {
   JS_Json_succeed,
   JS_Platform_batch,
   JS_Platform_leaf,
+  JS_Process_sleep,
   JS_Scheduler_andThen,
   JS_Scheduler_succeed,
-  JS_Process_sleep,
   JS_VirtualDom_node,
   JS_VirtualDom_on,
   JS_VirtualDom_text

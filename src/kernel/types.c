@@ -111,13 +111,26 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
 }
 
 Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
-  Record* r = GC_malloc(sizeof(Record) + n_children * sizeof(void*));
+  Record* r = CAN_THROW(GC_malloc(sizeof(Record) + n_children * sizeof(void*)));
   r->header = HEADER_RECORD(n_children);
   r->fieldgroup = fg;
   for (size_t i = 0; i < n_children; ++i) {
     r->values[i] = children[i];
   }
   return r;
+}
+
+Closure* ctorClosure(
+    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]) {
+  Closure* c = CAN_THROW(GC_malloc(sizeof(Closure) + n_values * sizeof(void*)));
+  c->header = HEADER_CLOSURE(n_values);
+  c->n_values = n_values;
+  c->max_values = max_values;
+  c->evaluator = evaluator;
+  for (size_t i = 0; i < n_values; ++i) {
+    c->values[i] = values[i];
+  }
+  return c;
 }
 
 u32 custom_params(Custom* c) {
