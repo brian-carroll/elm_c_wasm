@@ -304,11 +304,7 @@ Closure elm_html_Html_Events_onClick = {
 // constructors and constants
 
 void* eval_author_project_Main_SetCounter(void* args[1]) {
-  Custom* p = GC_malloc(sizeof(Custom) + sizeof(void*));
-  p->header = HEADER_CUSTOM(1);
-  p->ctor = CTOR_SetCounter;
-  p->values[0] = args[0];
-  return p;
+  return NEW_CUSTOM(CTOR_SetCounter, 1, args);
 };
 Closure author_project_Main_SetCounter = {
     .header = HEADER_CLOSURE(0),

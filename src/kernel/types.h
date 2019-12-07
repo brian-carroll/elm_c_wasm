@@ -202,6 +202,8 @@ typedef struct {
 } Custom;
 
 u32 custom_params(Custom* c);  // number of parameters in a Custom struct
+Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]);
+#define NEW_CUSTOM(ctor, n, c) CAN_THROW(ctorCustom(ctor, n, c))
 
 // RECORD
 
