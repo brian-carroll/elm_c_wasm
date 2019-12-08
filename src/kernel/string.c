@@ -75,7 +75,7 @@ static void* fromFloat(ElmFloat* box) {
 
 static void* String_fromNumber_eval(void* args[1]) {
   Number* box = args[0];
-  if (pa->i.header.tag == Tag_Int) {
+  if (box->i.header.tag == Tag_Int) {
     return fromInt(box);
   }
   return fromFloat(box);
