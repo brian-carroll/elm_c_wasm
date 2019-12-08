@@ -37,22 +37,16 @@ const jsKernelFunctions = [
 
 // Apply the wrapper to the Wasm module, passing the config params too
 // wrapWasmElmApp must be in scope where this code is inserted.
-const wasmMainRecord = wrapWasmElmApp(
+const wasmWrapper = wrapWasmElmApp(
   EmscriptenModule.buffer, // The `ArrayBuffer` memory block shared between JS and Wasm
   EmscriptenModule.asm, // Object of exported functions from the Wasm module
   appTypes, // App-specific type info passed from Elm compiler to this wrapper
   jsKernelFunctions // Array of all JS kernel functions called by the Elm Wasm module
 );
 
-// Swap in the wrapped Wasm app instead of the generated JS app
-//
-// Override a `var` in Elm's generated JS before it gets used.
-// We're relying on this code being inserted in the right place by the
-// build script `build-combine.sh`. That's _after_ the original `var`,
-// but _before_ author$project$Main$main
-var author$project$WasmWrapper$element = function(jsMainRecord) {
-  // Ignore the JS app implementation and swap in the Wasm implementation
-  // As promised in WasmWrapper.elm, use Browser.element to make a `Program`
-  return _Browser_element(wasmMainRecord);
+// In the real build, we can just assign to main instead of doing this.
+// But for the Bash build, text insertion is easier than text replacement
+var author$project$WasmWrapper$element = function(_) {
+  return wasmWrapper.mains[0];
 };
 //============ end patch.js ===================

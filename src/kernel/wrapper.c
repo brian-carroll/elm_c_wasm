@@ -13,13 +13,14 @@
 extern GcState gc_state;
 
 FieldGroup** appFieldGroups;
-void** mainGcRoot;
+void** mainsArray[];
 
 /*
     API exposed to C app
 */
-void Wrapper_registerMainRecord(void** mainGcRootFromApp) {
-  mainGcRoot = mainGcRootFromApp;
+
+void Wrapper_registerMains(void** mainsArrayFromApp[]) {
+  mainsArray = mainsArrayFromApp;
 }
 
 void Wrapper_registerFieldGroups(FieldGroup** fgArrayFromApp) {
@@ -30,16 +31,21 @@ void Wrapper_registerFieldGroups(FieldGroup** fgArrayFromApp) {
   API exposed to JS side of wrapper
 */
 
-size_t EMSCRIPTEN_KEEPALIVE getMainRecord() {
-  return (size_t)(*mainGcRoot);
+size_t mainsIndex = 0;
+size_t EMSCRIPTEN_KEEPALIVE getNextMain() {
+  assert(mainsArray != NULL);
+  void** mainGcRoot = mainsArray[mainsIndex];
+  if (mainGcRoot != NULL) mainsIndex++;
+  void* heapVal = *mainGcRoot;
+  return (size_t)heapVal;
 };
 
-size_t nextFieldGroup = 0;
+size_t fgIndex = 0;
 size_t EMSCRIPTEN_KEEPALIVE getNextFieldGroup() {
   assert(appFieldGroups != NULL);
-  FieldGroup* next = appFieldGroups[nextFieldGroup];
-  if (next != NULL) nextFieldGroup++;
-  return (size_t)next;
+  FieldGroup* fg = appFieldGroups[fgIndex];
+  if (fg != NULL) fgIndex++;
+  return (size_t)fg;
 }
 
 size_t EMSCRIPTEN_KEEPALIVE getUnit() {

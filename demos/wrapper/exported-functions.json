@@ -1,5 +1,5 @@
 [
-  "getMainRecord",
+  "getMains",
   "getUnit",
   "getNil",
   "getTrue",

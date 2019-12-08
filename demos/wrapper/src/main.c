@@ -504,8 +504,12 @@ void* init_author_project_Main_main() {
           })));
 }
 
+ElmValue** mainsArray[] = {
+    &ptr_author_project_Main_main,
+    NULL,
+};
+
 int EMSCRIPTEN_KEEPALIVE main() {
-  printf("entering main\n");
   int exit_code = GC_init();
   if (exit_code) return exit_code;
   Utils_initGlobal(&ptr_elm_core_Platform_Cmd_none, &init_elm_core_Platform_Cmd_none);
@@ -516,6 +520,6 @@ int EMSCRIPTEN_KEEPALIVE main() {
   Utils_initGlobal(&ptr_elm_html_Html_h1, &init_elm_html_Html_h1);
   Utils_initGlobal(&ptr_author_project_Main_main, &init_author_project_Main_main);
   Wrapper_registerFieldGroups(app_field_groups);
-  printf("exiting main\n");
+  Wrapper_registerMains(mainsArray);
   return 0;
 }

@@ -4,7 +4,7 @@
  * Functions exported from the Wasm module
  */
 interface ElmWasmExports {
-  _getMainRecord: () => number;
+  _getNextMain: () => number;
   _getUnit: () => number;
   _getNil: () => number;
   _getTrue: () => number;
@@ -604,34 +604,18 @@ function wrapWasmElmApp(
 
   -------------------------------------------------- */
 
-  interface MainRecord {
-    init: (flags: any) => any;
-    subscriptions: (model: any) => any;
-    update: (msg: any) => (model: any) => any;
-    view: (model: any) => any;
+  const mains: any[] = [];
+  while (true) {
+    const mainAddr = wasmExports._getNextMain();
+    if (!mainAddr) break;
+    mains.push(readWasmValue(mainAddr));
   }
 
-  // Extra fields for test & debug, ignored by JS Kernel
-  interface Wrapper extends MainRecord {
-    readWasmValue: typeof readWasmValue;
-    writeWasmValue: (value: any) => number;
-  }
-
-  const mainRecordAddr = wasmExports._getMainRecord();
-  const mainRecord: MainRecord = mainRecordAddr
-    ? readWasmValue(mainRecordAddr)
-    : {};
-
-  const wrapper: Wrapper = {
-    init: mainRecord.init,
-    subscriptions: mainRecord.subscriptions,
-    update: mainRecord.update,
-    view: mainRecord.view,
+  return {
+    mains,
     // functions for testing
     readWasmValue,
-    writeWasmValue: value =>
+    writeWasmValue: (value: any) =>
       handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value))
   };
-
-  return wrapper;
 }

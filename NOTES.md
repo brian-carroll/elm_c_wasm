@@ -1,3 +1,11 @@
+# Export `main` from Wasm
+
+- There's actually no need to special-case mainRecord, just export `main`.
+- It will be a suspended call to `Browser_element`, which is fine!
+- Wrapper will do the right thing by default: call `Browser_element` while converting it
+- So the JS `main` is always a fixed expression that reads a main from the wrapper. This is the only thing that changes.
+- Rest of JS stuff for initialising is unchanged! As long as `main` has the right name it's all good.
+
 # const
 
 - I get loads of warnings about const, do they matter?
