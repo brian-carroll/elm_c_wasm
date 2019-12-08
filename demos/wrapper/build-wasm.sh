@@ -1,3 +1,4 @@
+# FILENAME="handwritten"
 FILENAME="main"
 KERNELS=$(find ../../src/kernel -name '*.c')
 
