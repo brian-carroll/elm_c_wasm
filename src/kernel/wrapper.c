@@ -13,7 +13,7 @@
 extern GcState gc_state;
 
 FieldGroup** appFieldGroups;
-void** mainsArray[];
+void*** mainsArray;
 
 /*
     API exposed to C app
