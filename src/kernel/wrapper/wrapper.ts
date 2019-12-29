@@ -209,9 +209,10 @@ function wrapWasmElmApp(
         const jsCtor = appTypes.ctors[wasmCtor];
         const custom: Record<string, any> = { $: jsCtor };
         const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
-        for (let i = index + 2; i < index + size; i++) {
+        const nFields = size - 2;
+        for (let i = 0; i < nFields; i++) {
           const field = fieldNames[i];
-          const childAddr = mem32[i];
+          const childAddr = mem32[index + 2 + i];
           custom[field] = readWasmValue(childAddr);
         }
         return custom;

@@ -9,10 +9,10 @@ enum {
   JS_Browser_element,
   JS_Json_succeed,
   JS_Platform_batch,
+  JS_Platform_leaf,
   JS_Process_sleep,
   JS_Scheduler_andThen,
   JS_Scheduler_succeed,
-  JS_Task_command,
   JS_VirtualDom_node,
   JS_VirtualDom_on,
   JS_VirtualDom_text,
@@ -41,12 +41,6 @@ Closure VirtualDom_node = {
     .max_values = 0xffff,
     .evaluator = (void*)JS_VirtualDom_node,
 };
-Closure Task_command = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0xffff,
-    .evaluator = (void*)JS_Task_command,
-};
 Closure Scheduler_succeed = {
     .header = HEADER_CLOSURE(0),
     .n_values = 0x0,
@@ -64,6 +58,12 @@ Closure Process_sleep = {
     .n_values = 0x0,
     .max_values = 0xffff,
     .evaluator = (void*)JS_Process_sleep,
+};
+Closure Platform_leaf = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0xffff,
+    .evaluator = (void*)JS_Platform_leaf,
 };
 Closure Platform_batch = {
     .header = HEADER_CLOSURE(0),
@@ -141,6 +141,16 @@ ElmString16 literal_string_br = {
             0x72,
         },
 };
+ElmString16 literal_string_Task = {
+    .header = HEADER_STRING(4),
+    .words16 =
+        {
+            0x54,
+            0x61,
+            0x73,
+            0x6b,
+        },
+};
 ElmString16 literal_string_Start_20countdown = {
     .header = HEADER_STRING(15),
     .words16 =
@@ -210,20 +220,10 @@ FieldGroup* app_field_groups[] = {
 };
 
 #define elm_browser_Browser_element Browser_element
-void* eval_author_project_WasmWrapper_element(void* args[]) {
-  void* x_mainRecord = args[0];
-  return A1(&elm_browser_Browser_element, x_mainRecord);
-}
-Closure author_project_WasmWrapper_element = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0x1,
-    .evaluator = &eval_author_project_WasmWrapper_element,
-};
 
 #define elm_core_Platform_Cmd_batch Platform_batch
 #define elm_core_Platform_Cmd_none (*ptr_elm_core_Platform_Cmd_none)
-ElmValue* ptr_elm_core_Platform_Cmd_none;
+Closure* ptr_elm_core_Platform_Cmd_none;
 void* init_elm_core_Platform_Cmd_none() {
   return A1(&elm_core_Platform_Cmd_batch, &Nil);
 }
@@ -240,7 +240,7 @@ Closure author_project_Main_init = {
 
 #define elm_core_Platform_Sub_batch Platform_batch
 #define elm_core_Platform_Sub_none (*ptr_elm_core_Platform_Sub_none)
-ElmValue* ptr_elm_core_Platform_Sub_none;
+Closure* ptr_elm_core_Platform_Sub_none;
 void* init_elm_core_Platform_Sub_none() {
   return A1(&elm_core_Platform_Sub_batch, &Nil);
 }
@@ -299,7 +299,16 @@ Closure elm_core_Task_Perform = {
     .evaluator = &eval_elm_core_Task_Perform,
 };
 
-#define elm_core_Task_command Task_command
+Closure elm_core_Task_command = {
+    .header = HEADER_CLOSURE(1),
+    .n_values = 0x1,
+    .max_values = 0xffff,
+    .evaluator = (void*)JS_Platform_leaf,
+    .values =
+        {
+            &literal_string_Task,
+        },
+};
 
 #define elm_core_Task_andThen Scheduler_andThen
 
@@ -390,19 +399,19 @@ Closure author_project_Main_update = {
 };
 
 #define elm_html_Html_br (*ptr_elm_html_Html_br)
-ElmValue* ptr_elm_html_Html_br;
+Closure* ptr_elm_html_Html_br;
 void* init_elm_html_Html_br() {
   return A1(&VirtualDom_node, &literal_string_br);
 }
 
 #define elm_html_Html_button (*ptr_elm_html_Html_button)
-ElmValue* ptr_elm_html_Html_button;
+Closure* ptr_elm_html_Html_button;
 void* init_elm_html_Html_button() {
   return A1(&VirtualDom_node, &literal_string_button);
 }
 
 #define elm_html_Html_div (*ptr_elm_html_Html_div)
-ElmValue* ptr_elm_html_Html_div;
+Closure* ptr_elm_html_Html_div;
 void* init_elm_html_Html_div() {
   return A1(&VirtualDom_node, &literal_string_div);
 }
@@ -410,7 +419,7 @@ void* init_elm_html_Html_div() {
 #define elm_core_String_fromInt String_fromNumber
 
 #define elm_html_Html_h1 (*ptr_elm_html_Html_h1)
-ElmValue* ptr_elm_html_Html_h1;
+Closure* ptr_elm_html_Html_h1;
 void* init_elm_html_Html_h1() {
   return A1(&VirtualDom_node, &literal_string_h1);
 }
@@ -491,9 +500,9 @@ Closure author_project_Main_view = {
     .evaluator = &eval_author_project_Main_view,
 };
 #define author_project_Main_main (*ptr_author_project_Main_main)
-ElmValue* ptr_author_project_Main_main;
+Closure* ptr_author_project_Main_main;
 void* init_author_project_Main_main() {
-  return A1(&author_project_WasmWrapper_element,
+  return A1(&elm_browser_Browser_element,
       NEW_RECORD(&fg_init_subscriptions_update_view,
           4,
           ((void* []){
@@ -504,12 +513,13 @@ void* init_author_project_Main_main() {
           })));
 }
 
-ElmValue** mainsArray[] = {
+void** mains[] = {
     &ptr_author_project_Main_main,
     NULL,
 };
 
 int EMSCRIPTEN_KEEPALIVE main() {
+  printf("main\n");
   int exit_code = GC_init();
   if (exit_code) return exit_code;
   Utils_initGlobal(&ptr_elm_core_Platform_Cmd_none, &init_elm_core_Platform_Cmd_none);
@@ -520,6 +530,8 @@ int EMSCRIPTEN_KEEPALIVE main() {
   Utils_initGlobal(&ptr_elm_html_Html_h1, &init_elm_html_Html_h1);
   Utils_initGlobal(&ptr_author_project_Main_main, &init_author_project_Main_main);
   Wrapper_registerFieldGroups(app_field_groups);
-  Wrapper_registerMains(mainsArray);
+  printf("mains[0] %p\n", mains[0]);
+  printf("*mains[0] %p\n", *mains[0]);
+  Wrapper_registerMains(mains);
   return 0;
 }
