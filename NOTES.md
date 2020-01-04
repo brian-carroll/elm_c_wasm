@@ -1,3 +1,10 @@
+# missing kernel implementations for elm-spa-example
+
+- Basics_and
+- Basics_or
+- Char_toCode
+- List_cons
+
 # Export `main` from Wasm
 
 - There's actually no need to special-case mainRecord, just export `main`.

@@ -18,6 +18,7 @@ Custom Utils_GT;
 
 void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
+void* Utils_destruct_index(ElmValue* v, size_t index);
 void* Utils_clone(void* x);
 void* Utils_access_eval(void* args[2]);
 void Utils_initGlobal(void** global, void* (*init_func)());
