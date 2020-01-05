@@ -1,3 +1,29 @@
+# TCE improvements
+
+- on each iteration, just allocate, don't populate
+  - could achieve this by removing code from `GC_tce_iteration`
+- IDEA: don't bail out on GC full, instead do a `goto`
+  - define and undefine a macro that modifies CAN_THROW and A1/A2/An
+  - CAN_THROW does the goto when that macro is defined
+- Is this any better?
+  - well not really, only in case of gc full which is not important
+- Current implementation
+  - Begin
+    - Allocate a closure and tailcall
+  - Iter
+    - Allocate a closure and tailcall (in a C call to `GC_tce_iteration`)
+    - populate them (optional)
+    - mutate a closure
+    - pop back out on GC full
+  - GC full
+    - copy the mutated closure to the allocated closure
+    - populate the tailcall
+- Most important thing to optimise is the loop
+- Could get rid of the copying of values
+- Maybe even get rid of `GC_tce_iteration` and make it just a `GC_malloc` call
+  - maybe using a macro instead of a call.
+  - or maybe using a macro for just the arg to `GC_malloc`
+
 # missing kernel implementations for elm-spa-example
 
 - Basics_and
