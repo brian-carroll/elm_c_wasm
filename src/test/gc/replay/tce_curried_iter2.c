@@ -73,6 +73,8 @@ char* test_replay_tce_curried_iter2() {
 
   void* push = h + sizeof(GcStackMap) + 2 * sizeof(Closure) + 3 * sizeof(void*);
 
+  size_t zero = 0;
+
   // HEAP BEFORE GC
   void* heap_before_spec[] = {
       &(GcStackMap){
@@ -85,11 +87,10 @@ char* test_replay_tce_curried_iter2() {
           .older = h,
       },
       &closure_spec_iter1,
-      &(GcStackMap){
-          .header = HEADER_GC_STACK_TC,
-          .older = NULL,  // never gets populated
-          .replay = h + 2 * sizeof(GcStackMap) + 2 * sizeof(Closure) + 3 * sizeof(void*),
-      },
+      &zero,
+      &zero,
+      &zero,
+      &zero,
       &(ElmInt){
           .header = HEADER_INT,
           .value = 0,

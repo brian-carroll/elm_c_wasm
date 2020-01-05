@@ -344,19 +344,6 @@ void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
   state->stack_map = tailcall;
   *gc_tce_data = tce_space;
 
-  Closure* c = tce_space;
-  *c = (Closure){
-      .header = HEADER_CLOSURE(n_args),
-      .n_values = n_args,
-      .max_values = n_args,
-      .evaluator = NULL,
-  };
-  *tailcall = (GcStackMap){
-      .header = HEADER_GC_STACK_TC,
-      .newer = NULL,
-      .older = NULL,
-      .replay = c,
-  };
   return tce_space;  // not pGcFull
 }
 
@@ -383,9 +370,14 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
     gc_tce_data = c_mutable;
   } else {
     push = state->stack_map;  // First run. No tailcall has occurred yet, just a Push.
-    GC_tce_iteration(n_args, &gc_tce_data);
+    CAN_THROW(GC_tce_iteration(n_args, &gc_tce_data));
     c_mutable = gc_tce_data;
-    c_mutable->evaluator = c_orig->evaluator;
+    *c_mutable = (Closure){
+        .header = HEADER_CLOSURE(n_args),
+        .n_values = n_args,
+        .max_values = n_args,
+        .evaluator = c_orig->evaluator,
+    };
     GC_memcpy(c_mutable->values, args, n_args * sizeof(void*));
   }
 
@@ -404,9 +396,9 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
   GC_memcpy(c_replay, c_mutable, closure_bytes);
 
   GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + closure_bytes);
-  // tailcall->header = HEADER_GC_STACK_TC;
+  tailcall->header = HEADER_GC_STACK_TC;
   tailcall->older = push;
-  // tailcall->replay = c_replay;
+  tailcall->replay = c_replay;
 
   return pGcFull;
 }

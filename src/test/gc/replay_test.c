@@ -105,13 +105,13 @@ char* assert_heap_values(char* description, void* values[]) {
 
   while (true) {
     ElmValue* v = (ElmValue*)values[i];
-    if (v == NULL) break;
+    if (v == NULL) break;  // end of expected heap array
 
     size_t* p = (size_t*)values[i];
     size_t* v_end = p + v->header.size;
     size_t* heap_word = heap_value;
 
-    for (; p < v_end; heap_word++, p++) {
+    do {
       expected_value = *p;
       if (*heap_word != expected_value) {
         bad_addr = heap_word;
@@ -121,7 +121,10 @@ char* assert_heap_values(char* description, void* values[]) {
         }
         break;
       }
-    }
+      heap_word++;
+      p++;
+    } while (p < v_end);
+
     if (bad_addr) break;
     heap_value = heap_word;
     i++;
