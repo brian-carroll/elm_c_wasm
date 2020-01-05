@@ -466,7 +466,7 @@ void* fibHelp_tce(void* args[3], void** gc_tce_data) {
       ElmInt* next_prev1 = A2(&Basics_add, prev1, prev2);
       ElmInt* next_prev2 = prev1;
 
-      CAN_THROW(GC_tce_iteration(3, gc_tce_data));
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(3));
 
       // *Mutate* args last, after everything that can throw
       // Allows us to resume after GC exception

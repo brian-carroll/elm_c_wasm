@@ -40,7 +40,7 @@ static void* eval_mock_func_tce(void* args[2], void** gc_tce_data) {
         return last_alloc;
       case Tag_GcStackTailCall:
         last_alloc->value = i + 1;
-        CAN_THROW(GC_tce_iteration(2, gc_tce_data));
+        *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
         args[0] = last_alloc;
         break;
       default:

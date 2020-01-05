@@ -31,9 +31,9 @@ void* eval_tce_count(void* args[1], void** gc_tce_data) {
       return &Unit;
     } else {
       ElmInt* next_remaining = A2(&Basics_sub, remaining, (void*)&literal_1);
-      void* maybeException = GC_tce_iteration(1, gc_tce_data);
-      if (maybeException == pGcFull) {
-        return maybeException;
+      *gc_tce_data = GC_tce_iteration(1);
+      if (gc_tce_data == pGcFull) {
+        return pGcFull;
       }
       args[0] = next_remaining;
     }

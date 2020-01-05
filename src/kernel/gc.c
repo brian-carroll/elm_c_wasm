@@ -333,18 +333,17 @@ void* GC_stack_tailcall(Closure* c, void* push) {
 // Allocates space for a Closure and GcStackMap so that during replay
 // we can skip previous iterations (and their garbage)
 // Creates lots of extra garbage in order to be able to clean it all up!
-void* GC_tce_iteration(size_t n_args, void** gc_tce_data) {
+void* GC_tce_iteration(size_t n_args) {
   GcState* state = &gc_state;
   size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void*);
   size_t cont_bytes = closure_bytes + sizeof(GcStackMap);
 
   void* tce_space = GC_malloc(cont_bytes);
-  if (tce_space == pGcFull) return pGcFull;
-  GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
-  state->stack_map = tailcall;
-  *gc_tce_data = tce_space;
-
-  return tce_space;  // not pGcFull
+  if (tce_space != pGcFull) {
+    GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
+    state->stack_map = tailcall;
+  }
+  return tce_space;
 }
 
 // Evaluate a tail call elminated Elm function,
@@ -370,7 +369,7 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
     gc_tce_data = c_mutable;
   } else {
     push = state->stack_map;  // First run. No tailcall has occurred yet, just a Push.
-    CAN_THROW(GC_tce_iteration(n_args, &gc_tce_data));
+    gc_tce_data = CAN_THROW(GC_tce_iteration(n_args));
     c_mutable = gc_tce_data;
     *c_mutable = (Closure){
         .header = HEADER_CLOSURE(n_args),
@@ -750,7 +749,7 @@ int main(int argc, char** argv) {
   compact(state, pword);
   reverse_stack_map(state);
 
-  GC_tce_iteration(word, pointer_array);
+  GC_tce_iteration(word);
   GC_tce_eval(&dummy_tce_eval, c, pointer_array);
 
   GC_apply_replay();
