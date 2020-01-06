@@ -348,10 +348,12 @@ void* GC_tce_iteration(size_t n_args) {
 
 // Evaluate a tail call elminated Elm function,
 // managing all of the GC related stuff for it
-void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* args[]) {
+void* GC_tce_eval(void* (*tce_eval)(void* [], void**),
+    void* (*eval)(void* []),
+    u32 n_args,
+    void* args[]) {
   GcState* state = &gc_state;
   GcStackMap* push;
-  size_t n_args = (size_t)c_orig->max_values;
   size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void*);
 
   // Pointer to new space allocated by tce_eval on every iteration
@@ -375,7 +377,7 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**), Closure* c_orig, void* ar
         .header = HEADER_CLOSURE(n_args),
         .n_values = n_args,
         .max_values = n_args,
-        .evaluator = c_orig->evaluator,
+        .evaluator = eval,
     };
     GC_memcpy(c_mutable->values, args, n_args * sizeof(void*));
   }
@@ -750,7 +752,7 @@ int main(int argc, char** argv) {
   reverse_stack_map(state);
 
   GC_tce_iteration(word);
-  GC_tce_eval(&dummy_tce_eval, c, pointer_array);
+  GC_tce_eval(&dummy_tce_eval, NULL, 3, pointer_array);
 
   GC_apply_replay();
 

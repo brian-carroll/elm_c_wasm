@@ -49,9 +49,8 @@ static void* eval_mock_func_tce(void* args[2], void** gc_tce_data) {
   }
 }
 
-Closure mock_func_tail;
 void* eval_mock_func_tail(void* args[2]) {
-  return GC_tce_eval(&eval_mock_func_tce, &mock_func_tail, args);
+  return GC_tce_eval(&eval_mock_func_tce, &eval_mock_func_tail, 2, args);
 }
 Closure mock_func_tail = {
     .header = HEADER_CLOSURE(0),

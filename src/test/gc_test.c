@@ -477,9 +477,8 @@ void* fibHelp_tce(void* args[3], void** gc_tce_data) {
   }
 }
 
-Closure fibHelp;
 void* fibHelp_eval(void* args[3]) {
-  return GC_tce_eval(&fibHelp_tce, &fibHelp, args);
+  return GC_tce_eval(&fibHelp_tce, &fibHelp_eval, 3, args);
 }
 Closure fibHelp = {
     .header = HEADER_CLOSURE(0),

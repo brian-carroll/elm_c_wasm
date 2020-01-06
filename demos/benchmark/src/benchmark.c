@@ -40,9 +40,8 @@ void* eval_tce_count(void* args[1], void** gc_tce_data) {
   }
 }
 
-Closure count;  // pre-declaration for circular dependency
 void* eval_count(void* args[1]) {
-  return GC_tce_eval(&eval_tce_count, &count, args);
+  return GC_tce_eval(&eval_tce_count, &eval_count, 1, args);
 }
 Closure count = {
     .header = HEADER_CLOSURE(0),
