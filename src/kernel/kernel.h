@@ -5,6 +5,7 @@
 #endif
 
 #include "./basics.h"
+#include "./char.h"
 #include "./debug.h"
 #include "./gc.h"
 #include "./list.h"

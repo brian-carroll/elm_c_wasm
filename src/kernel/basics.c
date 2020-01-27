@@ -1,6 +1,23 @@
 #include "basics.h"
 #include <math.h>
-#include "types.h"
+
+static void* and_eval(void* args[2]) {
+  return (args[0] == &True && args[1] == &True) ? &True : &False;
+}
+Closure Basics_and = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &and_eval,
+    .max_values = 2,
+};
+
+static void* or_eval(void* args[2]) {
+  return (args[0] == &True || args[1] == &True) ? &True : &False;
+}
+Closure Basics_or = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &or_eval,
+    .max_values = 2,
+};
 
 static void* add_eval(void* args[2]) {
   Number* pa = args[0];

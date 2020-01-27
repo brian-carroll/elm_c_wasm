@@ -75,9 +75,9 @@
 
 # missing kernel implementations for elm-spa-example
 
-- [ ] Basics_and
-- [ ] Basics_or
-- [ ] Char_toCode
+- [x] Basics_and
+- [x] Basics_or
+- [x] Char_toCode
 - [ ] List_cons
 - [ ] List_map2
 - [ ] List_toArray (used in `String.join`)

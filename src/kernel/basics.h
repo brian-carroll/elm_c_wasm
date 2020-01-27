@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+Closure Basics_and;
+Closure Basics_or;
 Closure Basics_add;
 Closure Basics_sub;
 Closure Basics_mul;
