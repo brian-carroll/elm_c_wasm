@@ -3857,6 +3857,13 @@ ElmString16 literal_string_a = {
             0x61,
         },
 };
+ElmString16 literal_string__5d = {
+    .header = HEADER_STRING(1),
+    .words16 =
+        {
+            0x5d,
+        },
+};
 ElmString16 literal_string__5cu00A0Settings = {
     .header = HEADER_STRING(14),
     .words16 =
@@ -3909,6 +3916,27 @@ ElmString16 literal_string__5cu00A0 = {
             0x30,
         },
 };
+ElmString16 literal_string__5cn_5cn_28 = {
+    .header = HEADER_STRING(5),
+    .words16 =
+        {
+            0x5c,
+            0x6e,
+            0x5c,
+            0x6e,
+            0x28,
+        },
+};
+ElmString16 literal_string__5cn_5cn = {
+    .header = HEADER_STRING(4),
+    .words16 =
+        {
+            0x5c,
+            0x6e,
+            0x5c,
+            0x6e,
+        },
+};
 ElmString16 literal_string__5cn_20_20_20_20 = {
     .header = HEADER_STRING(6),
     .words16 =
@@ -3929,12 +3957,37 @@ ElmString16 literal_string__5cn = {
             0x6e,
         },
 };
+ElmString16 literal_string__5c_27_5d = {
+    .header = HEADER_STRING(3),
+    .words16 =
+        {
+            0x5c,
+            0x27,
+            0x5d,
+        },
+};
 ElmString16 literal_string__5c_22 = {
     .header = HEADER_STRING(2),
     .words16 =
         {
             0x5c,
             0x22,
+        },
+};
+ElmString16 literal_string__5b_5c_27 = {
+    .header = HEADER_STRING(3),
+    .words16 =
+        {
+            0x5b,
+            0x5c,
+            0x27,
+        },
+};
+ElmString16 literal_string__5b = {
+    .header = HEADER_STRING(1),
+    .words16 =
+        {
+            0x5b,
         },
 };
 ElmString16 literal_string_Z = {
@@ -4211,6 +4264,41 @@ ElmString16 literal_string_Thinkster = {
             0x72,
         },
 };
+ElmString16 literal_string_The_20Json_2eDecode_2eoneOf_20at_20json = {
+    .header = HEADER_STRING(29),
+    .words16 =
+        {
+            0x54,
+            0x68,
+            0x65,
+            0x20,
+            0x4a,
+            0x73,
+            0x6f,
+            0x6e,
+            0x2e,
+            0x44,
+            0x65,
+            0x63,
+            0x6f,
+            0x64,
+            0x65,
+            0x2e,
+            0x6f,
+            0x6e,
+            0x65,
+            0x4f,
+            0x66,
+            0x20,
+            0x61,
+            0x74,
+            0x20,
+            0x6a,
+            0x73,
+            0x6f,
+            0x6e,
+        },
+};
 ElmString16 literal_string_Task = {
     .header = HEADER_STRING(4),
     .words16 =
@@ -4480,6 +4568,63 @@ ElmString16 literal_string_Read_20more_2e_2e_2e = {
             0x2e,
         },
 };
+ElmString16
+    literal_string_Ran_20into_20a_20Json_2eDecode_2eoneOf_20with_20no_20possibilities = {
+        .header = HEADER_STRING(50),
+        .words16 =
+            {
+                0x52,
+                0x61,
+                0x6e,
+                0x20,
+                0x69,
+                0x6e,
+                0x74,
+                0x6f,
+                0x20,
+                0x61,
+                0x20,
+                0x4a,
+                0x73,
+                0x6f,
+                0x6e,
+                0x2e,
+                0x44,
+                0x65,
+                0x63,
+                0x6f,
+                0x64,
+                0x65,
+                0x2e,
+                0x6f,
+                0x6e,
+                0x65,
+                0x4f,
+                0x66,
+                0x20,
+                0x77,
+                0x69,
+                0x74,
+                0x68,
+                0x20,
+                0x6e,
+                0x6f,
+                0x20,
+                0x70,
+                0x6f,
+                0x73,
+                0x73,
+                0x69,
+                0x62,
+                0x69,
+                0x6c,
+                0x69,
+                0x74,
+                0x69,
+                0x65,
+                0x73,
+            },
+};
 ElmString16 literal_string_Publish_20Article = {
     .header = HEADER_STRING(15),
     .words16 =
@@ -4528,6 +4673,81 @@ ElmString16 literal_string_Profile = {
             0x69,
             0x6c,
             0x65,
+        },
+};
+ElmString16 literal_string_Problem_20with_20the_20value_20at_20json = {
+    .header = HEADER_STRING(30),
+    .words16 =
+        {
+            0x50,
+            0x72,
+            0x6f,
+            0x62,
+            0x6c,
+            0x65,
+            0x6d,
+            0x20,
+            0x77,
+            0x69,
+            0x74,
+            0x68,
+            0x20,
+            0x74,
+            0x68,
+            0x65,
+            0x20,
+            0x76,
+            0x61,
+            0x6c,
+            0x75,
+            0x65,
+            0x20,
+            0x61,
+            0x74,
+            0x20,
+            0x6a,
+            0x73,
+            0x6f,
+            0x6e,
+        },
+};
+ElmString16 literal_string_Problem_20with_20the_20given_20value_3a_5cn_5cn = {
+    .header = HEADER_STRING(33),
+    .words16 =
+        {
+            0x50,
+            0x72,
+            0x6f,
+            0x62,
+            0x6c,
+            0x65,
+            0x6d,
+            0x20,
+            0x77,
+            0x69,
+            0x74,
+            0x68,
+            0x20,
+            0x74,
+            0x68,
+            0x65,
+            0x20,
+            0x67,
+            0x69,
+            0x76,
+            0x65,
+            0x6e,
+            0x20,
+            0x76,
+            0x61,
+            0x6c,
+            0x75,
+            0x65,
+            0x3a,
+            0x5c,
+            0x6e,
+            0x5c,
+            0x6e,
         },
 };
 ElmString16 literal_string_Post_20Comment = {
@@ -4806,6 +5026,29 @@ ElmString16 literal_string_July = {
             0x75,
             0x6c,
             0x79,
+        },
+};
+ElmString16 literal_string_Json_2eDecode_2eoneOf = {
+    .header = HEADER_STRING(17),
+    .words16 =
+        {
+            0x4a,
+            0x73,
+            0x6f,
+            0x6e,
+            0x2e,
+            0x44,
+            0x65,
+            0x63,
+            0x6f,
+            0x64,
+            0x65,
+            0x2e,
+            0x6f,
+            0x6e,
+            0x65,
+            0x4f,
+            0x66,
         },
 };
 ElmString16 literal_string_January = {
@@ -5348,6 +5591,21 @@ ElmString16 literal_string__3d = {
             0x3d,
         },
 };
+ElmString16 literal_string__3a_5cn_5cn_20_20_20_20 = {
+    .header = HEADER_STRING(9),
+    .words16 =
+        {
+            0x3a,
+            0x5c,
+            0x6e,
+            0x5c,
+            0x6e,
+            0x20,
+            0x20,
+            0x20,
+            0x20,
+        },
+};
 ElmString16 literal_string__3a = {
     .header = HEADER_STRING(1),
     .words16 =
@@ -5499,6 +5757,14 @@ ElmString16 literal_string__2b = {
             0x2b,
         },
 };
+ElmString16 literal_string__29_20 = {
+    .header = HEADER_STRING(2),
+    .words16 =
+        {
+            0x29,
+            0x20,
+        },
+};
 ElmString16 literal_string__29 = {
     .header = HEADER_STRING(1),
     .words16 =
@@ -5528,6 +5794,25 @@ ElmString16 literal_string__23 = {
             0x23,
         },
 };
+ElmString16 literal_string__21 = {
+    .header = HEADER_STRING(1),
+    .words16 =
+        {
+            0x21,
+        },
+};
+ElmString16 literal_string__20ways_3a = {
+    .header = HEADER_STRING(6),
+    .words16 =
+        {
+            0x20,
+            0x77,
+            0x61,
+            0x79,
+            0x73,
+            0x3a,
+        },
+};
 ElmString16 literal_string__20to_20comment_2e = {
     .header = HEADER_STRING(12),
     .words16 =
@@ -5553,6 +5838,37 @@ ElmString16 literal_string__20or_20 = {
             0x20,
             0x6f,
             0x72,
+            0x20,
+        },
+};
+ElmString16 literal_string__20failed_20in_20the_20following_20 = {
+    .header = HEADER_STRING(25),
+    .words16 =
+        {
+            0x20,
+            0x66,
+            0x61,
+            0x69,
+            0x6c,
+            0x65,
+            0x64,
+            0x20,
+            0x69,
+            0x6e,
+            0x20,
+            0x74,
+            0x68,
+            0x65,
+            0x20,
+            0x66,
+            0x6f,
+            0x6c,
+            0x6c,
+            0x6f,
+            0x77,
+            0x69,
+            0x6e,
+            0x67,
             0x20,
         },
 };
@@ -5600,6 +5916,20 @@ ElmString16 literal_string__20characters_20long_2e = {
             0x6e,
             0x67,
             0x2e,
+        },
+};
+ElmString16 literal_string__20at_20json = {
+    .header = HEADER_STRING(8),
+    .words16 =
+        {
+            0x20,
+            0x61,
+            0x74,
+            0x20,
+            0x6a,
+            0x73,
+            0x6f,
+            0x6e,
         },
 };
 ElmString16 literal_string__20action_2dbtn = {
@@ -6540,7 +6870,38 @@ Closure elm_core_String_join = {
 
 #define elm_core_Basics_add Basics_add
 
-// Cycle
+void* tce_elm_core_List_foldl(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_func = args[0];
+  void* x_acc = args[1];
+  void* x_list = args[2];
+  void* tmp0;
+  if (x_list == &Nil) {
+    tmp0 = x_acc;
+  } else {
+    void* x_x = Utils_destruct_index(x_list, 0);
+    void* x_xs = Utils_destruct_index(x_list, 1);
+    void* tmp1 = x_func;
+    void* tmp2 = A2(x_func, x_x, x_acc);
+    void* tmp3 = x_xs;
+    *gc_tce_data = CAN_THROW(GC_tce_iteration(3));
+    args[2] = tmp3;
+    args[1] = tmp2;
+    args[0] = tmp1;
+    goto tce_loop;
+    tmp0 = NULL;
+  };
+  return tmp0;
+}
+void* eval_elm_core_List_foldl() {
+  return GC_tce_eval(&tce_elm_core_List_foldl, &eval_elm_core_List_foldl, 3, args);
+}
+Closure elm_core_List_foldl = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x3,
+    .evaluator = &eval_elm_core_List_foldl,
+};
 
 #define elm_core_Basics_gt Utils_gt
 
@@ -6554,7 +6915,63 @@ Closure elm_core_List_reverse = {
     .max_values = 0x1,
     .evaluator = &eval_elm_core_List_reverse,
 };
-// Cycle
+void* eval_elm_core_List_foldrHelper(void* args[]) {
+  void* x_fn = args[0];
+  void* x_acc = args[1];
+  void* x_ctr = args[2];
+  void* x_ls = args[3];
+  void* tmp0;
+  if (x_ls == &Nil) {
+    tmp0 = x_acc;
+  } else {
+    void* x_a = Utils_destruct_index(x_ls, 0);
+    void* x_r1 = Utils_destruct_index(x_ls, 1);
+    void* tmp1;
+    if (x_r1 == &Nil) {
+      tmp1 = A2(x_fn, x_a, x_acc);
+    } else {
+      void* x_b = Utils_destruct_index(x_r1, 0);
+      void* x_r2 = Utils_destruct_index(x_r1, 1);
+      void* tmp2;
+      if (x_r2 == &Nil) {
+        tmp2 = A2(x_fn, x_a, A2(x_fn, x_b, x_acc));
+      } else {
+        void* x_c = Utils_destruct_index(x_r2, 0);
+        void* x_r3 = Utils_destruct_index(x_r2, 1);
+        void* tmp3;
+        if (x_r3 == &Nil) {
+          tmp3 = A2(x_fn, x_a, A2(x_fn, x_b, A2(x_fn, x_c, x_acc)));
+        } else {
+          void* x_d = Utils_destruct_index(x_r3, 0);
+          void* x_r4 = Utils_destruct_index(x_r3, 1);
+          void* tmp4;
+          if (A2(&elm_core_Basics_gt, x_ctr, &literal_int_500) == &True) {
+            tmp4 =
+                A3(&elm_core_List_foldl, x_fn, x_acc, A1(&elm_core_List_reverse, x_r4));
+          } else {
+            tmp4 = A4(&elm_core_List_foldrHelper,
+                x_fn,
+                x_acc,
+                A2(&elm_core_Basics_add, x_ctr, &literal_int_1),
+                x_r4);
+          };
+          void* x_res = tmp4;
+          tmp3 = A2(x_fn, x_a, A2(x_fn, x_b, A2(x_fn, x_c, A2(x_fn, x_d, x_res))));
+        };
+        tmp2 = tmp3;
+      };
+      tmp1 = tmp2;
+    };
+    tmp0 = tmp1;
+  };
+  return tmp0;
+}
+Closure elm_core_List_foldrHelper = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x4,
+    .evaluator = &eval_elm_core_List_foldrHelper,
+};
 void* eval_elm_core_List_foldr(void* args[]) {
   void* x_fn = args[0];
   void* x_acc = args[1];
@@ -6888,7 +7305,37 @@ Closure elm_core_List_length = {
 #define elm_core_Basics_le Utils_le
 
 #define elm_core_Basics_sub Basics_sub
-// Cycle
+void* tce_elm_core_List_rangeHelp(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_lo = args[0];
+  void* x_hi = args[1];
+  void* x_list = args[2];
+  void* tmp0;
+  if (A2(&elm_core_Basics_le, x_lo, x_hi) == &True) {
+    void* tmp1 = x_lo;
+    void* tmp2 = A2(&elm_core_Basics_sub, x_hi, &literal_int_1);
+    void* tmp3 = A2(&elm_core_List_cons, x_hi, x_list);
+    *gc_tce_data = CAN_THROW(GC_tce_iteration(3));
+    args[2] = tmp3;
+    args[1] = tmp2;
+    args[0] = tmp1;
+    goto tce_loop;
+    tmp0 = NULL;
+  } else {
+    tmp0 = x_list;
+  };
+  return tmp0;
+}
+void* eval_elm_core_List_rangeHelp() {
+  return GC_tce_eval(
+      &tce_elm_core_List_rangeHelp, &eval_elm_core_List_rangeHelp, 3, args);
+}
+Closure elm_core_List_rangeHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x3,
+    .evaluator = &eval_elm_core_List_rangeHelp,
+};
 void* eval_elm_core_List_range(void* args[]) {
   void* x_lo = args[0];
   void* x_hi = args[1];
@@ -6989,7 +7436,185 @@ Closure elm_core_Char_isAlphaNum = {
 };
 
 #define elm_core_String_uncons String_uncons
-// Cycle
+void* eval_elm_json_Json_Decode_errorOneOf(void* args[]) {
+  void* x_i = args[0];
+  void* x_error = args[1];
+  return A2(&elm_core_Basics_append,
+      &literal_string__5cn_5cn_28,
+      A2(&elm_core_Basics_append,
+          A1(&elm_core_String_fromInt, A2(&elm_core_Basics_add, x_i, &literal_int_1)),
+          A2(&elm_core_Basics_append,
+              &literal_string__29_20,
+              A1(&elm_json_Json_Decode_indent,
+                  A1(&elm_json_Json_Decode_errorToString, x_error)))));
+}
+Closure elm_json_Json_Decode_errorOneOf = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x2,
+    .evaluator = &eval_elm_json_Json_Decode_errorOneOf,
+};
+void* eval_elm_json_Json_Decode_errorToString(void* args[]) {
+  void* x_error = args[0];
+  return A2(&elm_json_Json_Decode_errorToStringHelp, x_error, &Nil);
+}
+Closure elm_json_Json_Decode_errorToString = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_json_Json_Decode_errorToString,
+};
+void* tce_elm_json_Json_Decode_errorToStringHelp(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_error = args[0];
+  void* x_context = args[1];
+  void* tmp0;
+  void* tmp1 = ((Custom*)x_error)->ctor;
+  if (tmp1 == CTOR_Field) {
+    {
+      void* x_f = Utils_destruct_index(x_error, 0);
+      void* x_err = Utils_destruct_index(x_error, 1);
+      void* x__v1 = A1(&elm_core_String_uncons, x_f);
+      void* tmp10;
+      void* tmp11 = ((Custom*)x__v1)->ctor;
+      if (tmp11 == CTOR_Nothing) {
+        tmp10 = &False;
+      } else {
+        void* x__v2 = Utils_destruct_index(x__v1, 0);
+        void* x_char = Utils_destruct_index(x__v2, 0);
+        void* x_rest = Utils_destruct_index(x__v2, 1);
+        tmp10 = A2(&elm_core_Basics_and,
+            A1(&elm_core_Char_isAlpha, x_char),
+            A2(&elm_core_String_all, &elm_core_Char_isAlphaNum, x_rest));
+      };
+      void* x_isSimple = tmp10;
+      void* tmp12;
+      if (x_isSimple == &True) {
+        tmp12 = A2(&elm_core_Basics_append, &literal_string__2e, x_f);
+      } else {
+        tmp12 = A2(&elm_core_Basics_append,
+            &literal_string__5b_5c_27,
+            A2(&elm_core_Basics_append, x_f, &literal_string__5c_27_5d));
+      };
+      void* x_fieldName = tmp12;
+      void* tmp13 = x_err;
+      void* tmp14 = A2(&elm_core_List_cons, x_fieldName, x_context);
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+      args[1] = tmp14;
+      args[0] = tmp13;
+      goto tce_loop;
+      tmp0 = NULL;
+    };
+  } else if (tmp1 == CTOR_Index) {
+    {
+      void* x_i = Utils_destruct_index(x_error, 0);
+      void* x_err = Utils_destruct_index(x_error, 1);
+      void* x_indexName = A2(&elm_core_Basics_append,
+          &literal_string__5b,
+          A2(&elm_core_Basics_append,
+              A1(&elm_core_String_fromInt, x_i),
+              &literal_string__5d));
+      void* tmp8 = x_err;
+      void* tmp9 = A2(&elm_core_List_cons, x_indexName, x_context);
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+      args[1] = tmp9;
+      args[0] = tmp8;
+      goto tce_loop;
+      tmp0 = NULL;
+    };
+  } else if (tmp1 == CTOR_OneOf) {
+    {
+      void* x_errors = Utils_destruct_index(x_error, 0);
+      void* tmp3;
+      if (x_errors == &Nil) {
+        void* tmp4;
+        if (x_context == &Nil) {
+          tmp4 = &literal_string__21;
+        } else {
+          tmp4 = A2(&elm_core_Basics_append,
+              &literal_string__20at_20json,
+              A2(&elm_core_String_join,
+                  &literal_string_,
+                  A1(&elm_core_List_reverse, x_context)));
+        };
+        tmp3 = A2(&elm_core_Basics_append,
+            &literal_string_Ran_20into_20a_20Json_2eDecode_2eoneOf_20with_20no_20possibilities,
+            tmp4);
+      } else if (Utils_destruct_index(x_errors, 1) == &Nil) {
+        void* x_err = Utils_destruct_index(x_errors, 0);
+        void* tmp5 = x_err;
+        void* tmp6 = x_context;
+        *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+        args[1] = tmp6;
+        args[0] = tmp5;
+        goto tce_loop;
+        tmp3 = NULL;
+      } else {
+        void* tmp7;
+        if (x_context == &Nil) {
+          tmp7 = &literal_string_Json_2eDecode_2eoneOf;
+        } else {
+          tmp7 = A2(&elm_core_Basics_append,
+              &literal_string_The_20Json_2eDecode_2eoneOf_20at_20json,
+              A2(&elm_core_String_join,
+                  &literal_string_,
+                  A1(&elm_core_List_reverse, x_context)));
+        };
+        void* x_starter = tmp7;
+        void* x_introduction = A2(&elm_core_Basics_append,
+            x_starter,
+            A2(&elm_core_Basics_append,
+                &literal_string__20failed_20in_20the_20following_20,
+                A2(&elm_core_Basics_append,
+                    A1(&elm_core_String_fromInt, A1(&elm_core_List_length, x_errors)),
+                    &literal_string__20ways_3a)));
+        tmp3 = A2(&elm_core_String_join,
+            &literal_string__5cn_5cn,
+            A2(&elm_core_List_cons,
+                x_introduction,
+                A2(&elm_core_List_indexedMap,
+                    &elm_json_Json_Decode_errorOneOf,
+                    x_errors)));
+      };
+      tmp0 = tmp3;
+    };
+  } else {
+    void* x_msg = Utils_destruct_index(x_error, 0);
+    void* x_json = Utils_destruct_index(x_error, 1);
+    void* tmp2;
+    if (x_context == &Nil) {
+      tmp2 = &literal_string_Problem_20with_20the_20given_20value_3a_5cn_5cn;
+    } else {
+      tmp2 = A2(&elm_core_Basics_append,
+          &literal_string_Problem_20with_20the_20value_20at_20json,
+          A2(&elm_core_Basics_append,
+              A2(&elm_core_String_join,
+                  &literal_string_,
+                  A1(&elm_core_List_reverse, x_context)),
+              &literal_string__3a_5cn_5cn_20_20_20_20));
+    };
+    void* x_introduction = tmp2;
+    tmp0 = A2(&elm_core_Basics_append,
+        x_introduction,
+        A2(&elm_core_Basics_append,
+            A1(&elm_json_Json_Decode_indent,
+                A2(&elm_json_Json_Encode_encode, &literal_int_4, x_json)),
+            A2(&elm_core_Basics_append, &literal_string__5cn_5cn, x_msg)));
+  };
+  return tmp0;
+}
+void* eval_elm_json_Json_Decode_errorToStringHelp() {
+  return GC_tce_eval(&tce_elm_json_Json_Decode_errorToStringHelp,
+      &eval_elm_json_Json_Decode_errorToStringHelp,
+      2,
+      args);
+}
+Closure elm_json_Json_Decode_errorToStringHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x2,
+    .evaluator = &eval_elm_json_Json_Decode_errorToStringHelp,
+};
 
 #define elm_json_Json_Decode_fail Json_fail
 
@@ -7671,7 +8296,95 @@ Closure elm_core_Basics_negate = {
     .max_values = 0x1,
     .evaluator = &eval_elm_core_Basics_negate,
 };
-// Cycle
+void* tce_elm_parser_Parser_Advanced_chompWhileHelp(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_isGood = args[0];
+  void* x_offset = args[1];
+  void* x_row = args[2];
+  void* x_col = args[3];
+  void* x_s0 = args[4];
+  void* x_newOffset = A3(&elm_parser_Parser_Advanced_isSubChar,
+      x_isGood,
+      x_offset,
+      Utils_access_eval(((void* []){
+          (void*)FIELD_src,
+          x_s0,
+      })));
+  void* tmp0;
+  if (A2(&elm_core_Basics_eq, x_newOffset, A1(&elm_core_Basics_negate, &literal_int_1)) ==
+      &True) {
+    tmp0 = A3(&elm_parser_Parser_Advanced_Good,
+        A2(&elm_core_Basics_lt,
+            Utils_access_eval(((void* []){
+                (void*)FIELD_offset,
+                x_s0,
+            })),
+            x_offset),
+        &Unit,
+        NEW_RECORD(&fg_col_context_indent_offset_row_src,
+            6,
+            ((void* []){
+                x_col,
+                Utils_access_eval(((void* []){
+                    (void*)FIELD_context,
+                    x_s0,
+                })),
+                Utils_access_eval(((void* []){
+                    (void*)FIELD_indent,
+                    x_s0,
+                })),
+                x_offset,
+                x_row,
+                Utils_access_eval(((void* []){
+                    (void*)FIELD_src,
+                    x_s0,
+                })),
+            })));
+  } else if (A2(&elm_core_Basics_eq,
+                 x_newOffset,
+                 A1(&elm_core_Basics_negate, &literal_int_2)) == &True) {
+    void* tmp6 = x_isGood;
+    void* tmp7 = A2(&elm_core_Basics_add, x_offset, &literal_int_1);
+    void* tmp8 = A2(&elm_core_Basics_add, x_row, &literal_int_1);
+    void* tmp9 = &literal_int_1;
+    void* tmp10 = x_s0;
+    *gc_tce_data = CAN_THROW(GC_tce_iteration(5));
+    args[4] = tmp10;
+    args[3] = tmp9;
+    args[2] = tmp8;
+    args[1] = tmp7;
+    args[0] = tmp6;
+    goto tce_loop;
+    tmp0 = NULL;
+  } else {
+    void* tmp1 = x_isGood;
+    void* tmp2 = x_newOffset;
+    void* tmp3 = x_row;
+    void* tmp4 = A2(&elm_core_Basics_add, x_col, &literal_int_1);
+    void* tmp5 = x_s0;
+    *gc_tce_data = CAN_THROW(GC_tce_iteration(5));
+    args[4] = tmp5;
+    args[3] = tmp4;
+    args[2] = tmp3;
+    args[1] = tmp2;
+    args[0] = tmp1;
+    goto tce_loop;
+    tmp0 = NULL;
+  };
+  return tmp0;
+}
+void* eval_elm_parser_Parser_Advanced_chompWhileHelp() {
+  return GC_tce_eval(&tce_elm_parser_Parser_Advanced_chompWhileHelp,
+      &eval_elm_parser_Parser_Advanced_chompWhileHelp,
+      5,
+      args);
+}
+Closure elm_parser_Parser_Advanced_chompWhileHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x5,
+    .evaluator = &eval_elm_parser_Parser_Advanced_chompWhileHelp,
+};
 void* eval_elm_parser_Parser_Advanced_chompWhile_lambda0(void* args[]) {
   void* x_isGood = args[0];
   void* x_s = args[1];
@@ -8334,7 +9047,59 @@ Closure elm_parser_Parser_Advanced_Append = {
     .max_values = 0x2,
     .evaluator = &eval_elm_parser_Parser_Advanced_Append,
 };
-// Cycle
+void* tce_elm_parser_Parser_Advanced_oneOfHelp(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_s0 = args[0];
+  void* x_bag = args[1];
+  void* x_parsers = args[2];
+  void* tmp0;
+  if (x_parsers == &Nil) {
+    tmp0 = A2(&elm_parser_Parser_Advanced_Bad, &False, x_bag);
+  } else {
+    void* x_parse = ((Custom*)Utils_destruct_index(x_parsers, 0))->values[0];
+    void* x_remainingParsers = Utils_destruct_index(x_parsers, 1);
+    void* x__v1 = A1(x_parse, x_s0);
+    void* tmp1;
+    void* tmp2 = ((Custom*)x__v1)->ctor;
+    if (tmp2 == CTOR_Good) {
+      void* x_step = x__v1;
+      tmp1 = x_step;
+    } else {
+      void* x_step = x__v1;
+      void* x_p = Utils_destruct_index(x_step, 0);
+      void* x_x = Utils_destruct_index(x_step, 1);
+      void* tmp3;
+      if (x_p == &True) {
+        tmp3 = x_step;
+      } else {
+        void* tmp4 = x_s0;
+        void* tmp5 = A2(&elm_parser_Parser_Advanced_Append, x_bag, x_x);
+        void* tmp6 = x_remainingParsers;
+        *gc_tce_data = CAN_THROW(GC_tce_iteration(3));
+        args[2] = tmp6;
+        args[1] = tmp5;
+        args[0] = tmp4;
+        goto tce_loop;
+        tmp3 = NULL;
+      };
+      tmp1 = tmp3;
+    };
+    tmp0 = tmp1;
+  };
+  return tmp0;
+}
+void* eval_elm_parser_Parser_Advanced_oneOfHelp() {
+  return GC_tce_eval(&tce_elm_parser_Parser_Advanced_oneOfHelp,
+      &eval_elm_parser_Parser_Advanced_oneOfHelp,
+      3,
+      args);
+}
+Closure elm_parser_Parser_Advanced_oneOfHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x3,
+    .evaluator = &eval_elm_parser_Parser_Advanced_oneOfHelp,
+};
 void* eval_elm_parser_Parser_Advanced_oneOf_lambda0(void* args[]) {
   void* x_parsers = args[0];
   void* x_s = args[1];
@@ -8547,7 +9312,53 @@ Closure elm_parser_Parser_problemToDeadEnd = {
     .evaluator = &eval_elm_parser_Parser_problemToDeadEnd,
 };
 
-// Cycle
+void* tce_elm_parser_Parser_Advanced_bagToList(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_bag = args[0];
+  void* x_list = args[1];
+  void* tmp0;
+  void* tmp1 = ((Custom*)x_bag)->ctor;
+  if (tmp1 == CTOR_Empty) {
+    {
+      tmp0 = x_list;
+    };
+  } else if (tmp1 == CTOR_AddRight) {
+    {
+      void* x_bag1 = Utils_destruct_index(x_bag, 0);
+      void* x_x = Utils_destruct_index(x_bag, 1);
+      void* tmp4 = x_bag1;
+      void* tmp5 = A2(&elm_core_List_cons, x_x, x_list);
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+      args[1] = tmp5;
+      args[0] = tmp4;
+      goto tce_loop;
+      tmp0 = NULL;
+    };
+  } else {
+    void* x_bag1 = Utils_destruct_index(x_bag, 0);
+    void* x_bag2 = Utils_destruct_index(x_bag, 1);
+    void* tmp2 = x_bag1;
+    void* tmp3 = A2(&elm_parser_Parser_Advanced_bagToList, x_bag2, x_list);
+    *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+    args[1] = tmp3;
+    args[0] = tmp2;
+    goto tce_loop;
+    tmp0 = NULL;
+  };
+  return tmp0;
+}
+void* eval_elm_parser_Parser_Advanced_bagToList() {
+  return GC_tce_eval(&tce_elm_parser_Parser_Advanced_bagToList,
+      &eval_elm_parser_Parser_Advanced_bagToList,
+      2,
+      args);
+}
+Closure elm_parser_Parser_Advanced_bagToList = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x2,
+    .evaluator = &eval_elm_parser_Parser_Advanced_bagToList,
+};
 void* eval_elm_parser_Parser_Advanced_run(void* args[]) {
   void* x__v0 = args[0];
   void* x_src = args[1];
@@ -10227,11 +11038,9 @@ Closure elm_core_Maybe_destruct = {
 #define author_project_Api_storeCache (*ptr_author_project_Api_storeCache)
 Closure* ptr_author_project_Api_storeCache;
 void* eval_author_project_Api_storeCache_lambda0(void* args[]) {
-  void* x_$ = args[0];
-  return A3(&elm_core_Maybe_destruct,
-      &elm_json_Json_Encode_null,
-      &elm_core_Basics_identity,
-      x_$);
+  void* x = args[0];
+  return A3(
+      &elm_core_Maybe_destruct, &elm_json_Json_Encode_null, &elm_core_Basics_identity, x);
 }
 void* init_author_project_Api_storeCache() {
   return A2(&Platform_outgoingPort,
@@ -10678,9 +11487,81 @@ Closure elm_url_Url_Parser_State = {
     .evaluator = &eval_elm_url_Url_Parser_State,
 };
 
-// Cycle
+void* tce_elm_url_Url_Parser_getFirstMatch(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_states = args[0];
+  void* tmp0;
+  if (x_states == &Nil) {
+    tmp0 = &elm_core_Maybe_Nothing;
+  } else {
+    void* x_state = Utils_destruct_index(x_states, 0);
+    void* x_rest = Utils_destruct_index(x_states, 1);
+    void* x__v1 = Utils_access_eval(((void* []){
+        (void*)FIELD_unvisited,
+        x_state,
+    }));
+    void* tmp1;
+    if (x__v1 == &Nil) {
+      tmp1 = A1(&elm_core_Maybe_Just,
+          Utils_access_eval(((void* []){
+              (void*)FIELD_value,
+              x_state,
+          })));
+    } else if (A2(Utils_equal, Utils_destruct_index(x__v1, 0), &literal_string_) ==
+                   &True &&
+               Utils_destruct_index(x__v1, 1) == &Nil) {
+      tmp1 = A1(&elm_core_Maybe_Just,
+          Utils_access_eval(((void* []){
+              (void*)FIELD_value,
+              x_state,
+          })));
+    } else {
+      void* tmp2 = x_rest;
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(1));
+      args[0] = tmp2;
+      goto tce_loop;
+      tmp1 = NULL;
+    };
+    tmp0 = tmp1;
+  };
+  return tmp0;
+}
+void* eval_elm_url_Url_Parser_getFirstMatch() {
+  return GC_tce_eval(&tce_elm_url_Url_Parser_getFirstMatch,
+      &eval_elm_url_Url_Parser_getFirstMatch,
+      1,
+      args);
+}
+Closure elm_url_Url_Parser_getFirstMatch = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_url_Url_Parser_getFirstMatch,
+};
 
-// Cycle
+void* eval_elm_url_Url_Parser_removeFinalEmpty(void* args[]) {
+  void* x_segments = args[0];
+  void* tmp0;
+  if (x_segments == &Nil) {
+    tmp0 = &Nil;
+  } else if (A2(Utils_equal, Utils_destruct_index(x_segments, 0), &literal_string_) ==
+                 &True &&
+             Utils_destruct_index(x_segments, 1) == &Nil) {
+    tmp0 = &Nil;
+  } else {
+    void* x_segment = Utils_destruct_index(x_segments, 0);
+    void* x_rest = Utils_destruct_index(x_segments, 1);
+    tmp0 = A2(
+        &elm_core_List_cons, x_segment, A1(&elm_url_Url_Parser_removeFinalEmpty, x_rest));
+  };
+  return tmp0;
+}
+Closure elm_url_Url_Parser_removeFinalEmpty = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_url_Url_Parser_removeFinalEmpty,
+};
 void* eval_elm_url_Url_Parser_preparePath(void* args[]) {
   void* x_path = args[0];
   void* x__v0 = A2(&elm_core_String_split, &literal_string__2f, x_path);
@@ -10729,7 +11610,56 @@ Closure elm_url_Url_Parser_addToParametersHelp = {
 #define elm_url_Url_percentDecode Url_percentDecode
 
 #define elm_core_Basics_compare Utils_compare
-// Cycle
+void* tce_elm_core_Dict_get(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_targetKey = args[0];
+  void* x_dict = args[1];
+  void* tmp0;
+  void* tmp1 = ((Custom*)x_dict)->ctor;
+  if (tmp1 == CTOR_RBEmpty_elm_builtin) {
+    tmp0 = &elm_core_Maybe_Nothing;
+  } else {
+    void* x_key = Utils_destruct_index(x_dict, 1);
+    void* x_value = Utils_destruct_index(x_dict, 2);
+    void* x_left = Utils_destruct_index(x_dict, 3);
+    void* x_right = Utils_destruct_index(x_dict, 4);
+    void* x__v1 = A2(&elm_core_Basics_compare, x_targetKey, x_key);
+    void* tmp2;
+    void* tmp3 = ((Custom*)x__v1)->ctor;
+    if (tmp3 == CTOR_LT) {
+      {
+        void* tmp6 = x_targetKey;
+        void* tmp7 = x_left;
+        *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+        args[1] = tmp7;
+        args[0] = tmp6;
+        goto tce_loop;
+        tmp2 = NULL;
+      };
+    } else if (tmp3 == CTOR_EQ) {
+      { tmp2 = A1(&elm_core_Maybe_Just, x_value); };
+    } else {
+      void* tmp4 = x_targetKey;
+      void* tmp5 = x_right;
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+      args[1] = tmp5;
+      args[0] = tmp4;
+      goto tce_loop;
+      tmp2 = NULL;
+    };
+    tmp0 = tmp2;
+  };
+  return tmp0;
+}
+void* eval_elm_core_Dict_get() {
+  return GC_tce_eval(&tce_elm_core_Dict_get, &eval_elm_core_Dict_get, 2, args);
+}
+Closure elm_core_Dict_get = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x2,
+    .evaluator = &eval_elm_core_Dict_get,
+};
 
 Custom elm_core_Dict_Black = {
     .header = HEADER_CUSTOM(0),
@@ -10859,7 +11789,64 @@ Closure elm_core_Dict_balance = {
     .max_values = 0x5,
     .evaluator = &eval_elm_core_Dict_balance,
 };
-// Cycle
+void* eval_elm_core_Dict_insertHelp(void* args[]) {
+  void* x_key = args[0];
+  void* x_value = args[1];
+  void* x_dict = args[2];
+  void* tmp0;
+  void* tmp1 = ((Custom*)x_dict)->ctor;
+  if (tmp1 == CTOR_RBEmpty_elm_builtin) {
+    tmp0 = A5(&elm_core_Dict_RBNode_elm_builtin,
+        &elm_core_Dict_Red,
+        x_key,
+        x_value,
+        &elm_core_Dict_RBEmpty_elm_builtin,
+        &elm_core_Dict_RBEmpty_elm_builtin);
+  } else {
+    void* x_nColor = Utils_destruct_index(x_dict, 0);
+    void* x_nKey = Utils_destruct_index(x_dict, 1);
+    void* x_nValue = Utils_destruct_index(x_dict, 2);
+    void* x_nLeft = Utils_destruct_index(x_dict, 3);
+    void* x_nRight = Utils_destruct_index(x_dict, 4);
+    void* x__v1 = A2(&elm_core_Basics_compare, x_key, x_nKey);
+    void* tmp2;
+    void* tmp3 = ((Custom*)x__v1)->ctor;
+    if (tmp3 == CTOR_LT) {
+      {
+        tmp2 = A5(&elm_core_Dict_balance,
+            x_nColor,
+            x_nKey,
+            x_nValue,
+            A3(&elm_core_Dict_insertHelp, x_key, x_value, x_nLeft),
+            x_nRight);
+      };
+    } else if (tmp3 == CTOR_EQ) {
+      {
+        tmp2 = A5(&elm_core_Dict_RBNode_elm_builtin,
+            x_nColor,
+            x_nKey,
+            x_value,
+            x_nLeft,
+            x_nRight);
+      };
+    } else {
+      tmp2 = A5(&elm_core_Dict_balance,
+          x_nColor,
+          x_nKey,
+          x_nValue,
+          x_nLeft,
+          A3(&elm_core_Dict_insertHelp, x_key, x_value, x_nRight));
+    };
+    tmp0 = tmp2;
+  };
+  return tmp0;
+}
+Closure elm_core_Dict_insertHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x3,
+    .evaluator = &eval_elm_core_Dict_insertHelp,
+};
 void* eval_elm_core_Dict_insert(void* args[]) {
   void* x_key = args[0];
   void* x_value = args[1];
@@ -10889,7 +11876,33 @@ Closure elm_core_Dict_insert = {
     .evaluator = &eval_elm_core_Dict_insert,
 };
 
-// Cycle
+void* tce_elm_core_Dict_getMin(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_dict = args[0];
+  void* tmp0;
+  void* tmp1 = ((Custom*)Utils_destruct_index(x_dict, 3))->ctor;
+  void* tmp2 = ((Custom*)x_dict)->ctor;
+  if (tmp2 == CTOR_RBNode_elm_builtin && tmp1 == CTOR_RBNode_elm_builtin) {
+    void* x_left = Utils_destruct_index(x_dict, 3);
+    void* tmp3 = x_left;
+    *gc_tce_data = CAN_THROW(GC_tce_iteration(1));
+    args[0] = tmp3;
+    goto tce_loop;
+    tmp0 = NULL;
+  } else {
+    tmp0 = x_dict;
+  };
+  return tmp0;
+}
+void* eval_elm_core_Dict_getMin() {
+  return GC_tce_eval(&tce_elm_core_Dict_getMin, &eval_elm_core_Dict_getMin, 1, args);
+}
+Closure elm_core_Dict_getMin = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_core_Dict_getMin,
+};
 
 void* eval_elm_core_Dict_moveRedLeft(void* args[]) {
   void* x_dict = args[0];
@@ -11198,8 +12211,209 @@ Closure elm_core_Dict_removeHelpPrepEQGT = {
     .evaluator = &eval_elm_core_Dict_removeHelpPrepEQGT,
 };
 
-// Cycle
-// Cycle
+void* eval_elm_core_Dict_removeMin(void* args[]) {
+  void* x_dict = args[0];
+  void* tmp0;
+  void* tmp1 = ((Custom*)Utils_destruct_index(x_dict, 3))->ctor;
+  void* tmp2 = ((Custom*)x_dict)->ctor;
+  if (tmp2 == CTOR_RBNode_elm_builtin && tmp1 == CTOR_RBNode_elm_builtin) {
+    void* x_color = Utils_destruct_index(x_dict, 0);
+    void* x_key = Utils_destruct_index(x_dict, 1);
+    void* x_value = Utils_destruct_index(x_dict, 2);
+    void* x_left = Utils_destruct_index(x_dict, 3);
+    void* x_lColor = Utils_destruct_index(x_left, 0);
+    void* x_lLeft = Utils_destruct_index(x_left, 3);
+    void* x_right = Utils_destruct_index(x_dict, 4);
+    void* tmp3;
+    void* tmp4 = ((Custom*)x_lColor)->ctor;
+    if (tmp4 == CTOR_Black) {
+      void* tmp5;
+      void* tmp6 = ((Custom*)Utils_destruct_index(x_lLeft, 0))->ctor;
+      void* tmp7 = ((Custom*)x_lLeft)->ctor;
+      if (tmp7 == CTOR_RBNode_elm_builtin && tmp6 == CTOR_Red) {
+        void* x__v3 = Utils_destruct_index(x_lLeft, 0);
+        tmp5 = A5(&elm_core_Dict_RBNode_elm_builtin,
+            x_color,
+            x_key,
+            x_value,
+            A1(&elm_core_Dict_removeMin, x_left),
+            x_right);
+      } else {
+        void* x__v4 = A1(&elm_core_Dict_moveRedLeft, x_dict);
+        void* tmp8;
+        void* tmp9 = ((Custom*)x__v4)->ctor;
+        if (tmp9 == CTOR_RBNode_elm_builtin) {
+          void* x_nColor = Utils_destruct_index(x__v4, 0);
+          void* x_nKey = Utils_destruct_index(x__v4, 1);
+          void* x_nValue = Utils_destruct_index(x__v4, 2);
+          void* x_nLeft = Utils_destruct_index(x__v4, 3);
+          void* x_nRight = Utils_destruct_index(x__v4, 4);
+          tmp8 = A5(&elm_core_Dict_balance,
+              x_nColor,
+              x_nKey,
+              x_nValue,
+              A1(&elm_core_Dict_removeMin, x_nLeft),
+              x_nRight);
+        } else {
+          tmp8 = &elm_core_Dict_RBEmpty_elm_builtin;
+        };
+        tmp5 = tmp8;
+      };
+      tmp3 = tmp5;
+    } else {
+      tmp3 = A5(&elm_core_Dict_RBNode_elm_builtin,
+          x_color,
+          x_key,
+          x_value,
+          A1(&elm_core_Dict_removeMin, x_left),
+          x_right);
+    };
+    tmp0 = tmp3;
+  } else {
+    tmp0 = &elm_core_Dict_RBEmpty_elm_builtin;
+  };
+  return tmp0;
+}
+Closure elm_core_Dict_removeMin = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_core_Dict_removeMin,
+};
+void* eval_elm_core_Dict_removeHelp(void* args[]) {
+  void* x_targetKey = args[0];
+  void* x_dict = args[1];
+  void* tmp0;
+  void* tmp1 = ((Custom*)x_dict)->ctor;
+  if (tmp1 == CTOR_RBEmpty_elm_builtin) {
+    tmp0 = &elm_core_Dict_RBEmpty_elm_builtin;
+  } else {
+    void* x_color = Utils_destruct_index(x_dict, 0);
+    void* x_key = Utils_destruct_index(x_dict, 1);
+    void* x_value = Utils_destruct_index(x_dict, 2);
+    void* x_left = Utils_destruct_index(x_dict, 3);
+    void* x_right = Utils_destruct_index(x_dict, 4);
+    void* tmp2;
+    if (A2(&elm_core_Basics_lt, x_targetKey, x_key) == &True) {
+      void* tmp3;
+      void* tmp4 = ((Custom*)Utils_destruct_index(x_left, 0))->ctor;
+      void* tmp5 = ((Custom*)x_left)->ctor;
+      if (tmp5 == CTOR_RBNode_elm_builtin && tmp4 == CTOR_Black) {
+        void* x__v4 = Utils_destruct_index(x_left, 0);
+        void* x_lLeft = Utils_destruct_index(x_left, 3);
+        void* tmp6;
+        void* tmp7 = ((Custom*)Utils_destruct_index(x_lLeft, 0))->ctor;
+        void* tmp8 = ((Custom*)x_lLeft)->ctor;
+        if (tmp8 == CTOR_RBNode_elm_builtin && tmp7 == CTOR_Red) {
+          void* x__v6 = Utils_destruct_index(x_lLeft, 0);
+          tmp6 = A5(&elm_core_Dict_RBNode_elm_builtin,
+              x_color,
+              x_key,
+              x_value,
+              A2(&elm_core_Dict_removeHelp, x_targetKey, x_left),
+              x_right);
+        } else {
+          void* x__v7 = A1(&elm_core_Dict_moveRedLeft, x_dict);
+          void* tmp9;
+          void* tmp10 = ((Custom*)x__v7)->ctor;
+          if (tmp10 == CTOR_RBNode_elm_builtin) {
+            void* x_nColor = Utils_destruct_index(x__v7, 0);
+            void* x_nKey = Utils_destruct_index(x__v7, 1);
+            void* x_nValue = Utils_destruct_index(x__v7, 2);
+            void* x_nLeft = Utils_destruct_index(x__v7, 3);
+            void* x_nRight = Utils_destruct_index(x__v7, 4);
+            tmp9 = A5(&elm_core_Dict_balance,
+                x_nColor,
+                x_nKey,
+                x_nValue,
+                A2(&elm_core_Dict_removeHelp, x_targetKey, x_nLeft),
+                x_nRight);
+          } else {
+            tmp9 = &elm_core_Dict_RBEmpty_elm_builtin;
+          };
+          tmp6 = tmp9;
+        };
+        tmp3 = tmp6;
+      } else {
+        tmp3 = A5(&elm_core_Dict_RBNode_elm_builtin,
+            x_color,
+            x_key,
+            x_value,
+            A2(&elm_core_Dict_removeHelp, x_targetKey, x_left),
+            x_right);
+      };
+      tmp2 = tmp3;
+    } else {
+      tmp2 = A2(&elm_core_Dict_removeHelpEQGT,
+          x_targetKey,
+          A7(&elm_core_Dict_removeHelpPrepEQGT,
+              x_targetKey,
+              x_dict,
+              x_color,
+              x_key,
+              x_value,
+              x_left,
+              x_right));
+    };
+    tmp0 = tmp2;
+  };
+  return tmp0;
+}
+Closure elm_core_Dict_removeHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x2,
+    .evaluator = &eval_elm_core_Dict_removeHelp,
+};
+void* eval_elm_core_Dict_removeHelpEQGT(void* args[]) {
+  void* x_targetKey = args[0];
+  void* x_dict = args[1];
+  void* tmp0;
+  void* tmp1 = ((Custom*)x_dict)->ctor;
+  if (tmp1 == CTOR_RBNode_elm_builtin) {
+    void* x_color = Utils_destruct_index(x_dict, 0);
+    void* x_key = Utils_destruct_index(x_dict, 1);
+    void* x_value = Utils_destruct_index(x_dict, 2);
+    void* x_left = Utils_destruct_index(x_dict, 3);
+    void* x_right = Utils_destruct_index(x_dict, 4);
+    void* tmp2;
+    if (A2(&elm_core_Basics_eq, x_targetKey, x_key) == &True) {
+      void* x__v1 = A1(&elm_core_Dict_getMin, x_right);
+      void* tmp3;
+      void* tmp4 = ((Custom*)x__v1)->ctor;
+      if (tmp4 == CTOR_RBNode_elm_builtin) {
+        void* x_minKey = Utils_destruct_index(x__v1, 1);
+        void* x_minValue = Utils_destruct_index(x__v1, 2);
+        tmp3 = A5(&elm_core_Dict_balance,
+            x_color,
+            x_minKey,
+            x_minValue,
+            x_left,
+            A1(&elm_core_Dict_removeMin, x_right));
+      } else {
+        tmp3 = &elm_core_Dict_RBEmpty_elm_builtin;
+      };
+      tmp2 = tmp3;
+    } else {
+      tmp2 = A5(&elm_core_Dict_balance,
+          x_color,
+          x_key,
+          x_value,
+          x_left,
+          A2(&elm_core_Dict_removeHelp, x_targetKey, x_right));
+    };
+    tmp0 = tmp2;
+  } else {
+    tmp0 = &elm_core_Dict_RBEmpty_elm_builtin;
+  };
+  return tmp0;
+}
+Closure elm_core_Dict_removeHelpEQGT = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x2,
+    .evaluator = &eval_elm_core_Dict_removeHelpEQGT,
+};
 void* eval_elm_core_Dict_remove(void* args[]) {
   void* x_key = args[0];
   void* x_dict = args[1];
@@ -17780,7 +18994,57 @@ Closure elm_time_Time_posixToMillis = {
     .evaluator = &eval_elm_time_Time_posixToMillis,
 };
 
-// Cycle
+void* tce_elm_time_Time_toAdjustedMinutesHelp(void* args[], void** gc_tce_data) {
+tce_loop:;
+  void* x_defaultOffset = args[0];
+  void* x_posixMinutes = args[1];
+  void* x_eras = args[2];
+  void* tmp0;
+  if (x_eras == &Nil) {
+    tmp0 = A2(&elm_core_Basics_add, x_posixMinutes, x_defaultOffset);
+  } else {
+    void* x_era = Utils_destruct_index(x_eras, 0);
+    void* x_olderEras = Utils_destruct_index(x_eras, 1);
+    void* tmp1;
+    if (A2(&elm_core_Basics_lt,
+            Utils_access_eval(((void* []){
+                (void*)FIELD_start,
+                x_era,
+            })),
+            x_posixMinutes) == &True) {
+      tmp1 = A2(&elm_core_Basics_add,
+          x_posixMinutes,
+          Utils_access_eval(((void* []){
+              (void*)FIELD_offset,
+              x_era,
+          })));
+    } else {
+      void* tmp2 = x_defaultOffset;
+      void* tmp3 = x_posixMinutes;
+      void* tmp4 = x_olderEras;
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(3));
+      args[2] = tmp4;
+      args[1] = tmp3;
+      args[0] = tmp2;
+      goto tce_loop;
+      tmp1 = NULL;
+    };
+    tmp0 = tmp1;
+  };
+  return tmp0;
+}
+void* eval_elm_time_Time_toAdjustedMinutesHelp() {
+  return GC_tce_eval(&tce_elm_time_Time_toAdjustedMinutesHelp,
+      &eval_elm_time_Time_toAdjustedMinutesHelp,
+      3,
+      args);
+}
+Closure elm_time_Time_toAdjustedMinutesHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x3,
+    .evaluator = &eval_elm_time_Time_toAdjustedMinutesHelp,
+};
 void* eval_elm_time_Time_toAdjustedMinutes(void* args[]) {
   void* x__v0 = args[0];
   void* x_time = args[1];
