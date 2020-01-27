@@ -75,10 +75,14 @@
 
 # missing kernel implementations for elm-spa-example
 
-- Basics_and
-- Basics_or
-- Char_toCode
-- List_cons
+- [ ] Basics_and
+- [ ] Basics_or
+- [ ] Char_toCode
+- [ ] List_cons
+- [ ] List_map2
+- [ ] List_toArray (used in `String.join`)
+- [ ] String_join
+- [ ] String_split
 
 # Export `main` from Wasm
 

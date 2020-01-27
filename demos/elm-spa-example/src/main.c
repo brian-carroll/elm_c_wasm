@@ -186,8 +186,6 @@ enum {
   JS_Json_runOnString,
   JS_Json_succeed,
   JS_Json_wrap,
-  JS_List_fromArray,
-  JS_List_toArray,
   JS_Markdown_toHtml,
   JS_Parser_isSubChar,
   JS_Parser_isSubString,
@@ -201,8 +199,6 @@ enum {
   JS_Scheduler_fail,
   JS_Scheduler_onError,
   JS_Scheduler_succeed,
-  JS_String_join,
-  JS_String_split,
   JS_Time_here,
   JS_Url_percentDecode,
   JS_Url_percentEncode,
@@ -365,18 +361,6 @@ Closure Time_here = {
     .max_values = 0xffff,
     .evaluator = (void*)JS_Time_here,
 };
-Closure String_split = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0xffff,
-    .evaluator = (void*)JS_String_split,
-};
-Closure String_join = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0xffff,
-    .evaluator = (void*)JS_String_join,
-};
 Closure Scheduler_succeed = {
     .header = HEADER_CLOSURE(0),
     .n_values = 0x0,
@@ -454,18 +438,6 @@ Closure Markdown_toHtml = {
     .n_values = 0x0,
     .max_values = 0xffff,
     .evaluator = (void*)JS_Markdown_toHtml,
-};
-Closure List_toArray = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0xffff,
-    .evaluator = (void*)JS_List_toArray,
-};
-Closure List_fromArray = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0xffff,
-    .evaluator = (void*)JS_List_fromArray,
 };
 Closure Json_wrap = {
     .header = HEADER_CLOSURE(0),
