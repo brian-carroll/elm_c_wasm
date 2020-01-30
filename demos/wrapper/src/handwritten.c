@@ -434,22 +434,22 @@ void* eval_author_project_Main_view(void* args[1]) {
   void* str = isZero ? &literal_string_ClickTheButton : A1(&String_fromInt, model);
   return A2(&elm_html_Html_div,
       &Nil,
-      List_fromArray(2,
+      List_create(2,
           (void* []){
               A2(&elm_html_Html_h1,
                   &Nil,
-                  List_fromArray(1,
+                  List_create(1,
                       (void* []){
                           A1(&elm_html_Html_text, str),
                       })),
               isZero
                   ? A2(&elm_html_Html_button,
-                        List_fromArray(1,
+                        List_create(1,
                             (void* []){
                                 A1(&elm_html_Html_Events_onClick,
                                     A1(&author_project_Main_SetCounter, &literal_int_5)),
                             }),
-                        List_fromArray(1,
+                        List_create(1,
                             (void* []){
                                 A1(&elm_html_Html_text, &literal_string_StartCountdown),
                             }))

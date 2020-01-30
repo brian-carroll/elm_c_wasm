@@ -2,6 +2,10 @@
 #define ELM_KERNEL_LIST
 
 void* List_append_eval(void* args[]);
-void* List_fromArray(size_t len, void* values[]);
+void* List_create(size_t len, void* values[]);
+
+Closure List_cons;
+Closure List_map2;
+Closure List_toArray;
 
 #endif

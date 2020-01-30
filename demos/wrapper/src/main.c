@@ -470,22 +470,22 @@ void* eval_author_project_Main_view(void* args[]) {
                                   : A1(&elm_core_String_fromInt, x_model);
   return A2(&elm_html_Html_div,
       &Nil,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A2(&elm_html_Html_h1,
                   &Nil,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_text, x_str),
                       }))),
               x_isZero == &True
                   ? A2(&elm_html_Html_button,
-                        List_fromArray(1,
+                        List_create(1,
                             ((void* []){
                                 A1(&elm_html_Html_Events_onClick,
                                     A1(&author_project_Main_SetCounter, &literal_int_5)),
                             })),
-                        List_fromArray(1,
+                        List_create(1,
                             ((void* []){
                                 A1(&elm_html_Html_text,
                                     &literal_string_Start_20countdown),

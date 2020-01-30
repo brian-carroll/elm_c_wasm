@@ -6535,7 +6535,7 @@ Closure author_project_Avatar_Avatar = {
 void* eval_elm_json_Json_Decode_nullable(void* args[]) {
   void* x_decoder = args[0];
   return A1(&elm_json_Json_Decode_oneOf,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A1(&elm_json_Json_Decode_null, &elm_core_Maybe_Nothing),
               A2(&elm_json_Json_Decode_map, &elm_core_Maybe_Just, x_decoder),
@@ -7053,7 +7053,7 @@ Closure author_project_Api_Endpoint_url = {
 void* eval_author_project_Api_Endpoint_article(void* args[]) {
   void* x_slug = args[0];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               &literal_string_articles,
               A1(&author_project_Article_Slug_toString, x_slug),
@@ -7232,7 +7232,7 @@ Closure author_project_Author_authorFromFollowing = {
 void* eval_elm_core_String_split(void* args[]) {
   void* x_sep = args[0];
   void* x_string = args[1];
-  return A1(&List_fromArray, A2(&String_split, x_sep, x_string));
+  return A1(&List_create, A2(&String_split, x_sep, x_string));
 }
 Closure elm_core_String_split = {
     .header = HEADER_CLOSURE(0),
@@ -7596,7 +7596,7 @@ void* eval_NoRedInk_elm_json_decode_pipeline_Json_Decode_Pipeline_optionalDecode
   void* x_fallback = args[0];
   void* x_decoder = args[1];
   return A1(&elm_json_Json_Decode_oneOf,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               x_decoder,
               A1(&elm_json_Json_Decode_null, x_fallback),
@@ -9135,7 +9135,7 @@ void* eval_rtfeldman_elm_iso8601_date_strings_Iso8601_iso8601_lambda3(void* args
 void* eval_rtfeldman_elm_iso8601_date_strings_Iso8601_iso8601_lambda0(void* args[]) {
   void* x_datePart = args[0];
   return A1(&elm_parser_Parser_oneOf,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A2(&elm_parser_Parser_keeper,
                   A2(&elm_parser_Parser_keeper,
@@ -9159,7 +9159,7 @@ void* eval_rtfeldman_elm_iso8601_date_strings_Iso8601_iso8601_lambda0(void* args
                           A1(&rtfeldman_elm_iso8601_date_strings_Iso8601_paddedInt,
                               &literal_int_2)),
                       A1(&elm_parser_Parser_oneOf,
-                          List_fromArray(2,
+                          List_create(2,
                               ((void* []){
                                   A2(&elm_parser_Parser_keeper,
                                       A2(&elm_parser_Parser_ignorer,
@@ -9172,7 +9172,7 @@ void* eval_rtfeldman_elm_iso8601_date_strings_Iso8601_iso8601_lambda0(void* args
                                   A1(&elm_parser_Parser_succeed, &literal_int_0),
                               })))),
                   A1(&elm_parser_Parser_oneOf,
-                      List_fromArray(2,
+                      List_create(2,
                           ((void* []){
                               A2(&elm_parser_Parser_map,
                                   NEW_CLOSURE(0,
@@ -9186,7 +9186,7 @@ void* eval_rtfeldman_elm_iso8601_date_strings_Iso8601_iso8601_lambda0(void* args
                                           A1(&elm_parser_Parser_succeed,
                                               &rtfeldman_elm_iso8601_date_strings_Iso8601_utcOffsetMinutesFromParts),
                                           A1(&elm_parser_Parser_oneOf,
-                                              List_fromArray(2,
+                                              List_create(2,
                                                   ((void* []){
                                                       A2(&elm_parser_Parser_map,
                                                           NEW_CLOSURE(0,
@@ -9667,7 +9667,7 @@ void* eval_author_project_Api_get(void* args[]) {
   void* tmp1 = ((Custom*)x_maybeCred)->ctor;
   if (tmp1 == CTOR_Just) {
     void* x_cred = Utils_destruct_index(x_maybeCred, 0);
-    tmp0 = List_fromArray(1,
+    tmp0 = List_create(1,
         ((void* []){
             A1(&author_project_Api_credHeader, x_cred),
         }));
@@ -9720,7 +9720,7 @@ void* init_elm_time_Time_here() {
 void* eval_author_project_Api_Endpoint_comments(void* args[]) {
   void* x_slug = args[0];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(3,
+      List_create(3,
           ((void* []){
               &literal_string_articles,
               A1(&author_project_Article_Slug_toString, x_slug),
@@ -9996,7 +9996,7 @@ void* eval_author_project_Page_Article_init(void* args[]) {
                             &elm_time_Time_utc,
                         })),
       A1(&elm_core_Platform_Cmd_batch,
-          List_fromArray(4,
+          List_create(4,
               ((void* []){
                   A2(&elm_core_Basics_apR,
                       A2(&author_project_Article_fetch, x_maybeCred, x_slug),
@@ -10082,7 +10082,7 @@ Closure author_project_Page_Home_YourFeed = {
 void* eval_author_project_Api_Endpoint_articles(void* args[]) {
   void* x_params = args[0];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               &literal_string_articles,
           })),
@@ -10221,7 +10221,7 @@ Closure author_project_Article_Feed_decoder = {
 void* eval_author_project_Api_Endpoint_feed(void* args[]) {
   void* x_params = args[0];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               &literal_string_articles,
               &literal_string_feed,
@@ -10301,7 +10301,7 @@ void* eval_author_project_PaginatedList_params(void* args[]) {
   void* x_offset = A2(&elm_core_Basics_mul,
       A2(&elm_core_Basics_sub, x_page, &literal_int_1),
       x_resultsPerPage);
-  return List_fromArray(2,
+  return List_create(2,
       ((void* []){
           A2(&elm_url_Url_Builder_string,
               &literal_string_limit,
@@ -10405,7 +10405,7 @@ void* init_author_project_Article_Tag_decoder() {
 ElmValue* ptr_author_project_Api_Endpoint_tags;
 void* init_author_project_Api_Endpoint_tags() {
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               &literal_string_tags,
           })),
@@ -10450,7 +10450,7 @@ void* eval_author_project_Page_Home_init(void* args[]) {
                             &elm_time_Time_utc,
                         })),
       A1(&elm_core_Platform_Cmd_batch,
-          List_fromArray(4,
+          List_create(4,
               ((void* []){
                   A2(&elm_core_Basics_apR,
                       A3(&author_project_Page_Home_fetchFeed,
@@ -10564,7 +10564,7 @@ Closure author_project_Username_toString = {
 void* eval_author_project_Api_Endpoint_profiles(void* args[]) {
   void* x_uname = args[0];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               &literal_string_profiles,
               A1(&author_project_Username_toString, x_uname),
@@ -10691,7 +10691,7 @@ void* eval_author_project_Page_Profile_init(void* args[]) {
                             &elm_time_Time_utc,
                         })),
       A1(&elm_core_Platform_Cmd_batch,
-          List_fromArray(4,
+          List_create(4,
               ((void* []){
                   A2(&elm_core_Basics_apR,
                       A2(&elm_core_Basics_apR,
@@ -10828,7 +10828,7 @@ void* init_author_project_Page_Settings_formDecoder() {
 ElmValue* ptr_author_project_Api_Endpoint_user;
 void* init_author_project_Api_Endpoint_user() {
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               &literal_string_user,
           })),
@@ -10848,7 +10848,7 @@ void* eval_author_project_Page_Settings_init(void* args[]) {
                             &author_project_Page_Settings_Loading,
                         })),
       A1(&elm_core_Platform_Cmd_batch,
-          List_fromArray(2,
+          List_create(2,
               ((void* []){
                   A2(&elm_core_Basics_apR,
                       A3(&author_project_Api_get,
@@ -10917,7 +10917,7 @@ void* eval_author_project_Page_Article_Editor_initEdit(void* args[]) {
                             A1(&author_project_Page_Article_Editor_Loading, x_slug),
                         })),
       A1(&elm_core_Platform_Cmd_batch,
-          List_fromArray(2,
+          List_create(2,
               ((void* []){
                   A2(&elm_core_Basics_apR,
                       A2(&elm_core_Basics_apR,
@@ -11059,28 +11059,28 @@ void* eval_author_project_Route_routeToPieces(void* args[]) {
     { tmp0 = &Nil; };
   } else if (tmp1 == CTOR_Login) {
     {
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               &literal_string_login,
           }));
     };
   } else if (tmp1 == CTOR_Logout) {
     {
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               &literal_string_logout,
           }));
     };
   } else if (tmp1 == CTOR_Register) {
     {
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               &literal_string_register,
           }));
     };
   } else if (tmp1 == CTOR_Settings) {
     {
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               &literal_string_settings,
           }));
@@ -11088,7 +11088,7 @@ void* eval_author_project_Route_routeToPieces(void* args[]) {
   } else if (tmp1 == CTOR_Article) {
     {
       void* x_slug = Utils_destruct_index(x_page, 0);
-      tmp0 = List_fromArray(2,
+      tmp0 = List_create(2,
           ((void* []){
               &literal_string_article,
               A1(&author_project_Article_Slug_toString, x_slug),
@@ -11097,7 +11097,7 @@ void* eval_author_project_Route_routeToPieces(void* args[]) {
   } else if (tmp1 == CTOR_Profile) {
     {
       void* x_username = Utils_destruct_index(x_page, 0);
-      tmp0 = List_fromArray(2,
+      tmp0 = List_create(2,
           ((void* []){
               &literal_string_profile,
               A1(&author_project_Username_toString, x_username),
@@ -11105,14 +11105,14 @@ void* eval_author_project_Route_routeToPieces(void* args[]) {
     };
   } else if (tmp1 == CTOR_NewArticle) {
     {
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               &literal_string_editor,
           }));
     };
   } else {
     void* x_slug = Utils_destruct_index(x_page, 0);
-    tmp0 = List_fromArray(2,
+    tmp0 = List_create(2,
         ((void* []){
             &literal_string_editor,
             A1(&author_project_Article_Slug_toString, x_slug),
@@ -11562,7 +11562,7 @@ void* eval_elm_url_Url_Parser_addToParametersHelp(void* args[]) {
   void* tmp1 = ((Custom*)x_maybeList)->ctor;
   if (tmp1 == CTOR_Nothing) {
     tmp0 = A1(&elm_core_Maybe_Just,
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 x_value,
             })));
@@ -12795,7 +12795,7 @@ void* eval_elm_url_Url_Parser_s_lambda0(void* args[]) {
     void* x_rest = Utils_destruct_index(x_unvisited, 1);
     void* tmp2;
     if (A2(&elm_core_Basics_eq, x_next, x_str) == &True) {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               A5(&elm_url_Url_Parser_State,
                   A2(&elm_core_List_cons, x_next, x_visited),
@@ -12861,7 +12861,7 @@ Closure elm_url_Url_Parser_slash = {
 ElmValue* ptr_elm_url_Url_Parser_top;
 void* eval_elm_url_Url_Parser_top_lambda0(void* args[]) {
   void* x_state = args[0];
-  return List_fromArray(1,
+  return List_create(1,
       ((void* []){
           x_state,
       }));
@@ -12906,7 +12906,7 @@ void* eval_elm_url_Url_Parser_custom_lambda0(void* args[]) {
     void* tmp3 = ((Custom*)x__v2)->ctor;
     if (tmp3 == CTOR_Just) {
       void* x_nextValue = Utils_destruct_index(x__v2, 0);
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               A5(&elm_url_Url_Parser_State,
                   A2(&elm_core_List_cons, x_next, x_visited),
@@ -12968,7 +12968,7 @@ void* init_author_project_Username_urlParser() {
 ElmValue* ptr_author_project_Route_parser;
 void* init_author_project_Route_parser() {
   return A1(&elm_url_Url_Parser_oneOf,
-      List_fromArray(9,
+      List_create(9,
           ((void* []){
               A2(&elm_url_Url_Parser_map,
                   &author_project_Route_Home,
@@ -13638,7 +13638,7 @@ void* eval_author_project_Api_Endpoint_comment(void* args[]) {
   void* x_slug = args[0];
   void* x_commentId = args[1];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(4,
+      List_create(4,
           ((void* []){
               &literal_string_articles,
               A1(&author_project_Article_Slug_toString, x_slug),
@@ -13665,7 +13665,7 @@ void* eval_author_project_Api_delete(void* args[]) {
           ((void* []){
               x_body,
               A1(&elm_http_Http_expectJson, x_decoder),
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A1(&author_project_Api_credHeader, x_cred),
                   })),
@@ -13777,7 +13777,7 @@ Closure author_project_Article_faveDecoder = {
 void* eval_author_project_Api_Endpoint_favorite(void* args[]) {
   void* x_slug = args[0];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(3,
+      List_create(3,
           ((void* []){
               &literal_string_articles,
               A1(&author_project_Article_Slug_toString, x_slug),
@@ -13801,7 +13801,7 @@ void* eval_author_project_Api_post(void* args[]) {
   void* tmp1 = ((Custom*)x_maybeCred)->ctor;
   if (tmp1 == CTOR_Just) {
     void* x_cred = Utils_destruct_index(x_maybeCred, 0);
-    tmp0 = List_fromArray(1,
+    tmp0 = List_create(1,
         ((void* []){
             A1(&author_project_Api_credHeader, x_cred),
         }));
@@ -13896,11 +13896,11 @@ Closure elm_json_Json_Encode_object = {
 void* eval_author_project_Article_Comment_encodeCommentBody(void* args[]) {
   void* x_str = args[0];
   return A1(&elm_json_Json_Encode_object,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               NEW_TUPLE2(&literal_string_comment,
                   A1(&elm_json_Json_Encode_object,
-                      List_fromArray(1,
+                      List_create(1,
                           ((void* []){
                               NEW_TUPLE2(&literal_string_body,
                                   A1(&elm_json_Json_Encode_string, x_str)),
@@ -13961,7 +13961,7 @@ Closure author_project_Article_Comment_post = {
 void* eval_author_project_Api_Endpoint_follow(void* args[]) {
   void* x_uname = args[0];
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(3,
+      List_create(3,
           ((void* []){
               &literal_string_profiles,
               A1(&author_project_Username_toString, x_uname),
@@ -14752,7 +14752,7 @@ void* eval_author_project_Page_Article_Editor_create(void* args[]) {
   void* x_cred = args[1];
   void* x_form = ((Custom*)x__v0)->values[0];
   void* x_article = A1(&elm_json_Json_Encode_object,
-      List_fromArray(4,
+      List_create(4,
           ((void* []){
               NEW_TUPLE2(&literal_string_title,
                   A1(&elm_json_Json_Encode_string,
@@ -14783,7 +14783,7 @@ void* eval_author_project_Page_Article_Editor_create(void* args[]) {
           })));
   void* x_body = A2(&elm_core_Basics_apR,
       A1(&elm_json_Json_Encode_object,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   NEW_TUPLE2(&literal_string_article, x_article),
               }))),
@@ -14815,7 +14815,7 @@ void* eval_author_project_Api_put(void* args[]) {
           ((void* []){
               x_body,
               A1(&elm_http_Http_expectJson, x_decoder),
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A1(&author_project_Api_credHeader, x_cred),
                   })),
@@ -14837,7 +14837,7 @@ void* eval_author_project_Page_Article_Editor_edit(void* args[]) {
   void* x_cred = args[2];
   void* x_form = ((Custom*)x__v0)->values[0];
   void* x_article = A1(&elm_json_Json_Encode_object,
-      List_fromArray(3,
+      List_create(3,
           ((void* []){
               NEW_TUPLE2(&literal_string_title,
                   A1(&elm_json_Json_Encode_string,
@@ -14860,7 +14860,7 @@ void* eval_author_project_Page_Article_Editor_edit(void* args[]) {
           })));
   void* x_body = A2(&elm_core_Basics_apR,
       A1(&elm_json_Json_Encode_object,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   NEW_TUPLE2(&literal_string_article, x_article),
               }))),
@@ -14894,7 +14894,7 @@ Custom author_project_Page_Article_Editor_Title = {
   (*ptr_author_project_Page_Article_Editor_fieldsToValidate)
 Cons* ptr_author_project_Page_Article_Editor_fieldsToValidate;
 void* init_author_project_Page_Article_Editor_fieldsToValidate() {
-  return List_fromArray(2,
+  return List_create(2,
       ((void* []){
           &author_project_Page_Article_Editor_Title,
           &author_project_Page_Article_Editor_Body,
@@ -14967,7 +14967,7 @@ void* eval_author_project_Page_Article_Editor_validateField(void* args[]) {
                 (void*)FIELD_title,
                 x_form,
             }))) == &True) {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               &literal_string_title_20can_5c_27t_20be_20blank_2e,
           }));
@@ -14982,7 +14982,7 @@ void* eval_author_project_Page_Article_Editor_validateField(void* args[]) {
                 (void*)FIELD_body,
                 x_form,
             }))) == &True) {
-      tmp3 = List_fromArray(1,
+      tmp3 = List_create(1,
           ((void* []){
               &literal_string_body_20can_5c_27t_20be_20blank_2e,
           }));
@@ -15095,7 +15095,7 @@ Closure author_project_Page_Article_Editor_ServerError = {
 void* eval_author_project_Page_Article_Editor_savingError(void* args[]) {
   void* x_error = args[0];
   void* x_status = args[1];
-  void* x_problems = List_fromArray(1,
+  void* x_problems = List_create(1,
       ((void* []){
           A1(&author_project_Page_Article_Editor_ServerError,
               &literal_string_Error_20saving_20article),
@@ -16098,13 +16098,13 @@ void* eval_author_project_Api_decodeErrors(void* args[]) {
                     &literal_string_errors,
                     &author_project_Api_errorsDecoder))),
         A1(&elm_core_Result_withDefault,
-            List_fromArray(1,
+            List_create(1,
                 ((void* []){
                     &literal_string_Server_20error,
                 }))));
   } else {
     void* x_err = x_error;
-    tmp0 = List_fromArray(1,
+    tmp0 = List_create(1,
         ((void* []){
             &literal_string_Server_20error,
         }));
@@ -16122,7 +16122,7 @@ Closure author_project_Api_decodeErrors = {
 ElmValue* ptr_author_project_Api_Endpoint_login;
 void* init_author_project_Api_Endpoint_login() {
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               &literal_string_users,
               &literal_string_login,
@@ -16150,7 +16150,7 @@ void* eval_author_project_Page_Login_login(void* args[]) {
   void* x__v0 = args[0];
   void* x_form = ((Custom*)x__v0)->values[0];
   void* x_user = A1(&elm_json_Json_Encode_object,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               NEW_TUPLE2(&literal_string_email,
                   A1(&elm_json_Json_Encode_string,
@@ -16167,7 +16167,7 @@ void* eval_author_project_Page_Login_login(void* args[]) {
           })));
   void* x_body = A2(&elm_core_Basics_apR,
       A1(&elm_json_Json_Encode_object,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   NEW_TUPLE2(&literal_string_user, x_user),
               }))),
@@ -16218,11 +16218,11 @@ void* eval_author_project_Api_storeCredWith(void* args[]) {
   void* x_uname = Utils_destruct_index(x__v0, 0);
   void* x_token = Utils_destruct_index(x__v0, 1);
   void* x_json = A1(&elm_json_Json_Encode_object,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               NEW_TUPLE2(&literal_string_user,
                   A1(&elm_json_Json_Encode_object,
-                      List_fromArray(3,
+                      List_create(3,
                           ((void* []){
                               NEW_TUPLE2(&literal_string_username,
                                   A1(&author_project_Username_encode, x_uname)),
@@ -16290,7 +16290,7 @@ Custom author_project_Page_Login_Password = {
   (*ptr_author_project_Page_Login_fieldsToValidate)
 Cons* ptr_author_project_Page_Login_fieldsToValidate;
 void* init_author_project_Page_Login_fieldsToValidate() {
-  return List_fromArray(2,
+  return List_create(2,
       ((void* []){
           &author_project_Page_Login_Email,
           &author_project_Page_Login_Password,
@@ -16353,7 +16353,7 @@ void* eval_author_project_Page_Login_validateField(void* args[]) {
                 (void*)FIELD_email,
                 x_form,
             }))) == &True) {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               &literal_string_email_20can_5c_27t_20be_20blank_2e,
           }));
@@ -16368,7 +16368,7 @@ void* eval_author_project_Page_Login_validateField(void* args[]) {
                 (void*)FIELD_password,
                 x_form,
             }))) == &True) {
-      tmp3 = List_fromArray(1,
+      tmp3 = List_create(1,
           ((void* []){
               &literal_string_password_20can_5c_27t_20be_20blank_2e,
           }));
@@ -16938,7 +16938,7 @@ Closure author_project_Page_Register_ServerError = {
 ElmValue* ptr_author_project_Api_Endpoint_users;
 void* init_author_project_Api_Endpoint_users() {
   return A2(&author_project_Api_Endpoint_url,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               &literal_string_users,
           })),
@@ -16965,7 +16965,7 @@ void* eval_author_project_Page_Register_register(void* args[]) {
   void* x__v0 = args[0];
   void* x_form = ((Custom*)x__v0)->values[0];
   void* x_user = A1(&elm_json_Json_Encode_object,
-      List_fromArray(3,
+      List_create(3,
           ((void* []){
               NEW_TUPLE2(&literal_string_username,
                   A1(&elm_json_Json_Encode_string,
@@ -16988,7 +16988,7 @@ void* eval_author_project_Page_Register_register(void* args[]) {
           })));
   void* x_body = A2(&elm_core_Basics_apR,
       A1(&elm_json_Json_Encode_object,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   NEW_TUPLE2(&literal_string_user, x_user),
               }))),
@@ -17044,7 +17044,7 @@ Custom author_project_Page_Register_Username = {
   (*ptr_author_project_Page_Register_fieldsToValidate)
 Cons* ptr_author_project_Page_Register_fieldsToValidate;
 void* init_author_project_Page_Register_fieldsToValidate() {
-  return List_fromArray(3,
+  return List_create(3,
       ((void* []){
           &author_project_Page_Register_Username,
           &author_project_Page_Register_Email,
@@ -17116,7 +17116,7 @@ void* eval_author_project_Page_Register_validateField(void* args[]) {
                   (void*)FIELD_username,
                   x_form,
               }))) == &True) {
-        tmp4 = List_fromArray(1,
+        tmp4 = List_create(1,
             ((void* []){
                 &literal_string_username_20can_5c_27t_20be_20blank_2e,
             }));
@@ -17133,7 +17133,7 @@ void* eval_author_project_Page_Register_validateField(void* args[]) {
                   (void*)FIELD_email,
                   x_form,
               }))) == &True) {
-        tmp3 = List_fromArray(1,
+        tmp3 = List_create(1,
             ((void* []){
                 &literal_string_email_20can_5c_27t_20be_20blank_2e,
             }));
@@ -17149,7 +17149,7 @@ void* eval_author_project_Page_Register_validateField(void* args[]) {
                 (void*)FIELD_password,
                 x_form,
             }))) == &True) {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               &literal_string_password_20can_5c_27t_20be_20blank_2e,
           }));
@@ -17160,7 +17160,7 @@ void* eval_author_project_Page_Register_validateField(void* args[]) {
                            x_form,
                        }))),
                    &author_project_Viewer_minPasswordChars) == &True) {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               A2(&elm_core_Basics_append,
                   &literal_string_password_20must_20be_20at_20least_20,
@@ -17440,7 +17440,7 @@ void* eval_author_project_Page_Settings_edit(void* args[]) {
     tmp0 = A1(&elm_json_Json_Encode_string, x_avatar);
   };
   void* x_encodedAvatar = tmp0;
-  void* x_updates = List_fromArray(4,
+  void* x_updates = List_create(4,
       ((void* []){
           NEW_TUPLE2(&literal_string_username,
               A1(&elm_json_Json_Encode_string,
@@ -17479,7 +17479,7 @@ void* eval_author_project_Page_Settings_edit(void* args[]) {
   void* x_encodedUser = A2(&elm_core_Basics_apL, &elm_json_Json_Encode_object, tmp1);
   void* x_body = A2(&elm_core_Basics_apR,
       A1(&elm_json_Json_Encode_object,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   NEW_TUPLE2(&literal_string_user, x_encodedUser),
               }))),
@@ -17544,7 +17544,7 @@ Custom author_project_Page_Settings_Username = {
   (*ptr_author_project_Page_Settings_fieldsToValidate)
 Cons* ptr_author_project_Page_Settings_fieldsToValidate;
 void* init_author_project_Page_Settings_fieldsToValidate() {
-  return List_fromArray(3,
+  return List_create(3,
       ((void* []){
           &author_project_Page_Settings_Username,
           &author_project_Page_Settings_Email,
@@ -17624,7 +17624,7 @@ void* eval_author_project_Page_Settings_validateField(void* args[]) {
                   (void*)FIELD_username,
                   x_form,
               }))) == &True) {
-        tmp4 = List_fromArray(1,
+        tmp4 = List_create(1,
             ((void* []){
                 &literal_string_username_20can_5c_27t_20be_20blank_2e,
             }));
@@ -17641,7 +17641,7 @@ void* eval_author_project_Page_Settings_validateField(void* args[]) {
                   (void*)FIELD_email,
                   x_form,
               }))) == &True) {
-        tmp3 = List_fromArray(1,
+        tmp3 = List_create(1,
             ((void* []){
                 &literal_string_email_20can_5c_27t_20be_20blank_2e,
             }));
@@ -17662,7 +17662,7 @@ void* eval_author_project_Page_Settings_validateField(void* args[]) {
             A2(&elm_core_Basics_lt,
                 x_passwordLength,
                 &author_project_Viewer_minPasswordChars)) == &True) {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               A2(&elm_core_Basics_append,
                   &literal_string_password_20must_20be_20at_20least_20,
@@ -18214,44 +18214,44 @@ ElmValue* ptr_author_project_Page_viewFooter;
 void* init_author_project_Page_viewFooter() {
   return A2(&elm_html_Html_footer,
       &Nil,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class, &literal_string_container),
                       })),
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           A2(&elm_html_Html_a,
-                              List_fromArray(2,
+                              List_create(2,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_logo_2dfont),
                                       A1(&elm_html_Html_Attributes_href,
                                           &literal_string__2f),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text, &literal_string_conduit),
                                   }))),
                           A2(&elm_html_Html_span,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_attribution),
                                   })),
-                              List_fromArray(3,
+                              List_create(3,
                                   ((void* []){
                                       A1(&elm_html_Html_text,
                                           &literal_string_An_20interactive_20learning_20project_20from_20),
                                       A2(&elm_html_Html_a,
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_href,
                                                       &literal_string_https_3a_2f_2fthinkster_2eio),
                                               })),
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&elm_html_Html_text,
                                                       &literal_string_Thinkster),
@@ -18410,20 +18410,20 @@ void* eval_author_project_Page_navbarLink(void* args[]) {
   void* x_route = args[1];
   void* x_linkContent = args[2];
   return A2(&elm_html_Html_li,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_classList,
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           NEW_TUPLE2(&literal_string_nav_2ditem, &True),
                           NEW_TUPLE2(&literal_string_active,
                               A2(&author_project_Page_isActive, x_page, x_route)),
                       }))),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_a,
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class, &literal_string_nav_2dlink),
                           A1(&author_project_Route_href, x_route),
@@ -18573,14 +18573,14 @@ void* eval_author_project_Page_viewMenu(void* args[]) {
     void* x_viewer = Utils_destruct_index(x_maybeViewer, 0);
     void* x_username = A1(&author_project_Viewer_username, x_viewer);
     void* x_avatar = A1(&author_project_Viewer_avatar, x_viewer);
-    tmp0 = List_fromArray(4,
+    tmp0 = List_create(4,
         ((void* []){
             A2(x_linkTo,
                 &author_project_Route_NewArticle,
-                List_fromArray(2,
+                List_create(2,
                     ((void* []){
                         A2(&elm_html_Html_i,
-                            List_fromArray(1,
+                            List_create(1,
                                 ((void* []){
                                     A1(&elm_html_Html_Attributes_class,
                                         &literal_string_ion_2dcompose),
@@ -18590,10 +18590,10 @@ void* eval_author_project_Page_viewMenu(void* args[]) {
                     }))),
             A2(x_linkTo,
                 &author_project_Route_Settings,
-                List_fromArray(2,
+                List_create(2,
                     ((void* []){
                         A2(&elm_html_Html_i,
-                            List_fromArray(1,
+                            List_create(1,
                                 ((void* []){
                                     A1(&elm_html_Html_Attributes_class,
                                         &literal_string_ion_2dgear_2da),
@@ -18603,10 +18603,10 @@ void* eval_author_project_Page_viewMenu(void* args[]) {
                     }))),
             A2(x_linkTo,
                 A1(&author_project_Route_Profile, x_username),
-                List_fromArray(2,
+                List_create(2,
                     ((void* []){
                         A2(&elm_html_Html_img,
-                            List_fromArray(2,
+                            List_create(2,
                                 ((void* []){
                                     A1(&elm_html_Html_Attributes_class,
                                         &literal_string_user_2dpic),
@@ -18617,23 +18617,23 @@ void* eval_author_project_Page_viewMenu(void* args[]) {
                     }))),
             A2(x_linkTo,
                 &author_project_Route_Logout,
-                List_fromArray(1,
+                List_create(1,
                     ((void* []){
                         A1(&elm_html_Html_text, &literal_string_Sign_20out),
                     }))),
         }));
   } else {
-    tmp0 = List_fromArray(2,
+    tmp0 = List_create(2,
         ((void* []){
             A2(x_linkTo,
                 &author_project_Route_Login,
-                List_fromArray(1,
+                List_create(1,
                     ((void* []){
                         A1(&elm_html_Html_text, &literal_string_Sign_20in),
                     }))),
             A2(x_linkTo,
                 &author_project_Route_Register,
-                List_fromArray(1,
+                List_create(1,
                     ((void* []){
                         A1(&elm_html_Html_text, &literal_string_Sign_20up),
                     }))),
@@ -18651,35 +18651,35 @@ void* eval_author_project_Page_viewHeader(void* args[]) {
   void* x_page = args[0];
   void* x_maybeViewer = args[1];
   return A2(&elm_html_Html_nav,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class,
                   &literal_string_navbar_20navbar_2dlight),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class, &literal_string_container),
                       })),
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           A2(&elm_html_Html_a,
-                              List_fromArray(2,
+                              List_create(2,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_navbar_2dbrand),
                                       A1(&author_project_Route_href,
                                           &author_project_Route_Home),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text, &literal_string_conduit),
                                   }))),
                           A2(&elm_core_Basics_apL,
                               A1(&elm_html_Html_ul,
-                                  List_fromArray(1,
+                                  List_create(1,
                                       ((void* []){
                                           A1(&elm_html_Html_Attributes_class,
                                               &literal_string_nav_20navbar_2dnav_20pull_2dxs_2dright),
@@ -18688,7 +18688,7 @@ void* eval_author_project_Page_viewHeader(void* args[]) {
                                   A3(&author_project_Page_navbarLink,
                                       x_page,
                                       &author_project_Route_Home,
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A1(&elm_html_Html_text,
                                                   &literal_string_Home),
@@ -18724,7 +18724,7 @@ void* eval_author_project_Page_view(void* args[]) {
               A2(&author_project_Page_viewHeader, x_page, x_maybeViewer),
               A2(&elm_core_List_cons,
                   x_content,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           &author_project_Page_viewFooter,
                       })))),
@@ -18838,7 +18838,7 @@ Closure elm_html_Html_Attributes_width = {
 ElmValue* ptr_author_project_Loading_icon;
 void* init_author_project_Loading_icon() {
   return A2(&elm_html_Html_img,
-      List_fromArray(4,
+      List_create(4,
           ((void* []){
               A1(&author_project_Asset_src, &author_project_Asset_loading),
               A1(&elm_html_Html_Attributes_width, &literal_int_64),
@@ -18921,12 +18921,12 @@ Closure author_project_Article_Body_toHtml = {
 void* eval_author_project_Author_view(void* args[]) {
   void* x_uname = args[0];
   return A2(&elm_html_Html_a,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_author),
               A1(&author_project_Route_href, A1(&author_project_Route_Profile, x_uname)),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&author_project_Username_toHtml, x_uname),
           })));
@@ -19300,11 +19300,11 @@ void* eval_author_project_Timestamp_view(void* args[]) {
   void* x_timeZone = args[0];
   void* x_timestamp = args[1];
   return A2(&elm_html_Html_span,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_date),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text,
                   A2(&author_project_Timestamp_format, x_timeZone, x_timestamp)),
@@ -19433,7 +19433,7 @@ Closure elm_json_Json_Decode_at = {
 ElmValue* ptr_elm_html_Html_Events_targetValue;
 void* init_elm_html_Html_Events_targetValue() {
   return A2(&elm_json_Json_Decode_at,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               &literal_string_target,
               &literal_string_value,
@@ -19544,7 +19544,7 @@ void* eval_author_project_Page_Article_viewAddComment(void* args[]) {
     } else {
       void* x_str = Utils_destruct_index(x_commentText, 0);
       tmp2 = NEW_TUPLE2(x_str,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   A1(&elm_html_Html_Attributes_disabled, &True),
               })));
@@ -19553,25 +19553,25 @@ void* eval_author_project_Page_Article_viewAddComment(void* args[]) {
     void* x_commentStr = Utils_destruct_index(x__v1, 0);
     void* x_buttonAttrs = Utils_destruct_index(x__v1, 1);
     tmp0 = A2(&elm_html_Html_form,
-        List_fromArray(2,
+        List_create(2,
             ((void* []){
                 A1(&elm_html_Html_Attributes_class,
                     &literal_string_card_20comment_2dform),
                 A1(&elm_html_Html_Events_onSubmit,
                     A2(&author_project_Page_Article_ClickedPostComment, x_cred, x_slug)),
             })),
-        List_fromArray(2,
+        List_create(2,
             ((void* []){
                 A2(&elm_html_Html_div,
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&elm_html_Html_Attributes_class,
                                 &literal_string_card_2dblock),
                         })),
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A2(&elm_html_Html_textarea,
-                                List_fromArray(5,
+                                List_create(5,
                                     ((void* []){
                                         A1(&elm_html_Html_Attributes_class,
                                             &literal_string_form_2dcontrol),
@@ -19587,15 +19587,15 @@ void* eval_author_project_Page_Article_viewAddComment(void* args[]) {
                                 &Nil),
                         }))),
                 A2(&elm_html_Html_div,
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&elm_html_Html_Attributes_class,
                                 &literal_string_card_2dfooter),
                         })),
-                    List_fromArray(2,
+                    List_create(2,
                         ((void* []){
                             A2(&elm_html_Html_img,
-                                List_fromArray(2,
+                                List_create(2,
                                     ((void* []){
                                         A1(&elm_html_Html_Attributes_class,
                                             &literal_string_comment_2dauthor_2dimg),
@@ -19607,7 +19607,7 @@ void* eval_author_project_Page_Article_viewAddComment(void* args[]) {
                                     A1(&elm_html_Html_Attributes_class,
                                         &literal_string_btn_20btn_2dsm_20btn_2dprimary),
                                     x_buttonAttrs),
-                                List_fromArray(1,
+                                List_create(1,
                                     ((void* []){
                                         A1(&elm_html_Html_text,
                                             &literal_string_Post_20Comment),
@@ -19617,25 +19617,25 @@ void* eval_author_project_Page_Article_viewAddComment(void* args[]) {
   } else {
     tmp0 = A2(&elm_html_Html_p,
         &Nil,
-        List_fromArray(4,
+        List_create(4,
             ((void* []){
                 A2(&elm_html_Html_a,
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&author_project_Route_href, &author_project_Route_Login),
                         })),
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&elm_html_Html_text, &literal_string_Sign_20in),
                         }))),
                 A1(&elm_html_Html_text, &literal_string__20or_20),
                 A2(&elm_html_Html_a,
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&author_project_Route_href,
                                 &author_project_Route_Register),
                         })),
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&elm_html_Html_text, &literal_string_sign_20up),
                         }))),
@@ -19722,16 +19722,16 @@ void* eval_author_project_Page_Article_deleteButton(void* args[]) {
       x_cred,
       A1(&author_project_Article_slug, x_article));
   return A2(&elm_html_Html_button,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A1(&elm_html_Html_Attributes_class,
                   &literal_string_btn_20btn_2doutline_2ddanger_20btn_2dsm),
               A1(&elm_html_Html_Events_onClick, x_msg),
           })),
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A2(&elm_html_Html_i,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_ion_2dtrash_2da),
@@ -19750,7 +19750,7 @@ Closure author_project_Page_Article_deleteButton = {
 void* eval_author_project_Page_Article_editButton(void* args[]) {
   void* x_article = args[0];
   return A2(&elm_html_Html_a,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A1(&elm_html_Html_Attributes_class,
                   &literal_string_btn_20btn_2doutline_2dsecondary_20btn_2dsm),
@@ -19758,10 +19758,10 @@ void* eval_author_project_Page_Article_editButton(void* args[]) {
                   A1(&author_project_Route_EditArticle,
                       A1(&author_project_Article_slug, x_article))),
           })),
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A2(&elm_html_Html_i,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class, &literal_string_ion_2dedit),
                       })),
@@ -19821,7 +19821,7 @@ void* eval_author_project_Article_toggleFavoriteButton(void* args[]) {
               x_attrs)),
       A2(&elm_core_List_cons,
           A2(&elm_html_Html_i,
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A1(&elm_html_Html_Attributes_class, &literal_string_ion_2dheart),
                   })),
@@ -19883,7 +19883,7 @@ void* eval_author_project_Page_Article_favoriteButton(void* args[]) {
       (void*)FIELD_favorited,
       x__v0,
   }));
-  void* x_kids = List_fromArray(1,
+  void* x_kids = List_create(1,
       ((void* []){
           A1(&elm_html_Html_text,
               A2(&elm_core_Basics_append,
@@ -19933,15 +19933,15 @@ void* eval_author_project_Author_toggleFollowButton(void* args[]) {
               &literal_string__20,
               A1(&author_project_Username_toString, x_uname))));
   return A2(&elm_html_Html_button,
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, x_classStr),
               A1(&elm_html_Html_Events_onClick, x_msgWhenClicked),
           })),
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A2(&elm_html_Html_i,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_ion_2dplus_2dround),
@@ -19963,7 +19963,7 @@ void* eval_author_project_Author_followButton(void* args[]) {
   void* x_uname = Utils_destruct_index(x_author, 0);
   return A4(&author_project_Author_toggleFollowButton,
       &literal_string_Follow,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               &literal_string_btn_2doutline_2dsecondary,
           })),
@@ -19984,7 +19984,7 @@ void* eval_author_project_Author_unfollowButton(void* args[]) {
   void* x_uname = Utils_destruct_index(x_author, 0);
   return A4(&author_project_Author_toggleFollowButton,
       &literal_string_Unfollow,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               &literal_string_btn_2dsecondary,
           })),
@@ -20006,7 +20006,7 @@ void* eval_author_project_Page_Article_viewButtons(void* args[]) {
   if (tmp1 == CTOR_IsFollowing) {
     {
       void* x_followedAuthor = Utils_destruct_index(x_author, 0);
-      tmp0 = List_fromArray(3,
+      tmp0 = List_create(3,
           ((void* []){
               A3(&author_project_Author_unfollowButton,
                   &author_project_Page_Article_ClickedUnfollow,
@@ -20019,7 +20019,7 @@ void* eval_author_project_Page_Article_viewButtons(void* args[]) {
   } else if (tmp1 == CTOR_IsNotFollowing) {
     {
       void* x_unfollowedAuthor = Utils_destruct_index(x_author, 0);
-      tmp0 = List_fromArray(3,
+      tmp0 = List_create(3,
           ((void* []){
               A3(&author_project_Author_followButton,
                   &author_project_Page_Article_ClickedFollow,
@@ -20030,7 +20030,7 @@ void* eval_author_project_Page_Article_viewButtons(void* args[]) {
           }));
     };
   } else {
-    tmp0 = List_fromArray(3,
+    tmp0 = List_create(3,
         ((void* []){
             A1(&author_project_Page_Article_editButton, x_article),
             A1(&elm_html_Html_text, &literal_string__20),
@@ -20118,15 +20118,15 @@ void* eval_author_project_Page_Article_viewComment(void* args[]) {
         x_slug,
         A1(&author_project_Article_Comment_id, x_comment));
     tmp0 = A2(&elm_html_Html_span,
-        List_fromArray(2,
+        List_create(2,
             ((void* []){
                 A1(&elm_html_Html_Attributes_class, &literal_string_mod_2doptions),
                 A1(&elm_html_Html_Events_onClick, x_msg),
             })),
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 A2(&elm_html_Html_i,
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&elm_html_Html_Attributes_class,
                                 &literal_string_ion_2dtrash_2da),
@@ -20139,27 +20139,27 @@ void* eval_author_project_Page_Article_viewComment(void* args[]) {
   void* x_deleteCommentButton = tmp0;
   void* x_profile = A1(&author_project_Author_profile, x_author);
   return A2(&elm_html_Html_div,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_card),
           })),
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_card_2dblock),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&elm_html_Html_p,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_card_2dtext),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text,
                                           A1(&author_project_Article_Comment_body,
@@ -20167,25 +20167,25 @@ void* eval_author_project_Page_Article_viewComment(void* args[]) {
                                   }))),
                       }))),
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_card_2dfooter),
                       })),
-                  List_fromArray(5,
+                  List_create(5,
                       ((void* []){
                           A2(&elm_html_Html_a,
-                              List_fromArray(2,
+                              List_create(2,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_comment_2dauthor),
                                       A1(&elm_html_Html_Attributes_href,
                                           &literal_string_),
                                   })),
-                              List_fromArray(2,
+                              List_create(2,
                                   ((void* []){
                                       A2(&elm_html_Html_img,
-                                          List_fromArray(2,
+                                          List_create(2,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_comment_2dauthor_2dimg),
@@ -20198,7 +20198,7 @@ void* eval_author_project_Page_Article_viewComment(void* args[]) {
                                   }))),
                           A1(&elm_html_Html_text, &literal_string__20),
                           A2(&elm_html_Html_a,
-                              List_fromArray(2,
+                              List_create(2,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_comment_2dauthor),
@@ -20206,19 +20206,19 @@ void* eval_author_project_Page_Article_viewComment(void* args[]) {
                                           A1(&author_project_Route_Profile,
                                               x_authorUsername)),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text,
                                           A1(&author_project_Username_toString,
                                               x_authorUsername)),
                                   }))),
                           A2(&elm_html_Html_span,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_date_2dposted),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text, x_timestamp),
                                   }))),
@@ -20256,7 +20256,7 @@ void* eval_author_project_Page_viewErrors_lambda1(void* args[]) {
   void* x_error = args[0];
   return A2(&elm_html_Html_p,
       &Nil,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text, x_error),
           })));
@@ -20270,7 +20270,7 @@ void* eval_author_project_Page_viewErrors(void* args[]) {
   } else {
     tmp0 = A2(&elm_core_Basics_apL,
         A1(&elm_html_Html_div,
-            List_fromArray(6,
+            List_create(6,
                 ((void* []){
                     A1(&elm_html_Html_Attributes_class, &literal_string_error_2dmessages),
                     A2(&elm_html_Html_Attributes_style,
@@ -20294,14 +20294,14 @@ void* eval_author_project_Page_viewErrors(void* args[]) {
                 NEW_CLOSURE(
                     0, 1, &eval_author_project_Page_viewErrors_lambda1, ((void* []){})),
                 x_errors),
-            List_fromArray(1,
+            List_create(1,
                 ((void* []){
                     A2(&elm_html_Html_button,
-                        List_fromArray(1,
+                        List_create(1,
                             ((void* []){
                                 A1(&elm_html_Html_Events_onClick, x_dismissErrors),
                             })),
-                        List_fromArray(1,
+                        List_create(1,
                             ((void* []){
                                 A1(&elm_html_Html_text, &literal_string_Ok),
                             }))),
@@ -20381,7 +20381,7 @@ void* eval_author_project_Page_Article_view(void* args[]) {
         };
       } else if (tmp5 == CTOR_LoadingSlowly) {
         {
-          tmp4 = List_fromArray(1,
+          tmp4 = List_create(1,
               ((void* []){
                   &author_project_Loading_icon,
               }));
@@ -20410,7 +20410,7 @@ void* eval_author_project_Page_Article_view(void* args[]) {
                   x_comments));
         };
       } else {
-        tmp4 = List_fromArray(1,
+        tmp4 = List_create(1,
             ((void* []){
                 A1(&author_project_Loading_error, &literal_string_comments),
             }));
@@ -20419,58 +20419,58 @@ void* eval_author_project_Page_Article_view(void* args[]) {
           2,
           ((void* []){
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_article_2dpage),
                       })),
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           A2(&elm_html_Html_div,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_banner),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_div,
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_container),
                                               })),
-                                          List_fromArray(3,
+                                          List_create(3,
                                               ((void* []){
                                                   A2(&elm_html_Html_h1,
                                                       &Nil,
-                                                      List_fromArray(1,
+                                                      List_create(1,
                                                           ((void* []){
                                                               A1(&elm_html_Html_text,
                                                                   x_title),
                                                           }))),
                                                   A2(&elm_core_Basics_apL,
                                                       A1(&elm_html_Html_div,
-                                                          List_fromArray(1,
+                                                          List_create(1,
                                                               ((void* []){
                                                                   A1(&elm_html_Html_Attributes_class,
                                                                       &literal_string_article_2dmeta),
                                                               }))),
                                                       A2(&elm_core_List_append,
-                                                          List_fromArray(2,
+                                                          List_create(2,
                                                               ((void* []){
                                                                   A2(&elm_html_Html_a,
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A1(&author_project_Route_href,
                                                                                   A1(&author_project_Route_Profile,
                                                                                       A1(&author_project_Author_username,
                                                                                           x_author))),
                                                                           })),
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A2(&elm_html_Html_img,
-                                                                                  List_fromArray(
+                                                                                  List_create(
                                                                                       1,
                                                                                       ((void* []){
                                                                                           A1(&author_project_Avatar_src,
@@ -20480,12 +20480,12 @@ void* eval_author_project_Page_Article_view(void* args[]) {
                                                                                   &Nil),
                                                                           }))),
                                                                   A2(&elm_html_Html_div,
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A1(&elm_html_Html_Attributes_class,
                                                                                   &literal_string_info),
                                                                           })),
-                                                                      List_fromArray(2,
+                                                                      List_create(2,
                                                                           ((void* []){
                                                                               A1(&author_project_Author_view,
                                                                                   A1(&author_project_Author_username,
@@ -20516,28 +20516,28 @@ void* eval_author_project_Page_Article_view(void* args[]) {
                                               }))),
                                   }))),
                           A2(&elm_html_Html_div,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_container_20page),
                                   })),
-                              List_fromArray(4,
+                              List_create(4,
                                   ((void* []){
                                       A2(&elm_html_Html_div,
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_row_20article_2dcontent),
                                               })),
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A2(&elm_html_Html_div,
-                                                      List_fromArray(1,
+                                                      List_create(1,
                                                           ((void* []){
                                                               A1(&elm_html_Html_Attributes_class,
                                                                   &literal_string_col_2dmd_2d12),
                                                           })),
-                                                      List_fromArray(1,
+                                                      List_create(1,
                                                           ((void* []){
                                                               A2(&author_project_Article_Body_toHtml,
                                                                   A1(&author_project_Article_body,
@@ -20547,35 +20547,35 @@ void* eval_author_project_Page_Article_view(void* args[]) {
                                               }))),
                                       A2(&elm_html_Html_hr, &Nil, &Nil),
                                       A2(&elm_html_Html_div,
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_article_2dactions),
                                               })),
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A2(&elm_core_Basics_apL,
                                                       A1(&elm_html_Html_div,
-                                                          List_fromArray(1,
+                                                          List_create(1,
                                                               ((void* []){
                                                                   A1(&elm_html_Html_Attributes_class,
                                                                       &literal_string_article_2dmeta),
                                                               }))),
                                                       A2(&elm_core_List_append,
-                                                          List_fromArray(2,
+                                                          List_create(2,
                                                               ((void* []){
                                                                   A2(&elm_html_Html_a,
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A1(&author_project_Route_href,
                                                                                   A1(&author_project_Route_Profile,
                                                                                       A1(&author_project_Author_username,
                                                                                           x_author))),
                                                                           })),
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A2(&elm_html_Html_img,
-                                                                                  List_fromArray(
+                                                                                  List_create(
                                                                                       1,
                                                                                       ((void* []){
                                                                                           A1(&author_project_Avatar_src,
@@ -20584,12 +20584,12 @@ void* eval_author_project_Page_Article_view(void* args[]) {
                                                                                   &Nil),
                                                                           }))),
                                                                   A2(&elm_html_Html_div,
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A1(&elm_html_Html_Attributes_class,
                                                                                   &literal_string_info),
                                                                           })),
-                                                                      List_fromArray(2,
+                                                                      List_create(2,
                                                                           ((void* []){
                                                                               A1(&author_project_Author_view,
                                                                                   A1(&author_project_Author_username,
@@ -20613,16 +20613,16 @@ void* eval_author_project_Page_Article_view(void* args[]) {
                                                           x_buttons)),
                                               }))),
                                       A2(&elm_html_Html_div,
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_row),
                                               })),
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A2(&elm_core_Basics_apL,
                                                       A1(&elm_html_Html_div,
-                                                          List_fromArray(1,
+                                                          List_create(1,
                                                               ((void* []){
                                                                   A1(&elm_html_Html_Attributes_class,
                                                                       &literal_string_col_2dxs_2d12_20col_2dmd_2d8_20offset_2dmd_2d2),
@@ -20720,7 +20720,7 @@ void* eval_author_project_Page_Article_Editor_saveArticleButton(void* args[]) {
           A1(&elm_html_Html_Attributes_class,
               &literal_string_btn_20btn_2dlg_20pull_2dxs_2dright_20btn_2dprimary),
           x_extraAttrs),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text, x_caption),
           })));
@@ -20823,27 +20823,27 @@ void* eval_author_project_Page_Article_Editor_viewForm(void* args[]) {
   void* x_fields = args[1];
   void* x_saveButton = args[2];
   return A2(&elm_html_Html_form,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Events_onSubmit,
                   A1(&author_project_Page_Article_Editor_ClickedSave, x_cred)),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_fieldset,
                   &Nil,
-                  List_fromArray(5,
+                  List_create(5,
                       ((void* []){
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_input,
-                                          List_fromArray(4,
+                                          List_create(4,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -20860,15 +20860,15 @@ void* eval_author_project_Page_Article_Editor_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_input,
-                                          List_fromArray(4,
+                                          List_create(4,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol),
@@ -20885,15 +20885,15 @@ void* eval_author_project_Page_Article_Editor_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_textarea,
-                                          List_fromArray(5,
+                                          List_create(5,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol),
@@ -20913,15 +20913,15 @@ void* eval_author_project_Page_Article_Editor_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_input,
-                                          List_fromArray(4,
+                                          List_create(4,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol),
@@ -20962,7 +20962,7 @@ void* eval_author_project_Page_Article_Editor_viewProblem(void* args[]) {
   void* x_errorMessage = tmp0;
   return A2(&elm_html_Html_li,
       &Nil,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text, x_errorMessage),
           })));
@@ -20976,7 +20976,7 @@ Closure author_project_Page_Article_Editor_viewProblem = {
 void* eval_author_project_Page_Article_Editor_viewProblems(void* args[]) {
   void* x_problems = args[0];
   return A2(&elm_html_Html_ul,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_error_2dmessages),
           })),
@@ -21005,7 +21005,7 @@ void* eval_author_project_Page_Article_Editor_viewAuthenticated(void* args[]) {
     };
   } else if (tmp1 == CTOR_LoadingSlowly) {
     {
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               &author_project_Loading_icon,
           }));
@@ -21014,13 +21014,13 @@ void* eval_author_project_Page_Article_Editor_viewAuthenticated(void* args[]) {
     {
       void* x_slug = Utils_destruct_index(x__v0, 0);
       void* x_form = Utils_destruct_index(x__v0, 1);
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               A3(&author_project_Page_Article_Editor_viewForm,
                   x_cred,
                   x_form,
                   A1(&author_project_Page_Article_Editor_editArticleSaveButton,
-                      List_fromArray(1,
+                      List_create(1,
                           ((void* []){
                               A1(&elm_html_Html_Attributes_disabled, &True),
                           })))),
@@ -21029,13 +21029,13 @@ void* eval_author_project_Page_Article_Editor_viewAuthenticated(void* args[]) {
   } else if (tmp1 == CTOR_Creating) {
     {
       void* x_form = Utils_destruct_index(x__v0, 0);
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               A3(&author_project_Page_Article_Editor_viewForm,
                   x_cred,
                   x_form,
                   A1(&author_project_Page_Article_Editor_newArticleSaveButton,
-                      List_fromArray(1,
+                      List_create(1,
                           ((void* []){
                               A1(&elm_html_Html_Attributes_disabled, &True),
                           })))),
@@ -21046,7 +21046,7 @@ void* eval_author_project_Page_Article_Editor_viewAuthenticated(void* args[]) {
       void* x_slug = Utils_destruct_index(x__v0, 0);
       void* x_problems = Utils_destruct_index(x__v0, 1);
       void* x_form = Utils_destruct_index(x__v0, 2);
-      tmp0 = List_fromArray(2,
+      tmp0 = List_create(2,
           ((void* []){
               A1(&author_project_Page_Article_Editor_viewProblems, x_problems),
               A3(&author_project_Page_Article_Editor_viewForm,
@@ -21059,7 +21059,7 @@ void* eval_author_project_Page_Article_Editor_viewAuthenticated(void* args[]) {
     {
       void* x_problems = Utils_destruct_index(x__v0, 0);
       void* x_form = Utils_destruct_index(x__v0, 1);
-      tmp0 = List_fromArray(2,
+      tmp0 = List_create(2,
           ((void* []){
               A1(&author_project_Page_Article_Editor_viewProblems, x_problems),
               A3(&author_project_Page_Article_Editor_viewForm,
@@ -21069,37 +21069,37 @@ void* eval_author_project_Page_Article_Editor_viewAuthenticated(void* args[]) {
           }));
     };
   } else {
-    tmp0 = List_fromArray(1,
+    tmp0 = List_create(1,
         ((void* []){
             A1(&elm_html_Html_text, &literal_string_Article_20failed_20to_20load_2e),
         }));
   };
   void* x_formHtml = tmp0;
   return A2(&elm_html_Html_div,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_editor_2dpage),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_container_20page),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&elm_html_Html_div,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_row),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_div,
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_col_2dmd_2d10_20offset_2dmd_2d1_20col_2dxs_2d12),
@@ -21224,12 +21224,12 @@ Closure author_project_Article_Feed_ClickedUnfavorite = {
 void* eval_author_project_Article_Feed_viewTag(void* args[]) {
   void* x_tagName = args[0];
   return A2(&elm_html_Html_li,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class,
                   &literal_string_tag_2ddefault_20tag_2dpill_20tag_2doutline),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text, x_tagName),
           })));
@@ -21270,11 +21270,11 @@ void* eval_author_project_Article_Feed_viewPreview(void* args[]) {
     };
     void* x_viewButton = tmp2;
     tmp0 = A2(x_viewButton,
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 A1(&elm_html_Html_Attributes_class, &literal_string_pull_2dxs_2dright),
             })),
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 A1(&elm_html_Html_text,
                     A2(&elm_core_Basics_append,
@@ -21302,30 +21302,30 @@ void* eval_author_project_Article_Feed_viewPreview(void* args[]) {
       x__v0,
   }));
   return A2(&elm_html_Html_div,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_article_2dpreview),
           })),
-      List_fromArray(2,
+      List_create(2,
           ((void* []){
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_article_2dmeta),
                       })),
-                  List_fromArray(3,
+                  List_create(3,
                       ((void* []){
                           A2(&elm_html_Html_a,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&author_project_Route_href,
                                           A1(&author_project_Route_Profile, x_username)),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_img,
-                                          List_fromArray(1,
+                                          List_create(1,
                                               ((void* []){
                                                   A1(&author_project_Avatar_src,
                                                       A1(&author_project_Profile_avatar,
@@ -21334,12 +21334,12 @@ void* eval_author_project_Article_Feed_viewPreview(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_div,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_info),
                                   })),
-                              List_fromArray(2,
+                              List_create(2,
                                   ((void* []){
                                       A1(&author_project_Author_view, x_username),
                                       A2(&author_project_Timestamp_view,
@@ -21349,7 +21349,7 @@ void* eval_author_project_Article_Feed_viewPreview(void* args[]) {
                           x_faveButton,
                       }))),
               A2(&elm_html_Html_a,
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_preview_2dlink),
@@ -21357,29 +21357,29 @@ void* eval_author_project_Article_Feed_viewPreview(void* args[]) {
                               A1(&author_project_Route_Article,
                                   A1(&author_project_Article_slug, x_article))),
                       })),
-                  List_fromArray(4,
+                  List_create(4,
                       ((void* []){
                           A2(&elm_html_Html_h1,
                               &Nil,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text, x_title),
                                   }))),
                           A2(&elm_html_Html_p,
                               &Nil,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text, x_description),
                                   }))),
                           A2(&elm_html_Html_span,
                               &Nil,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text,
                                           &literal_string_Read_20more_2e_2e_2e),
                                   }))),
                           A2(&elm_html_Html_ul,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_tag_2dlist),
@@ -21436,32 +21436,32 @@ Closure author_project_Article_Feed_viewArticles = {
 ElmValue* ptr_author_project_Page_Home_viewBanner;
 void* init_author_project_Page_Home_viewBanner() {
   return A2(&elm_html_Html_div,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_banner),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_div,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class, &literal_string_container),
                       })),
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           A2(&elm_html_Html_h1,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_logo_2dfont),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text, &literal_string_conduit),
                                   }))),
                           A2(&elm_html_Html_p,
                               &Nil,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text,
                                           &literal_string_A_20place_20to_20share_20your_20knowledge_2e),
@@ -21475,26 +21475,26 @@ void* eval_author_project_Article_Feed_pageLink(void* args[]) {
   void* x_targetPage = args[1];
   void* x_isActive = args[2];
   return A2(&elm_html_Html_li,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_classList,
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           NEW_TUPLE2(&literal_string_page_2ditem, &True),
                           NEW_TUPLE2(&literal_string_active, x_isActive),
                       }))),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_a,
-                  List_fromArray(3,
+                  List_create(3,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_page_2dlink),
                           A1(&elm_html_Html_Events_onClick, A1(x_toMsg, x_targetPage)),
                           A1(&elm_html_Html_Attributes_href, &literal_string_),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_text,
                               A1(&elm_core_String_fromInt, x_targetPage)),
@@ -21555,7 +21555,7 @@ void* eval_author_project_Article_Feed_viewPagination(void* args[]) {
             A2(&elm_core_List_range, &literal_int_1, x_totalPages),
             A1(&elm_core_List_map, x_viewPageLink)),
         A1(&elm_html_Html_ul,
-            List_fromArray(1,
+            List_create(1,
                 ((void* []){
                     A1(&elm_html_Html_Attributes_class, &literal_string_pagination),
                 }))));
@@ -21608,11 +21608,11 @@ void* eval_author_project_Article_Feed_viewTab(void* args[]) {
   void* x_name = Utils_destruct_index(x__v0, 0);
   void* x_msg = Utils_destruct_index(x__v0, 1);
   return A2(&elm_html_Html_li,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_nav_2ditem),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_a,
                   A2(&elm_core_List_cons,
@@ -21622,7 +21622,7 @@ void* eval_author_project_Article_Feed_viewTab(void* args[]) {
                           A2(&elm_core_List_cons,
                               A1(&elm_html_Html_Attributes_href, &literal_string_),
                               x_attrs))),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_text, x_name),
                       }))),
@@ -21640,21 +21640,21 @@ void* eval_author_project_Article_Feed_viewTabs(void* args[]) {
   void* x_after = args[2];
   return A2(&elm_core_Basics_apL,
       A1(&elm_html_Html_ul,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   A1(&elm_html_Html_Attributes_class,
                       &literal_string_nav_20nav_2dpills_20outline_2dactive),
               }))),
       A1(&elm_core_List_concat,
-          List_fromArray(3,
+          List_create(3,
               ((void* []){
                   A2(&elm_core_List_map,
                       A1(&author_project_Article_Feed_viewTab, &Nil),
                       x_before),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&author_project_Article_Feed_viewTab,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_active),
@@ -21696,7 +21696,7 @@ void* eval_author_project_Page_Home_viewTabs(void* args[]) {
       tmp0 = A3(&author_project_Article_Feed_viewTabs,
           &Nil,
           A1(&author_project_Page_Home_yourFeed, x_cred),
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   &author_project_Page_Home_globalFeed,
               })));
@@ -21707,7 +21707,7 @@ void* eval_author_project_Page_Home_viewTabs(void* args[]) {
       void* tmp5 = ((Custom*)x_maybeCred)->ctor;
       if (tmp5 == CTOR_Just) {
         void* x_cred = Utils_destruct_index(x_maybeCred, 0);
-        tmp4 = List_fromArray(1,
+        tmp4 = List_create(1,
             ((void* []){
                 A1(&author_project_Page_Home_yourFeed, x_cred),
             }));
@@ -21726,13 +21726,13 @@ void* eval_author_project_Page_Home_viewTabs(void* args[]) {
     void* tmp3 = ((Custom*)x_maybeCred)->ctor;
     if (tmp3 == CTOR_Just) {
       void* x_cred = Utils_destruct_index(x_maybeCred, 0);
-      tmp2 = List_fromArray(2,
+      tmp2 = List_create(2,
           ((void* []){
               A1(&author_project_Page_Home_yourFeed, x_cred),
               &author_project_Page_Home_globalFeed,
           }));
     } else {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               &author_project_Page_Home_globalFeed,
           }));
@@ -21764,7 +21764,7 @@ Closure author_project_Page_Home_ClickedTag = {
 void* eval_author_project_Page_Home_viewTag(void* args[]) {
   void* x_tagName = args[0];
   return A2(&elm_html_Html_a,
-      List_fromArray(3,
+      List_create(3,
           ((void* []){
               A1(&elm_html_Html_Attributes_class,
                   &literal_string_tag_2dpill_20tag_2ddefault),
@@ -21772,7 +21772,7 @@ void* eval_author_project_Page_Home_viewTag(void* args[]) {
                   A1(&author_project_Page_Home_ClickedTag, x_tagName)),
               A1(&elm_html_Html_Attributes_href, &literal_string_),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text,
                   A1(&author_project_Article_Tag_toString, x_tagName)),
@@ -21787,7 +21787,7 @@ Closure author_project_Page_Home_viewTag = {
 void* eval_author_project_Page_Home_viewTags(void* args[]) {
   void* x_tags = args[0];
   return A2(&elm_html_Html_div,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Attributes_class, &literal_string_tag_2dlist),
           })),
@@ -21810,20 +21810,20 @@ void* eval_author_project_Page_Home_view(void* args[]) {
   if (tmp1 == CTOR_Loaded) {
     {
       void* x_tags = Utils_destruct_index(x__v1, 0);
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               A2(&elm_core_Basics_apL,
                   A1(&elm_html_Html_div,
-                      List_fromArray(1,
+                      List_create(1,
                           ((void* []){
                               A1(&elm_html_Html_Attributes_class,
                                   &literal_string_sidebar),
                           }))),
-                  List_fromArray(2,
+                  List_create(2,
                       ((void* []){
                           A2(&elm_html_Html_p,
                               &Nil,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text,
                                           &literal_string_Popular_20Tags),
@@ -21836,13 +21836,13 @@ void* eval_author_project_Page_Home_view(void* args[]) {
     { tmp0 = &Nil; };
   } else if (tmp1 == CTOR_LoadingSlowly) {
     {
-      tmp0 = List_fromArray(1,
+      tmp0 = List_create(1,
           ((void* []){
               &author_project_Loading_icon,
           }));
     };
   } else {
-    tmp0 = List_fromArray(1,
+    tmp0 = List_create(1,
         ((void* []){
             A1(&author_project_Loading_error, &literal_string_tags),
         }));
@@ -21856,19 +21856,19 @@ void* eval_author_project_Page_Home_view(void* args[]) {
   if (tmp3 == CTOR_Loaded) {
     {
       void* x_feed = Utils_destruct_index(x__v0, 0);
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               A2(&elm_core_Basics_apL,
                   A1(&elm_html_Html_div,
-                      List_fromArray(1,
+                      List_create(1,
                           ((void* []){
                               A1(&elm_html_Html_Attributes_class,
                                   &literal_string_feed_2dtoggle),
                           }))),
                   A1(&elm_core_List_concat,
-                      List_fromArray(3,
+                      List_create(3,
                           ((void* []){
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&author_project_Page_Home_viewTabs,
                                           A1(&author_project_Session_cred,
@@ -21891,7 +21891,7 @@ void* eval_author_project_Page_Home_view(void* args[]) {
                                   A1(&elm_core_List_map,
                                       A1(&elm_html_Html_map,
                                           &author_project_Page_Home_GotFeedMsg))),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A3(&author_project_Article_Feed_viewPagination,
                                           &author_project_Page_Home_ClickedFeedPage,
@@ -21908,13 +21908,13 @@ void* eval_author_project_Page_Home_view(void* args[]) {
     { tmp2 = &Nil; };
   } else if (tmp3 == CTOR_LoadingSlowly) {
     {
-      tmp2 = List_fromArray(1,
+      tmp2 = List_create(1,
           ((void* []){
               &author_project_Loading_icon,
           }));
     };
   } else {
-    tmp2 = List_fromArray(1,
+    tmp2 = List_create(1,
         ((void* []){
             A1(&author_project_Loading_error, &literal_string_feed),
         }));
@@ -21923,32 +21923,32 @@ void* eval_author_project_Page_Home_view(void* args[]) {
       2,
       ((void* []){
           A2(&elm_html_Html_div,
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A1(&elm_html_Html_Attributes_class, &literal_string_home_2dpage),
                   })),
-              List_fromArray(2,
+              List_create(2,
                   ((void* []){
                       &author_project_Page_Home_viewBanner,
                       A2(&elm_html_Html_div,
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A1(&elm_html_Html_Attributes_class,
                                       &literal_string_container_20page),
                               })),
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A2(&elm_html_Html_div,
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A1(&elm_html_Html_Attributes_class,
                                                   &literal_string_row),
                                           })),
-                                      List_fromArray(2,
+                                      List_create(2,
                                           ((void* []){
                                               A2(&elm_core_Basics_apL,
                                                   A1(&elm_html_Html_div,
-                                                      List_fromArray(1,
+                                                      List_create(1,
                                                           ((void* []){
                                                               A1(&elm_html_Html_Attributes_class,
                                                                   &literal_string_col_2dmd_2d9),
@@ -21956,7 +21956,7 @@ void* eval_author_project_Page_Home_view(void* args[]) {
                                                   tmp2),
                                               A2(&elm_core_Basics_apL,
                                                   A1(&elm_html_Html_div,
-                                                      List_fromArray(1,
+                                                      List_create(1,
                                                           ((void* []){
                                                               A1(&elm_html_Html_Attributes_class,
                                                                   &literal_string_col_2dmd_2d3),
@@ -22008,23 +22008,23 @@ void* init_elm_html_Html_Attributes_type_() {
 void* eval_author_project_Page_Login_viewForm(void* args[]) {
   void* x_form = args[0];
   return A2(&elm_html_Html_form,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Events_onSubmit,
                   &author_project_Page_Login_SubmittedForm),
           })),
-      List_fromArray(3,
+      List_create(3,
           ((void* []){
               A2(&elm_html_Html_fieldset,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_form_2dgroup),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&elm_html_Html_input,
-                              List_fromArray(4,
+                              List_create(4,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -22041,15 +22041,15 @@ void* eval_author_project_Page_Login_viewForm(void* args[]) {
                               &Nil),
                       }))),
               A2(&elm_html_Html_fieldset,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_form_2dgroup),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&elm_html_Html_input,
-                              List_fromArray(5,
+                              List_create(5,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -22068,12 +22068,12 @@ void* eval_author_project_Page_Login_viewForm(void* args[]) {
                               &Nil),
                       }))),
               A2(&elm_html_Html_button,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_btn_20btn_2dlg_20btn_2dprimary_20pull_2dxs_2dright),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_text, &literal_string_Sign_20in),
                       }))),
@@ -22100,7 +22100,7 @@ void* eval_author_project_Page_Login_viewProblem(void* args[]) {
   void* x_errorMessage = tmp0;
   return A2(&elm_html_Html_li,
       &Nil,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text, x_errorMessage),
           })));
@@ -22117,63 +22117,63 @@ void* eval_author_project_Page_Login_view(void* args[]) {
       2,
       ((void* []){
           A2(&elm_html_Html_div,
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A1(&elm_html_Html_Attributes_class, &literal_string_cred_2dpage),
                   })),
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A2(&elm_html_Html_div,
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A1(&elm_html_Html_Attributes_class,
                                       &literal_string_container_20page),
                               })),
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A2(&elm_html_Html_div,
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A1(&elm_html_Html_Attributes_class,
                                                   &literal_string_row),
                                           })),
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A2(&elm_html_Html_div,
-                                                  List_fromArray(1,
+                                                  List_create(1,
                                                       ((void* []){
                                                           A1(&elm_html_Html_Attributes_class,
                                                               &literal_string_col_2dmd_2d6_20offset_2dmd_2d3_20col_2dxs_2d12),
                                                       })),
-                                                  List_fromArray(4,
+                                                  List_create(4,
                                                       ((void* []){
                                                           A2(&elm_html_Html_h1,
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_Attributes_class,
                                                                           &literal_string_text_2dxs_2dcenter),
                                                                   })),
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_text,
                                                                           &literal_string_Sign_20in),
                                                                   }))),
                                                           A2(&elm_html_Html_p,
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_Attributes_class,
                                                                           &literal_string_text_2dxs_2dcenter),
                                                                   })),
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A2(&elm_html_Html_a,
-                                                                          List_fromArray(
+                                                                          List_create(
                                                                               1,
                                                                               ((void* []){
                                                                                   A1(&author_project_Route_href,
                                                                                       &author_project_Route_Register),
                                                                               })),
-                                                                          List_fromArray(
+                                                                          List_create(
                                                                               1,
                                                                               ((void* []){
                                                                                   A1(&elm_html_Html_text,
@@ -22181,7 +22181,7 @@ void* eval_author_project_Page_Login_view(void* args[]) {
                                                                               }))),
                                                                   }))),
                                                           A2(&elm_html_Html_ul,
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_Attributes_class,
                                                                           &literal_string_error_2dmessages),
@@ -22250,31 +22250,31 @@ void* init_author_project_Page_NotFound_view() {
       2,
       ((void* []){
           A2(&elm_html_Html_main_,
-              List_fromArray(3,
+              List_create(3,
                   ((void* []){
                       A1(&elm_html_Html_Attributes_id, &literal_string_content),
                       A1(&elm_html_Html_Attributes_class, &literal_string_container),
                       A1(&elm_html_Html_Attributes_tabindex,
                           A1(&elm_core_Basics_negate, &literal_int_1)),
                   })),
-              List_fromArray(2,
+              List_create(2,
                   ((void* []){
                       A2(&elm_html_Html_h1,
                           &Nil,
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A1(&elm_html_Html_text, &literal_string_Not_20Found),
                               }))),
                       A2(&elm_html_Html_div,
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A1(&elm_html_Html_Attributes_class,
                                       &literal_string_row),
                               })),
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A2(&elm_html_Html_img,
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A1(&author_project_Asset_src,
                                                   &author_project_Asset_error),
@@ -22424,13 +22424,13 @@ void* eval_author_project_Page_Profile_viewTabs(void* args[]) {
     tmp0 = A3(&author_project_Article_Feed_viewTabs,
         &Nil,
         &author_project_Page_Profile_myArticles,
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 &author_project_Page_Profile_favoritedArticles,
             })));
   } else {
     tmp0 = A3(&author_project_Article_Feed_viewTabs,
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 &author_project_Page_Profile_myArticles,
             })),
@@ -22562,39 +22562,39 @@ void* eval_author_project_Page_Profile_view(void* args[]) {
         {
           void* x_feed = Utils_destruct_index(x__v1, 0);
           tmp9 = A2(&elm_html_Html_div,
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A1(&elm_html_Html_Attributes_class, &literal_string_container),
                   })),
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A2(&elm_html_Html_div,
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A1(&elm_html_Html_Attributes_class,
                                       &literal_string_row),
                               })),
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A2(&elm_html_Html_div,
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A1(&elm_html_Html_Attributes_class,
                                                   &literal_string_col_2dxs_2d12_20col_2dmd_2d10_20offset_2dmd_2d1),
                                           })),
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A2(&elm_core_Basics_apL,
                                                   A1(&elm_html_Html_div,
-                                                      List_fromArray(1,
+                                                      List_create(1,
                                                           ((void* []){
                                                               A1(&elm_html_Html_Attributes_class,
                                                                   &literal_string_articles_2dtoggle),
                                                           }))),
                                                   A1(&elm_core_List_concat,
-                                                      List_fromArray(3,
+                                                      List_create(3,
                                                           ((void* []){
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&author_project_Page_Profile_viewTabs,
                                                                           Utils_access_eval(((
@@ -22616,7 +22616,7 @@ void* eval_author_project_Page_Profile_view(void* args[]) {
                                                                   A1(&elm_core_List_map,
                                                                       A1(&elm_html_Html_map,
                                                                           &author_project_Page_Profile_GotFeedMsg))),
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A3(&author_project_Article_Feed_viewPagination,
                                                                           &author_project_Page_Profile_ClickedFeedPage,
@@ -22641,11 +22641,11 @@ void* eval_author_project_Page_Profile_view(void* args[]) {
         tmp9 = A1(&author_project_Loading_error, &literal_string_feed);
       };
       tmp3 = A2(&elm_html_Html_div,
-          List_fromArray(1,
+          List_create(1,
               ((void* []){
                   A1(&elm_html_Html_Attributes_class, &literal_string_profile_2dpage),
               })),
-          List_fromArray(3,
+          List_create(3,
               ((void* []){
                   A2(&author_project_Page_viewErrors,
                       &author_project_Page_Profile_ClickedDismissErrors,
@@ -22654,39 +22654,39 @@ void* eval_author_project_Page_Profile_view(void* args[]) {
                           x_model,
                       }))),
                   A2(&elm_html_Html_div,
-                      List_fromArray(1,
+                      List_create(1,
                           ((void* []){
                               A1(&elm_html_Html_Attributes_class,
                                   &literal_string_user_2dinfo),
                           })),
-                      List_fromArray(1,
+                      List_create(1,
                           ((void* []){
                               A2(&elm_html_Html_div,
-                                  List_fromArray(1,
+                                  List_create(1,
                                       ((void* []){
                                           A1(&elm_html_Html_Attributes_class,
                                               &literal_string_container),
                                       })),
-                                  List_fromArray(1,
+                                  List_create(1,
                                       ((void* []){
                                           A2(&elm_html_Html_div,
-                                              List_fromArray(1,
+                                              List_create(1,
                                                   ((void* []){
                                                       A1(&elm_html_Html_Attributes_class,
                                                           &literal_string_row),
                                                   })),
-                                              List_fromArray(1,
+                                              List_create(1,
                                                   ((void* []){
                                                       A2(&elm_html_Html_div,
-                                                          List_fromArray(1,
+                                                          List_create(1,
                                                               ((void* []){
                                                                   A1(&elm_html_Html_Attributes_class,
                                                                       &literal_string_col_2dxs_2d12_20col_2dmd_2d10_20offset_2dmd_2d1),
                                                               })),
-                                                          List_fromArray(4,
+                                                          List_create(4,
                                                               ((void* []){
                                                                   A2(&elm_html_Html_img,
-                                                                      List_fromArray(2,
+                                                                      List_create(2,
                                                                           ((void* []){
                                                                               A1(&elm_html_Html_Attributes_class,
                                                                                   &literal_string_user_2dimg),
@@ -22697,14 +22697,14 @@ void* eval_author_project_Page_Profile_view(void* args[]) {
                                                                       &Nil),
                                                                   A2(&elm_html_Html_h4,
                                                                       &Nil,
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A1(&author_project_Username_toHtml,
                                                                                   x_username),
                                                                           }))),
                                                                   A2(&elm_html_Html_p,
                                                                       &Nil,
-                                                                      List_fromArray(1,
+                                                                      List_create(1,
                                                                           ((void* []){
                                                                               A1(&elm_html_Html_text,
                                                                                   A2(&elm_core_Maybe_withDefault,
@@ -22778,23 +22778,23 @@ Custom author_project_Page_Register_SubmittedForm = {
 void* eval_author_project_Page_Register_viewForm(void* args[]) {
   void* x_form = args[0];
   return A2(&elm_html_Html_form,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Events_onSubmit,
                   &author_project_Page_Register_SubmittedForm),
           })),
-      List_fromArray(4,
+      List_create(4,
           ((void* []){
               A2(&elm_html_Html_fieldset,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_form_2dgroup),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&elm_html_Html_input,
-                              List_fromArray(4,
+                              List_create(4,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -22811,15 +22811,15 @@ void* eval_author_project_Page_Register_viewForm(void* args[]) {
                               &Nil),
                       }))),
               A2(&elm_html_Html_fieldset,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_form_2dgroup),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&elm_html_Html_input,
-                              List_fromArray(4,
+                              List_create(4,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -22836,15 +22836,15 @@ void* eval_author_project_Page_Register_viewForm(void* args[]) {
                               &Nil),
                       }))),
               A2(&elm_html_Html_fieldset,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_form_2dgroup),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A2(&elm_html_Html_input,
-                              List_fromArray(5,
+                              List_create(5,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -22863,12 +22863,12 @@ void* eval_author_project_Page_Register_viewForm(void* args[]) {
                               &Nil),
                       }))),
               A2(&elm_html_Html_button,
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_Attributes_class,
                               &literal_string_btn_20btn_2dlg_20btn_2dprimary_20pull_2dxs_2dright),
                       })),
-                  List_fromArray(1,
+                  List_create(1,
                       ((void* []){
                           A1(&elm_html_Html_text, &literal_string_Sign_20up),
                       }))),
@@ -22895,7 +22895,7 @@ void* eval_author_project_Page_Register_viewProblem(void* args[]) {
   void* x_errorMessage = tmp0;
   return A2(&elm_html_Html_li,
       &Nil,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text, x_errorMessage),
           })));
@@ -22912,63 +22912,63 @@ void* eval_author_project_Page_Register_view(void* args[]) {
       2,
       ((void* []){
           A2(&elm_html_Html_div,
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A1(&elm_html_Html_Attributes_class, &literal_string_cred_2dpage),
                   })),
-              List_fromArray(1,
+              List_create(1,
                   ((void* []){
                       A2(&elm_html_Html_div,
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A1(&elm_html_Html_Attributes_class,
                                       &literal_string_container_20page),
                               })),
-                          List_fromArray(1,
+                          List_create(1,
                               ((void* []){
                                   A2(&elm_html_Html_div,
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A1(&elm_html_Html_Attributes_class,
                                                   &literal_string_row),
                                           })),
-                                      List_fromArray(1,
+                                      List_create(1,
                                           ((void* []){
                                               A2(&elm_html_Html_div,
-                                                  List_fromArray(1,
+                                                  List_create(1,
                                                       ((void* []){
                                                           A1(&elm_html_Html_Attributes_class,
                                                               &literal_string_col_2dmd_2d6_20offset_2dmd_2d3_20col_2dxs_2d12),
                                                       })),
-                                                  List_fromArray(4,
+                                                  List_create(4,
                                                       ((void* []){
                                                           A2(&elm_html_Html_h1,
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_Attributes_class,
                                                                           &literal_string_text_2dxs_2dcenter),
                                                                   })),
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_text,
                                                                           &literal_string_Sign_20up),
                                                                   }))),
                                                           A2(&elm_html_Html_p,
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_Attributes_class,
                                                                           &literal_string_text_2dxs_2dcenter),
                                                                   })),
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A2(&elm_html_Html_a,
-                                                                          List_fromArray(
+                                                                          List_create(
                                                                               1,
                                                                               ((void* []){
                                                                                   A1(&author_project_Route_href,
                                                                                       &author_project_Route_Login),
                                                                               })),
-                                                                          List_fromArray(
+                                                                          List_create(
                                                                               1,
                                                                               ((void* []){
                                                                                   A1(&elm_html_Html_text,
@@ -22976,7 +22976,7 @@ void* eval_author_project_Page_Register_view(void* args[]) {
                                                                               }))),
                                                                   }))),
                                                           A2(&elm_html_Html_ul,
-                                                              List_fromArray(1,
+                                                              List_create(1,
                                                                   ((void* []){
                                                                       A1(&elm_html_Html_Attributes_class,
                                                                           &literal_string_error_2dmessages),
@@ -23072,27 +23072,27 @@ void* eval_author_project_Page_Settings_viewForm(void* args[]) {
   void* x_cred = args[0];
   void* x_form = args[1];
   return A2(&elm_html_Html_form,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_Events_onSubmit,
                   A2(&author_project_Page_Settings_SubmittedForm, x_cred, x_form)),
           })),
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A2(&elm_html_Html_fieldset,
                   &Nil,
-                  List_fromArray(6,
+                  List_create(6,
                       ((void* []){
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_input,
-                                          List_fromArray(4,
+                                          List_create(4,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol),
@@ -23109,15 +23109,15 @@ void* eval_author_project_Page_Settings_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_input,
-                                          List_fromArray(4,
+                                          List_create(4,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -23134,15 +23134,15 @@ void* eval_author_project_Page_Settings_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_textarea,
-                                          List_fromArray(5,
+                                          List_create(5,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -23162,15 +23162,15 @@ void* eval_author_project_Page_Settings_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_input,
-                                          List_fromArray(4,
+                                          List_create(4,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -23187,15 +23187,15 @@ void* eval_author_project_Page_Settings_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_fieldset,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_form_2dgroup),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A2(&elm_html_Html_input,
-                                          List_fromArray(5,
+                                          List_create(5,
                                               ((void* []){
                                                   A1(&elm_html_Html_Attributes_class,
                                                       &literal_string_form_2dcontrol_20form_2dcontrol_2dlg),
@@ -23214,12 +23214,12 @@ void* eval_author_project_Page_Settings_viewForm(void* args[]) {
                                           &Nil),
                                   }))),
                           A2(&elm_html_Html_button,
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_Attributes_class,
                                           &literal_string_btn_20btn_2dlg_20btn_2dprimary_20pull_2dxs_2dright),
                                   })),
-                              List_fromArray(1,
+                              List_create(1,
                                   ((void* []){
                                       A1(&elm_html_Html_text,
                                           &literal_string_Update_20Settings),
@@ -23248,7 +23248,7 @@ void* eval_author_project_Page_Settings_viewProblem(void* args[]) {
   void* x_errorMessage = tmp0;
   return A2(&elm_html_Html_li,
       &Nil,
-      List_fromArray(1,
+      List_create(1,
           ((void* []){
               A1(&elm_html_Html_text, x_errorMessage),
           })));
@@ -23289,50 +23289,50 @@ void* eval_author_project_Page_Settings_view(void* args[]) {
       tmp2 = A1(&elm_html_Html_text, &literal_string_Error_20loading_20page_2e);
     };
     tmp0 = A2(&elm_html_Html_div,
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 A1(&elm_html_Html_Attributes_class, &literal_string_settings_2dpage),
             })),
-        List_fromArray(1,
+        List_create(1,
             ((void* []){
                 A2(&elm_html_Html_div,
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A1(&elm_html_Html_Attributes_class,
                                 &literal_string_container_20page),
                         })),
-                    List_fromArray(1,
+                    List_create(1,
                         ((void* []){
                             A2(&elm_html_Html_div,
-                                List_fromArray(1,
+                                List_create(1,
                                     ((void* []){
                                         A1(&elm_html_Html_Attributes_class,
                                             &literal_string_row),
                                     })),
-                                List_fromArray(1,
+                                List_create(1,
                                     ((void* []){
                                         A2(&elm_core_Basics_apL,
                                             A1(&elm_html_Html_div,
-                                                List_fromArray(1,
+                                                List_create(1,
                                                     ((void* []){
                                                         A1(&elm_html_Html_Attributes_class,
                                                             &literal_string_col_2dmd_2d6_20offset_2dmd_2d3_20col_2dxs_2d12),
                                                     }))),
-                                            List_fromArray(3,
+                                            List_create(3,
                                                 ((void* []){
                                                     A2(&elm_html_Html_h1,
-                                                        List_fromArray(1,
+                                                        List_create(1,
                                                             ((void* []){
                                                                 A1(&elm_html_Html_Attributes_class,
                                                                     &literal_string_text_2dxs_2dcenter),
                                                             })),
-                                                        List_fromArray(1,
+                                                        List_create(1,
                                                             ((void* []){
                                                                 A1(&elm_html_Html_text,
                                                                     &literal_string_Your_20Settings),
                                                             }))),
                                                     A2(&elm_html_Html_ul,
-                                                        List_fromArray(1,
+                                                        List_create(1,
                                                             ((void* []){
                                                                 A1(&elm_html_Html_Attributes_class,
                                                                     &literal_string_error_2dmessages),
