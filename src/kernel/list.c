@@ -2,11 +2,6 @@
 #include "./gc.h"
 #include "./types.h"
 
-// Not a kernel function, will be generated from Elm
-void* List_append_eval(void* args[2]) {
-  return NULL;
-}
-
 // Allocate an entire list at once, with no recursion overhead
 // First value in the array becomes the head of the list
 void* List_create(size_t len, void* values[]) {
@@ -25,11 +20,13 @@ void* List_create(size_t len, void* values[]) {
   return head;
 }
 
+// toArray
+
 void* eval_List_toArray(void* args[]) {
-  // This function only exists in C because some Elm code in core libs
-  // contains leaked details of the JS implementation.
-  // Intended to help with JS built-ins like String.prototype.join()
-  // In C we just pass through, to save rewriting core Elm.
+  // This function shouldn't exist in C but some Elm code in core libs
+  // contains leaked details of the JS implementation!
+  // Intended for use with JS built-ins like String.prototype.join()
+  // Just pass through for now. Some day change core Elm files.
   return args[0];
 }
 Closure List_toArray = {
@@ -37,6 +34,8 @@ Closure List_toArray = {
     .evaluator = &eval_List_toArray,
     .max_values = 1,
 };
+
+// cons
 
 void* eval_List_cons(void* args[]) {
   return NEW_CONS(args[0], args[1]);
@@ -46,6 +45,8 @@ Closure List_cons = {
     .evaluator = &eval_List_cons,
     .max_values = 2,
 };
+
+// map2
 
 static void* eval_List_map2(void* args[]) {
   const size_t CHUNK = 8;
