@@ -6,14 +6,13 @@
 
 // local utility function
 #if STRING_ENCODING == UTF16
-size_t String_bytes(ElmString* s) {
+size_t String_codepoints(ElmString* s) {
   u32 size = s->header.size;
   u32 size16 = size * SIZE_UNIT / 2;
   u16* words16 = (u16*)s;
   u16 last = words16[size16 - 1];
   size_t len16 = last ? (size16 - 2) : (size16 - 3);
-  size_t len8 = len16 < 1;
-  return len8;
+  return len16;
 }
 #else
 size_t String_bytes(ElmString* s) {
@@ -83,5 +82,54 @@ static void* String_fromNumber_eval(void* args[1]) {
 Closure String_fromNumber = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &String_fromNumber_eval,
+    .max_values = 1,
+};
+
+static void* eval_String_join(void* args[]) {
+  ElmString16* sep = args[0];
+  Cons* strs = args[1];
+
+  ElmString16* s = strs->head;
+  u32 result_len = String_codepoints(s);
+  Header h = HEADER_STRING(result_len);
+  ElmString16* result = GC_malloc(h.size * SIZE_UNIT);
+  if (result == pGcFull) {
+    return pGcFull;
+  }
+  result->header = h;
+  memcpy(result->values, s->words16, result_len * 2);
+
+  u32 sep_len = String_codepoints(sep);
+
+  for (strs = strs->tail; strs != &Nil; strs = strs->tail) {
+    u16* to = &result->values[result_len];
+    s = strs->head;
+    u32 len = String_codepoints(s);
+
+    result_len += sep_len + len;
+    h = HEADER_STRING(result_len);
+    if (GC_malloc((h.size - result->header.size) * SIZE_UNIT) == pGcFull) {
+      return pGcFull;
+    }
+    result->header = h;
+
+    memcpy(to, sep->words16, sep_len * 2);
+    memcpy(to + sep_len, s->words16, len * 2);
+  }
+  return result;
+}
+Closure String_join = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_join,
+    .max_values = 1,
+};
+
+static void* eval_String_split(void* args[]) {
+  ElmString* sep = args[0];
+  ElmString* str = args[1];
+}
+Closure String_split = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_split,
     .max_values = 1,
 };
