@@ -127,6 +127,27 @@ Closure String_join = {
 static void* eval_String_split(void* args[]) {
   ElmString* sep = args[0];
   ElmString* str = args[1];
+
+  /*
+    outer vars
+      sep_len
+      result
+
+    loop vars:
+      str_idx position in str
+      sep_idx position in sep
+      copy_end end of range to copy
+
+    search backwards through str
+    check for a match
+      check current sep_idx against current str_idx
+      if no match, reset sep_idx = sep_len-1 and keep going
+      if match, decrement sep_idx and try again
+      if sep_idx already zero, we have a proper match
+        do a copy NEW_ELM_STRING
+        create a Cons cell, point `result` at it
+        update copy_end to str_idx-1
+  */
 }
 Closure String_split = {
     .header = HEADER_CLOSURE(0),
