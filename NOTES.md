@@ -1,3 +1,52 @@
+# Get repo in a less-embarrassing state
+
+- Fix compiler errors for new functions
+- Sort out branches
+  - Roll back `master` to some working state, maybe the wrapper demo
+  - Revive `develop`
+  - Make a `feature/elm-spa-example` since it's not working yet
+
+# Issues to create
+
+## C kernel
+
+- Unit tests for new functions
+- Get unit tests passing again
+  - Make a list of what's failing, create an issue for each
+- Fix failing GC replay case
+- GC perf analysis
+- GC controller
+  - Currently GC is triggered by wrapper calling an exported function.
+  - Should it be built into the `evalClosure` exported function instead?
+  - When to do major / minor?
+  - How much memory to start off with?
+  - How much memory to shink/grow by when out of memory?
+  - Does everything work properly with more initial memory?
+  - Conditions for growing or shrinking memory vs just doing a collection
+
+## Compiler
+
+- Optimise saturated calls to some Basics/Utils functions as in JS
+  - `<|` and `|>`
+  - Basics math ops
+  - Entire math expressions (make them register only, eliminate heap access)
+- Get type type info to code gen
+  - Eliminate Int/Float ambiguity from JS kernel to Wasm app (this is actually a hard requirement for correctness. Elm Wasm is broken without it.)
+    - Special list of kernel fns that return Floats from the runtime to the app. Use this list in code gen.
+  - Type-specialised inlining of Int/Float operations
+  - Get rid of dynamic type detection in destructuring `Utils_destruct_index`
+
+# missing kernel implementations for elm-spa-example
+
+- [x] Basics_and
+- [x] Basics_or
+- [x] Char_toCode
+- [x] List_cons
+- [x] List_map2
+- [x] List_toArray (used in `String.join`)
+- [ ] String_join
+- [ ] String_split
+
 # TCE improvements
 
 - on each iteration, just allocate, don't populate
