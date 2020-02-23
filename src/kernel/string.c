@@ -125,29 +125,58 @@ Closure String_join = {
 };
 
 static void* eval_String_split(void* args[]) {
-  ElmString* sep = args[0];
-  ElmString* str = args[1];
+  ElmString16* sep = args[0];
+  ElmString16* str = args[1];
 
-  /*
-    outer vars
-      sep_len
-      result
+  size_t sep_len = String_codepoints(sep);
+  size_t str_len = String_codepoints(str);
 
-    loop vars:
-      str_idx position in str
-      sep_idx position in sep
-      copy_end end of range to copy
+  Cons* result = &Nil;
 
-    search backwards through str
-    check for a match
-      check current sep_idx against current str_idx
-      if no match, reset sep_idx = sep_len-1 and keep going
-      if match, decrement sep_idx and try again
-      if sep_idx already zero, we have a proper match
-        do a copy NEW_ELM_STRING
-        create a Cons cell, point `result` at it
-        update copy_end to str_idx-1
-  */
+  // iterate over substrings
+  for (size_t str_idx = str_len - 1; str_idx > 0; --str_idx) {
+    size_t substr_end_idx = str_idx;
+    size_t substr_start_idx;
+
+    // search for next substring
+    while (1) {
+      if (str_idx == 0) {
+        substr_start_idx = 0;
+      } else {
+        size_t sep_idx = sep_len - 1;
+
+        // match last codepoint of sep
+        if (str->words16[str_idx] != sep->words16[sep_idx]) {
+          str_idx--;
+          continue;
+        }
+        size_t match_end_idx = str_idx;
+
+        // match as many other codepoints as possible
+        while (sep_idx && str_idx && str->words16[str_idx] == sep->words16[sep_idx]) {
+          sep_idx--;
+          str_idx--;
+        };
+
+        if (sep_idx != 0) {
+          // not a full match. resume searching from next codepoint
+          str_idx = match_end_idx - 1;
+          continue;
+        }
+        substr_start_idx = match_end_idx + 1;
+      }
+
+      // Copy the substring and put it in the list
+      size_t substr_len = 1 + substr_end_idx - substr_start_idx;
+      ElmString* substr =
+          NEW_ELM_STRING(substr_len * 2, (char*)(&str->words16[substr_start_idx]));
+      result = NEW_CONS(substr, result);
+
+      break;  // to outer loop (over substrings)
+    };
+  }
+
+  return result;
 }
 Closure String_split = {
     .header = HEADER_CLOSURE(0),
