@@ -20,24 +20,24 @@ void* List_create(size_t len, void* values[]) {
   return head;
 }
 
-// toArray
-
-void* eval_List_toArray(void* args[]) {
-  // This function shouldn't exist in C but some Elm code in core libs
-  // contains leaked details of the JS implementation!
-  // Intended for use with JS built-ins like String.prototype.join()
-  // Just pass through for now. Some day change core Elm files.
+// toArray & fromArray
+// These functions shouldn't exist in C but some Elm code in core libs
+// contains leaked details of the JS implementation!
+// Intended for use with JS built-ins like String.prototype.join()
+// Just pass through for now. Maybe some day refactor the core Elm files.
+static void* eval_List_identity(void* args[]) {
   return args[0];
 }
 Closure List_toArray = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &eval_List_toArray,
+    .evaluator = &eval_List_identity,
     .max_values = 1,
 };
+#define List_fromArray List_toArray
 
 // cons
 
-void* eval_List_cons(void* args[]) {
+static void* eval_List_cons(void* args[]) {
   return NEW_CONS(args[0], args[1]);
 }
 Closure List_cons = {

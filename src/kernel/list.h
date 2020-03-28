@@ -7,5 +7,6 @@ void* List_create(size_t len, void* values[]);
 Closure List_cons;
 Closure List_map2;
 Closure List_toArray;
+Closure List_fromArray;
 
 #endif

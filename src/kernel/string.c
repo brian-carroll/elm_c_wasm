@@ -74,10 +74,7 @@ static void* fromFloat(ElmFloat* box) {
 
 static void* String_fromNumber_eval(void* args[1]) {
   Number* box = args[0];
-  if (box->i.header.tag == Tag_Int) {
-    return fromInt(box);
-  }
-  return fromFloat(box);
+  return (box->i.header.tag == Tag_Int) ? fromInt(box) : fromFloat(box);
 }
 Closure String_fromNumber = {
     .header = HEADER_CLOSURE(0),
@@ -85,6 +82,9 @@ Closure String_fromNumber = {
     .max_values = 1,
 };
 
+/*
+ * String.join
+ */
 static void* eval_String_join(void* args[]) {
   ElmString16* sep = args[0];
   Cons* strs = args[1];
@@ -124,6 +124,9 @@ Closure String_join = {
     .max_values = 1,
 };
 
+/*
+ * String.split
+ */
 static void* eval_String_split(void* args[]) {
   ElmString16* sep = args[0];
   ElmString16* str = args[1];
