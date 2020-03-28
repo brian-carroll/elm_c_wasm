@@ -2,6 +2,7 @@ FILENAME="main"
 # ELM_OPTIMIZE='--optimize'
 
 # Wasm & sourcemap
+mkdir -p dist
 cp build/$FILENAME.wasm* dist
 
 echo "combining JS files"
