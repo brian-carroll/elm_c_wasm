@@ -16,13 +16,14 @@ extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 
 void Utils_initGlobal(void** global, void* (*init_func)()) {
   GC_register_root(global);
-  if ((*global = init_func()) != pGcFull) return;
-
-  GC_collect_full();
-  if ((*global = init_func()) != pGcFull) return;
-
-  // fprintf(stderr, "Heap overflow initialising global at %p", global);
-  assert(0);
+  for (;;) {
+    void* val = init_func();
+    if (val != pGcFull) {
+      *global = val;
+      return;
+    }
+    GC_collect_full();
+  }
 }
 
 void* Utils_destruct_index(ElmValue* v, size_t index) {
