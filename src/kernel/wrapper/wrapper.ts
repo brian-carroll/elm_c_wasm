@@ -26,7 +26,7 @@ interface ElmWasmExports {
 interface GeneratedAppTypes {
   ctors: string[];
   fields: string[];
-  fieldGroupNames: string[];
+  fieldGroups: string[];
 }
 
 /*********************************************************************************************
@@ -100,7 +100,7 @@ function wrapWasmElmApp(
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
-    fieldGroups: generatedAppTypes.fieldGroupNames.reduce((enumObj, name) => {
+    fieldGroups: generatedAppTypes.fieldGroups.reduce((enumObj, name) => {
       const addr = wasmExports._getNextFieldGroup();
       enumObj[name] = addr;
       enumObj[addr] = name;

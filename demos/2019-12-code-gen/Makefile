@@ -2,23 +2,24 @@
 
 KERNELS := $(shell find ../../src/kernel -name '*.c')
 
+# I know, I know, sorry...
+ELM_TO_C := $(HOME)/Code/wasm/compiler/.stack-work/install/x86_64-linux/lts-13.28/8.6.5/bin/elm
+
 .PHONY: all clean
 
-all: dist/bundle.js
+all: dist/elm.wasm
 
 clean:
-	rm -f build/* dist/*
+	rm -rf build/* dist/*
 
-dist/bundle.js: build-combine.sh build/main.wasm build/wrapper.js build/elm.js src/*.js
-	@dos2unix -q build-combine.sh
-	bash build-combine.sh
+build/elm/elm.c: src/Main.elm
+	@mkdir -p build/elm
+	$(ELM_TO_C) make src/Main.elm --output build/elm/elm.c
 
-build/elm.js: src/Main.elm
-	elm make src/Main.elm --output build/elm.js
-
-build/wrapper.js: ../../src/kernel/wrapper/wrapper.ts
-	npx tsc $< --outFile $@
-
-build/main.wasm: build-wasm.sh $(KERNELS) src/main.c
+build/emscripten/elm.wasm: build-wasm.sh $(KERNELS) build/elm/elm.c
 	@dos2unix -q build-wasm.sh
 	bash build-wasm.sh
+
+dist/elm.wasm: build/emscripten/elm.wasm build/elm/elm.c
+	cp build/emscripten/elm.wasm dist
+	cat build/emscripten/elm.js build/elm/elm.js > dist/elm.js

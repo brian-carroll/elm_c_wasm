@@ -3,5 +3,6 @@
 
 void* List_append_eval(void* args[]);
 void* List_fromArray(size_t len, void* values[]);
+#define List_create List_fromArray
 
 #endif

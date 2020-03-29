@@ -50,7 +50,7 @@ function formatHex(arg, bits = 32) {
 const generatedAppTypes = {
   ctors: ['Nothing', 'Just'],
   fields: ['address', 'firstName', 'lastName'],
-  fieldGroupNames: ['firstName_lastName_address', 'firstName_lastName']
+  fieldGroups: ['firstName_lastName_address', 'firstName_lastName']
 };
 
 describe('wrapper', () => {
