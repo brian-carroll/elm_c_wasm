@@ -33,7 +33,6 @@ Closure List_toArray = {
     .evaluator = &eval_List_identity,
     .max_values = 1,
 };
-#define List_fromArray List_toArray
 
 // cons
 

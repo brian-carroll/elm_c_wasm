@@ -26,7 +26,7 @@ interface ElmWasmExports {
 interface GeneratedAppTypes {
   ctors: string[];
   fields: string[];
-  fieldGroupNames: string[];
+  fieldGroups: string[];
 }
 
 /*********************************************************************************************
@@ -100,7 +100,7 @@ function wrapWasmElmApp(
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
-    fieldGroups: generatedAppTypes.fieldGroupNames.reduce((enumObj, name) => {
+    fieldGroups: generatedAppTypes.fieldGroups.reduce((enumObj, name) => {
       const addr = wasmExports._getNextFieldGroup();
       enumObj[name] = addr;
       enumObj[addr] = name;
@@ -311,22 +311,19 @@ function wrapWasmElmApp(
 
   let maxWriteIndex32: number;
   let maxWriteIndex16: number;
-
-  function HeapOverflowError(message?: string) {
-    this.name = HeapOverflowError.name;
-    this.message = message || '';
-  }
-  HeapOverflowError.prototype = Error.prototype;
+  const heapOverflowError = new Error('Wasm heap overflow');
 
   function write32(index: number, value: number) {
-    if (index > maxWriteIndex32)
-      throw new HeapOverflowError('Wasm heap overflow');
+    if (index > maxWriteIndex32) {
+      throw heapOverflowError;
+    }
     mem32[index] = value;
   }
 
   function write16(index: number, value: number) {
-    if (index > maxWriteIndex16)
-      throw new HeapOverflowError('Wasm heap overflow');
+    if (index > maxWriteIndex16) {
+      throw heapOverflowError;
+    }
     mem16[index] = value;
   }
 
@@ -347,7 +344,7 @@ function wrapWasmElmApp(
         wasmExports._finishWritingAt(result.nextIndex << 2);
         return result.addr;
       } catch (e) {
-        if (e.name === HeapOverflowError.name) {
+        if (e === heapOverflowError) {
           wasmExports._collectGarbage();
         } else {
           console.error(e);

@@ -10,6 +10,7 @@ clean:
 	rm -f build/* dist/*
 
 dist/bundle.js: build-combine.sh build/elm.js build/benchmark.wasm src/*.js
+	mkdir -p dist
 	dos2unix -q build-combine.sh
 	bash build-combine.sh
 
