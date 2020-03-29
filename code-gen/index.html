@@ -61,7 +61,7 @@
       <ul>
         <li>
           <a
-            href="https://github.com/brian-carroll/elm_c_wasm/tree/master/demos/2019-10-wrapper"
+            href="https://github.com/brian-carroll/elm_c_wasm/tree/master/demos/2019-12-wrapper"
           >
             Demo source code
           </a>
@@ -91,6 +91,11 @@
     <div id="elm-container">
       <div id="main"></div>
     </div>
-    <script src="dist/bundle.js"></script>
+    <script src="dist/elm.js"></script>
+    <script>
+      Elm.onReady(() => {
+        Elm.Main.init({ node: document.querySelector('#main') });
+      });
+    </script>
   </body>
 </html>
