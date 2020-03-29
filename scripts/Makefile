@@ -19,7 +19,7 @@ HEADERS := $(KHEADERS) $(THEADERS)
 DATA_TSV := $(shell find $(SRC) -name '*.tsv')
 DATA_INC := $(DATA_TSV:.tsv=.inc)
 
-.PHONY: all check dist www gc-size clean watch benchmark
+.PHONY: all check dist www gc-size clean watch benchmark codegen
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
@@ -67,26 +67,30 @@ build.log: $(SOURCES) $(HEADERS)
 	make gh-pages | tee build.log
 
 benchmark:
-	cd $(ROOT)/demos/benchmark && make clean && make
+	cd $(ROOT)/demos/2019-08-benchmark && make clean && make
 
 wrapper:
-	cd $(ROOT)/demos/wrapper && make clean && make
+	cd $(ROOT)/demos/2019-10-wrapper && make clean && make
+
+codegen:
+	cd $(ROOT)/demos/2019-12-code-gen && make clean && make
 
 gh-pages: CFLAGS=-Wall -O3
-gh-pages: clean www benchmark
+gh-pages: www benchmark codegen
 	mkdir -p $(DEPLOY)/unit-tests/dist/www
 	mkdir -p $(DEPLOY)/wrapper/dist
 	mkdir -p $(DEPLOY)/benchmark/dist
+	mkdir -p $(DEPLOY)/code-gen/dist
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
 	cp $(ROOT)/favicon.png $(DEPLOY)/unit-tests/
 	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www
 	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
 	cp $(ROOT)/demos/index.html $(DEPLOY)
 	cp $(ROOT)/demos/favicon.png $(DEPLOY)
-	cp $(ROOT)/demos/wrapper/index.html $(DEPLOY)/wrapper/index.html
-	cp $(ROOT)/demos/wrapper/dist/* $(DEPLOY)/wrapper/dist/
-	cp $(ROOT)/demos/benchmark/index.html $(DEPLOY)/benchmark/index.html
-	cp $(ROOT)/demos/benchmark/dist/* $(DEPLOY)/benchmark/dist/
+	cp $(ROOT)/demos/2019-08-benchmark/index.html $(DEPLOY)/benchmark/index.html
+	cp $(ROOT)/demos/2019-08-benchmark/dist/* $(DEPLOY)/benchmark/dist/
+	cp $(ROOT)/demos/2019-12-code-gen/index.html $(DEPLOY)/code-gen/index.html
+	cp $(ROOT)/demos/2019-12-code-gen/dist/* $(DEPLOY)/code-gen/dist/
 	cd $(DEPLOY) && git add . && git commit -m 'update' && git push
 
 
@@ -114,6 +118,7 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS)
 	$(CC) -Wall -O0 -ggdb $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
+	@mkdir -p $(DIST)/www
 	emcc $(CFLAGS) $(SOURCES) -o $@
 
 $(DIST)/bin/fake-ast: $(KSOURCES) $(KHEADERS) $(SRC)/hand-compiled/fake-ast.c
