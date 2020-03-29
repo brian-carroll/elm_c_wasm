@@ -1,0 +1,4 @@
+/dist/*
+/build/*
+/elm-stuff
+*.map
