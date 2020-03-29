@@ -1,10 +1,11 @@
 module Main exposing (main)
 
+import Browser
 import Html exposing (Html, br, button, div, h1, text)
 import Html.Events exposing (onClick)
 import Process
 import Task
-import Browser
+
 
 type alias Model =
     Int
@@ -72,6 +73,7 @@ view model =
         ]
 
 
+subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
 
