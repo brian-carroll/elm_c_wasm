@@ -62,8 +62,6 @@ This means gradual progress on lots of pieces, with no end-to-end system for qui
 
 I have built a few demos here: https://brian-carroll.github.io/elm_c_wasm/
 
-At this early stage, they're very primitive demos! Definitely not full Elm programs in Wasm!
-
 - [Simple example app][demo-app]
 
   - App compiled from Elm to WebAssembly. Demonstrates the full Elm architecture interacting with kernel code written in C, and with the Elm runtime.
