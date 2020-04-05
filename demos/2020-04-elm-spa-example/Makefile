@@ -15,14 +15,16 @@ clean:
 
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
-	cd elm-spa-example
-	$(ELM_TO_C) make src/Main.elm --output ../build/elm/elm.c
+	cd elm-spa-example; $(ELM_TO_C) make src/Main.elm --output ../build/elm/elm.c
+
+build/elm/elm.js: build/elm/elm.c
+	@:
 
 build/emscripten/elm.wasm: build-wasm.sh $(KERNELS) build/elm/elm.c
 	@dos2unix -q build-wasm.sh
 	bash build-wasm.sh
 
-dist/elm.wasm: build/emscripten/elm.wasm build/elm/elm.c
+dist/elm.wasm: build/emscripten/elm.wasm build/elm/elm.js
 	@mkdir -p build/emscripten
 	cp build/emscripten/elm.wasm dist
 	cat build/emscripten/elm.js build/elm/elm.js > dist/elm.js
