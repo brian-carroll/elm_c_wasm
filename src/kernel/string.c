@@ -29,6 +29,35 @@ static size_t String_bytes(ElmString* s) {
 #endif
 
 /*
+ * String.uncons
+ */
+static void* eval_String_uncons(void* args[]) {
+  ElmString16* string = args[0];
+  size_t len = String_codepoints(string);
+  if (len == 0) {
+    return elm_core_Maybe_Nothing;
+  }
+  u16 word = string->words16[0];
+  u32 codepoint = (u32)word;
+  size_t i = 0;
+  if (IS_LOW_SURROGATE(word)) {
+    i = 1;
+    codepoint |= (s->words16[1] << 16);
+  }
+  ElmChar* c = NEW_ELM_CHAR(codepoint);
+
+  char* remainder = (char*)(&string->words16[i + 1]);
+  ElmString16* s = NEW_ELM_STRING(len - i, remainder);
+
+  return elm_core_Maybe_Just(NEW_TUPLE2(c, s));
+}
+Closure String_uncons = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_uncons,
+    .max_values = 1,
+};
+
+/*
  * String.length
  */
 static void* eval_String_length(void* args[]) {
@@ -118,12 +147,13 @@ static void* eval_String_toInt(void* args[]) {
   for (size_t i = start; i < str.length; ++i) {
     u16 code = str->words16[i];
     if (code < 0x30 || 0x39 < code) {
-      return Maybe_Nothing;
+      return elm_core_Maybe_Nothing;
     }
     total = 10 * total + code - 0x30;
   }
 
-  return i == start ? __Maybe_Nothing : Maybe_Just(code0 == 0x2D ? -total : total);
+  return i == start ? elm_core_Maybe_Nothing
+                    : elm_core_Maybe_Just(code0 == 0x2D ? -total : total);
 }
 Closure String_toInt = {
     .header = HEADER_CLOSURE(0),
@@ -234,6 +264,27 @@ Closure String_split = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_split,
     .max_values = 1,
+};
+
+/*
+ * String.slice
+ */
+static void* eval_String_slice(void* args[]) {
+  ElmInt* start = args[0];
+  ElmInt* end = args[1];
+  ElmString16* str = args[2];
+  size_t len = String_codepoints(str);
+
+  size_t n_words = (size_t)(end - start);
+  size_t n_bytes = payload_words * 2;
+  u16* words_to_copy = str->words16[start->value];
+
+  return NEW_ELM_STRING(n_bytes, (char*)words_to_copy);
+}
+Closure String_slice = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_slice,
+    .max_values = 3,
 };
 
 /*

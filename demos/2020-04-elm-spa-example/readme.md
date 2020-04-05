@@ -6,13 +6,6 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 
 ### Issues currently causing C compiler errors
 
-#### Kernel functions not written yet
-
-| name          | implementation                                 |
-| ------------- | ---------------------------------------------- |
-| String_slice  | FOR_EACH_CHAR, i++, if a < i < b copy          |
-| String_uncons | get first char, then rest string, create tuple |
-
 #### Elm functions not generated
 
 - elm_core_Basics_negate
