@@ -15,6 +15,9 @@ static size_t String_codepoints(ElmString* s) {
   return len16;
 }
 
+#define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
+#define IS_HIGH_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
+
 #else
 static size_t String_bytes(ElmString* s) {
   size_t total_bytes = (size_t)(s->header.size * SIZE_UNIT);
@@ -25,6 +28,22 @@ static size_t String_bytes(ElmString* s) {
 }
 #endif
 
+/*
+ * String.length
+ */
+static void* eval_String_length(void* args[]) {
+  size_t len = String_codepoints(args[0]);
+  return NEW_ELM_INT((u32)len);
+}
+Closure String_length = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_length,
+    .max_values = 1,
+};
+
+/*
+ * String.append
+ */
 void* String_append_eval(void* args[2]) {
   ElmString* a = args[0];
   ElmString* b = args[1];
@@ -47,6 +66,9 @@ Closure String_append = {
     .max_values = 2,
 };
 
+/*
+ * String.fromNumber
+ */
 static void* fromInt(ElmInt* box) {
   i32 unboxed = box->value;
   char buf[12];  // enough for -2147483648
@@ -80,6 +102,32 @@ static void* String_fromNumber_eval(void* args[1]) {
 Closure String_fromNumber = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &String_fromNumber_eval,
+    .max_values = 1,
+};
+
+/*
+ * String.toInt
+ */
+static void* eval_String_toInt(void* args[]) {
+  ElmString16* str = args[0];
+  size_t len = String_codepoints(str);
+  u16 code0 = str->words16[0];
+  u32 total = 0;
+  size_t start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
+
+  for (size_t i = start; i < str.length; ++i) {
+    u16 code = str->words16[i];
+    if (code < 0x30 || 0x39 < code) {
+      return Maybe_Nothing;
+    }
+    total = 10 * total + code - 0x30;
+  }
+
+  return i == start ? __Maybe_Nothing : Maybe_Just(code0 == 0x2D ? -total : total);
+}
+Closure String_toInt = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_toInt,
     .max_values = 1,
 };
 
@@ -200,7 +248,7 @@ static void* eval_String_all(void* args[]) {
   for (size_t i = 0; i < len; i++) {
     u16 word = s->words16[i];
     u32 codepoint = (u32)word;
-    if (0xDC00 <= word && word <= 0xDFFF) {
+    if (IS_LOW_SURROGATE(word)) {
       i++;
       codepoint |= (s->words16[i] << 16);
     }

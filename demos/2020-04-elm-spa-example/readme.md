@@ -8,13 +8,10 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 
 #### Kernel functions not written yet
 
-| name          | implementation                                              |
-| ------------- | ----------------------------------------------------------- |
-| String_all    | new Char c, FOR_EACH_CHAR, mutate c, if A1(isGood,c)==False |
-| String_length | FOR_EACH_CODEPOINT, i++, create ElmInt                      |
-| String_slice  | FOR_EACH_CHAR, i++, if a < i < b copy                       |
-| String_toInt  | sprintf                                                     |
-| String_uncons | get first char, then rest string, create tuple              |
+| name          | implementation                                 |
+| ------------- | ---------------------------------------------- |
+| String_slice  | FOR_EACH_CHAR, i++, if a < i < b copy          |
+| String_uncons | get first char, then rest string, create tuple |
 
 #### Elm functions not generated
 
