@@ -6,7 +6,7 @@
 
 // local utility function
 #if STRING_ENCODING == UTF16
-size_t String_codepoints(ElmString* s) {
+static size_t String_codepoints(ElmString* s) {
   u32 size = s->header.size;
   u32 size16 = size * SIZE_UNIT / 2;
   u16* words16 = (u16*)s;
@@ -14,8 +14,9 @@ size_t String_codepoints(ElmString* s) {
   size_t len16 = last ? (size16 - 2) : (size16 - 3);
   return len16;
 }
+
 #else
-size_t String_bytes(ElmString* s) {
+static size_t String_bytes(ElmString* s) {
   size_t total_bytes = (size_t)(s->header.size * SIZE_UNIT);
   u8* struct_bytes = (u8*)s;
   u8 last_byte = struct_bytes[total_bytes - 1];
@@ -185,4 +186,33 @@ Closure String_split = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_split,
     .max_values = 1,
+};
+
+/*
+ * String.all
+ */
+static void* eval_String_all(void* args[]) {
+  Closure* isGood = args[0];
+  ElmString16* s = args[1];
+  size_t len = String_codepoints(s);
+  ElmChar* c = NEW_ELM_CHAR(0);
+
+  for (size_t i = 0; i < len; i++) {
+    u16 word = s->words16[i];
+    u32 codepoint = (u32)word;
+    if (0xDC00 <= word && word <= 0xDFFF) {
+      i++;
+      codepoint |= (s->words16[i] << 16);
+    }
+    c->value = codepoint;
+    if (A1(isGood, c) == &False) {
+      return &False;
+    }
+  }
+  return &True;
+}
+Closure String_all = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_all,
+    .max_values = 2,
 };
