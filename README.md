@@ -12,7 +12,7 @@ It implements parts of Elm's [core libraries](https://package.elm-lang.org/packa
 - Record updates and accessors
 - A working garbage collector specially designed for Elm
 
-I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c) that generates C instead of JavaScript. It's not fully debugged yet.
+I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler) that generates C instead of JavaScript. It's not fully debugged yet.
 
 &nbsp;
 
