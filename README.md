@@ -34,7 +34,7 @@ I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-co
 
 # Current Status
 
-Here's roughly how I see the project progressing from here, as of October 2019. (Unless some big unknown bites me, which it might!)
+Here's roughly how I see the project progressing from here, as of April 2020. (Unless some big unknown bites me, which it might!)
 
 - [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][core-unit-tests].
 - [x] Do some initial exploration of C code generation in a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c). Understand how it works and what's involved.
