@@ -1,0 +1,15 @@
+{
+  "iterations": 1200,
+  "utf8": {
+    "tDecode": 230,
+    "tDOM": 2735,
+    "tTotal": 2965,
+    "iters": 600
+  },
+  "utf16": {
+    "tDecode": 68.33333333333334,
+    "tDOM": 2756.666666666667,
+    "tTotal": 2825,
+    "iters": 600
+  }
+}
