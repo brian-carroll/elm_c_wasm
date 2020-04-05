@@ -2,6 +2,8 @@
 
 This repo is part of a project to compile Elm to WebAssembly, using C as an intermediate language.
 
+**EXPERIMENTAL! DEFINITELY NOT PRODUCTION READY!**
+
 It implements parts of Elm's [core libraries](https://package.elm-lang.org/packages/elm/core/latest/) needed for any compiled code to work, including:
 
 - Byte level implementations of all of Elm's data types
@@ -10,23 +12,39 @@ It implements parts of Elm's [core libraries](https://package.elm-lang.org/packa
 - Record updates and accessors
 - A working garbage collector specially designed for Elm
 
-I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c) where I'm working on getting it to generate C instead of JavaScript. It's at a very early stage.
+I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler) that generates C instead of JavaScript. It's not fully debugged yet.
+
+&nbsp;
+
+# Contents
+
+- [Current Status](#current-status)
+- [Demo links](#demos)
+- [Installation](#installation)
+- [The JavaScript/WebAssembly interface](#the-javascriptwebassembly-interface)
+- [C as an intermediate language](#c-as-an-intermediate-language)
+
+# Other documentation
+
+- [Elm data structures](./docs/data-structures.md)
+- [String encoding](./docs/string-encoding.md)
+- [Garbage Collector](./docs/gc.md)
 
 &nbsp;
 
 # Current Status
 
-Here's roughly how I see the project progressing from here, as of October 2019. (Unless some big unknown bites me, which it might!)
+Here's roughly how I see the project progressing from here, as of April 2020. (Unless some big unknown bites me, which it might!)
 
-- [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][core-unit-tests].
+- [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][demo-unit-tests-core].
 - [x] Do some initial exploration of C code generation in a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c). Understand how it works and what's involved.
-- [x] Implement a [Garbage Collector](./docs/gc.md) in C and compile it to Wasm. Prove it works using [in-browser unit tests][gc-unit-tests] and an [elm-benchmark app][benchmark].
+- [x] Implement a [Garbage Collector](./docs/gc.md) in C and compile it to Wasm. Prove it works using [in-browser unit tests][demo-unit-tests-gc] and an [elm-benchmark app][demo-benchmark].
 - [x] Create a wrapper to connect a WebAssembly module to Elm's kernel JavaScript.
-
-  - Figure out what memory management issues exist related to crossing the language boundary. (What if Wasm's memory overflows when JS writes to it? Does Wasm need to refer to JS objects, and if so, how? How to deal with `onClick` handlers? etc.)
-  - Get a "hello world" app working with kernel entirely in JS and pure Elm entirely in Wasm. Very minimal Elm code, hand-compiled to C.
-- [ ] Finish code generation for the full Elm AST (outputting both C and JS)
-	- Test on an example app. Perhaps Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), probably something smaller first
+  - [x] Test on a simple example app.
+- [x] Finish code generation for the full Elm AST (outputting both C and JS)
+  - [x] Test on the same [simple example app](demo-app) created for testing the wrapper
+  - [ ] Test on Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), adding implementations of core Kernel functions as needed
+- [ ] Complete the kernel code for the core libraries. This is a large task!
 - [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
 
@@ -34,20 +52,10 @@ My general approach is to explore all the different pieces, then work on the big
 
 This means gradual progress on lots of pieces, with no end-to-end system for quite a long time. But I feel that focusing on the biggest unknowns first will lead to a good design and avoid going down dead ends. Not everyone likes this style but it works for me!
 
-[core-unit-tests]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose
-[gc-unit-tests]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose
-[benchmark]: https://brian-carroll.github.io/elm_c_wasm/benchmark/index.html
-
-&nbsp;
-
-# Documentation
-
-- [Demos](#demos)
-- [The JavaScript/WebAssembly interface](#the-javascriptwebassembly-interface)
-- [C as an intermediate language](#c-as-an-intermediate-language)
-- [Elm data structures](./docs/data-structures.md)
-- [String encoding](./docs/string-encoding.md)
-- [Garbage Collector](./docs/gc.md)
+[demo-app]: https://brian-carroll.github.io/elm_c_wasm/code-gen/index.html
+[demo-unit-tests-core]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose
+[demo-unit-tests-gc]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose
+[demo-benchmark]: https://brian-carroll.github.io/elm_c_wasm/benchmark/index.html
 
 &nbsp;
 
@@ -55,21 +63,74 @@ This means gradual progress on lots of pieces, with no end-to-end system for qui
 
 I have built a few demos here: https://brian-carroll.github.io/elm_c_wasm/
 
-At this early stage, they're very primitive demos! Definitely not full Elm programs in Wasm!
+- [Simple example app][demo-app]
 
-- [Unit tests for core libraries][core-unit-tests]
+  - App compiled from Elm to WebAssembly. Demonstrates the full Elm architecture interacting with kernel code written in C, and with the Elm runtime.
+
+- [Unit tests for core libraries][demo-unit-tests-core]
 
   - You can see byte-level Elm data structures, arithmetic operations, record updates and accessors, and first-class functions in action.
 
-- [Unit tests for the GC][gc-unit-tests]
+- [Unit tests for the GC][demo-unit-tests-gc]
 
   - You can see print-outs of the heap, with byte-level Elm data structures, GC mark bits, etc.
 
-- [Performance micro-benchmarks][benchmark]
+- [Performance micro-benchmarks][demo-benchmark]
 
   - Reported figures for the Wasm implementations are slower than JS. It's partly due to crossing back and forth across the JS/Wasm boundary on every iteration. Browsers can't optimise that very well yet, though Firefox seems much better at it than Chrome.
 
   - Despite the limitations, the benchmark is a good way to stress-test the implementation, flush out bugs in the GC, and to find out where the bottlenecks are.
+
+&nbsp;
+
+# Installation
+
+This project is very much in the early phases of development. It's not even close to being production ready.
+
+The C compilation stage often fails because there are so many kernel modules still not written yet. And the compiler has not really been debugged so it generates bad C code sometimes.
+
+You have been warned!
+
+This is an installation guide for anyone who might want to play with the code and maybe contribute.
+
+- Install Emscripten
+
+  - https://emscripten.org/docs/getting_started/downloads.html
+
+- Clone and build the forked Elm compiler
+
+  - Install Stack (https://www.haskellstack.org)
+  - Clone the forked repo (https://github.com/brian-carroll/elm-compiler)
+  - `cd` to the root directory
+  - `stack init`
+  - `stack build`
+
+- Clone this repo
+
+  - In a different directory to the compiler. Perhaps put the two directories beside each other if you like, it doesn't matter.
+
+- Run `npm install`
+
+  - We need a couple of NPM packages.
+    - TypeScript for the wrapper (src/kernel/wrapper/wrapper.ts)
+      - This file could eventually be replaced with its compiled JS version
+    - `http-server` to serve assets including the .wasm file
+      - If you prefer to use something else, go ahead
+
+- Ensure you're using the forked Elm binary
+
+  - The Makefile invokes `elm`
+  - You can either change the Makefile or change your PATH, whichever you prefer
+
+- Build the demo
+
+  - `cd demos/wrapper`
+  - `make`
+
+- Run a development server and open the demo
+
+  - `npx http-server` (still inside `demos/wrapper`)
+  - Open a browser at http://localhost:8080
 
 &nbsp;
 
@@ -125,11 +186,3 @@ Rust is very good for _hand-written_ code that does _manual memory management_, 
 Also, a language implementation, particularly one with a GC, is going to involve a lot of `unsafe` Rust. That's quite advanced Rust programming. It would have been too hard for me to know when to go against the normal rules and when not to, on my very first Rust project. Someone who was proficient in Rust may have made a different decision.
 
 For all these reasons, I _very reluctantly_ realised that I had exhausted the alternatives and C was the only tool for this job. It's my first C project in about 10 years.
-
-&nbsp;
-
-# Further reading
-
-- [Elm data structures](./docs/data-structures.md)
-- [String encoding](./docs/string-encoding.md)
-- [Garbage Collector](./docs/gc.md)

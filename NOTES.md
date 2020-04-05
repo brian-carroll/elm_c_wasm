@@ -1,3 +1,24 @@
+# Elm code layer within the core?
+
+Problem:
+
+- Need the C kernel to have the exact same API as the JS kernel, but C is a pain to write and debug.
+- A lot of the kernel functions in Elm.js are delegating directly to JS built-ins that we'd have to rewrite in C.
+
+Solution:
+
+- Implement more of the Kernel functions in Elm, built on top of really fundamental C functions
+- Pre-compile those Elm modules and bundle the result with the core C lib
+- Can use a dummy app to provide an Elm `main`. It can have a folder per core module.
+- Extract the compiled C functions out of that dummy app. Ideally using some build script.
+  - Run a pattern matcher on the C text, grab what we need
+  - leave behind the dummy app stuff and the actual handwritten C kernel stuff
+  - Write it all out to a generated.c file that gets included with the kernel lib
+  - End of the eval function is the next line that begins with `}` rather than whitespace
+- Approaches
+  - Node script (really dumb, just count parens and brackets)
+  - Haskell Language.C (Proper parsing, filtering and writing out again)
+
 # Get repo in a less-embarrassing state
 
 - Fix compiler errors for new functions
