@@ -16,6 +16,22 @@ I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-co
 
 &nbsp;
 
+# Contents
+
+- [Current Status](#current-status)
+- [Demo links](#demos)
+- [Installation](#installation)
+- [The JavaScript/WebAssembly interface](#the-javascriptwebassembly-interface)
+- [C as an intermediate language](#c-as-an-intermediate-language)
+
+# Other documentation
+
+- [Elm data structures](./docs/data-structures.md)
+- [String encoding](./docs/string-encoding.md)
+- [Garbage Collector](./docs/gc.md)
+
+&nbsp;
+
 # Current Status
 
 Here's roughly how I see the project progressing from here, as of October 2019. (Unless some big unknown bites me, which it might!)
@@ -42,17 +58,6 @@ This means gradual progress on lots of pieces, with no end-to-end system for qui
 
 &nbsp;
 
-# Documentation
-
-- [Demos](#demos)
-- [The JavaScript/WebAssembly interface](#the-javascriptwebassembly-interface)
-- [C as an intermediate language](#c-as-an-intermediate-language)
-- [Elm data structures](./docs/data-structures.md)
-- [String encoding](./docs/string-encoding.md)
-- [Garbage Collector](./docs/gc.md)
-
-&nbsp;
-
 # Demos
 
 I have built a few demos here: https://brian-carroll.github.io/elm_c_wasm/
@@ -72,6 +77,57 @@ At this early stage, they're very primitive demos! Definitely not full Elm progr
   - Reported figures for the Wasm implementations are slower than JS. It's partly due to crossing back and forth across the JS/Wasm boundary on every iteration. Browsers can't optimise that very well yet, though Firefox seems much better at it than Chrome.
 
   - Despite the limitations, the benchmark is a good way to stress-test the implementation, flush out bugs in the GC, and to find out where the bottlenecks are.
+
+&nbsp;
+
+# Installation
+
+This project is very much in the early phases of development. It's not even close to being production ready.
+
+The C compilation stage often fails because there are so many kernel modules still not written yet. And the compiler has not really been debugged so it generates bad C code sometimes.
+
+You have been warned!
+
+This is an installation guide for anyone who might want to play with the code and maybe contribute.
+
+- Install Emscripten
+
+  - https://emscripten.org/docs/getting_started/downloads.html
+
+- Clone and build the forked Elm compiler
+
+  - Install Stack (https://www.haskellstack.org)
+  - Clone the forked repo (https://github.com/brian-carroll/elm-compiler)
+  - `cd` to the root directory
+  - `stack init`
+  - `stack build`
+
+- Clone this repo
+
+  - In a different directory to the compiler. Perhaps put the two directories beside each other if you like, it doesn't matter.
+
+- Run `npm install`
+
+  - We need a couple of NPM packages.
+    - TypeScript for the wrapper (src/kernel/wrapper/wrapper.ts)
+      - This file could eventually be replaced with its compiled JS version
+    - `http-server` to serve assets including the .wasm file
+      - If you prefer to use something else, go ahead
+
+- Ensure you're using the forked Elm binary
+
+  - The Makefile invokes `elm`
+  - You can either change the Makefile or change your PATH, whichever you prefer
+
+- Build the demo
+
+  - `cd demos/wrapper`
+  - `make`
+
+- Run a development server and open the demo
+
+  - `npx http-server` (still inside `demos/wrapper`)
+  - Open a browser at http://localhost:8080
 
 &nbsp;
 
@@ -127,60 +183,3 @@ Rust is very good for _hand-written_ code that does _manual memory management_, 
 Also, a language implementation, particularly one with a GC, is going to involve a lot of `unsafe` Rust. That's quite advanced Rust programming. It would have been too hard for me to know when to go against the normal rules and when not to, on my very first Rust project. Someone who was proficient in Rust may have made a different decision.
 
 For all these reasons, I _very reluctantly_ realised that I had exhausted the alternatives and C was the only tool for this job. It's my first C project in about 10 years.
-
-&nbsp;
-
-# Further reading
-
-- [Elm data structures](./docs/data-structures.md)
-- [String encoding](./docs/string-encoding.md)
-- [Garbage Collector](./docs/gc.md)
-
-# Install
-
-This project is very much in the early phases of development. It's not even close to being production ready.
-
-The C compilation stage often fails because there are so many kernel modules still not written yet. And the compiler has not really been debugged so it generates bad C code sometimes.
-
-You have been warned!
-
-This is an installation guide for anyone who might want to play with the code and maybe contribute.
-
-- Install Emscripten
-
-  - https://emscripten.org/docs/getting_started/downloads.html
-
-- Clone and build the forked Elm compiler
-
-  - Install Stack (https://www.haskellstack.org)
-  - Clone the forked repo (https://github.com/brian-carroll/elm-compiler)
-  - `cd` to the root directory
-  - `stack init`
-  - `stack build`
-
-- Clone this repo
-
-  - In a different directory to the compiler. Perhaps put the two directories beside each other if you like, it doesn't matter.
-
-- Run `npm install`
-
-  - We need a couple of NPM packages.
-    - TypeScript for the wrapper (src/kernel/wrapper/wrapper.ts)
-      - This file could eventually be replaced with its compiled JS version
-    - `http-server` to serve assets including the .wasm file
-      - If you prefer to use something else, go ahead
-
-- Ensure you're using the forked Elm binary
-
-  - The Makefile invokes `elm`
-  - You can either change the Makefile or change your PATH, whichever you prefer
-
-- Build the demo
-
-  - `cd demos/wrapper`
-  - `make`
-
-- Run a development server and open the demo
-
-  - `npx http-server` (still inside `demos/wrapper`)
-  - Open a browser at http://localhost:8080
