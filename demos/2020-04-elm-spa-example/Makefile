@@ -1,5 +1,6 @@
 .PHONY: all
 
+ELM_SOURCES := $(shell find elm-spa-example/src -name '*.elm')
 KERNELS := $(shell find ../../src/kernel -name '*.c')
 
 # I know, I know, sorry...
@@ -12,14 +13,16 @@ all: dist/elm.wasm
 clean:
 	rm -rf build/* dist/*
 
-build/elm/elm.c: src/Main.elm
+build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
-	$(ELM_TO_C) make src/Main.elm --output build/elm/elm.c
+	cd elm-spa-example
+	$(ELM_TO_C) make src/Main.elm --output ../build/elm/elm.c
 
 build/emscripten/elm.wasm: build-wasm.sh $(KERNELS) build/elm/elm.c
 	@dos2unix -q build-wasm.sh
 	bash build-wasm.sh
 
 dist/elm.wasm: build/emscripten/elm.wasm build/elm/elm.c
+	@mkdir -p build/emscripten
 	cp build/emscripten/elm.wasm dist
 	cat build/emscripten/elm.js build/elm/elm.js > dist/elm.js

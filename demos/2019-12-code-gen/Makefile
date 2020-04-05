@@ -21,5 +21,6 @@ build/emscripten/elm.wasm: build-wasm.sh $(KERNELS) build/elm/elm.c
 	bash build-wasm.sh
 
 dist/elm.wasm: build/emscripten/elm.wasm build/elm/elm.c
+	@mkdir -p build/emscripten
 	cp build/emscripten/elm.wasm dist
 	cat build/emscripten/elm.js build/elm/elm.js > dist/elm.js
