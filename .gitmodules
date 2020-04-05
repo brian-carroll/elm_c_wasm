@@ -1,0 +1,3 @@
+[submodule "demos/2020-04-elm-spa-example/elm-spa-example"]
+	path = demos/2020-04-elm-spa-example/elm-spa-example
+	url = git@github.com:rtfeldman/elm-spa-example.git
