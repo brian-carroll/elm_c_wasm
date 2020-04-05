@@ -2,6 +2,8 @@
 
 This repo is part of a project to compile Elm to WebAssembly, using C as an intermediate language.
 
+**EXPERIMENTAL! DEFINITELY NOT PRODUCTION READY! NOWHERE NEAR IT!**
+
 It implements parts of Elm's [core libraries](https://package.elm-lang.org/packages/elm/core/latest/) needed for any compiled code to work, including:
 
 - Byte level implementations of all of Elm's data types
@@ -25,8 +27,8 @@ Here's roughly how I see the project progressing from here, as of October 2019. 
 
   - Figure out what memory management issues exist related to crossing the language boundary. (What if Wasm's memory overflows when JS writes to it? Does Wasm need to refer to JS objects, and if so, how? How to deal with `onClick` handlers? etc.)
   - Get a "hello world" app working with kernel entirely in JS and pure Elm entirely in Wasm. Very minimal Elm code, hand-compiled to C.
-- [ ] Finish code generation for the full Elm AST (outputting both C and JS)
-	- Test on an example app. Perhaps Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), probably something smaller first
+
+- [ ] Finish code generation for the full Elm AST (outputting both C and JS) - Test on an example app. Perhaps Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), probably something smaller first
 - [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
 
@@ -133,3 +135,52 @@ For all these reasons, I _very reluctantly_ realised that I had exhausted the al
 - [Elm data structures](./docs/data-structures.md)
 - [String encoding](./docs/string-encoding.md)
 - [Garbage Collector](./docs/gc.md)
+
+# Install
+
+This project is very much in the early phases of development. It's not even close to being production ready.
+
+The C compilation stage often fails because there are so many kernel modules still not written yet. And the compiler has not really been debugged so it generates bad C code sometimes.
+
+You have been warned!
+
+This is an installation guide for anyone who might want to play with the code and maybe contribute.
+
+- Install Emscripten
+
+  - https://emscripten.org/docs/getting_started/downloads.html
+
+- Clone and build the forked Elm compiler
+
+  - Install Stack (https://www.haskellstack.org)
+  - Clone the forked repo (https://github.com/brian-carroll/elm-compiler)
+  - `cd` to the root directory
+  - `stack init`
+  - `stack build`
+
+- Clone this repo
+
+  - In a different directory to the compiler. Perhaps put the two directories beside each other if you like, it doesn't matter.
+
+- Run `npm install`
+
+  - We need a couple of NPM packages.
+    - TypeScript for the wrapper (src/kernel/wrapper/wrapper.ts)
+      - This file could eventually be replaced with its compiled JS version
+    - `http-server` to serve assets including the .wasm file
+      - If you prefer to use something else, go ahead
+
+- Ensure you're using the forked Elm binary
+
+  - The Makefile invokes `elm`
+  - You can either change the Makefile or change your PATH, whichever you prefer
+
+- Build the demo
+
+  - `cd demos/wrapper`
+  - `make`
+
+- Run a development server and open the demo
+
+  - `npx http-server` (still inside `demos/wrapper`)
+  - Open a browser at http://localhost:8080
