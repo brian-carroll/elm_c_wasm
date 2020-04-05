@@ -1,30 +1,38 @@
 Richard Feldman's SPA example, compiled to WebAssembly
 
-Serves as a vehicle to develop and debug the code generator
+Serves as a vehicle to develop and debug the code generator, and motivation to expand the set of C kernel functions.
 
 **Not working yet**
 
-- Missing functions in core libraries
+### Issues causing C compiler errors
 
-  - A5
-  - CTOR_Field
-  - CTOR_Index
-  - CTOR_OneOf
-  - String_all
-  - String_length
-  - String_slice
-  - String_toInt
-  - String_uncons
-  - elm_core_Basics_negate
-  - elm_core_List_foldrHelper
-  - elm_json_Json_Decode_errorToString
-  - elm_json_Json_Decode_errorToStringHelp
+#### Kernel functions not written yet
 
-- Code gen bugs
+- A5
+- String_all
+- String_length
+- String_slice
+- String_toInt
+- String_uncons
 
-  - `args` array is not defined
+#### Elm functions not generated
 
-    - eval_elm_core_List_foldl
-    - eval_elm_core_List_rangeHelp
-    - eval_elm_json_Json_Decode_errorToStringHelp
-    - eval_elm_parser_Parser_Advanced_chompWhileHelp
+- elm_core_Basics_negate
+- elm_core_List_foldrHelper
+- elm_json_Json_Decode_errorToString
+- elm_json_Json_Decode_errorToStringHelp
+
+#### Constructor IDs not generated
+
+All of these are used in elm_json_Json_Decode_errorToStringHelp. Maybe if that bug is fixed, this one will go away too.
+
+- CTOR_Field
+- CTOR_Index
+- CTOR_OneOf
+
+#### `args` array not defined for some recursive functions
+
+- eval_elm_core_List_foldl
+- eval_elm_core_List_rangeHelp
+- eval_elm_json_Json_Decode_errorToStringHelp
+- eval_elm_parser_Parser_Advanced_chompWhileHelp
