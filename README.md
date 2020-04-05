@@ -2,7 +2,7 @@
 
 This repo is part of a project to compile Elm to WebAssembly, using C as an intermediate language.
 
-**EXPERIMENTAL! DEFINITELY NOT PRODUCTION READY! NOWHERE NEAR IT!**
+**EXPERIMENTAL! DEFINITELY NOT PRODUCTION READY!**
 
 It implements parts of Elm's [core libraries](https://package.elm-lang.org/packages/elm/core/latest/) needed for any compiled code to work, including:
 
@@ -44,6 +44,7 @@ Here's roughly how I see the project progressing from here, as of April 2020. (U
 - [x] Finish code generation for the full Elm AST (outputting both C and JS)
   - [x] Test on the same [simple example app](demo-app) created for testing the wrapper
   - [ ] Test on Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), adding implementations of core Kernel functions as needed
+- [ ] Complete the kernel code for the core libraries. This is a large task!
 - [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
 
