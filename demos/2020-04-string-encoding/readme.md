@@ -1,7 +1,7 @@
 ## TextDecoder performance benchmarks for UTF-8 and UTF-16
 
-Averaged over 600 iterations per encoding
-Exact same HTML file size in ASCII and Chinese, approx 60kB
+Decoding times in microseconds, from `performance.now()`, averaged over 600 iterations. (10 seconds at 60 per second, triggered on `requestAnimationFrame`)
+Exact same HTML file size in ASCII and Chinese (approx 60kB)
 
 |                 | tDecode utf8 | tDecode utf16 |     | bytelength utf8 | bytelength utf16 |     | tDecode/kB utf8 | tDecode/kB utf16 |
 | --------------- | ------------ | ------------- | --- | --------------- | ---------------- | --- | --------------- | ---------------- |
@@ -34,6 +34,6 @@ The first set of numbers (decode time) are the measurements.
 
 ### Backward compatibility
 
-- But using UTF-8 would change how String.length works, as well as lots of other String and Char functions. Would break existing apps.
+- But using UTF-8 would change how `String.length` works, as well as lots of other String and Char functions. Would break existing apps.
 - This could turn into a Python v2/v3 problem. That 12-year mess was in large part to do with strings and Unicode as well.
-- Maybe there need to be two versions of each of these libraries, make it a compile option. Maybe only a few basic functions are different like foldl, foldr. Maybe length (though it's a fold)
+- Maybe there need to be two versions of each of these libraries, make it a compile option. Maybe only a few basic functions are different like foldl, foldr. Build everything on top of that.
