@@ -80,7 +80,7 @@ This would break some existing apps, making it harder to port them to Wasm.
 
 Porting existing apps to Wasm is also the best way to test and debug this Elm-in-WebAssembly project. That in itself is a big incentive to keep the same APIs for the core libraries! The loss of productivity would be enormous if we couldn't compile existing example apps and expect them to work.
 
-Of course if we stick with JS-compatible strings for this reason, it could create problems like Python 2.7. Its end-of-life was extended over and over again for 12 years after the release of Python 3. People didn't want to upgrade their apps for fear of breaking changes related to string encoding.
+Of course if we stick with JS-compatible strings for this reason, it could create problems like Python 2.7, which survived 12 years after the release of Python 3. In large part, that was because of breaking changes related to string encoding.
 
 ## Conclusions
 
