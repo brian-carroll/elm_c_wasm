@@ -27,5 +27,6 @@ void Utils_initGlobal(void** global, void* (*init_func)());
 #define A2(f, a, b) CAN_THROW(Utils_apply(f, 2, (void* []){a, b}))
 #define A3(f, a, b, c) CAN_THROW(Utils_apply(f, 3, (void* []){a, b, c}))
 #define A4(f, a, b, c, d) CAN_THROW(Utils_apply(f, 4, (void* []){a, b, c, d}))
+#define A5(f, a, b, c, d, e) CAN_THROW(Utils_apply(f, 5, (void* []){a, b, c, d, e}))
 
 #endif

@@ -10,7 +10,6 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 
 | name          | implementation                                              |
 | ------------- | ----------------------------------------------------------- |
-| A5            | macro. easy.                                                |
 | String_all    | new Char c, FOR_EACH_CHAR, mutate c, if A1(isGood,c)==False |
 | String_length | FOR_EACH_CODEPOINT, i++, create ElmInt                      |
 | String_slice  | FOR_EACH_CHAR, i++, if a < i < b copy                       |
