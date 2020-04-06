@@ -174,7 +174,7 @@ Closure Basics_toFloat = {
 static void* eval_floor(void* args[]) {
   ElmFloat* f = args[0];
   f64 result = floor(f->value);
-  return NEW_ELM_INT((u32)result);
+  return NEW_ELM_INT((i32)result);
 }
 Closure Basics_floor = {
     .header = HEADER_CLOSURE(0),
@@ -188,7 +188,7 @@ Closure Basics_floor = {
 static void* eval_ceiling(void* args[]) {
   ElmFloat* f = args[0];
   f64 result = ceil(f->value);
-  return NEW_ELM_INT((u32)result);
+  return NEW_ELM_INT((i32)result);
 }
 Closure Basics_ceiling = {
     .header = HEADER_CLOSURE(0),
@@ -252,11 +252,11 @@ Closure Basics_modBy = {
 static void* eval_remainderBy(void* args[]) {
   ElmInt* a0 = args[0];
   ElmInt* a1 = args[1];
-  u32 modulus = a0->value;
-  u32 x = a1->value;
+  i32 modulus = a0->value;
+  i32 x = a1->value;
 
   assert(modulus != 0);
-  u32 answer = x % modulus;
+  i32 answer = x % modulus;
 
   return NEW_ELM_INT(((answer > 0 && modulus < 0) || (answer < 0 && modulus > 0))
                          ? answer + modulus
