@@ -1,6 +1,9 @@
 #include "basics.h"
 #include <math.h>
 
+/**
+ * and
+ */
 static void* and_eval(void* args[2]) {
   return (args[0] == &True && args[1] == &True) ? &True : &False;
 }
@@ -10,6 +13,9 @@ Closure Basics_and = {
     .max_values = 2,
 };
 
+/**
+ * or
+ */
 static void* or_eval(void* args[2]) {
   return (args[0] == &True || args[1] == &True) ? &True : &False;
 }
@@ -19,6 +25,21 @@ Closure Basics_or = {
     .max_values = 2,
 };
 
+/**
+ * not
+ */
+static void* not_eval(void* args[2]) {
+  return (args[0] == &False) ? &True : &False;
+}
+Closure Basics_not = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &not_eval,
+    .max_values = 2,
+};
+
+/**
+ * add
+ */
 static void* add_eval(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
@@ -40,6 +61,9 @@ Closure Basics_add = {
     .max_values = 2,
 };
 
+/**
+ * sub
+ */
 static void* sub_eval(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
@@ -61,6 +85,9 @@ Closure Basics_sub = {
     .max_values = 2,
 };
 
+/**
+ * mul
+ */
 static void* mul_eval(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
@@ -82,6 +109,37 @@ Closure Basics_mul = {
     .max_values = 2,
 };
 
+/**
+ * fdiv
+ */
+static void* fdiv_eval(void* args[2]) {
+  ElmFloat* fa = args[0];
+  ElmFloat* fb = args[1];
+  return NEW_ELM_FLOAT(fa->value / fb->value);
+}
+Closure Basics_fdiv = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &fdiv_eval,
+    .max_values = 2,
+};
+
+/**
+ * idiv
+ */
+static void* idiv_eval(void* args[2]) {
+  ElmInt* ia = args[0];
+  ElmInt* ib = args[1];
+  return NEW_ELM_FLOAT(ia->value / ib->value);
+}
+Closure Basics_idiv = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &idiv_eval,
+    .max_values = 2,
+};
+
+/**
+ * pow
+ */
 static i32 ipow(i32 base, i32 ex) {
   if (ex < 0) {
     if (base == 1) {
@@ -131,3 +189,29 @@ Closure Basics_pow = {
     .evaluator = &pow_eval,
     .max_values = 2,
 };
+
+/*
+ * toFloat
+ */
+static void* eval_toFloat(void* args[]) {
+  ElmInt* i = args[0];
+  return NEW_ELM_FLOAT((f64)i->value);
+}
+
+/*
+ * floor
+ */
+static void* eval_floor(void* args[]) {
+  ElmFloat* f = args[0];
+  f64 result = floor(f->value);
+  return NEW_ELM_INT((u32)result);
+}
+
+/*
+ * ceiling
+ */
+static void* eval_ceiling(void* args[]) {
+  ElmFloat* f = args[0];
+  f64 result = ceil(f->value);
+  return NEW_ELM_INT((u32)result);
+}

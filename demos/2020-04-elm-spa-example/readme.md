@@ -8,13 +8,8 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 
 #### Kernel code not written yet
 
-- Basics_ceiling
-- Basics_fdiv
-- Basics_floor
-- Basics_idiv
 - Basics_log
 - Basics_modBy
-- Basics_not
 - Basics_remainderBy
 - Basics_toFloat
 
