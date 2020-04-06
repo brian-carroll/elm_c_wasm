@@ -31,6 +31,8 @@ emcc build/emscripten/$FILENAME.c \
   -s EXPORT_NAME='EmscriptenModule' \
   -s EXPORTED_FUNCTIONS="$(cat ./exported-functions.json)" \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-  $extra_opt
+  -ferror-limit=10000 \
+  $extra_opt \
+  &> emcc.log
 
 set +x

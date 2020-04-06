@@ -6,24 +6,44 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 
 ### Issues currently causing C compiler errors
 
-#### Elm functions not generated
+#### Kernel code not written yet
+
+- Basics_ceiling
+- Basics_fdiv
+- Basics_floor
+- Basics_idiv
+- Basics_modBy
+- Basics_not
+- Basics_toFloat
+- String_trim
+- Utils_notEqual
+
+#### Closures used before they are declared
 
 - elm_core_Basics_negate
-- elm_core_List_foldrHelper
-- elm_json_Json_Decode_errorToString
-- elm_json_Json_Decode_errorToStringHelp
 
-#### Constructor IDs not generated
+  - negate is `x -> -x`
+  - but `-` generates `negate`
+  - JS code gen does optimisations for saturated Basics calls that gets around this circular definition. Was going to leave this for later but apparently need it now!
 
-All of these are used in elm_json_Json_Decode_errorToStringHelp. Maybe if that bug is fixed, this one will go away too.
+#### IDs not generated for constructors and record fields
 
+These are all from `elm` packages. Could be a dependency issue. Maybe they're indirect deps via JS kernel code?
+
+- CTOR_BadStatus
+- CTOR_EQ
 - CTOR_Field
+- CTOR_Http
 - CTOR_Index
+- CTOR_Internal
+- CTOR_LT
 - CTOR_OneOf
+- CTOR_Root
 
-#### `args` array not defined for some recursive functions
-
-- eval_elm_core_List_foldl
-- eval_elm_core_List_rangeHelp
-- eval_elm_json_Json_Decode_errorToStringHelp
-- eval_elm_parser_Parser_Advanced_chompWhileHelp
+- FIELD_fragment
+- FIELD_host
+- FIELD_path
+- FIELD_port\_
+- FIELD_protocol
+- FIELD_query
+- FIELD_start
