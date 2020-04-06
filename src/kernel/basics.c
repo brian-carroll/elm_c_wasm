@@ -2,42 +2,6 @@
 #include <math.h>
 
 /**
- * and
- */
-static void* and_eval(void* args[2]) {
-  return (args[0] == &True && args[1] == &True) ? &True : &False;
-}
-Closure Basics_and = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &and_eval,
-    .max_values = 2,
-};
-
-/**
- * or
- */
-static void* or_eval(void* args[2]) {
-  return (args[0] == &True || args[1] == &True) ? &True : &False;
-}
-Closure Basics_or = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &or_eval,
-    .max_values = 2,
-};
-
-/**
- * not
- */
-static void* not_eval(void* args[2]) {
-  return (args[0] == &False) ? &True : &False;
-}
-Closure Basics_not = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &not_eval,
-    .max_values = 2,
-};
-
-/**
  * add
  */
 static void* add_eval(void* args[2]) {
@@ -215,3 +179,39 @@ static void* eval_ceiling(void* args[]) {
   f64 result = ceil(f->value);
   return NEW_ELM_INT((u32)result);
 }
+
+/**
+ * not
+ */
+static void* not_eval(void* args[2]) {
+  return (args[0] == &False) ? &True : &False;
+}
+Closure Basics_not = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &not_eval,
+    .max_values = 2,
+};
+
+/**
+ * and
+ */
+static void* and_eval(void* args[2]) {
+  return (args[0] == &True && args[1] == &True) ? &True : &False;
+}
+Closure Basics_and = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &and_eval,
+    .max_values = 2,
+};
+
+/**
+ * or
+ */
+static void* or_eval(void* args[2]) {
+  return (args[0] == &True || args[1] == &True) ? &True : &False;
+}
+Closure Basics_or = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &or_eval,
+    .max_values = 2,
+};
