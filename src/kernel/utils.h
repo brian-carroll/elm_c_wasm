@@ -4,6 +4,7 @@
 #include "types.h"
 
 Closure Utils_equal;
+Closure Utils_notEqual;
 Closure Utils_append;
 Closure Utils_compare;
 

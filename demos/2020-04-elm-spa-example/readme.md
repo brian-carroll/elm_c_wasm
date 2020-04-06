@@ -13,8 +13,6 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 - String_startsWith
 - String_trim
 
-- Utils_notEqual
-
 #### Closures used before they are declared
 
 - elm_core_Basics_negate

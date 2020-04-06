@@ -166,6 +166,9 @@ void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
   return result;
 }
 
+/**
+ * EQUALITY
+ */
 static ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
   Tuple2* t2 = NEW_TUPLE2(pa, pb);
   Cons* c = NEW_CONS(t2, *pstack);
@@ -279,6 +282,25 @@ Closure Utils_equal = {
     .max_values = 2,
 };
 
+/**
+ * INEQUALITY
+ */
+static void* eval_notEqual(void* args[2]) {
+  void* equal = eq_eval(args);
+  if (equal == pGcFull) {
+    return pGcFull;
+  }
+  return equal == &False ? &True : &False;
+}
+Closure Utils_notEqual = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_notEqual,
+    .max_values = 2,
+};
+
+/**
+ * APPEND
+ */
 static void* append_eval(void* args[2]) {
   Header* h = (Header*)args[0];
 
