@@ -8,11 +8,6 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 
 #### Kernel code not written yet
 
-- Basics_log
-- Basics_modBy
-- Basics_remainderBy
-- Basics_toFloat
-
 - String_contains
 - String_indexes
 - String_startsWith

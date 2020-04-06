@@ -1,10 +1,11 @@
 #include "basics.h"
+#include <assert.h>
 #include <math.h>
 
 /**
  * add
  */
-static void* add_eval(void* args[2]) {
+static void* eval_add(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
   if (pa->f.header.tag == Tag_Float) {
@@ -21,14 +22,14 @@ static void* add_eval(void* args[2]) {
 }
 Closure Basics_add = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &add_eval,
+    .evaluator = &eval_add,
     .max_values = 2,
 };
 
 /**
  * sub
  */
-static void* sub_eval(void* args[2]) {
+static void* eval_sub(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
   if (pa->f.header.tag == Tag_Float) {
@@ -45,14 +46,14 @@ static void* sub_eval(void* args[2]) {
 }
 Closure Basics_sub = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &sub_eval,
+    .evaluator = &eval_sub,
     .max_values = 2,
 };
 
 /**
  * mul
  */
-static void* mul_eval(void* args[2]) {
+static void* eval_mul(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
   if (pa->f.header.tag == Tag_Float) {
@@ -69,35 +70,35 @@ static void* mul_eval(void* args[2]) {
 }
 Closure Basics_mul = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &mul_eval,
+    .evaluator = &eval_mul,
     .max_values = 2,
 };
 
 /**
  * fdiv
  */
-static void* fdiv_eval(void* args[2]) {
+static void* eval_fdiv(void* args[2]) {
   ElmFloat* fa = args[0];
   ElmFloat* fb = args[1];
   return NEW_ELM_FLOAT(fa->value / fb->value);
 }
 Closure Basics_fdiv = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &fdiv_eval,
+    .evaluator = &eval_fdiv,
     .max_values = 2,
 };
 
 /**
  * idiv
  */
-static void* idiv_eval(void* args[2]) {
+static void* eval_idiv(void* args[2]) {
   ElmInt* ia = args[0];
   ElmInt* ib = args[1];
   return NEW_ELM_FLOAT(ia->value / ib->value);
 }
 Closure Basics_idiv = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &idiv_eval,
+    .evaluator = &eval_idiv,
     .max_values = 2,
 };
 
@@ -133,7 +134,7 @@ static i32 ipow(i32 base, i32 ex) {
   }
   return result;
 }
-static void* pow_eval(void* args[2]) {
+static void* eval_pow(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
   if (pa->f.header.tag == Tag_Float) {
@@ -150,7 +151,7 @@ static void* pow_eval(void* args[2]) {
 }
 Closure Basics_pow = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &pow_eval,
+    .evaluator = &eval_pow,
     .max_values = 2,
 };
 
@@ -161,6 +162,11 @@ static void* eval_toFloat(void* args[]) {
   ElmInt* i = args[0];
   return NEW_ELM_FLOAT((f64)i->value);
 }
+Closure Basics_toFloat = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_toFloat,
+    .max_values = 1,
+};
 
 /*
  * floor
@@ -170,6 +176,11 @@ static void* eval_floor(void* args[]) {
   f64 result = floor(f->value);
   return NEW_ELM_INT((u32)result);
 }
+Closure Basics_floor = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_floor,
+    .max_values = 1,
+};
 
 /*
  * ceiling
@@ -179,39 +190,93 @@ static void* eval_ceiling(void* args[]) {
   f64 result = ceil(f->value);
   return NEW_ELM_INT((u32)result);
 }
-
+Closure Basics_ceiling = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_ceiling,
+    .max_values = 1,
+};
 /**
  * not
  */
-static void* not_eval(void* args[2]) {
+static void* eval_not(void* args[2]) {
   return (args[0] == &False) ? &True : &False;
 }
 Closure Basics_not = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &not_eval,
+    .evaluator = &eval_not,
     .max_values = 2,
 };
 
 /**
  * and
  */
-static void* and_eval(void* args[2]) {
+static void* eval_and(void* args[2]) {
   return (args[0] == &True && args[1] == &True) ? &True : &False;
 }
 Closure Basics_and = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &and_eval,
+    .evaluator = &eval_and,
     .max_values = 2,
 };
 
 /**
  * or
  */
-static void* or_eval(void* args[2]) {
+static void* eval_or(void* args[2]) {
   return (args[0] == &True || args[1] == &True) ? &True : &False;
 }
 Closure Basics_or = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &or_eval,
+    .evaluator = &eval_or,
     .max_values = 2,
+};
+
+/**
+ * modBy
+ */
+static void* eval_modBy(void* args[]) {
+  ElmInt* a = args[0];
+  ElmInt* b = args[1];
+  return NEW_ELM_INT(a % b);
+}
+Closure Basics_modBy = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_modBy,
+    .max_values = 2,
+};
+
+/**
+ * remainderBy
+ * https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/divmodnote-letter.pdf
+ */
+static void* eval_remainderBy(void* args[]) {
+  ElmInt* a0 = args[0];
+  ElmInt* a1 = args[1];
+  u32 modulus = a0->value;
+  u32 x = a1->value;
+
+  assert(modulus != 0);
+  u32 answer = x % modulus;
+
+  return NEW_ELM_INT(((answer > 0 && modulus < 0) || (answer < 0 && modulus > 0))
+                         ? answer + modulus
+                         : answer);
+}
+Closure Basics_remainderBy = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_remainderBy,
+    .max_values = 2,
+};
+
+/**
+ * log
+ */
+static void* eval_log(void* args[]) {
+  ElmFloat* f = args[0];
+  return NEW_ELM_FLOAT(log(f));
+}
+Closure Basics_log = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_log,
+    .max_values = 1,
 };
