@@ -7,7 +7,7 @@
 
 // local utility function
 #if STRING_ENCODING == UTF16
-static size_t String_codepoints(ElmString16* s) {
+static size_t code_units(ElmString16* s) {
   u32 size = s->header.size;
   u32 size16 = size * SIZE_UNIT / 2;
   u16* words16 = (u16*)s;
@@ -17,8 +17,8 @@ static size_t String_codepoints(ElmString16* s) {
 }
 
 static size_t indexOf(ElmString16* sub, ElmString16* str) {
-  size_t lstr = String_codepoints(str);
-  size_t lsub = String_codepoints(sub);
+  size_t lstr = code_units(str);
+  size_t lsub = code_units(sub);
 
   if (lsub == 0) return 0;
 
@@ -40,7 +40,8 @@ static size_t indexOf(ElmString16* sub, ElmString16* str) {
 #define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
 #define IS_HIGH_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
 
-#else
+#endif
+
 static size_t String_bytes(ElmString* s) {
   size_t total_bytes = (size_t)(s->header.size * SIZE_UNIT);
   u8* struct_bytes = (u8*)s;
@@ -48,14 +49,13 @@ static size_t String_bytes(ElmString* s) {
   size_t len = (total_bytes - sizeof(Header)) - (size_t)(last_byte + 1);
   return len;
 }
-#endif
 
 /*
  * String.uncons
  */
 static void* eval_String_uncons(void* args[]) {
   ElmString16* string = args[0];
-  size_t len = String_codepoints(string);
+  size_t len = code_units(string);
   if (len == 0) {
     return elm_core_Maybe_Nothing;
   }
@@ -83,7 +83,7 @@ Closure String_uncons = {
  * String.length
  */
 static void* eval_String_length(void* args[]) {
-  size_t len = String_codepoints(args[0]);
+  size_t len = code_units(args[0]);
   return NEW_ELM_INT((u32)len);
 }
 Closure String_length = {
@@ -161,7 +161,7 @@ Closure String_fromNumber = {
  */
 static void* eval_String_toInt(void* args[]) {
   ElmString16* str = args[0];
-  size_t len = String_codepoints(str);
+  size_t len = code_units(str);
   u16 code0 = str->words16[0];
   u32 total = 0;
   size_t start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
@@ -191,7 +191,7 @@ static void* eval_String_join(void* args[]) {
   Cons* strs = args[1];
 
   ElmString16* s = strs->head;
-  u32 result_len = String_codepoints(s);
+  u32 result_len = code_units(s);
   Header h = HEADER_STRING(result_len);
   ElmString16* result = GC_malloc(h.size * SIZE_UNIT);
   if (result == pGcFull) {
@@ -200,12 +200,12 @@ static void* eval_String_join(void* args[]) {
   result->header = h;
   memcpy(result->values, s->words16, result_len * 2);
 
-  u32 sep_len = String_codepoints(sep);
+  u32 sep_len = code_units(sep);
 
   for (strs = strs->tail; strs != &Nil; strs = strs->tail) {
     u16* to = &result->values[result_len];
     s = strs->head;
-    u32 len = String_codepoints(s);
+    u32 len = code_units(s);
 
     result_len += sep_len + len;
     h = HEADER_STRING(result_len);
@@ -232,8 +232,8 @@ static void* eval_String_split(void* args[]) {
   ElmString16* sep = args[0];
   ElmString16* str = args[1];
 
-  size_t sep_len = String_codepoints(sep);
-  size_t str_len = String_codepoints(str);
+  size_t sep_len = code_units(sep);
+  size_t str_len = code_units(str);
 
   Cons* result = &Nil;
 
@@ -295,7 +295,7 @@ static void* eval_String_slice(void* args[]) {
   ElmInt* start = args[0];
   ElmInt* end = args[1];
   ElmString16* str = args[2];
-  size_t len = String_codepoints(str);
+  size_t len = code_units(str);
 
   size_t n_words = (size_t)(end - start);
   size_t n_bytes = payload_words * 2;
@@ -315,7 +315,7 @@ Closure String_slice = {
 static void* eval_String_all(void* args[]) {
   Closure* isGood = args[0];
   ElmString16* s = args[1];
-  size_t len = String_codepoints(s);
+  size_t len = code_units(s);
   ElmChar* c = NEW_ELM_CHAR(0);
 
   for (size_t i = 0; i < len; i++) {
@@ -359,8 +359,8 @@ static void* eval_String_indexes(void* args[]) {
   ElmString16* sub = args[0];
   ElmString16* str = args[1];
 
-  size_t sub_len = String_codepoints(sub);
-  size_t str_len = String_codepoints(str);
+  size_t sub_len = code_units(sub);
+  size_t str_len = code_units(str);
 
   Cons* result = &Nil;
 
