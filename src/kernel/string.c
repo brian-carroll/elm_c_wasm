@@ -5,8 +5,9 @@
 #include "gc.h"
 #include "types.h"
 
-// local utility function
-#if STRING_ENCODING == UTF16
+#define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
+#define IS_HIGH_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
+
 static size_t code_units(ElmString16* s) {
   u32 size = s->header.size;
   u32 size16 = size * SIZE_UNIT / 2;
@@ -15,32 +16,6 @@ static size_t code_units(ElmString16* s) {
   size_t len16 = last ? (size16 - 2) : (size16 - 3);
   return len16;
 }
-
-static size_t indexOf(ElmString16* sub, ElmString16* str) {
-  size_t lstr = code_units(str);
-  size_t lsub = code_units(sub);
-
-  if (lsub == 0) return 0;
-
-  u16 c0 = sub->words16[0];
-  for (size_t istr = 0; istr < lstr; istr++) {
-    if (str->words16[istr] == c0) {
-      size_t isub = 1;
-      while (isub < lsub && sub->words16[isub] == str->words16[istr]) {
-        isub++;
-      }
-      if (isub == lsub) {
-        return istr;
-      }
-    }
-  }
-  return -1;
-}
-
-#define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
-#define IS_HIGH_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
-
-#endif
 
 static size_t String_bytes(ElmString* s) {
   size_t total_bytes = (size_t)(s->header.size * SIZE_UNIT);
@@ -344,7 +319,25 @@ Closure String_all = {
 static void* eval_String_contains(void* args[]) {
   ElmString16* sub = args[0];
   ElmString16* str = args[1];
-  return indexOf(sub, str) == -1 ? &False : &True;
+
+  size_t lsub = code_units(sub);
+  size_t lstr = code_units(str);
+
+  if (lsub == 0) return 0;
+
+  u16 c0 = sub->words16[0];
+  for (size_t istr = 0; istr < lstr; istr++) {
+    if (str->words16[istr] == c0) {
+      size_t isub = 1;
+      while (isub < lsub && sub->words16[isub] == str->words16[istr]) {
+        isub++;
+      }
+      if (isub == lsub) {
+        return &True;
+      }
+    }
+  }
+  return &False;
 }
 Closure String_contains = {
     .header = HEADER_CLOSURE(0),
@@ -421,29 +414,128 @@ Closure String_startsWith = {
     .max_values = 2,
 };
 
+// https://tc39.es/ecma262/#prod-LineTerminator
+// https://tc39.es/ecma262/#prod-WhiteSpace
+// https://www.compart.com/en/unicode/category/Zs
+size_t is_whitespace(u16 c) {
+  return (c == 0x000A || c == 0x000D || c == 0x0020 || c == 0x00A0 || c == 0x1680 ||
+          c == 0x2000 || c == 0x2001 || c == 0x2002 || c == 0x2003 || c == 0x2004 ||
+          c == 0x2005 || c == 0x2006 || c == 0x2007 || c == 0x2008 || c == 0x2009 ||
+          c == 0x200A || c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F ||
+          c == 0x3000);
+}
+
 /**
  * String.trim
  */
 static void* eval_String_trim(void* args[]) {
   ElmString16* str = args[1];
+  size_t len = code_units(str);
+  size_t start = 0;
+  size_t end = len - 1;
+  while (is_whitespace(str->words16[start]) && start < len) {
+    start++;
+  }
+  while (is_whitespace(str->words16[end]) && end) {
+    end--;
+  }
+  size_t n_bytes = (end + 1 - start) * 2;
+  return NEW_ELM_STRING(n_bytes, (char*)(&str->words16[start]));
 }
 Closure String_trim = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_trim,
     .max_values = 1,
 };
-/*
 
-var _String_startsWith = F2(function(sub, str)
-{
-        return str.indexOf(sub) === 0;
-});
+/**
+ * String.trimLeft
+ */
+static void* eval_String_trimLeft(void* args[]) {
+  ElmString16* str = args[1];
+  size_t len = code_units(str);
+  size_t start = 0;
+  while (is_whitespace(str->words16[start]) && start < len) {
+    start++;
+  }
+  size_t n_bytes = (len - start) * 2;
+  return NEW_ELM_STRING(n_bytes, (char*)(&str->words16[start]));
+}
+Closure String_trimLeft = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_trimLeft,
+    .max_values = 1,
+};
 
-var _String_endsWith = F2(function(sub, str)
-{
-        return str.length >= sub.length &&
-                str.lastIndexOf(sub) === str.length - sub.length;
-});
+/**
+ * String.trimRight
+ */
+static void* eval_String_trimRight(void* args[]) {
+  ElmString16* str = args[1];
+  size_t len = code_units(str);
+  size_t end = len - 1;
+  while (is_whitespace(str->words16[end])) {
+    end--;
+  }
+  size_t n_bytes = (end + 1) * 2;
+  return NEW_ELM_STRING(n_bytes, (char*)(&str->words16[0]));
+}
+Closure String_trimRight = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_trimRight,
+    .max_values = 1,
+};
 
+/**
+ * String.startsWith
+ */
+void* eval_String_startsWith(void* args[]) {
+  ElmString16* sub = args[0];
+  ElmString16* str = args[1];
 
-*/
+  size_t lsub = code_units(sub);
+  size_t lstr = code_units(str);
+
+  if (lsub > lstr) {
+    return &False;
+  }
+
+  for (size_t i = 0; i < lsub; i++) {
+    if (str->words16[i] == sub->words16[i]) {
+      return &False;
+    }
+  }
+  return &True;
+}
+Closure String_startsWith = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_startsWith,
+    .max_values = 1,
+};
+
+/**
+ * String.endsWith
+ */
+void* eval_String_endsWith(void* args[]) {
+  ElmString16* sub = args[0];
+  ElmString16* str = args[1];
+
+  size_t lsub = code_units(sub);
+  size_t lstr = code_units(str);
+
+  if (lsub > lstr) {
+    return &False;
+  }
+
+  for (size_t i = 0; i < lsub; i++) {
+    if (str->words16[lstr - 1 - i] == sub->words16[lsub - 1 - i]) {
+      return &False;
+    }
+  }
+  return &True;
+}
+Closure String_endsWith = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_endsWith,
+    .max_values = 1,
+};
