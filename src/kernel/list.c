@@ -1,6 +1,9 @@
+#include <stddef.h>
 #include <stdlib.h>
+
 #include "./gc.h"
 #include "./types.h"
+#include "./utils.h"
 
 // Allocate an entire list at once, with no recursion overhead
 // First value in the array becomes the head of the list
@@ -50,8 +53,8 @@ Closure List_cons = {
 static void* eval_List_map2(void* args[]) {
   const size_t CHUNK = 8;
   Closure* f = args[0];
-  void* xs = args[1];
-  void* ys = args[2];
+  Cons* xs = args[1];
+  Cons* ys = args[2];
 
   Custom* tmpArray = GC_malloc(sizeof(Custom));
   if (tmpArray == pGcFull) return pGcFull;

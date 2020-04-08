@@ -11,9 +11,11 @@
 static void* eval_negate(void* args[]) {
   Number* x = args[0];
   if (x->f.header.tag == Tag_Float) {
-    return NEW_ELM_FLOAT(-x->f.value);
+    f64 val = x->f.value;
+    return NEW_ELM_FLOAT(-val);
   } else {
-    return NEW_ELM_INT(-x->i.value);
+    i32 val = x->i.value;
+    return NEW_ELM_INT(-val);
   }
 }
 Closure Basics_negate = {
@@ -257,7 +259,7 @@ Closure Basics_or = {
 static void* eval_modBy(void* args[]) {
   ElmInt* a = args[0];
   ElmInt* b = args[1];
-  return NEW_ELM_INT(a % b);
+  return NEW_ELM_INT(a->value % b->value);
 }
 Closure Basics_modBy = {
     .header = HEADER_CLOSURE(0),
@@ -293,7 +295,7 @@ Closure Basics_remainderBy = {
  */
 static void* eval_log(void* args[]) {
   ElmFloat* f = args[0];
-  return NEW_ELM_FLOAT(log(f));
+  return NEW_ELM_FLOAT(log(f->value));
 }
 Closure Basics_log = {
     .header = HEADER_CLOSURE(0),

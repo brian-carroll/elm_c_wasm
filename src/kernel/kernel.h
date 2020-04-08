@@ -9,6 +9,7 @@
 #include "./debug.h"
 #include "./gc.h"
 #include "./list.h"
+#include "./maybe.h"
 #include "./string.h"
 #include "./types.h"
 #include "./utils.h"

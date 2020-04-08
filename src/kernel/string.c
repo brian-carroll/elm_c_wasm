@@ -3,7 +3,9 @@
 #include <string.h>
 
 #include "gc.h"
+#include "maybe.h"
 #include "types.h"
+#include "utils.h"
 
 #define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
 #define IS_HIGH_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
@@ -32,21 +34,21 @@ static void* eval_String_uncons(void* args[]) {
   ElmString16* string = args[0];
   size_t len = code_units(string);
   if (len == 0) {
-    return elm_core_Maybe_Nothing;
+    return &g_elm_core_Maybe_Nothing;
   }
   u16 word = string->words16[0];
   u32 codepoint = (u32)word;
   size_t i = 0;
   if (IS_LOW_SURROGATE(word)) {
     i = 1;
-    codepoint |= (s->words16[1] << 16);
+    codepoint |= (string->words16[1] << 16);
   }
   ElmChar* c = NEW_ELM_CHAR(codepoint);
 
   char* remainder = (char*)(&string->words16[i + 1]);
   ElmString16* s = NEW_ELM_STRING(len - i, remainder);
 
-  return elm_core_Maybe_Just(NEW_TUPLE2(c, s));
+  return A1(&g_elm_core_Maybe_Just, NEW_TUPLE2(c, s));
 }
 Closure String_uncons = {
     .header = HEADER_CLOSURE(0),
@@ -141,16 +143,17 @@ static void* eval_String_toInt(void* args[]) {
   u32 total = 0;
   size_t start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
 
-  for (size_t i = start; i < str.length; ++i) {
+  size_t i;
+  for (i = start; i < len; ++i) {
     u16 code = str->words16[i];
     if (code < 0x30 || 0x39 < code) {
-      return elm_core_Maybe_Nothing;
+      return &g_elm_core_Maybe_Nothing;
     }
     total = 10 * total + code - 0x30;
   }
 
-  return i == start ? elm_core_Maybe_Nothing
-                    : elm_core_Maybe_Just(code0 == 0x2D ? -total : total);
+  return i == start ? &g_elm_core_Maybe_Nothing
+                    : A1(&g_elm_core_Maybe_Just, code0 == 0x2D ? -total : total);
 }
 Closure String_toInt = {
     .header = HEADER_CLOSURE(0),
@@ -173,12 +176,12 @@ static void* eval_String_join(void* args[]) {
     return pGcFull;
   }
   result->header = h;
-  memcpy(result->values, s->words16, result_len * 2);
+  memcpy(result->words16, s->words16, result_len * 2);
 
   u32 sep_len = code_units(sep);
 
   for (strs = strs->tail; strs != &Nil; strs = strs->tail) {
-    u16* to = &result->values[result_len];
+    u16* to = &result->words16[result_len];
     s = strs->head;
     u32 len = code_units(s);
 
@@ -273,7 +276,7 @@ static void* eval_String_slice(void* args[]) {
   size_t len = code_units(str);
 
   size_t n_words = (size_t)(end - start);
-  size_t n_bytes = payload_words * 2;
+  size_t n_bytes = n_words * 2;
   u16* words_to_copy = str->words16[start->value];
 
   return NEW_ELM_STRING(n_bytes, (char*)words_to_copy);
@@ -399,18 +402,6 @@ static void* eval_String_indexes(void* args[]) {
 Closure String_indexes = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_indexes,
-    .max_values = 2,
-};
-
-/**
- * String.startsWith
- */
-static void* eval_String_startsWith(void* args[]) {
-  ElmString16* str = args[1];
-}
-Closure String_startsWith = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &eval_String_startsWith,
     .max_values = 2,
 };
 
