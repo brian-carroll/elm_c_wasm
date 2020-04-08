@@ -115,7 +115,7 @@ static void* fromFloat(ElmFloat* box) {
   size_t n_chars = (size_t)snprintf(dummy, sizeof(dummy), "%g", unboxed);
   ElmString* tmp = NEW_ELM_STRING((n_chars + 1) / 2, NULL);
   ElmString* s = NEW_ELM_STRING(n_chars, NULL);
-  snprintf(tmp->bytes, n_chars, "%g", unboxed);
+  snprintf((char*)tmp->bytes, n_chars, "%g", unboxed);
   u16* utf16 = (u16*)s->bytes;
   for (size_t i = 0; i < n_chars; i++) {
     utf16[i] = (u16)tmp->bytes[i];
@@ -140,7 +140,7 @@ static void* eval_String_toInt(void* args[]) {
   ElmString16* str = args[0];
   size_t len = code_units(str);
   u16 code0 = str->words16[0];
-  u32 total = 0;
+  i32 total = 0;
   size_t start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
 
   size_t i;
@@ -152,8 +152,9 @@ static void* eval_String_toInt(void* args[]) {
     total = 10 * total + code - 0x30;
   }
 
-  return i == start ? &g_elm_core_Maybe_Nothing
-                    : A1(&g_elm_core_Maybe_Just, code0 == 0x2D ? -total : total);
+  return i == start
+             ? &g_elm_core_Maybe_Nothing
+             : A1(&g_elm_core_Maybe_Just, NEW_ELM_INT(code0 == 0x2D ? -total : total));
 }
 Closure String_toInt = {
     .header = HEADER_CLOSURE(0),
@@ -277,7 +278,7 @@ static void* eval_String_slice(void* args[]) {
 
   size_t n_words = (size_t)(end - start);
   size_t n_bytes = n_words * 2;
-  u16* words_to_copy = str->words16[start->value];
+  u16* words_to_copy = &str->words16[start->value];
 
   return NEW_ELM_STRING(n_bytes, (char*)words_to_copy);
 }

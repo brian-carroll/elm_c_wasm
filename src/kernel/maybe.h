@@ -1,0 +1,2 @@
+Custom g_elm_core_Maybe_Nothing;
+Closure g_elm_core_Maybe_Just;

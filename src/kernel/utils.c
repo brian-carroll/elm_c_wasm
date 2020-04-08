@@ -1,6 +1,8 @@
 #include "./utils.h"
+
 #include <assert.h>
 #include <string.h>
+
 #include "./gc.h"
 #include "./list.h"
 #include "./string.h"
@@ -8,6 +10,7 @@
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
+
 #include "./debug.h"
 extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #else
@@ -295,30 +298,6 @@ static void* eval_notEqual(void* args[2]) {
 Closure Utils_notEqual = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_notEqual,
-    .max_values = 2,
-};
-
-/**
- * APPEND
- */
-static void* append_eval(void* args[2]) {
-  Header* h = (Header*)args[0];
-
-  switch (h->tag) {
-    case Tag_String:
-      return String_append_eval(args);
-
-    case Tag_List:
-      return List_append_eval(args);
-
-    default:
-      log_error("Tried to Utils_append non-appendable\n");
-      return args[0];
-  }
-}
-Closure Utils_append = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &append_eval,
     .max_values = 2,
 };
 
