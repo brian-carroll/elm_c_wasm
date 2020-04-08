@@ -1,6 +1,26 @@
 #include "basics.h"
+
 #include <assert.h>
 #include <math.h>
+
+/**
+ * negate
+ * Elm version of Basics_negate ends up being self-referential!
+ * Have to break the cycle using a kernel version
+ */
+static void* eval_negate(void* args[]) {
+  Number* x = args[0];
+  if (x->f.header.tag == Tag_Float) {
+    return NEW_ELM_FLOAT(-x->f.value);
+  } else {
+    return NEW_ELM_INT(-x->i.value);
+  }
+}
+Closure Basics_negate = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_negate,
+    .max_values = 1,
+};
 
 /**
  * add

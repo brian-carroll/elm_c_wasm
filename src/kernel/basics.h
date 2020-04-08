@@ -18,6 +18,8 @@
   , identity, always, (<|), (|>), (<<), (>>), Never, never
 */
 
+Closure Basics_negate;  // is not a kernel function in Elm-JS
+
 Closure Basics_add;
 Closure Basics_sub;
 Closure Basics_mul;
