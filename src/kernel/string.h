@@ -13,5 +13,9 @@ Closure String_length;
 Closure String_slice;
 Closure String_toInt;
 Closure String_uncons;
+Closure String_contains;
+Closure String_indexes;
+Closure String_startsWith;
+Closure String_trim;
 
 #endif

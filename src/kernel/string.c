@@ -1,18 +1,40 @@
 #include <stdio.h>  // sprintf
 #include <stdlib.h>
 #include <string.h>
+
 #include "gc.h"
 #include "types.h"
 
 // local utility function
 #if STRING_ENCODING == UTF16
-static size_t String_codepoints(ElmString* s) {
+static size_t String_codepoints(ElmString16* s) {
   u32 size = s->header.size;
   u32 size16 = size * SIZE_UNIT / 2;
   u16* words16 = (u16*)s;
   u16 last = words16[size16 - 1];
   size_t len16 = last ? (size16 - 2) : (size16 - 3);
   return len16;
+}
+
+static size_t indexOf(ElmString16* sub, ElmString16* str) {
+  size_t lstr = String_codepoints(str);
+  size_t lsub = String_codepoints(sub);
+
+  if (lsub == 0) return 0;
+
+  u16 c0 = sub->words16[0];
+  for (size_t istr = 0; istr < lstr; istr++) {
+    if (str->words16[istr] == c0) {
+      size_t isub = 1;
+      while (isub < lsub && sub->words16[isub] == str->words16[istr]) {
+        isub++;
+      }
+      if (isub == lsub) {
+        return istr;
+      }
+    }
+  }
+  return -1;
 }
 
 #define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
@@ -315,3 +337,113 @@ Closure String_all = {
     .evaluator = &eval_String_all,
     .max_values = 2,
 };
+
+/**
+ * String.contains
+ */
+static void* eval_String_contains(void* args[]) {
+  ElmString16* sub = args[0];
+  ElmString16* str = args[1];
+  return indexOf(sub, str) == -1 ? &False : &True;
+}
+Closure String_contains = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_contains,
+    .max_values = 2,
+};
+
+/**
+ * String.indexes
+ */
+static void* eval_String_indexes(void* args[]) {
+  ElmString16* sub = args[0];
+  ElmString16* str = args[1];
+
+  size_t sub_len = String_codepoints(sub);
+  size_t str_len = String_codepoints(str);
+
+  Cons* result = &Nil;
+
+  // iterate over substring occurrences
+  for (size_t str_idx = str_len - 1; str_idx > 0; --str_idx) {
+    size_t substr_end_idx = str_idx;
+    size_t substr_start_idx;
+
+    // search for next substring
+    while (1) {
+      if (str_idx == 0) {
+        substr_start_idx = 0;
+      } else {
+        size_t sub_idx = sub_len - 1;
+
+        // match last codepoint of sub
+        if (str->words16[str_idx] != sub->words16[sub_idx]) {
+          str_idx--;
+          continue;
+        }
+
+        // match as many other codepoints as possible
+        size_t match_idx = str_idx;
+        while (sub_idx && match_idx && str->words16[match_idx] == sub->words16[sub_idx]) {
+          sub_idx--;
+          match_idx--;
+        };
+
+        if (sub_idx != 0) {
+          // not a full match. resume searching from next codepoint
+          str_idx--;
+          continue;
+        }
+      }
+
+      result = NEW_CONS(NEW_ELM_INT((i32)str_idx), result);
+      break;  // to outer loop (over substrings)
+    };
+  }
+
+  return result;
+}
+Closure String_indexes = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_indexes,
+    .max_values = 2,
+};
+
+/**
+ * String.startsWith
+ */
+static void* eval_String_startsWith(void* args[]) {
+  ElmString16* str = args[1];
+}
+Closure String_startsWith = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_startsWith,
+    .max_values = 2,
+};
+
+/**
+ * String.trim
+ */
+static void* eval_String_trim(void* args[]) {
+  ElmString16* str = args[1];
+}
+Closure String_trim = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_trim,
+    .max_values = 1,
+};
+/*
+
+var _String_startsWith = F2(function(sub, str)
+{
+        return str.indexOf(sub) === 0;
+});
+
+var _String_endsWith = F2(function(sub, str)
+{
+        return str.length >= sub.length &&
+                str.lastIndexOf(sub) === str.length - sub.length;
+});
+
+
+*/
