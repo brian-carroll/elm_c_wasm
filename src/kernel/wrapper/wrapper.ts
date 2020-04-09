@@ -63,7 +63,7 @@ function wrapWasmElmApp(
   const mem32 = new Uint32Array(wasmBuffer);
   const mem16 = new Uint16Array(wasmBuffer);
 
-  const wasmConstAddrs = (function() {
+  const wasmConstAddrs = (function () {
     const Unit = wasmExports._getUnit();
     const Nil = wasmExports._getNil();
     const True = wasmExports._getTrue();
@@ -100,16 +100,19 @@ function wrapWasmElmApp(
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
-    fieldGroups: generatedAppTypes.fieldGroups.reduce((enumObj, name) => {
-      const addr = wasmExports._getNextFieldGroup();
-      enumObj[name] = addr;
-      enumObj[addr] = name;
-      return enumObj;
-    }, {})
+    fieldGroups: generatedAppTypes.fieldGroups.reduce(
+      (enumObj: NameToInt & IntToName, name) => {
+        const addr = wasmExports._getNextFieldGroup();
+        enumObj[name] = addr;
+        enumObj[addr] = name;
+        return enumObj;
+      },
+      {}
+    )
   };
 
   function arrayToEnum(names: string[]): NameToInt & IntToName {
-    return names.reduce((enumObj, name, index) => {
+    return names.reduce((enumObj: NameToInt & IntToName, name, index) => {
       enumObj[name] = index;
       enumObj[index] = name;
       return enumObj;
@@ -361,6 +364,9 @@ function wrapWasmElmApp(
    * May throw an error
    */
   function writeWasmValue(nextIndex: number, value: any): WriteResult {
+    if (value == null) {
+      return { addr: 0, nextIndex };
+    }
     const typeInfo: TypeInfo = detectElmType(value);
     if (typeInfo.kind === 'constAddr') {
       return { addr: typeInfo.value, nextIndex };
@@ -369,16 +375,6 @@ function wrapWasmElmApp(
     const builder: WasmBuilder = wasmBuilder(tag, value);
     return writeFromBuilder(nextIndex, builder, tag);
   }
-
-  type TypeInfo =
-    | {
-        kind: 'tag';
-        value: Tag;
-      }
-    | {
-        kind: 'constAddr';
-        value: number;
-      };
 
   // Info needed to build any Elm Wasm value
   // The shape is always the same, which helps JS engines to optimise
@@ -392,6 +388,16 @@ function wrapWasmElmApp(
         body: number[];
         jsChildren: any[];
         bodyWriter: null;
+      };
+
+  type TypeInfo =
+    | {
+        kind: 'tag';
+        value: Tag;
+      }
+    | {
+        kind: 'constAddr';
+        value: number;
       };
 
   function detectElmType(elmValue: any): TypeInfo {
@@ -520,16 +526,11 @@ function wrapWasmElmApp(
         };
       }
       case Tag.Closure: {
-        // The only Closures that get written back (so far) are Wasm constructor functions.
-        // They get passed to Task.map (Wasm) to wrap a value from JS runtime in a Msg constructor,
-        // in preparation for a call to `update`
-        // If attaching properties to JS functions causes de-optimisation in JS engines,
-        // it might actually be worth implementing Task.map and Cmd.map in JS rather than Wasm.
-        // (This code will break if JS tries to partially apply an arg before writing to Wasm!
-        // That would require custom F2, F3... But I don't think it happens. Wait for a use case.)
-        const freeVars = value.freeVars;
-        const max_values = value.max_values;
-        const evaluator = value.evaluator;
+        // Closures that get written back include Wasm Msg constructor functions.
+        const fun = value.f || value;
+        const freeVars = fun.freeVars;
+        const max_values = fun.max_values;
+        const evaluator = fun.evaluator;
         if (!evaluator) {
           console.error(value);
           throw new Error(
