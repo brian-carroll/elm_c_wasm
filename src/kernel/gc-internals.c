@@ -257,7 +257,9 @@ void mark(GcState* state, size_t* ignore_below) {
   bitmap_reset(&state->heap);
 
   // Mark values freshly allocated in still-running function calls
-  mark_stack_map(state, ignore_below);
+  if (state->stack_depth > 0) {
+    mark_stack_map(state, ignore_below);
+  }
 
   // Mark GC roots (mutable values in Elm effect managers, including the program's
   // `model`)
