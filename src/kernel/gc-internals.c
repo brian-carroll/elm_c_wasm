@@ -488,6 +488,11 @@ void compact(GcState* state, size_t* compact_start) {
     state->stack_map_empty = (GcStackMap*)forwarding_address(heap, stack_map_empty);
   }
 
+  size_t* roots = (size_t*)state->roots;
+  if (roots > first_move_to) {
+    state->roots = (Cons*)forwarding_address(heap, roots);
+  }
+
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {
     size_t** root_mutable_pointer = root_cell->head;
     size_t* live_heap_value = *root_mutable_pointer;
