@@ -11,8 +11,9 @@ names. Doesn't really matter if they're functions or values.
 In fact code gen currently has to make up names for the values.
 It's a bit more straightforward and saves a couple of instructions.
 */
+#include "../types.h"
 
-void Wrapper_registerMains(void** mainsArrayFromApp[]);
-void Wrapper_registerFieldGroups(FieldGroup** fgArrayFromApp);
+extern FieldGroup* Wrapper_appFieldGroups[];
+extern void** Wrapper_mainsArray[];
 
 #endif

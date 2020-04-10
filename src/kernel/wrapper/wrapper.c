@@ -9,23 +9,9 @@
 #include "../gc.h"
 #include "../types.h"
 #include "../utils.h"
+#include "./wrapper.h"
 
 extern GcState gc_state;
-
-FieldGroup** appFieldGroups;
-void*** mainsArray;
-
-/*
-    API exposed to C app
-*/
-
-void Wrapper_registerMains(void** mainsArrayFromApp[]) {
-  mainsArray = mainsArrayFromApp;
-}
-
-void Wrapper_registerFieldGroups(FieldGroup** fgArrayFromApp) {
-  appFieldGroups = fgArrayFromApp;
-}
 
 /*
   API exposed to JS side of wrapper
@@ -33,17 +19,20 @@ void Wrapper_registerFieldGroups(FieldGroup** fgArrayFromApp) {
 
 size_t mainsIndex = 0;
 size_t EMSCRIPTEN_KEEPALIVE getNextMain() {
-  assert(mainsArray != NULL);
-  void** mainGcRoot = mainsArray[mainsIndex];
-  if (mainGcRoot != NULL) mainsIndex++;
+  assert(Wrapper_mainsArray != NULL);
+  void** mainGcRoot = Wrapper_mainsArray[mainsIndex];
+  if (mainGcRoot == NULL) {
+    return 0;
+  }
+  mainsIndex++;
   void* heapVal = *mainGcRoot;
   return (size_t)heapVal;
 };
 
 size_t fgIndex = 0;
 size_t EMSCRIPTEN_KEEPALIVE getNextFieldGroup() {
-  assert(appFieldGroups != NULL);
-  FieldGroup* fg = appFieldGroups[fgIndex];
+  assert(Wrapper_appFieldGroups != NULL);
+  FieldGroup* fg = Wrapper_appFieldGroups[fgIndex];
   if (fg != NULL) fgIndex++;
   return (size_t)fg;
 }
