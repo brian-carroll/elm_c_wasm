@@ -4,11 +4,11 @@
 #else
 #define EMSCRIPTEN_KEEPALIVE
 #endif
-#include "./debug.h"
-#include "./gc-internals.h"
-#include "./gc.h"
-#include "./types.h"
-#include "./utils.h"
+#include "../debug.h"
+#include "../gc-internals.h"
+#include "../gc.h"
+#include "../types.h"
+#include "../utils.h"
 
 extern GcState gc_state;
 
