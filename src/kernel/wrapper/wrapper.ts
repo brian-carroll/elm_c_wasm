@@ -361,9 +361,6 @@ function wrapWasmElmApp(
    * May throw an error
    */
   function writeWasmValue(nextIndex: number, value: any): WriteResult {
-    if (value == null) {
-      return { addr: 0, nextIndex };
-    }
     const typeInfo: TypeInfo = detectElmType(value);
     if (typeInfo.kind === 'constAddr') {
       return { addr: typeInfo.value, nextIndex };
@@ -398,6 +395,9 @@ function wrapWasmElmApp(
       };
 
   function detectElmType(elmValue: any): TypeInfo {
+    if (elmValue === null || elmValue === undefined) {
+      return { kind: 'constAddr', value: wasmConstAddrs.Unit };
+    }
     switch (typeof elmValue) {
       case 'number': {
         // There's no way to tell `1 : Int` from `1.0 : Float` at this low level. But `1.2` is definitely a Float.
