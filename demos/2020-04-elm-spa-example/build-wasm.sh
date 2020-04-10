@@ -6,8 +6,8 @@ extra_opt=""
 # extra_opt="$extra_opt -DDEBUG_LOG"
 extra_opt="$extra_opt -O3"
 
-# extra_opt="$extra_opt -g4"
-# extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/wrapper/"
+extra_opt="$extra_opt -g4"
+extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/2020-04-elm-spa-example/"
 
 FIND='"kernel.h"'
 REPLACE='"../../../../src/kernel/kernel.h"'
@@ -28,6 +28,7 @@ emcc build/emscripten/$FILENAME.c \
   -o build/emscripten/$FILENAME.js \
   -Wno-incompatible-pointer-types \
   -s MODULARIZE_INSTANCE=1 \
+  -s ASSERTIONS=1 \
   -s EXPORT_NAME='EmscriptenModule' \
   -s EXPORTED_FUNCTIONS="$(cat ./exported-functions.json)" \
   -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
