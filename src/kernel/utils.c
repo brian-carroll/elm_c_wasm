@@ -23,9 +23,11 @@ void Utils_initGlobal(void** global, void* (*init_func)()) {
     void* val = init_func();
     if (val != pGcFull) {
       *global = val;
+      GC_stack_empty();
       return;
     }
     GC_collect_full();
+    GC_start_replay();
   }
 }
 

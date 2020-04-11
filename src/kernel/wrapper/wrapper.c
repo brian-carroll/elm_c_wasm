@@ -72,6 +72,7 @@ size_t EMSCRIPTEN_KEEPALIVE evalClosure(size_t addr) {
   for (size_t attempts = 0; attempts < 1000; attempts++) {
     void* result = Utils_apply((Closure*)addr, 0, NULL);  // addr ignored on replay
     if (result != pGcFull) {
+      GC_stack_empty();
       return (size_t)result;
     }
     GC_collect_full();
