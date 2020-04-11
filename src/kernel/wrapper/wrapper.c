@@ -84,7 +84,9 @@ void EMSCRIPTEN_KEEPALIVE collectGarbage() {
   GC_collect_full();
 }
 
+extern GcState gc_state;
 void EMSCRIPTEN_KEEPALIVE debugHeapState() {
+  mark(&gc_state, gc_state.heap.start);
   print_heap();
   print_state();
 }
