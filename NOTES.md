@@ -1,3 +1,53 @@
+# JS arrays passed into Wasm!
+Some core packages are using their own weird JS data structures
+that contain arrays. `Json` is one of them.
+It's probably best to leave JSON decoding in JS.
+  - It can handle non-serialisable objects
+  - It handles JS edge cases like NaN, Int vs Float ranges, etc.
+  - There's a lot of code. The C version would be buggy!
+How to model JS arrays using what we have already?
+
+Feck, they also have numeric $ constructors
+$: 13
+encode as -14 => Uint32Array 4294967282
+read back 4294967282, this should go into the ctors enum object
+{
+  4294967282: 13,
+}
+
+Don't really need the 13 as a key
+
+- `Record`
+  - This is how the wrapper currently treats them, with 0 fieldgroup (coerced into the ArrayBuffer from `undefined`.)
+  - Special case:
+    - Reading. Detect NULL pointer in FG and decode to array instead of object
+    - Writing: no special case
+  - Downside:
+    - we have NULL pointer in C. Shouldn't matter because no code should touch it. But I have _some_ out of bounds issue somewhere and I can't eliminate this if it's still hanging around.
+
+- `Custom`
+  - Naturally looks like an array
+  - Special cases:
+    - Writing: type detection & Custom writer
+    - Add CTOR_JS_ARRAY to ctors
+    - Custom reader: detect CTOR_JS_ARRAY, make an array.
+  - Upsides:
+    - ctor field is a number, not a pointer
+    - easiest mental model
+
+- `Closure`
+  - Suspended call to the "kernel" JS function, the Array constructor.
+  - Special cases:
+    - Writing: Detect type, make it look like a wasmCallback
+    - Reading: no special case
+  - Upsides:
+    - Puts it in the Kernel section where it makes sense to be!
+    - Marked NEVER_EVALUATE, which is nice
+  - Downsides:
+    - A bit too clever
+    - Array constructor function needs to be curried, but also needs to be of arbitrary length... agh, need a few of them
+
+
 # Elm code layer within the core?
 
 Problem:

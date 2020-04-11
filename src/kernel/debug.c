@@ -72,13 +72,15 @@ void print_value(ElmValue* v) {
         printf("%p ", v->custom.values[i]);
       }
       break;
-    case Tag_Record:
+    case Tag_Record: {
       printf("Record fieldgroup: %p values: ", v->record.fieldgroup);
-      for (size_t i = 0; i < v->record.fieldgroup->size; ++i) {
+      size_t header_kids = (size_t)(v->header.size) - (sizeof(Record) / sizeof(void*));
+      for (size_t i = 0; i < header_kids; ++i) {
         printf("%p ", v->record.values[i]);
       }
       break;
-    case Tag_Closure:
+    }
+    case Tag_Closure: {
       printf("Closure (%p) n_values: %d max_values: %d values: ",
           v->closure.evaluator,
           v->closure.n_values,
@@ -88,6 +90,7 @@ void print_value(ElmValue* v) {
         printf("%p ", v->closure.values[i]);
       }
       break;
+    }
     case Tag_GcException:
       printf("GcException");
       break;

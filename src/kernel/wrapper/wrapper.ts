@@ -5,6 +5,7 @@
  */
 interface ElmWasmExports {
   _getNextMain: () => number;
+  _getJsNull: () => number;
   _getUnit: () => number;
   _getNil: () => number;
   _getTrue: () => number;
@@ -68,15 +69,18 @@ function wrapWasmElmApp(
     const Nil = wasmExports._getNil();
     const True = wasmExports._getTrue();
     const False = wasmExports._getFalse();
+    const JsNull = wasmExports._getJsNull();
     return {
       Unit,
       Nil,
       True,
       False,
+      JsNull,
       [Unit]: _Utils_Tuple0,
       [Nil]: _List_Nil,
       [True]: true,
-      [False]: false
+      [False]: false,
+      [JsNull]: null
     };
   })();
 
@@ -128,6 +132,7 @@ function wrapWasmElmApp(
   const SIZE_MASK = 0x0fffffff;
   const SIZE_SHIFT = 0;
   const NEVER_EVALUATE = 0xffff;
+  const KERNEL_CTOR_OFFSET = 1024 * 1000;
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
@@ -166,6 +171,7 @@ function wrapWasmElmApp(
   }
 
   function readWasmValue(addr: number): any {
+    if (!addr) return null;
     const index = addr >> 2;
     const header = mem32[index];
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
@@ -209,27 +215,42 @@ function wrapWasmElmApp(
         );
       }
       case Tag.Custom: {
-        const elmConst = wasmConstAddrs[addr]; // True/False/Unit
+        const elmConst = wasmConstAddrs[addr]; // True/False/Unit/JsNull
         if (elmConst !== undefined) return elmConst;
         const nFields = size - 2;
         const wasmCtor = mem32[index + 1];
-        const jsCtor = appTypes.ctors[wasmCtor];
-        if (jsCtor === CTOR_KERNEL_ARRAY) {
-          const kernelArray: any[] = [];
-          mem32.slice(index + 2, index + nFields).forEach(childAddr => {
-            kernelArray.push(readWasmValue(childAddr));
-          });
-          return kernelArray;
-        } else {
-          const custom: Record<string, any> = { $: jsCtor };
-          const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
-          for (let i = 0; i < nFields; i++) {
+
+        if (wasmCtor >= KERNEL_CTOR_OFFSET) {
+          const custom: Record<string, any> = {
+            $: wasmCtor - KERNEL_CTOR_OFFSET
+          };
+          const fieldNames = readWasmValue(mem32[index + 2]).split(' ');
+          for (let i = 1; i < nFields; i++) {
             const field = fieldNames[i];
             const childAddr = mem32[index + 2 + i];
             custom[field] = readWasmValue(childAddr);
           }
           return custom;
         }
+
+        const jsCtor: string = appTypes.ctors[wasmCtor];
+
+        if (jsCtor === CTOR_KERNEL_ARRAY) {
+          const kernelArray: any[] = [];
+          mem32.slice(index + 2, index + nFields).forEach(childAddr => {
+            kernelArray.push(readWasmValue(childAddr));
+          });
+          return kernelArray;
+        }
+
+        const custom: Record<string, any> = { $: jsCtor };
+        const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
+        for (let i = 0; i < nFields; i++) {
+          const field = fieldNames[i];
+          const childAddr = mem32[index + 2 + i];
+          custom[field] = readWasmValue(childAddr);
+        }
+        return custom;
       }
       case Tag.Record: {
         const record: Record<string, any> = {};
@@ -419,7 +440,7 @@ function wrapWasmElmApp(
 
   function detectElmType(elmValue: any): TypeInfo {
     if (elmValue === null || elmValue === undefined) {
-      return { kind: 'constAddr', value: wasmConstAddrs.Unit };
+      return { kind: 'constAddr', value: wasmConstAddrs.JsNull };
     }
     switch (typeof elmValue) {
       case 'number': {
@@ -523,13 +544,21 @@ function wrapWasmElmApp(
           bodyWriter: null
         };
       case Tag.Custom: {
-        const jsCtor: string = value.$;
+        const jsCtor: string | number = value.$;
+        let body: number[];
         const jsChildren: any[] = [];
-        Object.keys(value).forEach(k => {
+        const keys = Object.keys(value);
+        if (typeof jsCtor === 'number') {
+          body = [KERNEL_CTOR_OFFSET + jsCtor];
+          jsChildren.push(keys.join(' '));
+        } else {
+          body = [appTypes.ctors[jsCtor]];
+        }
+        keys.forEach(k => {
           if (k !== '$') jsChildren.push(value[k]);
         });
         return {
-          body: [appTypes.ctors[jsCtor]],
+          body,
           jsChildren,
           bodyWriter: null
         };

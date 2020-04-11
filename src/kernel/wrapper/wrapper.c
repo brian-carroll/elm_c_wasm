@@ -49,6 +49,14 @@ size_t EMSCRIPTEN_KEEPALIVE getTrue() {
 size_t EMSCRIPTEN_KEEPALIVE getFalse() {
   return (size_t)&False;
 }
+Custom JsNull = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = 0,
+};
+size_t EMSCRIPTEN_KEEPALIVE getJsNull() {
+  return (size_t)&JsNull;
+}
+
 size_t EMSCRIPTEN_KEEPALIVE getMaxWriteAddr() {
   return (size_t)gc_state.heap.end;
 }
