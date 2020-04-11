@@ -97,6 +97,9 @@ function wrapWasmElmApp(
     fieldGroups: NameToInt & IntToName;
   }
 
+  const CTOR_KERNEL_ARRAY = 'CTOR_KERNEL_ARRAY';
+  generatedAppTypes.ctors.push(CTOR_KERNEL_ARRAY);
+
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
@@ -208,17 +211,25 @@ function wrapWasmElmApp(
       case Tag.Custom: {
         const elmConst = wasmConstAddrs[addr]; // True/False/Unit
         if (elmConst !== undefined) return elmConst;
+        const nFields = size - 2;
         const wasmCtor = mem32[index + 1];
         const jsCtor = appTypes.ctors[wasmCtor];
-        const custom: Record<string, any> = { $: jsCtor };
-        const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
-        const nFields = size - 2;
-        for (let i = 0; i < nFields; i++) {
-          const field = fieldNames[i];
-          const childAddr = mem32[index + 2 + i];
-          custom[field] = readWasmValue(childAddr);
+        if (jsCtor === CTOR_KERNEL_ARRAY) {
+          const kernelArray: any[] = [];
+          mem32.slice(index + 2, index + nFields).forEach(childAddr => {
+            kernelArray.push(readWasmValue(childAddr));
+          });
+          return kernelArray;
+        } else {
+          const custom: Record<string, any> = { $: jsCtor };
+          const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
+          for (let i = 0; i < nFields; i++) {
+            const field = fieldNames[i];
+            const childAddr = mem32[index + 2 + i];
+            custom[field] = readWasmValue(childAddr);
+          }
+          return custom;
         }
-        return custom;
       }
       case Tag.Record: {
         const record: Record<string, any> = {};
@@ -362,12 +373,21 @@ function wrapWasmElmApp(
    */
   function writeWasmValue(nextIndex: number, value: any): WriteResult {
     const typeInfo: TypeInfo = detectElmType(value);
-    if (typeInfo.kind === 'constAddr') {
-      return { addr: typeInfo.value, nextIndex };
+    switch (typeInfo.kind) {
+      case 'constAddr':
+        return { addr: typeInfo.value, nextIndex };
+      case 'tag': {
+        const tag: Tag = typeInfo.value;
+        const builder: WasmBuilder = wasmBuilder(tag, value);
+        return writeFromBuilder(nextIndex, builder, tag);
+      }
+      case 'kernelArray': {
+        const customObj = value.slice();
+        customObj.$ = CTOR_KERNEL_ARRAY;
+        const builder: WasmBuilder = wasmBuilder(Tag.Custom, customObj);
+        return writeFromBuilder(nextIndex, builder, Tag.Closure);
+      }
     }
-    const tag: Tag = typeInfo.value;
-    const builder: WasmBuilder = wasmBuilder(tag, value);
-    return writeFromBuilder(nextIndex, builder, tag);
   }
 
   // Info needed to build any Elm Wasm value
@@ -392,6 +412,9 @@ function wrapWasmElmApp(
     | {
         kind: 'constAddr';
         value: number;
+      }
+    | {
+        kind: 'kernelArray';
       };
 
   function detectElmType(elmValue: any): TypeInfo {
@@ -425,6 +448,9 @@ function wrapWasmElmApp(
       case 'object': {
         if (elmValue instanceof String) {
           return { kind: 'tag', value: Tag.Char };
+        }
+        if (Array.isArray(elmValue)) {
+          return { kind: 'kernelArray' };
         }
         switch (elmValue.$) {
           case undefined:
