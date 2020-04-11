@@ -73,7 +73,7 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
       // printf("export_count: GC point 2, call=%d, gc=%d\n", export_count_call_id,
       // ++gc_id);
       GC_collect_full();
-      GC_start_replay();
+      GC_prep_replay();
       continue;
     }
     result = Utils_apply(&count, 1, args);
@@ -84,7 +84,7 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
     //   log_error("Too many gc cycles\n");
     // }
     GC_collect_full();
-    GC_start_replay();
+    GC_prep_replay();
   }
   return (int)result->header.tag;  // makes no sense but it's the right type
 }
@@ -129,7 +129,7 @@ int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
       // printf("export_count_no_tce: GC point 1, call=%d, gc=%d\n",
       //        export_count_no_tce_call_id, ++gc_id);
       GC_collect_full();
-      GC_start_replay();
+      GC_prep_replay();
       continue;
     }
     result = Utils_apply(&count_no_tce, 1, (void* []){remaining});
@@ -138,7 +138,7 @@ int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
     //     export_count_no_tce_call_id,
     //     ++gc_id);
     GC_collect_full();
-    GC_start_replay();
+    GC_prep_replay();
   }
   return (int)result->header.tag;  // makes no sense but it's the right type
 }
@@ -160,7 +160,7 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
     if (boxA == pGcFull || boxB == pGcFull || result == pGcFull) {
       // printf("export_add: GC\n");
       GC_collect_full();
-      GC_start_replay();
+      GC_prep_replay();
     } else {
       // print_state();
       // printf("stack_map->older = %p\n", gc_state.stack_map->older);

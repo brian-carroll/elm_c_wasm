@@ -76,7 +76,7 @@ size_t EMSCRIPTEN_KEEPALIVE evalClosure(size_t addr) {
       return (size_t)result;
     }
     GC_collect_full();
-    GC_start_replay();
+    GC_prep_replay();
   }
   assert(0);
 }

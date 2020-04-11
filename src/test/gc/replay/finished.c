@@ -68,7 +68,7 @@ char* test_replay_finished() {
 
   // GC + REPLAY
   GC_collect_full();
-  GC_start_replay();
+  GC_prep_replay();
   void* result2 = Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
   mu_assert("Replay return value",
       memcmp(result2, &expected_result, expected_result.header.size * SIZE_UNIT) == 0);

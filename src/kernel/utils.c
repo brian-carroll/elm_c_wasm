@@ -27,7 +27,7 @@ void Utils_initGlobal(void** global, void* (*init_func)()) {
       return;
     }
     GC_collect_full();
-    GC_start_replay();
+    GC_prep_replay();
   }
 }
 

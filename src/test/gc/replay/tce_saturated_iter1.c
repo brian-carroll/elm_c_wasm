@@ -67,7 +67,7 @@ char* test_replay_tce_saturated_iter1() {
 
   // GC + REPLAY
   GC_collect_full();
-  GC_start_replay();
+  GC_prep_replay();
   Utils_apply(&mock_func_tail, 2, (void* []){&zero, NULL});
 
   // HEAP AFTER GC

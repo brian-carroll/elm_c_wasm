@@ -56,7 +56,7 @@ char* test_replay_apply_alloc_failed() {
   mu_assert("Function call should throw", result == pGcFull);
 
   GC_collect_full();
-  GC_start_replay();
+  GC_prep_replay();
   Utils_apply(&generateGarbage, 1, (void* []){&spaceToLeave});
   Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
 

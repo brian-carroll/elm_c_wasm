@@ -48,7 +48,7 @@ char* test_replay_saturated() {
 
   // GC + REPLAY
   GC_collect_full();
-  GC_start_replay();
+  GC_prep_replay();
   Utils_apply(&mock_func, 2, (void* []){NULL, NULL});
 
   // HEAP AFTER GC

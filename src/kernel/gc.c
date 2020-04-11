@@ -696,7 +696,7 @@ void GC_collect_nursery() {
   collect(&gc_state, gc_state.nursery);
 }
 
-void GC_start_replay() {
+void GC_prep_replay() {
   GcState* state = &gc_state;
   reverse_stack_map(state);
   size_t* first_allocated = (size_t*)(state->stack_map_empty + 1);

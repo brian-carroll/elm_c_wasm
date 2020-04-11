@@ -19,7 +19,7 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**),
     void* (*eval)(void* []),
     u32 n_args,
     void* args[]);
-void GC_start_replay();
+void GC_prep_replay();
 void* GC_apply_replay();  // called from Utils_apply
 
 void GC_collect_full();
