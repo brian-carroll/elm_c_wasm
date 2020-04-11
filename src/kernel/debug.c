@@ -1,8 +1,10 @@
 #include "./debug.h"
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "./gc-internals.h"
 #include "./types.h"
 #ifdef __EMSCRIPTEN__
@@ -180,23 +182,34 @@ void print_bitmap() {
 void print_state() {
   GcState* state = &gc_state;
 
-  size_t heap_bytes = (void*)(state->heap.end) - (void*)(state->heap.start);
-  size_t heap_kb = heap_bytes / 1024;
+  size_t start = (size_t)state->heap.start;
+  size_t end = (size_t)state->heap.end;
+  size_t system_end = (size_t)state->heap.system_end;
+  size_t next_alloc = (size_t)state->next_alloc;
+  size_t nursery = (size_t)state->nursery;
+  size_t stack_map_empty = (size_t)state->stack_map_empty;
 
-  printf("start = %p\n", state->heap.start);
-  printf("end = %p (%zd bytes / %zd kB)\n", state->heap.end, heap_bytes, heap_kb);
-  printf("offsets = %p\n", state->heap.offsets);
-  printf("bitmap = %p\n", state->heap.bitmap);
-  printf("system_end = %p\n", state->heap.system_end);
-  printf("next_alloc = %p\n", state->next_alloc);
-  printf("roots = %p\n", state->roots);
-  printf("stack_map = %p\n", state->stack_map);
-  printf("stack_depth = %zd\n", state->stack_depth);
-  printf("stack_map_empty = %p\n", state->stack_map_empty);
-  printf("nursery = %p\n", state->nursery);
-  printf("replay_ptr = %p\n", state->replay_ptr);
+  size_t total = (system_end - start + 512) / 1024;
+  size_t available = (end - start + 512) / 1024;
+  size_t used = (next_alloc - start + 512) / 1024;
+  size_t stack = (next_alloc - stack_map_empty + 512) / 1024;
+  size_t since_gc = (next_alloc - nursery + 512) / 1024;
 
-  print_bitmap();
+  printf("start %p\n", state->heap.start);
+  printf("system_end %p      (%zd kB total heap)\n", state->heap.system_end, total);
+  printf("end %p             (%zd kB app heap)\n", state->heap.end, available);
+  printf("next_alloc %p      (%zd kB used)\n", state->next_alloc, used);
+  printf("stack_map_empty %p (%zd kB current call)\n", state->stack_map_empty, stack);
+  printf("nursery %p         (%zd kB since last GC)\n", state->nursery, since_gc);
+  printf("\n");
+  printf("offsets %p\n", state->heap.offsets);
+  printf("bitmap %p\n", state->heap.bitmap);
+  printf("roots %p\n", state->roots);
+  printf("stack_map %p\n", state->stack_map);
+  printf("stack_depth %zd\n", state->stack_depth);
+  printf("replay_ptr %p\n", state->replay_ptr);
+
+  // print_bitmap();
 }
 
 void log_error(char* fmt, ...) {
