@@ -17,12 +17,21 @@ extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #define log_error(...)
 #endif
 
-void Utils_initGlobal(void** global, void* (*init_func)()) {
-  GC_register_root(global);
+/**
+ * Initialise a global value by evaluating an Elm expression
+ *
+ * global_permanent_ptr:  location of a pointer outside the heap
+ *           that always points to the current heap location.
+ *           GC will update this as it moves the value around.
+ * init_func:   a function that evaluates the Elm expression
+ *           to initialise the global value
+ */
+void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
+  GC_register_root(global_permanent_ptr);
   for (;;) {
-    void* val = init_func();
-    if (val != pGcFull) {
-      *global = val;
+    void* heap_value = init_func();
+    if (heap_value != pGcFull) {
+      *global_permanent_ptr = heap_value;
       GC_stack_empty();
       return;
     }
