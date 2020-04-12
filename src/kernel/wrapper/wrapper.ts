@@ -547,16 +547,15 @@ function wrapWasmElmApp(
         const jsCtor: string | number = value.$;
         let body: number[];
         const jsChildren: any[] = [];
-        const keys = Object.keys(value);
+        const keys = Object.keys(value).filter(k => k !== '$');
         if (typeof jsCtor === 'number') {
           body = [KERNEL_CTOR_OFFSET + jsCtor];
-          jsChildren.push(keys.join(' '));
+          const keyString: string = keys.join(' ');
+          jsChildren.push(keyString);
         } else {
           body = [appTypes.ctors[jsCtor]];
         }
-        keys.forEach(k => {
-          if (k !== '$') jsChildren.push(value[k]);
-        });
+        keys.forEach(k => jsChildren.push(value[k]));
         return {
           body,
           jsChildren,
