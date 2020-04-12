@@ -1,13 +1,8 @@
-#include "../kernel/string.h"
-
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/debug.h"
-#include "../kernel/gc.h"
-#include "../kernel/types.h"
-#include "../kernel/utils.h"
+#include "../kernel/kernel.h"
 #include "./test.h"
 
 // ---------------------------------------------------------
@@ -50,12 +45,21 @@ void* expect_string(char* expected_c_str, ElmString16* actual) {
   ElmString16* expected = create_string(expected_c_str);
   bool ok = A2(&Utils_equal, actual, expected) == &True;
   if (!ok) {
-    FILE* f = stderr;
-    fprintf(f, "%s: Expected \"%s\" but got \"", test_description, expected_c_str);
-    print_elm_string(f, actual);
-    fprintf(f, "\"\n");
+    if (!verbose) {
+      printf("\n%s\n", test_description);
+    }
+    printf("\n");
+    printf("Expected \"%s\"\n", expected_c_str);
+    print_value_full(expected);
+    printf("\n");
+    printf(" but got \"");
+    print_elm_string(stdout, actual);
+    printf("\"\n");
+    print_value_full(actual);
+    printf("\n");
+    tests_failed++;
   } else if (verbose) {
-    printf("OK: \"%s\"\n", expected_c_str);
+    printf("  OK: \"%s\"\n", expected_c_str);
   }
   assertions_made++;
   return NULL;
@@ -64,6 +68,25 @@ void* expect_string(char* expected_c_str, ElmString16* actual) {
 // ---------------------------------------------------------
 //          STRING TESTS
 // ---------------------------------------------------------
+
+char mu_message[1024];
+
+void* test_code_units() {
+  mu_assert("Expect code_units=0 for \"\"", code_units(NEW_ELM_STRING16(0)) == 0);
+  mu_assert("Expect code_units=1 for \"1\"", code_units(create_string("1")) == 1);
+
+  char buf[21];
+  for (size_t i = 2; i <= 20; i++) {
+    size_t j = 0;
+    for (; j < i; j++) {
+      buf[j] = '.';
+    }
+    buf[j] = 0;
+    sprintf(mu_message, "Expect code_units=%zu for \"%s\"", i, buf);
+    mu_assert(mu_message, code_units(create_string(buf)) == i);
+  }
+  return NULL;
+}
 
 void* test_String_append() {
   ElmString16* hello = create_string("hello");
@@ -75,8 +98,23 @@ void* test_String_append() {
 void* test_String_fromNumber() {
   expect_string("2147483647", A1(&String_fromNumber, NEW_ELM_INT(2147483647)));
   expect_string("-2147483648", A1(&String_fromNumber, NEW_ELM_INT(-2147483648)));
-  expect_string("-3.141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3.141592653589793)));
-  expect_string("-3141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3141592653589793)));
+  expect_string(
+      "-3.141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3.141592653589793)));
+  expect_string(
+      "-3141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3141592653589793)));
+  return NULL;
+}
+
+void* test_String_join() {
+  expect_string("home/steve/Desktop",
+      A2(&String_join,
+          create_string("/"),
+          List_create(3,
+              (void*[]){
+                  create_string("home"),
+                  create_string("steve"),
+                  create_string("Desktop"),
+              })));
   return NULL;
 }
 
@@ -89,23 +127,18 @@ char* string_test() {
     printf("------\n");
   }
 
+  mu_run_test(test_code_units);
   describe("test_String_append", &test_String_append);
   describe("test_String_fromNumber", &test_String_fromNumber);
+  describe("test_String_join", &test_String_join);
   return NULL;
 }
 
 /*
-- String_append
-  - "hello " ++ "world" == "hello world"
-- String_fromNumber
-  - Int 2147483647 == "2147483647"
-  - Int -2147483648 == "-2147483648"
-  - Float -3.141592653589793
-  - Float -3141592653589793
 - String_join
-  -
+  - String.join "/" [ "home", "steve", "Desktop" ]
 - String_split
-  -
+  -[ "home", "steve", "Desktop", "" ] (String.split "/" "home/steve/Desktop/")
 - String_all
   -
 - String_length

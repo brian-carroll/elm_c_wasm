@@ -12,12 +12,7 @@
 #include "./types_test.h"
 #include "./utils_test.h"
 
-// Init functions
-#include "../kernel/basics.h"
-#include "../kernel/gc.h"
-#include "../kernel/string.h"
-#include "../kernel/types.h"
-#include "../kernel/utils.h"
+#include "../kernel/kernel.h"
 
 // Avoid wrapper compile errors using dummy app params
 FieldGroup* Wrapper_appFieldGroups[] = {};
@@ -25,6 +20,7 @@ void** Wrapper_mainsArray[] = {};
 
 int verbose = false;
 int tests_run = 0;
+int tests_failed = 0;
 int assertions_made = 0;
 
 // Debug function, with pre-allocated memory for strings
@@ -141,17 +137,23 @@ int main(int argc, char** argv) {
     }
   }
 
-  char* result = test_all(types, utils, basics, string, gc);
-  bool passed = (result == NULL);
+  char* mu_error_message = test_all(types, utils, basics, string, gc);
+  int exit_code;
 
-  if (!passed) {
-    printf("Failed: %s\n", result);
-  } else {
+  if (tests_failed) {
+    printf("FAILED %d new-style tests\n", tests_failed);
+    exit_code = EXIT_FAILURE;
+  }
+  if (mu_error_message != NULL) {
+    printf("FAILED min_unit test: %s\n", mu_error_message);
+    exit_code = EXIT_FAILURE;
+  }
+  if (!tests_failed && !mu_error_message) {
     printf("\nALL TESTS PASSED\n");
+    exit_code = EXIT_SUCCESS;
   }
   printf("Tests run: %d\n", tests_run);
   printf("Assertions made: %d\n", assertions_made);
 
-  int exit_code = passed ? EXIT_SUCCESS : EXIT_FAILURE;
   exit(exit_code);
 }

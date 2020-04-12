@@ -28,7 +28,8 @@ bool is_marked(void* p) {
   return (bool)downshift;
 }
 
-void print_value(ElmValue* v) {
+void print_value(void* p) {
+  ElmValue* v = p;
   printf("| " FORMAT_PTR " | " FORMAT_HEX " |  %c   |%5d | ",
       v,
       *((size_t*)v),
@@ -119,9 +120,7 @@ void print_value(ElmValue* v) {
   printf("\n");
 }
 
-void print_heap() {
-  GcState* state = &gc_state;
-
+void print_range(size_t* start, size_t* end) {
 #ifdef TARGET_64BIT
   printf("|    Address     |       Hex        | Mark | Size | Value\n");
   printf("| -------------- | ---------------- | ---- | ---- | -----\n");
@@ -130,9 +129,9 @@ void print_heap() {
   printf("| -------- | -------- | ---- | ---- | -----\n");
 #endif
 
-  size_t* first_value = state->heap.start;
+  size_t* first_value = start;
   size_t* next_value = first_value;
-  for (size_t* p = first_value; p < state->next_alloc; p++) {
+  for (size_t* p = first_value; p < end; p++) {
     if (p == next_value) {
       if (*p == 0) {
         // summarize big chunks of zeros
@@ -143,7 +142,7 @@ void print_heap() {
             (size_t)0,
             p - next_value);
         next_value = p;
-        if (p >= state->next_alloc) break;
+        if (p >= end) break;
       }
       ElmValue* v = (ElmValue*)p;
       print_value(v);
@@ -159,6 +158,17 @@ void print_heap() {
           is_marked(p) ? 'X' : ' ');
     }
   }
+}
+
+void print_value_full(void* p) {
+  Header* h = p;
+  size_t* words = p;
+  print_range(words, words + h->size);
+}
+
+void print_heap() {
+  GcState* state = &gc_state;
+  print_range(state->heap.start, state->next_alloc);
 }
 
 void print_bitmap() {

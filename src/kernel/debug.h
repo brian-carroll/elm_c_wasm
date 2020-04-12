@@ -12,7 +12,8 @@
 #endif
 
 bool is_marked(void* p);
-void print_value(ElmValue* v);
+void print_value(void* p);
+void print_value_full(void* p);
 void print_heap();
 void print_state();
 void print_bitmap();

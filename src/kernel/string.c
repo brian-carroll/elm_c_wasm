@@ -12,11 +12,14 @@
 
 size_t code_units(ElmString16* s) {
   u32 size = s->header.size;
-  u32 size16 = size * SIZE_UNIT / 2;
-  u16* words16 = (u16*)s;
-  u16 last = words16[size16 - 1];
-  size_t len16 = last ? (size16 - 2) : (size16 - 3);
-  return len16;
+  size_t* words = (size_t*)s;
+  size_t* after = words + size;
+  u16* last_code_unit = ((u16*)after) - 1;
+  while ((*last_code_unit == 0) && (last_code_unit >= s->words16)) {
+    last_code_unit--;
+  }
+  size_t units = last_code_unit + 1 - s->words16;
+  return units;
 }
 
 /*
@@ -178,7 +181,7 @@ static void* eval_String_join(void* args[]) {
 Closure String_join = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_join,
-    .max_values = 1,
+    .max_values = 2,
 };
 
 /*
