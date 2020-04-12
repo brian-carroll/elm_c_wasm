@@ -87,34 +87,22 @@ Closure String_append = {
 /*
  * String.fromNumber
  */
-static void* fromInt(ElmInt* box) {
-  i32 unboxed = box->value;
-  char buf[12];  // enough for -2147483648
-  size_t n_chars = (size_t)snprintf(buf, sizeof(buf), "%d", unboxed);
-  ElmString* s = NEW_ELM_STRING(n_chars, NULL);
-  u16* utf16 = (u16*)s->bytes;
-  for (size_t i = 0; i < n_chars; i++) {
-    utf16[i] = (u16)buf[i];
-  }
-  return s;
-}
-
-static void* fromFloat(ElmFloat* box) {
-  f64 unboxed = box->value;
-  char buf[25];  // need 22 for "-3.001415926535898e+18", plus a bit extra
-  size_t n_chars = (size_t)snprintf(buf, sizeof(buf), "%.16g", unboxed);
-  ElmString* s = NEW_ELM_STRING(n_chars, NULL);
-  u16* utf16 = (u16*)s->bytes;
-  for (size_t i = 0; i < n_chars; i++) {
-    utf16[i] = (u16)buf[i];
-  }
-  return s;
-}
-
 static void* String_fromNumber_eval(void* args[1]) {
   Number* box = args[0];
-  return (box->i.header.tag == Tag_Int) ? fromInt((ElmInt*)box)
-                                        : fromFloat((ElmFloat*)box);
+  char buf[25];
+  size_t n_chars;
+
+  if (box->i.header.tag == Tag_Int) {
+    n_chars = (size_t)snprintf(buf, sizeof(buf), "%d", box->i.value);
+  } else {
+    n_chars = (size_t)snprintf(buf, sizeof(buf), "%.16g", box->f.value);
+  }
+
+  ElmString16* s = NEW_ELM_STRING16(n_chars);
+  for (size_t i = 0; i < n_chars; i++) {
+    s->words16[i] = (u16)buf[i];
+  }
+  return s;
 }
 Closure String_fromNumber = {
     .header = HEADER_CLOSURE(0),

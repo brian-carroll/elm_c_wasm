@@ -5,9 +5,9 @@
 #include <string.h>
 
 #include "../kernel/debug.h"
+#include "../kernel/gc.h"
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
-#include "../kernel/gc.h"
 #include "./test.h"
 
 // ---------------------------------------------------------
@@ -65,10 +65,18 @@ void* expect_string(char* expected_c_str, ElmString16* actual) {
 //          STRING TESTS
 // ---------------------------------------------------------
 
-void* string_append_test() {
+void* test_String_append() {
   ElmString16* hello = create_string("hello");
   ElmString16* world = create_string(" world");
   expect_string("hello world", A2(&String_append, hello, world));
+  return NULL;
+}
+
+void* test_String_fromNumber() {
+  expect_string("2147483647", A1(&String_fromNumber, NEW_ELM_INT(2147483647)));
+  expect_string("-2147483648", A1(&String_fromNumber, NEW_ELM_INT(-2147483648)));
+  expect_string("-3.141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3.141592653589793)));
+  expect_string("-3141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3141592653589793)));
   return NULL;
 }
 
@@ -81,7 +89,8 @@ char* string_test() {
     printf("------\n");
   }
 
-  describe("string_append_test", &string_append_test);
+  describe("test_String_append", &test_String_append);
+  describe("test_String_fromNumber", &test_String_fromNumber);
   return NULL;
 }
 
