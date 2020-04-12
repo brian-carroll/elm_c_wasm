@@ -10,21 +10,13 @@
 #define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
 #define IS_HIGH_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
 
-static size_t code_units(ElmString16* s) {
+size_t code_units(ElmString16* s) {
   u32 size = s->header.size;
   u32 size16 = size * SIZE_UNIT / 2;
   u16* words16 = (u16*)s;
   u16 last = words16[size16 - 1];
   size_t len16 = last ? (size16 - 2) : (size16 - 3);
   return len16;
-}
-
-static size_t String_bytes(ElmString* s) {
-  size_t total_bytes = (size_t)(s->header.size * SIZE_UNIT);
-  u8* struct_bytes = (u8*)s;
-  u8 last_byte = struct_bytes[total_bytes - 1];
-  size_t len = (total_bytes - sizeof(Header)) - (size_t)(last_byte + 1);
-  return len;
 }
 
 /*
@@ -73,18 +65,16 @@ Closure String_length = {
  * String.append
  */
 void* String_append_eval(void* args[2]) {
-  ElmString* a = args[0];
-  ElmString* b = args[1];
+  ElmString16* a = args[0];
+  ElmString16* b = args[1];
 
-  u32 na = String_bytes(a);
-  u32 nb = String_bytes(b);
+  size_t len_a = code_units(a);
+  size_t len_b = code_units(b);
 
-  ElmString* s = NEW_ELM_STRING(na + nb, NULL);
+  ElmString16* s = NEW_ELM_STRING16(len_a + len_b);
 
-  // May not be aligned on word boundaries
-  // TODO: see if this can be optimised more
-  memcpy(s->bytes, a->bytes, na);
-  memcpy(&s->bytes[na], b->bytes, nb);
+  memcpy(s->words16, a->words16, len_a * sizeof(u16));
+  memcpy(&s->words16[len_a], b->words16, len_b * sizeof(u16));
 
   return s;
 }
@@ -111,21 +101,20 @@ static void* fromInt(ElmInt* box) {
 
 static void* fromFloat(ElmFloat* box) {
   f64 unboxed = box->value;
-  char dummy[1];
-  size_t n_chars = (size_t)snprintf(dummy, sizeof(dummy), "%g", unboxed);
-  ElmString* tmp = NEW_ELM_STRING((n_chars + 1) / 2, NULL);
+  char buf[25];  // need 22 for "-3.001415926535898e+18", plus a bit extra
+  size_t n_chars = (size_t)snprintf(buf, sizeof(buf), "%.16g", unboxed);
   ElmString* s = NEW_ELM_STRING(n_chars, NULL);
-  snprintf((char*)tmp->bytes, n_chars, "%g", unboxed);
   u16* utf16 = (u16*)s->bytes;
   for (size_t i = 0; i < n_chars; i++) {
-    utf16[i] = (u16)tmp->bytes[i];
+    utf16[i] = (u16)buf[i];
   }
   return s;
 }
 
 static void* String_fromNumber_eval(void* args[1]) {
   Number* box = args[0];
-  return (box->i.header.tag == Tag_Int) ? fromInt(box) : fromFloat(box);
+  return (box->i.header.tag == Tag_Int) ? fromInt((ElmInt*)box)
+                                        : fromFloat((ElmFloat*)box);
 }
 Closure String_fromNumber = {
     .header = HEADER_CLOSURE(0),
@@ -271,14 +260,20 @@ Closure String_split = {
  * String.slice
  */
 static void* eval_String_slice(void* args[]) {
-  ElmInt* start = args[0];
-  ElmInt* end = args[1];
+  ElmInt* argStart = args[0];
+  ElmInt* argEnd = args[1];
   ElmString16* str = args[2];
   size_t len = code_units(str);
 
+  i32 start = argStart->value < 0 ? 0 : (argStart->value > len ? len : argStart->value);
+  i32 end = argEnd->value < 0 ? 0 : (argEnd->value > len ? len : argEnd->value);
+  if (start > end) {
+    return NEW_ELM_STRING(0, NULL);
+  }
+
   size_t n_words = (size_t)(end - start);
   size_t n_bytes = n_words * 2;
-  u16* words_to_copy = &str->words16[start->value];
+  u16* words_to_copy = &str->words16[start];
 
   return NEW_ELM_STRING(n_bytes, (char*)words_to_copy);
 }
@@ -363,14 +358,9 @@ static void* eval_String_indexes(void* args[]) {
 
   // iterate over substring occurrences
   for (size_t str_idx = str_len - 1; str_idx > 0; --str_idx) {
-    size_t substr_end_idx = str_idx;
-    size_t substr_start_idx;
-
     // search for next substring
     while (1) {
-      if (str_idx == 0) {
-        substr_start_idx = 0;
-      } else {
+      if (str_idx > 0) {
         size_t sub_idx = sub_len - 1;
 
         // match last codepoint of sub

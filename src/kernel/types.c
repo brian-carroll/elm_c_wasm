@@ -1,6 +1,8 @@
 #include "types.h"
+
 #include <stdlib.h>
 #include <string.h>
+
 #include "gc.h"
 
 // see also NEW_CONS in header file
@@ -110,6 +112,28 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
   return p;
 }
 
+// see also NEW_ELM_STRING16 in header file
+ElmString16* ctorElmString16(size_t len16) {
+  size_t used_bytes = sizeof(Header) + len16 * sizeof(u16);
+  size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
+  size_t aligned_bytes = aligned_words * SIZE_UNIT;
+
+  ElmString16* p = CAN_THROW(GC_malloc(aligned_bytes));
+
+  if (aligned_bytes != used_bytes) {
+    size_t* words = (size_t*)p;
+    words[aligned_words - 1] = 0; // set padding to zero
+  }
+
+  // Write header _after_ padding in case there's only one word!
+  p->header = (Header){
+      .tag = Tag_String,
+      .size = (u32)aligned_words,
+  };
+
+  return p;
+}
+
 Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
   Custom* c = CAN_THROW(GC_malloc(sizeof(Custom) + n_children * sizeof(void*)));
   c->header = HEADER_CUSTOM(n_children);
@@ -130,7 +154,7 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   return r;
 }
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]) {
+    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
   Closure* c = CAN_THROW(GC_malloc(sizeof(Closure) + n_values * sizeof(void*)));
   c->header = HEADER_CLOSURE(n_values);
   c->n_values = n_values;

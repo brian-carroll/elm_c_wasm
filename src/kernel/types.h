@@ -180,13 +180,15 @@ typedef struct {
   u8 bytes[];
 } ElmString;
 ElmString* ctorElmString(size_t n, char* str);
+#define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 
 typedef struct {
   Header header;
   u16 words16[];
 } ElmString16;
+ElmString16* ctorElmString16(size_t n);
+#define NEW_ELM_STRING16(len16) CAN_THROW(ctorElmString16(len16))
 
-#define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 enum {
   UTF8,
   UTF16,

@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+size_t code_units(ElmString16* s); // testing
+
 void* String_append_eval(void* args[]);  // exposed for `++`
 Closure String_append;
 Closure String_fromNumber;

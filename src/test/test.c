@@ -1,3 +1,5 @@
+#include "./test.h"
+
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -7,7 +9,6 @@
 #include "./basics_test.h"
 #include "./gc_test.h"
 #include "./string_test.h"
-#include "./test.h"
 #include "./types_test.h"
 #include "./utils_test.h"
 
@@ -17,6 +18,10 @@
 #include "../kernel/string.h"
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
+
+// Avoid wrapper compile errors using dummy app params
+FieldGroup* Wrapper_appFieldGroups[] = {};
+void** Wrapper_mainsArray[] = {};
 
 int verbose = false;
 int tests_run = 0;
@@ -76,14 +81,16 @@ char* test_all(bool types, bool utils, bool basics, bool string, bool gc) {
 int main(int argc, char** argv) {
   GC_init();
 
-  static struct option long_options[] = {{"verbose", no_argument, NULL, 'v'},
+  static struct option long_options[] = {
+      {"verbose", no_argument, NULL, 'v'},
       {"all", no_argument, NULL, 'a'},
       {"types", no_argument, NULL, 't'},
       {"utils", no_argument, NULL, 'u'},
       {"basics", no_argument, NULL, 'b'},
       {"string", no_argument, NULL, 's'},
       {"gc", no_argument, NULL, 'g'},
-      {NULL, 0, NULL, 0}};
+      {NULL, 0, NULL, 0},
+  };
 
   // By default in Bash shell, just do what's specified
   bool types = false;
