@@ -50,15 +50,18 @@
         - Abuaiadh et al, 2004
 */
 #include "gc.h"
+
 #include <errno.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "gc-internals.h"
 #include "types.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
+
 #include "./debug.h"
 #else
 #define log_error(...)
@@ -208,20 +211,41 @@ void* GC_malloc(size_t bytes) {
 }
 
 void* GC_memcpy(void* dest, void* src, size_t bytes) {
-  size_t words = bytes / sizeof(size_t);
-
 #ifdef DEBUG
-  if (bytes % sizeof(size_t)) {
+  if (bytes % sizeof(u16)) {  // string bodies can be 16-bit aligned
     log_error("GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
   }
 #endif
+  u32* src32;
+  u32* dest32;
+  u64* src64;
+  u64* dest64;
 
-  size_t* src_words = (size_t*)src;
-  size_t* dest_words = (size_t*)dest;
-
-  for (size_t i = 0; i < words; i++) {
-    dest_words[i] = src_words[i];
+  // Get 64-bit alignment if we don't already have it
+  if ((size_t)dest % sizeof(u64)) {
+    src32 = (u32*)src;
+    dest32 = (u32*)dest;
+    *dest32 = *src32;
+    bytes -= sizeof(u32);
+    src += sizeof(u32);
+    dest += sizeof(u32);
   }
+
+  // Bulk copy in 64-bit chunks
+  src64 = (u64*)src;
+  dest64 = (u64*)dest;
+  size_t i = 0;
+  for (; i < bytes / sizeof(u64); i++) {
+    dest64[i] = src64[i];
+  }
+
+  // last 32 bits if needed
+  if (bytes % sizeof(u64)) {
+    src32 = (u32*)(&src64[i]);
+    dest32 = (u32*)(&dest64[i]);
+    *dest32 = *src32;
+  }
+
   return dest;  // C standard lib returns this. Normally ignored.
 }
 
@@ -348,8 +372,8 @@ void* GC_tce_iteration(size_t n_args) {
 
 // Evaluate a tail call elminated Elm function,
 // managing all of the GC related stuff for it
-void* GC_tce_eval(void* (*tce_eval)(void* [], void**),
-    void* (*eval)(void* []),
+void* GC_tce_eval(void* (*tce_eval)(void*[], void**),
+    void* (*eval)(void*[]),
     u32 n_args,
     void* args[]) {
   GcState* state = &gc_state;
