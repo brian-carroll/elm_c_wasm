@@ -1,3 +1,5 @@
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>  // sprintf
 #include <stdlib.h>
 #include <string.h>
@@ -187,43 +189,249 @@ Closure String_join = {
 /*
  * String.split
  */
+ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx) {
+  for (;;) {
+    // Match last char of substring
+    ptrdiff_t sub_idx = sub_len - 1;
+    while (str_idx >= 0 && sub_idx >= 0 && str[str_idx] != sub[sub_idx]) {
+      str_idx--;
+    }
+    if (str_idx < 0) return -1; // not found
+
+    // Partial match. If the rest fails, retry from here.
+    ptrdiff_t retry_idx = str_idx - 1;
+
+    // Match remaining chars of substring
+    do {
+      str_idx--;
+      sub_idx--;
+    } while (str_idx >= 0 && sub_idx >= 0 && str[str_idx] == sub[sub_idx]);
+
+    if (sub_idx < 0) return str_idx + 1;  // Found it!
+    if (str_idx < 0) return -1;  // Matched some more chars then ran out => not found.
+    str_idx = retry_idx;         // Only a partial match. Backtrack and try again.
+  }
+}
+
 static void* eval_String_split(void* args[]) {
   ElmString16* sep = args[0];
   ElmString16* str = args[1];
 
   size_t sep_len = code_units(sep);
   size_t str_len = code_units(str);
-
   Cons* result = &Nil;
 
+  ptrdiff_t str_idx = str_len - 1;
+  ptrdiff_t match_idx;
+  ptrdiff_t substr_idx;
+  ptrdiff_t substr_len;
+  ElmString16* substr;
+
+  match_idx = find_reverse(sep->words16, str->words16, sep_len, str_idx);
+  substr_idx = 1 + match_idx + sep_len;
+  substr_len = 1 + str_idx - substr_idx;
+  substr = NEW_ELM_STRING16(substr_len);
+  memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
+  result = NEW_CONS(substr, result);
+
+  printf(
+      "sep_len %zu "
+      "str_len %zu "
+      "str_idx %zd (%c) "
+      "match_idx %zd (%c) "
+      "substr_idx %zd (%c) "
+      "substr_len %zd "
+      "\n",
+      sep_len,
+      str_len,
+      str_idx,
+      (char)str->words16[str_idx],
+      match_idx,
+      (char)str->words16[match_idx],
+      substr_idx,
+      (char)str->words16[substr_idx],
+      substr_len);
+
+  str_idx = match_idx;  // - 1;
+
+  match_idx = find_reverse(sep->words16, str->words16, sep_len, str_idx);
+  substr_idx = 1 + match_idx + sep_len;
+  substr_len = 1 + str_idx - substr_idx;
+  substr = NEW_ELM_STRING16(substr_len);
+  memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
+  result = NEW_CONS(substr, result);
+
+  printf(
+      "sep_len %zu "
+      "str_len %zu "
+      "str_idx %zd (%c) "
+      "match_idx %zd (%c) "
+      "substr_idx %zd (%c) "
+      "substr_len %zd "
+      "\n",
+      sep_len,
+      str_len,
+      str_idx,
+      (char)str->words16[str_idx],
+      match_idx,
+      (char)str->words16[match_idx],
+      substr_idx,
+      (char)str->words16[substr_idx],
+      substr_len);
+
+  return result;
+}
+
+// de abcdefghij
+//    0123456789
+//       de
+
+// static void* eval_String_split(void* args[]) {
+//   ElmString16* sep = args[0];
+//   ElmString16* str = args[1];
+
+//   size_t sep_len = code_units(sep);
+//   size_t str_len = code_units(str);
+//   Cons* result = &Nil;
+
+//   ptrdiff_t str_idx = str_len - 1;
+//   ptrdiff_t sep_idx = sep_len - 1;
+//   size_t substr_end = str_len;
+//   size_t substr_start = 0;
+
+//   bool partial_match = false;
+
+//   printf("    partial_match %d, sep_idx %zd, substr_start %zu, substr_end %zu\n",
+//       partial_match,
+//       sep_idx,
+//       substr_start,
+//       substr_end);
+
+//   for (; str_idx >= 0; str_idx--) {
+//     bool create_substr;
+
+//     // --- Update state ---
+//     // if (sep_idx < 0) {  // got to end of separator string
+//     //   partial_match = false;
+//     //   sep_idx = sep_len - 1;
+//     //   create_substr = true;
+//     //   substr_start = str_idx;
+//     // } else
+//     if (sep_len == 0) {
+//       create_substr = true;
+//       substr_start = str_idx;
+//       substr_end = str_idx + 1;
+//     } else if (!partial_match) {
+//       if (str->words16[str_idx] == sep->words16[sep_idx]) {
+//         partial_match = true;
+//         sep_idx--;
+//         create_substr = false;
+//         // substr_start: unchanged
+//       } else {
+//         partial_match = false;
+//         // sep_index: unchanged
+//         create_substr = false;
+//         substr_start = str_idx;
+//       }
+//     } else {  // partial match
+//       if (str->words16[str_idx] == sep->words16[sep_idx]) {
+//         partial_match = true;
+//         sep_idx--;
+//         create_substr = false;
+//         // substr_start: unchanged
+//       } else {
+//         partial_match = false;
+//         sep_idx = sep_len - 1;
+//         create_substr = true;
+//         // substr_start: unchanged
+//       }
+//     }
+
+//     printf(
+//         "%c : partial_match %d, sep_idx %zd, substr_start %zu, substr_end %zu, "
+//         "create_substr %d\n",
+//         (char)str->words16[str_idx],
+//         partial_match,
+//         sep_idx,
+//         substr_start,
+//         substr_end,
+//         create_substr);
+
+//     // --- Create substring if needed ---
+//     if (create_substr) {
+//       size_t substr_len = substr_end - substr_start;
+//       ElmString16* substr = NEW_ELM_STRING16(substr_len);
+//       memcpy(substr->words16, &str->words16[substr_start], substr_len * sizeof(u16));
+//       result = NEW_CONS(substr, result);
+
+//       substr_end = str_idx + 1;
+//     }
+//   }
+
+//   size_t substr_len = substr_end - substr_start;
+//   ElmString16* substr = NEW_ELM_STRING16(substr_len);
+//   memcpy(substr->words16, &str->words16[substr_start], substr_len * sizeof(u16));
+//   result = NEW_CONS(substr, result);
+
+//   return result;
+// }
+
+/*
+static void* eval_String_split_old(void* args[]) {
+  ElmString16* sep = args[0];
+  ElmString16* str = args[1];
+
+  size_t sep_len = code_units(sep);
+  size_t str_len = code_units(str);
+  Cons* result = &Nil;
+
+  printf("sep_len = %zu\n", sep_len);
+  printf("str_len = %zu\n", str_len);
+
   // iterate over substrings
-  for (size_t str_idx = str_len - 1; str_idx > 0; --str_idx) {
+  for (ptrdiff_t str_idx = str_len - 1; str_idx >= 0; --str_idx) {
     size_t substr_end_idx = str_idx;
     size_t substr_start_idx;
 
     // search for next substring
     while (1) {
-      if (str_idx == 0) {
+      if (str_idx < 0) {
+        printf("if (str_idx < 0)\n");
         substr_start_idx = 0;
       } else {
-        size_t sep_idx = sep_len - 1;
+        ptrdiff_t sep_idx = sep_len - 1;
 
         // match last codepoint of sep
-        if (str->words16[str_idx] != sep->words16[sep_idx]) {
+        if ((sep_idx >= 0) && (str->words16[str_idx] != sep->words16[sep_idx])) {
+          printf("mismatch %d '%c' != %d '%c'\n",
+              str->words16[str_idx],
+              (char)str->words16[str_idx],
+              sep->words16[sep_idx],
+              (char)sep->words16[sep_idx]);
           str_idx--;
           continue;
         }
         size_t match_end_idx = str_idx;
+        printf("match_end_idx = %zu %c\n",
+            match_end_idx,
+            sep_len ? (char)sep->words16[sep_idx] : ' ');
 
         // match as many other codepoints as possible
-        while (sep_idx && str_idx && str->words16[str_idx] == sep->words16[sep_idx]) {
+        do {
+          printf("further match on %c\n", (char)sep->words16[sep_idx]);
           sep_idx--;
           str_idx--;
-        };
+        } while ((sep_idx >= 0) && (str_idx >= 0) &&
+                 (str->words16[str_idx] == sep->words16[sep_idx]));
+        printf("mismatch again at sep_idx = %zd, str_idx = %zd (%c)\n",
+            sep_idx,
+            str_idx,
+            (char)str->words16[str_idx]);
 
-        if (sep_idx != 0) {
+        if (sep_idx > -1) {
           // not a full match. resume searching from next codepoint
           str_idx = match_end_idx - 1;
+          printf("partial match, reset str_idx %zd\n", str_idx);
           continue;
         }
         substr_start_idx = match_end_idx + 1;
@@ -231,20 +439,29 @@ static void* eval_String_split(void* args[]) {
 
       // Copy the substring and put it in the list
       size_t substr_len = 1 + substr_end_idx - substr_start_idx;
+      printf("create substring length %zu from %zu ('%c') to %zu ('%c')\n",
+          substr_len,
+          substr_start_idx,
+          (char)str->words16[substr_start_idx],
+          substr_end_idx,
+          (char)str->words16[substr_end_idx]);
+
       ElmString* substr =
           NEW_ELM_STRING(substr_len * 2, (char*)(&str->words16[substr_start_idx]));
       result = NEW_CONS(substr, result);
 
       break;  // to outer loop (over substrings)
     };
+    printf("broke out of while loop\n");
   }
 
   return result;
 }
+*/
 Closure String_split = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_split,
-    .max_values = 1,
+    .max_values = 2,
 };
 
 /*

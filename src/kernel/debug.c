@@ -120,7 +120,7 @@ void print_value(void* p) {
   printf("\n");
 }
 
-void print_range(size_t* start, size_t* end) {
+void print_heap_range(size_t* start, size_t* end) {
 #ifdef TARGET_64BIT
   printf("|    Address     |       Hex        | Mark | Size | Value\n");
   printf("| -------------- | ---------------- | ---- | ---- | -----\n");
@@ -163,12 +163,12 @@ void print_range(size_t* start, size_t* end) {
 void print_value_full(void* p) {
   Header* h = p;
   size_t* words = p;
-  print_range(words, words + h->size);
+  print_heap_range(words, words + h->size);
 }
 
 void print_heap() {
   GcState* state = &gc_state;
-  print_range(state->heap.start, state->next_alloc);
+  print_heap_range(state->heap.start, state->next_alloc);
 }
 
 void print_bitmap() {
