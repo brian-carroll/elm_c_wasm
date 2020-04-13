@@ -119,12 +119,9 @@ void* test_String_append() {
   ElmString16* empty = create_string("");
   expect_string(
       "append \"hello\" \" world\"", "hello world", A2(&String_append, hello, world));
-  expect_string(
-      "append \"hello\" \"\"", "hello", A2(&String_append, hello, empty));
-  expect_string(
-      "append \"\" \"hello\"", "hello", A2(&String_append, empty, hello));
-  expect_string(
-      "append \"\" \"\"", "", A2(&String_append, empty, empty));
+  expect_string("append \"hello\" \"\"", "hello", A2(&String_append, hello, empty));
+  expect_string("append \"\" \"hello\"", "hello", A2(&String_append, empty, hello));
+  expect_string("append \"\" \"\"", "", A2(&String_append, empty, empty));
   return NULL;
 }
 
@@ -159,6 +156,8 @@ void* test_String_join() {
               })));
   expect_string("join \"/\" []", "", A2(&String_join, slash, &Nil));
   expect_string("join \"\" [\"/\"]", "/", A2(&String_join, empty, NEW_CONS(slash, &Nil)));
+  expect_string("join \"/\" [\"\"]", "", A2(&String_join, slash, NEW_CONS(empty, &Nil)));
+  expect_string("join \"\" [\"\"]", "", A2(&String_join, empty, NEW_CONS(empty, &Nil)));
   expect_string("join \"\" []", "", A2(&String_join, empty, &Nil));
   return NULL;
 }
@@ -249,9 +248,8 @@ void* test_String_split() {
               empty,
           }));
 
-  expect_equal("split \"ab\" \"\" == [\"\"]",
-      A2(&String_split, ab, empty),
-      NEW_CONS(empty, &Nil));
+  expect_equal(
+      "split \"ab\" \"\" == [\"\"]", A2(&String_split, ab, empty), NEW_CONS(empty, &Nil));
 
   return NULL;
 }
@@ -268,7 +266,7 @@ char* string_test() {
   mu_run_test(test_code_units);
   describe("test_String_append", &test_String_append);
   describe("test_String_fromNumber", &test_String_fromNumber);
-  // describe("test_String_join", &test_String_join); // SEGFAULT
+  describe("test_String_join", &test_String_join);
   mu_run_test(test_find_reverse);
   describe("test_String_split", &test_String_split);
 

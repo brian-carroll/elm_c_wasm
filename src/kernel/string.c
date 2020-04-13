@@ -58,7 +58,7 @@ Closure String_uncons = {
  */
 static void* eval_String_length(void* args[]) {
   size_t len = code_units(args[0]);
-  return NEW_ELM_INT((u32)len);
+  return NEW_ELM_INT((i32)len);
 }
 Closure String_length = {
     .header = HEADER_CLOSURE(0),
@@ -150,6 +150,10 @@ Closure String_toInt = {
 static void* eval_String_join(void* args[]) {
   ElmString16* sep = args[0];
   Cons* strs = args[1];
+
+  if (strs == &Nil) {
+    return NEW_ELM_STRING16(0);
+  }
 
   ElmString16* s = strs->head;
   u32 result_len = code_units(s);
