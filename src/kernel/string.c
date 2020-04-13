@@ -347,43 +347,23 @@ static void* eval_String_indexes(void* args[]) {
   ElmString16* str = args[1];
 
   size_t sub_len = code_units(sub);
+  if (sub_len == 0) {
+    return &Nil;
+  }
   size_t str_len = code_units(str);
-
   Cons* result = &Nil;
 
-  // iterate over substring occurrences
-  for (size_t str_idx = str_len - 1; str_idx > 0; --str_idx) {
-    // search for next substring
-    while (1) {
-      if (str_idx > 0) {
-        size_t sub_idx = sub_len - 1;
+  ptrdiff_t str_idx = str_len - 1;
+  ptrdiff_t match_idx;
 
-        // match last codepoint of sub
-        if (str->words16[str_idx] != sub->words16[sub_idx]) {
-          str_idx--;
-          continue;
-        }
-
-        // match as many other codepoints as possible
-        size_t match_idx = str_idx;
-        while (sub_idx && match_idx && str->words16[match_idx] == sub->words16[sub_idx]) {
-          sub_idx--;
-          match_idx--;
-        };
-
-        if (sub_idx != 0) {
-          // not a full match. resume searching from next codepoint
-          str_idx--;
-          continue;
-        }
-      }
-
-      result = NEW_CONS(NEW_ELM_INT((i32)str_idx), result);
-      break;  // to outer loop (over substrings)
-    };
+  for (;;) {
+    match_idx = find_reverse(sub->words16, str->words16, sub_len, str_idx);
+    if (match_idx < 0) {
+      return result;
+    }
+    result = NEW_CONS(NEW_ELM_INT((i32)match_idx), result);
+    str_idx = match_idx - 1;
   }
-
-  return result;
 }
 Closure String_indexes = {
     .header = HEADER_CLOSURE(0),

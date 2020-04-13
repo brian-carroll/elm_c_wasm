@@ -52,7 +52,7 @@ void* expect_equal(char* expect_description, void* left, void* right) {
     if (!verbose) {
       printf("\n%s\n", test_description);
     }
-    printf("%s\n", expect_description);
+    printf("FAIL: %s\n", expect_description);
     printf("Left: %p\n", left);
     printf("Right: %p\n", right);
     print_heap_range(test_heap_ptr, GC_malloc(0));
@@ -254,6 +254,36 @@ void* test_String_split() {
   return NULL;
 }
 
+void* test_String_indexes() {
+  expect_equal("indexes \"/\" \"home/steve/Desktop\" == [4,10]",
+      A2(&String_indexes, create_string("/"), create_string("home/steve/Desktop")),
+      List_create(2,
+          (void*[]){
+              NEW_ELM_INT(4),
+              NEW_ELM_INT(10),
+          }));
+
+  ElmString16* abc = create_string("abc");
+  ElmString16* ab = create_string("ab");
+  ElmString16* empty = create_string("");
+
+  expect_equal("indexes \"abc\" \"ab\" == []  # substring longer than string",
+      A2(&String_indexes, abc, ab),
+      &Nil);
+
+  expect_equal("indexes \"\" \"ab\" == []  # empty substring",
+      A2(&String_indexes, empty, ab),
+      &Nil);
+
+  expect_equal("indexes \"ab\" \"ab\" == [0]",
+      A2(&String_indexes, ab, ab),
+      NEW_CONS(NEW_ELM_INT(0), &Nil));
+
+  expect_equal("indexes \"ab\" \"\" == []", A2(&String_indexes, ab, empty), &Nil);
+
+  return NULL;
+}
+
 char* string_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -269,18 +299,13 @@ char* string_test() {
   describe("test_String_join", &test_String_join);
   mu_run_test(test_find_reverse);
   describe("test_String_split", &test_String_split);
+  describe("test_String_indexes", &test_String_indexes);
 
   return NULL;
 }
 
 /*
-- String_join
-  - String.join "/" [ "home", "steve", "Desktop" ]
-- String_split
-  -[ "home", "steve", "Desktop", "" ] (String.split "/" "home/steve/Desktop/")
 - String_all
-  -
-- String_length
   -
 - String_slice
   -
@@ -289,8 +314,6 @@ char* string_test() {
 - String_uncons
   -
 - String_contains
-  -
-- String_indexes
   -
 - String_startsWith
   -
