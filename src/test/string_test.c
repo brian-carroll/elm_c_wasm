@@ -349,6 +349,42 @@ void* test_String_fromNumber() {
   return NULL;
 }
 
+void* test_String_toInt() {
+  expect_equal("toInt \"2147483647\" == Just 2147483647",
+      A1(&String_toInt, create_string("2147483647")),
+      A1(&g_elm_core_Maybe_Just, NEW_ELM_INT(2147483647)));
+
+  expect_equal("toInt \"-2147483648\" == Just -2147483648",
+      A1(&String_toInt, create_string("-2147483648")),
+      A1(&g_elm_core_Maybe_Just, NEW_ELM_INT(-2147483648)));
+
+  expect_equal("toInt \"+10\" == Just 10",
+      A1(&String_toInt, create_string("+10")),
+      A1(&g_elm_core_Maybe_Just, NEW_ELM_INT(10)));
+
+  expect_equal("toInt \"0\" == Just 0",
+      A1(&String_toInt, create_string("0")),
+      A1(&g_elm_core_Maybe_Just, NEW_ELM_INT(0)));
+
+  expect_equal("toInt \"+0\" == Just 0",
+      A1(&String_toInt, create_string("+0")),
+      A1(&g_elm_core_Maybe_Just, NEW_ELM_INT(0)));
+
+  expect_equal("toInt \"-0\" == Just 0",
+      A1(&String_toInt, create_string("-0")),
+      A1(&g_elm_core_Maybe_Just, NEW_ELM_INT(0)));
+
+  expect_equal("toInt \"hello\" == Nothing",
+      A1(&String_toInt, create_string("hello")),
+      &g_elm_core_Maybe_Nothing);
+
+  expect_equal("toInt \"\" == Nothing",
+      A1(&String_toInt, create_string("")),
+      &g_elm_core_Maybe_Nothing);
+
+  return NULL;
+}
+
 char* string_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -357,7 +393,6 @@ char* string_test() {
     printf("String\n");
     printf("------\n");
   }
-
 
   describe("test_String_uncons", &test_String_uncons);
   describe("test_String_append", &test_String_append);
@@ -375,7 +410,7 @@ char* string_test() {
   // TODO: test_String_endsWith
   describe("test_String_indexes", &test_String_indexes);
   describe("test_String_fromNumber", &test_String_fromNumber);
-  // TODO: test_String_toInt
+  describe("test_String_toInt", &test_String_toInt);
 
   return NULL;
 }
