@@ -6,8 +6,13 @@
 #include "../kernel/kernel.h"
 #include "./test.h"
 
+size_t code_units(ElmString16* s);
+ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);
+
 // ---------------------------------------------------------
-//          STRING TEST UTILITIES
+// 
+//          STRING TESTING UTILITIES
+// 
 // ---------------------------------------------------------
 
 char* test_description;
@@ -91,7 +96,9 @@ void* expect_string(char* call_expr, char* expected_c_str, ElmString16* actual) 
 }
 
 // ---------------------------------------------------------
-//          STRING TESTS
+// 
+//          STRING HELPER TESTS
+// 
 // ---------------------------------------------------------
 
 char mu_message[1024];
@@ -112,57 +119,6 @@ void* test_code_units() {
   }
   return NULL;
 }
-
-void* test_String_append() {
-  ElmString16* hello = create_string("hello");
-  ElmString16* world = create_string(" world");
-  ElmString16* empty = create_string("");
-  expect_string(
-      "append \"hello\" \" world\"", "hello world", A2(&String_append, hello, world));
-  expect_string("append \"hello\" \"\"", "hello", A2(&String_append, hello, empty));
-  expect_string("append \"\" \"hello\"", "hello", A2(&String_append, empty, hello));
-  expect_string("append \"\" \"\"", "", A2(&String_append, empty, empty));
-  return NULL;
-}
-
-void* test_String_fromNumber() {
-  expect_string("fromNumber 2147483647",
-      "2147483647",
-      A1(&String_fromNumber, NEW_ELM_INT(2147483647)));
-  expect_string("fromNumber -2147483648",
-      "-2147483648",
-      A1(&String_fromNumber, NEW_ELM_INT(-2147483648)));
-  expect_string("fromNumber -3.141592653589793",
-      "-3.141592653589793",
-      A1(&String_fromNumber, NEW_ELM_FLOAT(-3.141592653589793)));
-  expect_string("fromNumber -3141592653589793",
-      "-3141592653589793",
-      A1(&String_fromNumber, NEW_ELM_FLOAT(-3141592653589793)));
-  return NULL;
-}
-
-void* test_String_join() {
-  ElmString16* slash = create_string("/");
-  ElmString16* empty = create_string("");
-  expect_string("join \"/\" [\"home\",\"steve\",\"Desktop\"]",
-      "home/steve/Desktop",
-      A2(&String_join,
-          slash,
-          List_create(3,
-              (void*[]){
-                  create_string("home"),
-                  create_string("steve"),
-                  create_string("Desktop"),
-              })));
-  expect_string("join \"/\" []", "", A2(&String_join, slash, &Nil));
-  expect_string("join \"\" [\"/\"]", "/", A2(&String_join, empty, NEW_CONS(slash, &Nil)));
-  expect_string("join \"/\" [\"\"]", "", A2(&String_join, slash, NEW_CONS(empty, &Nil)));
-  expect_string("join \"\" [\"\"]", "", A2(&String_join, empty, NEW_CONS(empty, &Nil)));
-  expect_string("join \"\" []", "", A2(&String_join, empty, &Nil));
-  return NULL;
-}
-
-ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);
 
 void* test_find_reverse() {
   ElmString16* sep;
@@ -213,6 +169,24 @@ void* test_find_reverse() {
   return NULL;
 }
 
+// ---------------------------------------------------------
+// 
+//          STRING TESTS
+// 
+// ---------------------------------------------------------
+
+void* test_String_append() {
+  ElmString16* hello = create_string("hello");
+  ElmString16* world = create_string(" world");
+  ElmString16* empty = create_string("");
+  expect_string(
+      "append \"hello\" \" world\"", "hello world", A2(&String_append, hello, world));
+  expect_string("append \"hello\" \"\"", "hello", A2(&String_append, hello, empty));
+  expect_string("append \"\" \"hello\"", "hello", A2(&String_append, empty, hello));
+  expect_string("append \"\" \"\"", "", A2(&String_append, empty, empty));
+  return NULL;
+}
+
 void* test_String_split() {
   expect_equal("split \"/\" \"home/steve/Desktop\" == [\"home\",\"steve\",\"Desktop\"]",
       A2(&String_split, create_string("/"), create_string("home/steve/Desktop")),
@@ -254,6 +228,27 @@ void* test_String_split() {
   return NULL;
 }
 
+void* test_String_join() {
+  ElmString16* slash = create_string("/");
+  ElmString16* empty = create_string("");
+  expect_string("join \"/\" [\"home\",\"steve\",\"Desktop\"]",
+      "home/steve/Desktop",
+      A2(&String_join,
+          slash,
+          List_create(3,
+              (void*[]){
+                  create_string("home"),
+                  create_string("steve"),
+                  create_string("Desktop"),
+              })));
+  expect_string("join \"/\" []", "", A2(&String_join, slash, &Nil));
+  expect_string("join \"\" [\"/\"]", "/", A2(&String_join, empty, NEW_CONS(slash, &Nil)));
+  expect_string("join \"/\" [\"\"]", "", A2(&String_join, slash, NEW_CONS(empty, &Nil)));
+  expect_string("join \"\" [\"\"]", "", A2(&String_join, empty, NEW_CONS(empty, &Nil)));
+  expect_string("join \"\" []", "", A2(&String_join, empty, &Nil));
+  return NULL;
+}
+
 void* test_String_indexes() {
   expect_equal("indexes \"/\" \"home/steve/Desktop\" == [4,10]",
       A2(&String_indexes, create_string("/"), create_string("home/steve/Desktop")),
@@ -284,6 +279,22 @@ void* test_String_indexes() {
   return NULL;
 }
 
+void* test_String_fromNumber() {
+  expect_string("fromNumber 2147483647",
+      "2147483647",
+      A1(&String_fromNumber, NEW_ELM_INT(2147483647)));
+  expect_string("fromNumber -2147483648",
+      "-2147483648",
+      A1(&String_fromNumber, NEW_ELM_INT(-2147483648)));
+  expect_string("fromNumber -3.141592653589793",
+      "-3.141592653589793",
+      A1(&String_fromNumber, NEW_ELM_FLOAT(-3.141592653589793)));
+  expect_string("fromNumber -3141592653589793",
+      "-3141592653589793",
+      A1(&String_fromNumber, NEW_ELM_FLOAT(-3141592653589793)));
+  return NULL;
+}
+
 char* string_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -295,11 +306,11 @@ char* string_test() {
 
   mu_run_test(test_code_units);
   describe("test_String_append", &test_String_append);
-  describe("test_String_fromNumber", &test_String_fromNumber);
-  describe("test_String_join", &test_String_join);
   mu_run_test(test_find_reverse);
   describe("test_String_split", &test_String_split);
+  describe("test_String_join", &test_String_join);
   describe("test_String_indexes", &test_String_indexes);
+  describe("test_String_fromNumber", &test_String_fromNumber);
 
   return NULL;
 }
