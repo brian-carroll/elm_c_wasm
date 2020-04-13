@@ -6,13 +6,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../kernel/kernel.h"
 #include "./basics_test.h"
 #include "./gc_test.h"
 #include "./string_test.h"
 #include "./types_test.h"
 #include "./utils_test.h"
-
-#include "../kernel/kernel.h"
 
 // Avoid wrapper compile errors using dummy app params
 FieldGroup* Wrapper_appFieldGroups[] = {};
@@ -22,6 +21,25 @@ int verbose = false;
 int tests_run = 0;
 int tests_failed = 0;
 int assertions_made = 0;
+
+// Elm-defined stuff used in Kernel code
+enum {
+  CTOR_Nothing,
+  CTOR_Just,
+};
+void* eval_elm_core_Maybe_Just(void* args[]) {
+  return ctorCustom(CTOR_Just, 1, args);
+}
+Closure g_elm_core_Maybe_Just = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_core_Maybe_Just,
+};
+Custom g_elm_core_Maybe_Nothing = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = CTOR_Nothing,
+};
 
 // Debug function, with pre-allocated memory for strings
 // Avoiding use of malloc in test code in case it screws up GC

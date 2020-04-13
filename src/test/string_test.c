@@ -10,9 +10,9 @@ size_t code_units(ElmString16* s);
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);
 
 // ---------------------------------------------------------
-// 
+//
 //          STRING TESTING UTILITIES
-// 
+//
 // ---------------------------------------------------------
 
 char* test_description;
@@ -96,9 +96,9 @@ void* expect_string(char* call_expr, char* expected_c_str, ElmString16* actual) 
 }
 
 // ---------------------------------------------------------
-// 
+//
 //          STRING HELPER TESTS
-// 
+//
 // ---------------------------------------------------------
 
 char mu_message[1024];
@@ -170,10 +170,31 @@ void* test_find_reverse() {
 }
 
 // ---------------------------------------------------------
-// 
+//
 //          STRING TESTS
-// 
+//
 // ---------------------------------------------------------
+
+void* test_String_uncons() {
+  ElmString16* abc = create_string("abc");
+  ElmString16* bc = create_string("bc");
+  ElmString16* a_str = create_string("a");
+  ElmString16* empty = create_string("");
+  ElmChar* a_char = NEW_ELM_CHAR((u32)'a');
+
+  expect_equal("uncons \"abc\" == Just ('a',\"bc\")",
+      A1(&String_uncons, abc),
+      A1(&g_elm_core_Maybe_Just, NEW_TUPLE2(a_char, bc)));
+
+  expect_equal(
+      "uncons \"\" == Nothing", A1(&String_uncons, empty), &g_elm_core_Maybe_Nothing);
+
+  expect_equal("uncons \"a\" == Just ('a',\"\")",
+      A1(&String_uncons, a_str),
+      A1(&g_elm_core_Maybe_Just, NEW_TUPLE2(a_char, empty)));
+
+  return NULL;
+}
 
 void* test_String_append() {
   ElmString16* hello = create_string("hello");
@@ -305,8 +326,10 @@ char* string_test() {
   }
 
   mu_run_test(test_code_units);
-  describe("test_String_append", &test_String_append);
   mu_run_test(test_find_reverse);
+
+  describe("test_String_uncons", &test_String_uncons);
+  describe("test_String_append", &test_String_append);
   describe("test_String_split", &test_String_split);
   describe("test_String_join", &test_String_join);
   describe("test_String_indexes", &test_String_indexes);
@@ -314,20 +337,3 @@ char* string_test() {
 
   return NULL;
 }
-
-/*
-- String_all
-  -
-- String_slice
-  -
-- String_toInt
-  -
-- String_uncons
-  -
-- String_contains
-  -
-- String_startsWith
-  -
-- String_trim
-  -
-*/
