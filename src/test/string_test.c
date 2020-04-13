@@ -273,45 +273,32 @@ void* test_String_join() {
 void* test_String_slice() {
   ElmString16* abc = create_string("abc");
 
-  expect_string("slice 1 2 \"abc\" == \"b\"",
-      "b",
-      A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(2), abc));
-  expect_string("slice 1 -1 \"abc\" == \"b\"",
-      "b",
-      A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(-1), abc));
-  expect_string("slice -2 2 \"abc\" == \"b\"",
-      "b",
-      A3(&String_slice, NEW_ELM_INT(-2), NEW_ELM_INT(2), abc));
-  expect_string("slice -2 -1 \"abc\" == \"b\"",
+  expect_string(
+      "slice 1 2 \"abc\"", "b", A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(2), abc));
+  expect_string(
+      "slice 1 -1 \"abc\"", "b", A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(-1), abc));
+  expect_string(
+      "slice -2 2 \"abc\"", "b", A3(&String_slice, NEW_ELM_INT(-2), NEW_ELM_INT(2), abc));
+  expect_string("slice -2 -1 \"abc\"",
       "b",
       A3(&String_slice, NEW_ELM_INT(-2), NEW_ELM_INT(-1), abc));
-  expect_string("slice 2 1 \"abc\" == \"\"",
-      "",
-      A3(&String_slice, NEW_ELM_INT(2), NEW_ELM_INT(1), abc));
-  expect_string("slice 0 3 \"abc\" == \"abc\"",
-      "abc",
-      A3(&String_slice, NEW_ELM_INT(0), NEW_ELM_INT(3), abc));
-  expect_string("slice -3 0 \"abc\" == \"\"",
-      "",
-      A3(&String_slice, NEW_ELM_INT(-3), NEW_ELM_INT(0), abc));
-  expect_string("slice  0 -3 \"abc\" == \"\"",
-      "",
-      A3(&String_slice, NEW_ELM_INT(0), NEW_ELM_INT(-3), abc));
-  expect_string("slice -3 -1 \"abc\" == \"ab\"",
-      "ab",
-      A3(&String_slice, NEW_ELM_INT(-3), NEW_ELM_INT(-1), abc));
-  expect_string("slice -1 3 \"abc\" == \"c\"",
-      "c",
-      A3(&String_slice, NEW_ELM_INT(-1), NEW_ELM_INT(3), abc));
-  expect_string("slice -100 2 \"abc\" == \"ab\"",
-      "ab",
-      A3(&String_slice, NEW_ELM_INT(-100), NEW_ELM_INT(2), abc));
-  expect_string("slice 1 100 \"abc\" == \"bc\"",
-      "bc",
-      A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(100), abc));
-  expect_string("slice -100 100 \"abc\" == \"abc\"",
+
+  expect_string(
+      "slice 2 1 \"abc\"", "", A3(&String_slice, NEW_ELM_INT(2), NEW_ELM_INT(1), abc));
+
+  expect_string(
+      "slice 0 3 \"abc\"", "abc", A3(&String_slice, NEW_ELM_INT(0), NEW_ELM_INT(3), abc));
+  expect_string(
+      "slice -3 0 \"abc\"", "", A3(&String_slice, NEW_ELM_INT(-3), NEW_ELM_INT(0), abc));
+  expect_string(
+      "slice  0 -3 \"abc\"", "", A3(&String_slice, NEW_ELM_INT(0), NEW_ELM_INT(-3), abc));
+
+  expect_string("slice -100 100 \"abc\"",
       "abc",
       A3(&String_slice, NEW_ELM_INT(-100), NEW_ELM_INT(100), abc));
+  expect_string("slice -100 100 \"\"",
+      "",
+      A3(&String_slice, NEW_ELM_INT(-100), NEW_ELM_INT(100), create_string("")));
 
   return NULL;
 }
