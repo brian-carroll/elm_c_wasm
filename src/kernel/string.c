@@ -199,14 +199,25 @@ Closure String_join = {
 /*
  * String.slice
  */
+static size_t slice_wrap_index(i32 n, i32 len) {
+  if (n <= -len) {
+    return 0;
+  } else if (n < 0) {
+    return n + len;
+  } else if (n > len) {
+    return len;
+  } else {
+    return n;
+  }
+}
 static void* eval_String_slice(void* args[]) {
   ElmInt* argStart = args[0];
   ElmInt* argEnd = args[1];
   ElmString16* str = args[2];
   size_t len = code_units(str);
 
-  i32 start = argStart->value < 0 ? 0 : (argStart->value > len ? len : argStart->value);
-  i32 end = argEnd->value < 0 ? 0 : (argEnd->value > len ? len : argEnd->value);
+  i32 start = slice_wrap_index(argStart->value, (i32)len);
+  i32 end = slice_wrap_index(argEnd->value, (i32)len);
   if (start > end) {
     return NEW_ELM_STRING(0, NULL);
   }

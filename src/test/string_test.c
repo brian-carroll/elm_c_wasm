@@ -270,6 +270,52 @@ void* test_String_join() {
   return NULL;
 }
 
+void* test_String_slice() {
+  ElmString16* abc = create_string("abc");
+
+  expect_string("slice 1 2 \"abc\" == \"b\"",
+      "b",
+      A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(2), abc));
+  expect_string("slice 1 -1 \"abc\" == \"b\"",
+      "b",
+      A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(-1), abc));
+  expect_string("slice -2 2 \"abc\" == \"b\"",
+      "b",
+      A3(&String_slice, NEW_ELM_INT(-2), NEW_ELM_INT(2), abc));
+  expect_string("slice -2 -1 \"abc\" == \"b\"",
+      "b",
+      A3(&String_slice, NEW_ELM_INT(-2), NEW_ELM_INT(-1), abc));
+  expect_string("slice 2 1 \"abc\" == \"\"",
+      "",
+      A3(&String_slice, NEW_ELM_INT(2), NEW_ELM_INT(1), abc));
+  expect_string("slice 0 3 \"abc\" == \"abc\"",
+      "abc",
+      A3(&String_slice, NEW_ELM_INT(0), NEW_ELM_INT(3), abc));
+  expect_string("slice -3 0 \"abc\" == \"\"",
+      "",
+      A3(&String_slice, NEW_ELM_INT(-3), NEW_ELM_INT(0), abc));
+  expect_string("slice  0 -3 \"abc\" == \"\"",
+      "",
+      A3(&String_slice, NEW_ELM_INT(0), NEW_ELM_INT(-3), abc));
+  expect_string("slice -3 -1 \"abc\" == \"ab\"",
+      "ab",
+      A3(&String_slice, NEW_ELM_INT(-3), NEW_ELM_INT(-1), abc));
+  expect_string("slice -1 3 \"abc\" == \"c\"",
+      "c",
+      A3(&String_slice, NEW_ELM_INT(-1), NEW_ELM_INT(3), abc));
+  expect_string("slice -100 2 \"abc\" == \"ab\"",
+      "ab",
+      A3(&String_slice, NEW_ELM_INT(-100), NEW_ELM_INT(2), abc));
+  expect_string("slice 1 100 \"abc\" == \"bc\"",
+      "bc",
+      A3(&String_slice, NEW_ELM_INT(1), NEW_ELM_INT(100), abc));
+  expect_string("slice -100 100 \"abc\" == \"abc\"",
+      "abc",
+      A3(&String_slice, NEW_ELM_INT(-100), NEW_ELM_INT(100), abc));
+
+  return NULL;
+}
+
 void* test_String_indexes() {
   expect_equal("indexes \"/\" \"home/steve/Desktop\" == [4,10]",
       A2(&String_indexes, create_string("/"), create_string("home/steve/Desktop")),
@@ -332,6 +378,7 @@ char* string_test() {
   describe("test_String_append", &test_String_append);
   describe("test_String_split", &test_String_split);
   describe("test_String_join", &test_String_join);
+  describe("test_String_slice", &test_String_slice);
   describe("test_String_indexes", &test_String_indexes);
   describe("test_String_fromNumber", &test_String_fromNumber);
 
