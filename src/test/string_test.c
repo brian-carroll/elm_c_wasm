@@ -116,8 +116,15 @@ void* test_code_units() {
 void* test_String_append() {
   ElmString16* hello = create_string("hello");
   ElmString16* world = create_string(" world");
+  ElmString16* empty = create_string("");
   expect_string(
       "append \"hello\" \" world\"", "hello world", A2(&String_append, hello, world));
+  expect_string(
+      "append \"hello\" \"\"", "hello", A2(&String_append, hello, empty));
+  expect_string(
+      "append \"\" \"hello\"", "hello", A2(&String_append, empty, hello));
+  expect_string(
+      "append \"\" \"\"", "", A2(&String_append, empty, empty));
   return NULL;
 }
 
