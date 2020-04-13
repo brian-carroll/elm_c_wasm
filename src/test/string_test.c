@@ -358,16 +358,24 @@ char* string_test() {
     printf("------\n");
   }
 
-  mu_run_test(test_code_units);
-  mu_run_test(test_find_reverse);
 
   describe("test_String_uncons", &test_String_uncons);
   describe("test_String_append", &test_String_append);
+  mu_run_test(test_code_units);
+  mu_run_test(test_find_reverse);
   describe("test_String_split", &test_String_split);
   describe("test_String_join", &test_String_join);
   describe("test_String_slice", &test_String_slice);
+  // TODO: test_String_trim
+  // TODO: test_String_trimLeft
+  // TODO: test_String_trimRight
+  // TODO: test_String_all
+  // TODO: test_String_contains
+  // TODO: test_String_startsWith
+  // TODO: test_String_endsWith
   describe("test_String_indexes", &test_String_indexes);
   describe("test_String_fromNumber", &test_String_fromNumber);
+  // TODO: test_String_toInt
 
   return NULL;
 }
