@@ -172,8 +172,7 @@ void* test_find_reverse() {
 
   sep = create_string("");
   result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 2);
-  mu_expect_equal(
-      "should find 2nd last char, given '' again", result, str_len - 2);
+  mu_expect_equal("should find 2nd last char, given '' again", result, str_len - 2);
 
   sep = create_string("h");
   result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
@@ -181,13 +180,11 @@ void* test_find_reverse() {
 
   sep = create_string("ji");
   result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
-  mu_expect_equal(
-      "should find multiple chars in middle (no retry)", result, 5);
+  mu_expect_equal("should find multiple chars in middle (no retry)", result, 5);
 
   sep = create_string("jil");
   result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
-  mu_expect_equal(
-      "should find multiple chars in middle (immediate retry)", result, 5);
+  mu_expect_equal("should find multiple chars in middle (immediate retry)", result, 5);
 
   sep = create_string("ho");
   result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
@@ -211,31 +208,49 @@ void* test_String_split() {
   //                      create_string("steve"),
   //                      create_string("Desktop"),
   //                  }),
-  //     A2(&String_split, create_string("/"), create_string("home/steve/Desktop")));
+  printf("\n");
+  printf("## split \"/\" \"home/steve/Desktop\" == [\"home\",\"steve\",\"Desktop\"]\n");
+  printf("1st find expected                         substr_idx 10, substr_len 7\n");
+  A2(&String_split, create_string("/"), create_string("home/steve/Desktop"));
+  printf("2nd find expected                         substr_idx 5, substr_len 5\n");
+  // );
 
-  // ElmString16* abc = create_string("abc");
-  // ElmString16* ab = create_string("ab");
-  // ElmString16* empty = create_string("");
-  // Cons* list_ab = NEW_CONS(ab, &Nil);
+  ElmString16* abc = create_string("abc");
+  ElmString16* ab = create_string("ab");
+  ElmString16* empty = create_string("");
+  Cons* list_ab = NEW_CONS(ab, &Nil);
 
   // printf("\n## separator longer than search string\n\n");
-  // expect_equal(list_ab, A2(&String_split, abc, ab));
+  printf("\n## split \"abc\" \"ab\" == [\"ab\"]\n");
+  printf("1st find expected                         substr_idx 0, substr_len 2\n");
+  A2(&String_split, abc, ab);
+  printf("2nd find should not happen\n");
+  // expect_equal(list_ab,
+  // );
 
   // printf("\n## separate on empty string\n\n");
+  printf("\n## split \"\" \"ab\" == [\"a\",\"b\"]\n");
+  printf("1st find expected                         substr_idx 1, substr_len 1\n");
+  A2(&String_split, empty, ab);
+  printf("2nd find expected                         substr_idx 0, substr_len 1\n");
   // expect_equal(List_create(2,
-  //                  (void*[]){
-  //                      create_string("a"),
-  //                      create_string("b"),
-  //                  }),
-  //     A2(&String_split, empty, ab));
+  //  (void*[]){
+  //  create_string("a"),
+  //  create_string("b"),
+  //  }),
+  // );
 
   // printf("\n## separator same as search string\n\n");
+  printf("\n## split \"ab\" \"ab\" == [\"\",\"\"]\n");
+  printf("1st find expected                         substr_idx 2, substr_len 0\n");
+  A2(&String_split, ab, ab);
+  printf("2nd find expected                         substr_idx 0, substr_len 0\n");
   // expect_equal(List_create(2,
   //                  (void*[]){
   //                      empty,
   //                      empty,
   //                  }),
-  //     A2(&String_split, ab, ab));
+  // );
 
   return NULL;
 }
@@ -253,8 +268,8 @@ char* string_test() {
   // describe("test_String_append", &test_String_append);
   // describe("test_String_fromNumber", &test_String_fromNumber);
   // describe("test_String_join", &test_String_join);
-  mu_run_test(test_find_reverse);
-  // describe("test_String_split", &test_String_split);
+  // mu_run_test(test_find_reverse);
+  describe("test_String_split", &test_String_split);
 
   return NULL;
 }

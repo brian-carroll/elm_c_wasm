@@ -196,7 +196,7 @@ ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx) {
     while (str_idx >= 0 && sub_idx >= 0 && str[str_idx] != sub[sub_idx]) {
       str_idx--;
     }
-    if (str_idx < 0) return -1; // not found
+    if (str_idx < 0) return -1;  // not found
 
     // Partial match. If the rest fails, retry from here.
     ptrdiff_t retry_idx = str_idx - 1;
@@ -228,22 +228,16 @@ static void* eval_String_split(void* args[]) {
   ElmString16* substr;
 
   match_idx = find_reverse(sep->words16, str->words16, sep_len, str_idx);
-  substr_idx = 1 + match_idx + sep_len;
+  substr_idx = (match_idx < 0) ? 0 : (match_idx + sep_len);
   substr_len = 1 + str_idx - substr_idx;
-  substr = NEW_ELM_STRING16(substr_len);
-  memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
-  result = NEW_CONS(substr, result);
 
   printf(
-      "sep_len %zu "
-      "str_len %zu "
+      "1st find: "
       "str_idx %zd (%c) "
       "match_idx %zd (%c) "
       "substr_idx %zd (%c) "
       "substr_len %zd "
       "\n",
-      sep_len,
-      str_len,
       str_idx,
       (char)str->words16[str_idx],
       match_idx,
@@ -252,25 +246,25 @@ static void* eval_String_split(void* args[]) {
       (char)str->words16[substr_idx],
       substr_len);
 
-  str_idx = match_idx;  // - 1;
+  substr = NEW_ELM_STRING16(substr_len);
+  memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
+  result = NEW_CONS(substr, result);
+
+  if (substr_idx == 0) return result;
+
+  str_idx = match_idx - 1;
 
   match_idx = find_reverse(sep->words16, str->words16, sep_len, str_idx);
-  substr_idx = 1 + match_idx + sep_len;
+  substr_idx = (match_idx < 0) ? 0 : (match_idx + sep_len);
   substr_len = 1 + str_idx - substr_idx;
-  substr = NEW_ELM_STRING16(substr_len);
-  memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
-  result = NEW_CONS(substr, result);
 
   printf(
-      "sep_len %zu "
-      "str_len %zu "
+      "2nd find: "
       "str_idx %zd (%c) "
       "match_idx %zd (%c) "
       "substr_idx %zd (%c) "
       "substr_len %zd "
       "\n",
-      sep_len,
-      str_len,
       str_idx,
       (char)str->words16[str_idx],
       match_idx,
@@ -278,6 +272,39 @@ static void* eval_String_split(void* args[]) {
       substr_idx,
       (char)str->words16[substr_idx],
       substr_len);
+
+  substr = NEW_ELM_STRING16(substr_len);
+  memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
+  result = NEW_CONS(substr, result);
+
+  if (substr_idx == 0) return result;
+
+  str_idx = match_idx - 1;
+
+  match_idx = find_reverse(sep->words16, str->words16, sep_len, str_idx);
+  substr_idx = (match_idx < 0) ? 0 : (match_idx + sep_len);
+  substr_len = 1 + str_idx - substr_idx;
+
+
+  printf(
+      "3rd find: "
+      "str_idx %zd (%c) "
+      "match_idx %zd (%c) "
+      "substr_idx %zd (%c) "
+      "substr_len %zd "
+      "\n",
+      str_idx,
+      (char)str->words16[str_idx],
+      match_idx,
+      (char)str->words16[match_idx],
+      substr_idx,
+      (char)str->words16[substr_idx],
+      substr_len);
+
+  substr = NEW_ELM_STRING16(substr_len);
+  memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
+  result = NEW_CONS(substr, result);
+
 
   return result;
 }
