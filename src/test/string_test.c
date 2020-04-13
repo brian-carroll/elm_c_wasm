@@ -46,26 +46,26 @@ void print_elm_string(ElmString16* str) {
   printf("\"");
 }
 
-void* expect_equal(void* left, void* right) {
+void* expect_equal(char* expect_description, void* left, void* right) {
   bool ok = A2(&Utils_equal, left, right) == &True;
   if (!ok) {
     if (!verbose) {
       printf("\n%s\n", test_description);
     }
-    printf("\n");
+    printf("%s\n", expect_description);
     printf("Left: %p\n", left);
     printf("Right: %p\n", right);
     print_heap_range(test_heap_ptr, GC_malloc(0));
     printf("\n");
     tests_failed++;
   } else if (verbose) {
-    printf("  OK\n");
+    printf("PASS: %s\n", expect_description);
   }
   assertions_made++;
   return NULL;
 }
 
-void* expect_string(char* expected_c_str, ElmString16* actual) {
+void* expect_string(char* call_expr, char* expected_c_str, ElmString16* actual) {
   ElmString16* expected = create_string(expected_c_str);
   bool ok = A2(&Utils_equal, actual, expected) == &True;
   if (!ok) {
@@ -73,17 +73,18 @@ void* expect_string(char* expected_c_str, ElmString16* actual) {
       printf("\n%s\n", test_description);
     }
     printf("\n");
-    printf("Expected \"%s\"\n", expected_c_str);
+    printf("%s\n", call_expr);
+    printf("Expected %s\n", expected_c_str);
     print_value_full(expected);
     printf("\n");
-    printf(" but got ");
+    printf("Actual ");
     print_elm_string(actual);
     printf("\n");
     print_value_full(actual);
     printf("\n");
     tests_failed++;
   } else if (verbose) {
-    printf("  OK: \"%s\"\n", expected_c_str);
+    printf("PASS: %s == \"%s\"\n", call_expr, expected_c_str);
   }
   assertions_made++;
   return NULL;
@@ -115,30 +116,43 @@ void* test_code_units() {
 void* test_String_append() {
   ElmString16* hello = create_string("hello");
   ElmString16* world = create_string(" world");
-  expect_string("hello world", A2(&String_append, hello, world));
+  expect_string(
+      "append \"hello\" \" world\"", "hello world", A2(&String_append, hello, world));
   return NULL;
 }
 
 void* test_String_fromNumber() {
-  expect_string("2147483647", A1(&String_fromNumber, NEW_ELM_INT(2147483647)));
-  expect_string("-2147483648", A1(&String_fromNumber, NEW_ELM_INT(-2147483648)));
-  expect_string(
-      "-3.141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3.141592653589793)));
-  expect_string(
-      "-3141592653589793", A1(&String_fromNumber, NEW_ELM_FLOAT(-3141592653589793)));
+  expect_string("fromNumber 2147483647",
+      "2147483647",
+      A1(&String_fromNumber, NEW_ELM_INT(2147483647)));
+  expect_string("fromNumber -2147483648",
+      "-2147483648",
+      A1(&String_fromNumber, NEW_ELM_INT(-2147483648)));
+  expect_string("fromNumber -3.141592653589793",
+      "-3.141592653589793",
+      A1(&String_fromNumber, NEW_ELM_FLOAT(-3.141592653589793)));
+  expect_string("fromNumber -3141592653589793",
+      "-3141592653589793",
+      A1(&String_fromNumber, NEW_ELM_FLOAT(-3141592653589793)));
   return NULL;
 }
 
 void* test_String_join() {
-  expect_string("home/steve/Desktop",
+  ElmString16* slash = create_string("/");
+  ElmString16* empty = create_string("");
+  expect_string("join \"/\" [\"home\",\"steve\",\"Desktop\"]",
+      "home/steve/Desktop",
       A2(&String_join,
-          create_string("/"),
+          slash,
           List_create(3,
               (void*[]){
                   create_string("home"),
                   create_string("steve"),
                   create_string("Desktop"),
               })));
+  expect_string("join \"/\" []", "", A2(&String_join, slash, &Nil));
+  expect_string("join \"\" [\"/\"]", "/", A2(&String_join, empty, NEW_CONS(slash, &Nil)));
+  expect_string("join \"\" []", "", A2(&String_join, empty, &Nil));
   return NULL;
 }
 
@@ -151,7 +165,7 @@ void* test_find_reverse() {
   ptrdiff_t result;
 
   if (verbose) {
-    printf("find_reverse\n");
+    printf("\ntest_find_reverse\n");
   }
 
   sep = create_string("z");
@@ -194,63 +208,43 @@ void* test_find_reverse() {
 }
 
 void* test_String_split() {
-  /*
-  > String.split "abc" "ab"
-  ["ab"] : List String
-  > String.split "ab" "ab"
-  ["",""] : List String
-  > String.split "" "ab"
-  ["a","b"] : List String
-  */
-  // expect_equal(List_create(3,
-  //                  (void*[]){
-  //                      create_string("home"),
-  //                      create_string("steve"),
-  //                      create_string("Desktop"),
-  //                  }),
-  printf("\n");
-  printf("## split \"/\" \"home/steve/Desktop\" == [\"home\",\"steve\",\"Desktop\"]\n");
-  printf("1st find expected                         substr_idx 10, substr_len 7\n");
-  A2(&String_split, create_string("/"), create_string("home/steve/Desktop"));
-  printf("2nd find expected                         substr_idx 5, substr_len 5\n");
-  // );
+  expect_equal("split \"/\" \"home/steve/Desktop\" == [\"home\",\"steve\",\"Desktop\"]",
+      A2(&String_split, create_string("/"), create_string("home/steve/Desktop")),
+      List_create(3,
+          (void*[]){
+              create_string("home"),
+              create_string("steve"),
+              create_string("Desktop"),
+          }));
 
   ElmString16* abc = create_string("abc");
   ElmString16* ab = create_string("ab");
   ElmString16* empty = create_string("");
   Cons* list_ab = NEW_CONS(ab, &Nil);
 
-  // printf("\n## separator longer than search string\n\n");
-  printf("\n## split \"abc\" \"ab\" == [\"ab\"]\n");
-  printf("1st find expected                         substr_idx 0, substr_len 2\n");
-  A2(&String_split, abc, ab);
-  printf("2nd find should not happen\n");
-  // expect_equal(list_ab,
-  // );
+  expect_equal("split \"abc\" \"ab\" == [\"ab\"]  # separator longer than string",
+      A2(&String_split, abc, ab),
+      list_ab);
 
-  // printf("\n## separate on empty string\n\n");
-  printf("\n## split \"\" \"ab\" == [\"a\",\"b\"]\n");
-  printf("1st find expected                         substr_idx 1, substr_len 1\n");
-  A2(&String_split, empty, ab);
-  printf("2nd find expected                         substr_idx 0, substr_len 1\n");
-  // expect_equal(List_create(2,
-  //  (void*[]){
-  //  create_string("a"),
-  //  create_string("b"),
-  //  }),
-  // );
+  expect_equal("split \"\" \"ab\" == [\"a\",\"b\"]  # split on empty string",
+      A2(&String_split, empty, ab),
+      List_create(2,
+          (void*[]){
+              create_string("a"),
+              create_string("b"),
+          }));
 
-  // printf("\n## separator same as search string\n\n");
-  printf("\n## split \"ab\" \"ab\" == [\"\",\"\"]\n");
-  printf("1st find expected                         substr_idx 2, substr_len 0\n");
-  A2(&String_split, ab, ab);
-  printf("2nd find expected                         substr_idx 0, substr_len 0\n");
-  // expect_equal(List_create(2,
-  //                  (void*[]){
-  //                      empty,
-  //                      empty,
-  //                  }),
-  // );
+  expect_equal("split \"ab\" \"ab\" == [\"\",\"\"]",
+      A2(&String_split, ab, ab),
+      List_create(2,
+          (void*[]){
+              empty,
+              empty,
+          }));
+
+  expect_equal("split \"ab\" \"\" == [\"\"]",
+      A2(&String_split, ab, empty),
+      NEW_CONS(empty, &Nil));
 
   return NULL;
 }
@@ -264,11 +258,11 @@ char* string_test() {
     printf("------\n");
   }
 
-  // mu_run_test(test_code_units);
-  // describe("test_String_append", &test_String_append);
-  // describe("test_String_fromNumber", &test_String_fromNumber);
-  // describe("test_String_join", &test_String_join);
-  // mu_run_test(test_find_reverse);
+  mu_run_test(test_code_units);
+  describe("test_String_append", &test_String_append);
+  describe("test_String_fromNumber", &test_String_fromNumber);
+  // describe("test_String_join", &test_String_join); // SEGFAULT
+  mu_run_test(test_find_reverse);
   describe("test_String_split", &test_String_split);
 
   return NULL;
