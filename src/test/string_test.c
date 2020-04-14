@@ -464,6 +464,8 @@ void* test_String_contains() {
 
   expect_equal("contains \"\" \"abc\" == True", A2(&String_contains, empty, abc), &True);
 
+  expect_equal("contains \"\" \"\" == True", A2(&String_contains, empty, empty), &True);
+
   return NULL;
 }
 
@@ -566,7 +568,7 @@ char* string_test() {
   describe("test_String_trimLeft", &test_String_trimLeft);
   describe("test_String_trimRight", &test_String_trimRight);
   describe("test_String_all", &test_String_all);
-  // describe("test_String_contains", &test_String_contains);
+  describe("test_String_contains", &test_String_contains);
   // describe("test_String_startsWith", &test_String_startsWith); // TODO
   // describe("test_String_endsWith", &test_String_endsWith); // TODO
   describe("test_String_indexes", &test_String_indexes);

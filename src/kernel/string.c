@@ -394,23 +394,12 @@ static void* eval_String_contains(void* args[]) {
   ElmString16* str = args[1];
 
   size_t lsub = code_units(sub);
+  if (lsub == 0) return &True;
   size_t lstr = code_units(str);
+  if (lsub > lstr) return &False;
 
-  if (lsub == 0 || lsub > lstr) return &False;
-
-  u16 c0 = sub->words16[0];
-  for (size_t istr = 0; istr < lstr; istr++) {
-    if (str->words16[istr] == c0) {
-      size_t isub = 1;
-      while (isub < lsub && sub->words16[isub] == str->words16[istr]) {
-        isub++;
-      }
-      if (isub == lsub) {
-        return &True;
-      }
-    }
-  }
-  return &False;
+  ptrdiff_t idx = find_forward(sub->words16, str->words16, lsub, lstr);
+  return (idx == -1) ? &False : &True;
 }
 Closure String_contains = {
     .header = HEADER_CLOSURE(0),
