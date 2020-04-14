@@ -24,6 +24,56 @@ size_t code_units(ElmString16* s) {
   return units;
 }
 
+ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx) {
+  for (;;) {
+    // Match last char of substring
+    ptrdiff_t sub_idx = sub_len - 1;
+    while (str_idx >= 0 && sub_idx >= 0 && str[str_idx] != sub[sub_idx]) {
+      str_idx--;
+    }
+    if (str_idx < 0) return -1;  // not found
+
+    // Partial match. If the rest fails, retry from next.
+    ptrdiff_t retry_idx = str_idx - 1;
+
+    // Match remaining chars of substring
+    do {
+      str_idx--;
+      sub_idx--;
+    } while (str_idx >= 0 && sub_idx >= 0 && str[str_idx] == sub[sub_idx]);
+
+    if (sub_idx < 0) return str_idx + 1;  // Found it!
+    if (str_idx < 0) return -1;  // Matched some more chars then ran out => not found.
+    str_idx = retry_idx;         // Only a partial match. Backtrack and try again.
+  }
+}
+
+ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len) {
+  ptrdiff_t str_idx = 0;
+  for (;;) {
+    // Match first char of substring
+    ptrdiff_t sub_idx = 0;
+    while (str_idx < str_len && sub_idx < sub_len && str[str_idx] != sub[0]) {
+      str_idx++;
+    }
+
+    if (str_idx >= str_len) return -1;  // not found
+
+    // Partial match. If the rest fails, retry from next.
+    ptrdiff_t retry_idx = str_idx + 1;
+
+    // Match remaining chars of substring
+    while (str_idx < str_len && sub_idx < sub_len && str[str_idx] == sub[sub_idx]) {
+      str_idx++;
+      sub_idx++;
+    }
+
+    if (sub_idx >= sub_len) return str_idx - sub_len;  // Found it!
+    if (str_idx >= str_len) return -1; // Matched some more chars then ran out => not found.
+    str_idx = retry_idx;            // Only a partial match. Backtrack and try again.
+  }
+}
+
 /*
  * String.uncons
  */
@@ -92,30 +142,6 @@ Closure String_length = {
 /*
  * String.split
  */
-ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx) {
-  for (;;) {
-    // Match last char of substring
-    ptrdiff_t sub_idx = sub_len - 1;
-    while (str_idx >= 0 && sub_idx >= 0 && str[str_idx] != sub[sub_idx]) {
-      str_idx--;
-    }
-    if (str_idx < 0) return -1;  // not found
-
-    // Partial match. If the rest fails, retry from here.
-    ptrdiff_t retry_idx = str_idx - 1;
-
-    // Match remaining chars of substring
-    do {
-      str_idx--;
-      sub_idx--;
-    } while (str_idx >= 0 && sub_idx >= 0 && str[str_idx] == sub[sub_idx]);
-
-    if (sub_idx < 0) return str_idx + 1;  // Found it!
-    if (str_idx < 0) return -1;  // Matched some more chars then ran out => not found.
-    str_idx = retry_idx;         // Only a partial match. Backtrack and try again.
-  }
-}
-
 static void* eval_String_split(void* args[]) {
   ElmString16* sep = args[0];
   ElmString16* str = args[1];
@@ -370,7 +396,7 @@ static void* eval_String_contains(void* args[]) {
   size_t lsub = code_units(sub);
   size_t lstr = code_units(str);
 
-  if (lsub == 0) return 0;
+  if (lsub == 0 || lsub > lstr) return &False;
 
   u16 c0 = sub->words16[0];
   for (size_t istr = 0; istr < lstr; istr++) {

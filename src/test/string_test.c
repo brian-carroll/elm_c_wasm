@@ -8,6 +8,7 @@
 
 size_t code_units(ElmString16* s);
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);
+ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len);
 
 // ---------------------------------------------------------
 //
@@ -121,8 +122,9 @@ void* test_code_units() {
 }
 
 void* test_find_reverse() {
-  ElmString16* sep;
+  //                                01234567890123456
   ElmString16* str = create_string("home/jill/Desktop");
+  ElmString16* sub;
   size_t str_len = code_units(str);
   ptrdiff_t result;
 
@@ -130,41 +132,91 @@ void* test_find_reverse() {
     printf("\ntest_find_reverse\n");
   }
 
-  sep = create_string("z");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("z");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should return -1 for no match", result, -1);
 
-  sep = create_string("go");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("go");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should return -1 for partial match", result, -1);
 
-  sep = create_string("/");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("/");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should find last match", result, 9);
 
-  sep = create_string("");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should find last char, given ''", result, str_len - 1);
 
-  sep = create_string("");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 2);
+  sub = create_string("");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 2);
   mu_expect_equal("should find 2nd last char, given '' again", result, str_len - 2);
 
-  sep = create_string("h");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("h");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should find a single char at start", result, 0);
 
-  sep = create_string("ji");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("ji");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should find multiple chars in middle (no retry)", result, 5);
 
-  sep = create_string("jil");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("jil");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should find multiple chars in middle (immediate retry)", result, 5);
 
-  sep = create_string("ho");
-  result = find_reverse(sep->words16, str->words16, code_units(sep), str_len - 1);
+  sub = create_string("ho");
+  result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should find multiple chars at start (retry)", result, 0);
+
+  return NULL;
+}
+
+void* test_find_forward() {
+  //                                01234567890123456
+  ElmString16* str = create_string("home/jill/Desktop");
+  ElmString16* sub;
+  size_t str_len = code_units(str);
+  ptrdiff_t result;
+
+  if (verbose) {
+    printf("\ntest_find_forward\n");
+  }
+
+  sub = create_string("z");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should return -1 for no match", result, -1);
+
+  sub = create_string("my");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should return -1 for partial match", result, -1);
+
+  sub = create_string("/");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should find first match", result, 4);
+
+  sub = create_string("");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should find first char, given ''", result, 0);
+
+  sub = create_string("");
+  result = find_forward(&sub->words16[1], str->words16, code_units(sub), str_len - 1);
+  mu_expect_equal("should find 2nd char, given '' again", result, 0);
+
+  sub = create_string("p");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should find a single char at end", result, str_len - 1);
+
+  sub = create_string("De");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should find multiple chars in middle (no retry)", result, 10);
+
+  sub = create_string("l/");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should find multiple chars in middle (immediate retry)", result, 8);
+
+  sub = create_string("op");
+  result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
+  mu_expect_equal("should find multiple chars at end (retry)", result, 15);
 
   return NULL;
 }
@@ -392,19 +444,26 @@ void* test_String_all() {
       A2(&String_all, &isX, create_string("XXXX-")),
       &False);
 
-  expect_equal("all ((==) 'X') \"\" == True",
-      A2(&String_all, &isX, create_string("")),
-      &True);
+  expect_equal(
+      "all ((==) 'X') \"\" == True", A2(&String_all, &isX, create_string("")), &True);
 
   return NULL;
 }
 
 void* test_String_contains() {
-  // TODO
-  // contains "ab" "abc" == True
-  // contains "abc" "ab" == False
-  // contains "abc" "" == False
-  // contains "" "abc" == True
+  ElmString16* abc = create_string("abc");
+  ElmString16* ab = create_string("ab");
+  ElmString16* empty = create_string("");
+
+  expect_equal("contains \"ab\" \"abc\" == True", A2(&String_contains, ab, abc), &True);
+
+  expect_equal("contains \"abc\" \"ab\" == False", A2(&String_contains, abc, ab), &False);
+
+  expect_equal(
+      "contains \"abc\" \"\" == False", A2(&String_contains, abc, empty), &False);
+
+  expect_equal("contains \"\" \"abc\" == True", A2(&String_contains, empty, abc), &True);
+
   return NULL;
 }
 
@@ -499,6 +558,7 @@ char* string_test() {
   describe("test_String_append", &test_String_append);
   mu_run_test(test_code_units);
   mu_run_test(test_find_reverse);
+  mu_run_test(test_find_forward);
   describe("test_String_split", &test_String_split);
   describe("test_String_join", &test_String_join);
   describe("test_String_slice", &test_String_slice);
@@ -506,9 +566,9 @@ char* string_test() {
   describe("test_String_trimLeft", &test_String_trimLeft);
   describe("test_String_trimRight", &test_String_trimRight);
   describe("test_String_all", &test_String_all);
-  // // describe("test_String_contains", &test_String_contains); // TODO
-  // // describe("test_String_startsWith", &test_String_startsWith); // TODO
-  // // describe("test_String_endsWith", &test_String_endsWith); // TODO
+  // describe("test_String_contains", &test_String_contains);
+  // describe("test_String_startsWith", &test_String_startsWith); // TODO
+  // describe("test_String_endsWith", &test_String_endsWith); // TODO
   describe("test_String_indexes", &test_String_indexes);
   describe("test_String_fromNumber", &test_String_fromNumber);
   describe("test_String_toInt", &test_String_toInt);
