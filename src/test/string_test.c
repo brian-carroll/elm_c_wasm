@@ -373,12 +373,29 @@ void* test_String_trimRight() {
   return NULL;
 }
 
+void* eval_isX(void* args[]) {
+  ElmChar* c = args[0];
+  return c->value == (u32)'X' ? &True : &False;
+}
+Closure isX = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_isX,
+    .max_values = 1,
+};
+
 void* test_String_all() {
-  // TODO
-  // isX = (==) 'X'
-  // all isX "XXXXX" == True
-  // all isX "XXXX " == False
-  // all isX "" == True
+  expect_equal("all ((==) 'X') \"XXXXX\" == True",
+      A2(&String_all, &isX, create_string("XXXXX")),
+      &True);
+
+  expect_equal("all ((==) 'X') \"XXXX-\" == False",
+      A2(&String_all, &isX, create_string("XXXX-")),
+      &False);
+
+  expect_equal("all ((==) 'X') \"\" == True",
+      A2(&String_all, &isX, create_string("")),
+      &True);
+
   return NULL;
 }
 
@@ -488,7 +505,7 @@ char* string_test() {
   describe("test_String_trim", &test_String_trim);
   describe("test_String_trimLeft", &test_String_trimLeft);
   describe("test_String_trimRight", &test_String_trimRight);
-  // // describe("test_String_all", &test_String_all); // TODO
+  describe("test_String_all", &test_String_all);
   // // describe("test_String_contains", &test_String_contains); // TODO
   // // describe("test_String_startsWith", &test_String_startsWith); // TODO
   // // describe("test_String_endsWith", &test_String_endsWith); // TODO
