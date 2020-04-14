@@ -470,22 +470,51 @@ void* test_String_contains() {
 }
 
 void* test_String_startsWith() {
-  // TODO
-  // startsWith "ab" "abc" == True
-  // startsWith "bc" "abc" == False
-  // startsWith "abc" "ab" == False
-  // startsWith "abc" "" == False
-  // startsWith "" "abc" == True
+  ElmString16* abc = create_string("abc");
+  ElmString16* ab = create_string("ab");
+  ElmString16* bc = create_string("bc");
+  ElmString16* empty = create_string("");
+
+  expect_equal(
+      "startsWith \"ab\" \"abc\" == True", A2(&String_startsWith, ab, abc), &True);
+
+  expect_equal(
+      "startsWith \"bc\" \"abc\" == False", A2(&String_startsWith, bc, abc), &False);
+
+  expect_equal(
+      "startsWith \"abc\" \"ab\" == False", A2(&String_startsWith, abc, ab), &False);
+
+  expect_equal(
+      "startsWith \"abc\" \"\" == False", A2(&String_startsWith, abc, empty), &False);
+
+  expect_equal(
+      "startsWith \"\" \"abc\" == True", A2(&String_startsWith, empty, abc), &True);
+
+  expect_equal(
+      "startsWith \"\" \"\" == True", A2(&String_startsWith, empty, empty), &True);
+
   return NULL;
 }
 
 void* test_String_endsWith() {
-  // TODO
-  // endsWith "ab" "abc" == False
-  // endsWith "bc" "abc" == True
-  // endsWith "abc" "ab" == False
-  // endsWith "abc" "" == False
-  // endsWith "" "abc" == True
+  ElmString16* abc = create_string("abc");
+  ElmString16* ab = create_string("ab");
+  ElmString16* bc = create_string("bc");
+  ElmString16* empty = create_string("");
+
+  expect_equal("endsWith \"ab\" \"abc\" == False", A2(&String_endsWith, ab, abc), &False);
+
+  expect_equal("endsWith \"bc\" \"abc\" == True", A2(&String_endsWith, bc, abc), &True);
+
+  expect_equal("endsWith \"abc\" \"ab\" == False", A2(&String_endsWith, abc, ab), &False);
+
+  expect_equal(
+      "endsWith \"abc\" \"\" == False", A2(&String_endsWith, abc, empty), &False);
+
+  expect_equal("endsWith \"\" \"abc\" == True", A2(&String_endsWith, empty, abc), &True);
+
+  expect_equal("endsWith \"\" \"\" == True", A2(&String_endsWith, empty, empty), &True);
+
   return NULL;
 }
 
@@ -569,8 +598,8 @@ char* string_test() {
   describe("test_String_trimRight", &test_String_trimRight);
   describe("test_String_all", &test_String_all);
   describe("test_String_contains", &test_String_contains);
-  // describe("test_String_startsWith", &test_String_startsWith); // TODO
-  // describe("test_String_endsWith", &test_String_endsWith); // TODO
+  describe("test_String_startsWith", &test_String_startsWith);
+  describe("test_String_endsWith", &test_String_endsWith);
   describe("test_String_indexes", &test_String_indexes);
   describe("test_String_fromNumber", &test_String_fromNumber);
   describe("test_String_toInt", &test_String_toInt);

@@ -415,14 +415,12 @@ void* eval_String_startsWith(void* args[]) {
   ElmString16* str = args[1];
 
   size_t lsub = code_units(sub);
+  if (lsub == 0) return &True;
   size_t lstr = code_units(str);
-
-  if (lsub > lstr) {
-    return &False;
-  }
+  if (lsub > lstr) return &False;
 
   for (size_t i = 0; i < lsub; i++) {
-    if (str->words16[i] == sub->words16[i]) {
+    if (str->words16[i] != sub->words16[i]) {
       return &False;
     }
   }
@@ -431,7 +429,7 @@ void* eval_String_startsWith(void* args[]) {
 Closure String_startsWith = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_startsWith,
-    .max_values = 1,
+    .max_values = 2,
 };
 
 /**
@@ -442,14 +440,12 @@ void* eval_String_endsWith(void* args[]) {
   ElmString16* str = args[1];
 
   size_t lsub = code_units(sub);
+  if (lsub == 0) return &True;
   size_t lstr = code_units(str);
-
-  if (lsub > lstr) {
-    return &False;
-  }
+  if (lsub > lstr) return &False;
 
   for (size_t i = 0; i < lsub; i++) {
-    if (str->words16[lstr - 1 - i] == sub->words16[lsub - 1 - i]) {
+    if (str->words16[lstr - 1 - i] != sub->words16[lsub - 1 - i]) {
       return &False;
     }
   }
@@ -458,7 +454,7 @@ void* eval_String_endsWith(void* args[]) {
 Closure String_endsWith = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_endsWith,
-    .max_values = 1,
+    .max_values = 2,
 };
 
 /**
