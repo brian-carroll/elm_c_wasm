@@ -234,33 +234,50 @@ Closure String_slice = {
     .max_values = 3,
 };
 
-// https://tc39.es/ecma262/#prod-LineTerminator
-// https://tc39.es/ecma262/#prod-WhiteSpace
-// https://www.compart.com/en/unicode/category/Zs
-size_t is_whitespace(u16 c) {
-  return (c == 0x000A || c == 0x000D || c == 0x0020 || c == 0x00A0 || c == 0x1680 ||
-          c == 0x2000 || c == 0x2001 || c == 0x2002 || c == 0x2003 || c == 0x2004 ||
-          c == 0x2005 || c == 0x2006 || c == 0x2007 || c == 0x2008 || c == 0x2009 ||
-          c == 0x200A || c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F ||
-          c == 0x3000);
+bool is_whitespace(u16 c) {
+  // https://www.compart.com/en/unicode/category/Zs
+  bool is_unicode_space_separator =
+      (c == 0x0020 || c == 0x00A0 || c == 0x1680 || c == 0x2000 || c == 0x2001 ||
+          c == 0x2002 || c == 0x2003 || c == 0x2004 || c == 0x2005 || c == 0x2006 ||
+          c == 0x2007 || c == 0x2008 || c == 0x2009 || c == 0x200A || c == 0x202F ||
+          c == 0x205F || c == 0x3000);
+
+  // https://tc39.es/ecma262/#prod-WhiteSpace
+  // Two of these are already covered but this way is more explicit, and it'll get
+  // optimised
+  bool is_ecma_white_space = (c == 0x0009 || c == 0x000B || c == 0x000C || c == 0x0020 ||
+                              c == 0x00A0 || c == 0xFEFF || is_unicode_space_separator);
+
+  // https://tc39.es/ecma262/#prod-LineTerminator
+  bool is_ecma_line_terminator =
+      (c == 0x000A || c == 0x000D || c == 0x2028 || c == 0x2029);
+
+  // https://tc39.es/ecma262/#sec-string.prototype.trim
+  bool shouldTrim = (is_ecma_white_space || is_ecma_line_terminator);
+
+  return shouldTrim;
 }
 
 /**
  * String.trim
  */
 static void* eval_String_trim(void* args[]) {
-  ElmString16* str = args[1];
+  ElmString16* str = args[0];
   size_t len = code_units(str);
-  size_t start = 0;
-  size_t end = len - 1;
-  while (is_whitespace(str->words16[start]) && start < len) {
+  ptrdiff_t start = 0;
+  ptrdiff_t end = len - 1;
+  while (is_whitespace(str->words16[start]) && start <= end) {
     start++;
   }
-  while (is_whitespace(str->words16[end]) && end) {
+  while (is_whitespace(str->words16[end]) && end > start) {
     end--;
   }
-  size_t n_bytes = (end + 1 - start) * 2;
-  return NEW_ELM_STRING(n_bytes, (char*)(&str->words16[start]));
+  ptrdiff_t n_units = end + 1 - start;
+  ElmString16* result = NEW_ELM_STRING16(n_units);
+  if (n_units > 0) {
+    memcpy(result->words16, &str->words16[start], n_units * 2);
+  }
+  return result;
 }
 Closure String_trim = {
     .header = HEADER_CLOSURE(0),
