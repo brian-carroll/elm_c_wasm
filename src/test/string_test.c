@@ -333,6 +333,68 @@ void* test_String_indexes() {
   return NULL;
 }
 
+void* test_String_trim() {
+  // TODO
+  // "hello" == trim " \n hello \t \r\n"
+  // "" == trim " \n \t \r\n"
+  // "" == trim ""
+  return NULL;
+}
+
+void* test_String_trimLeft() {
+  // TODO
+  // "hello \t \r\n" == trimLeft " \n hello \t \r\n"
+  // "" == trimLeft " \n \t \r\n"
+  // "" == trimLeft ""
+  return NULL;
+}
+
+void* test_String_trimRight() {
+  // TODO
+  // " \n hello" == trimRight " \n hello \t \r\n"
+  // "" == trimRight " \n \t \r\n"
+  // "" == trimRight ""
+  return NULL;
+}
+
+void* test_String_all() {
+  // TODO
+  // isX = (==) 'X'
+  // all isX "XXXXX" == True
+  // all isX "XXXX " == False
+  // all isX "" == True
+  return NULL;
+}
+
+void* test_String_contains() {
+  // TODO
+  // contains "ab" "abc" == True
+  // contains "abc" "ab" == False
+  // contains "abc" "" == False
+  // contains "" "abc" == True
+  return NULL;
+}
+
+void* test_String_startsWith() {
+  // TODO
+  // startsWith "ab" "abc" == True
+  // startsWith "bc" "abc" == False
+  // startsWith "abc" "ab" == False
+  // startsWith "abc" "" == False
+  // startsWith "" "abc" == True
+  return NULL;
+}
+
+void* test_String_endsWith() {
+  // TODO
+  // endsWith "ab" "abc" == False
+  // endsWith "bc" "abc" == True
+  // endsWith "abc" "ab" == False
+  // endsWith "abc" "" == False
+  // endsWith "" "abc" == True
+  return NULL;
+}
+
 void* test_String_fromNumber() {
   expect_string("fromNumber 2147483647",
       "2147483647",
@@ -385,6 +447,12 @@ void* test_String_toInt() {
   return NULL;
 }
 
+// ---------------------------------------------------------
+//
+//          RUN ALL STRING TESTS
+//
+// ---------------------------------------------------------
+
 char* string_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -401,13 +469,13 @@ char* string_test() {
   describe("test_String_split", &test_String_split);
   describe("test_String_join", &test_String_join);
   describe("test_String_slice", &test_String_slice);
-  // TODO: test_String_trim
-  // TODO: test_String_trimLeft
-  // TODO: test_String_trimRight
-  // TODO: test_String_all
-  // TODO: test_String_contains
-  // TODO: test_String_startsWith
-  // TODO: test_String_endsWith
+  // TODO: describe("test_String_trim", &test_String_trim);
+  // TODO: describe("test_String_trimLeft", &test_String_trimLeft);
+  // TODO: describe("test_String_trimRight", &test_String_trimRight);
+  // TODO: describe("test_String_all", &test_String_all);
+  // TODO: describe("test_String_contains", &test_String_contains);
+  // TODO: describe("test_String_startsWith", &test_String_startsWith);
+  // TODO: describe("test_String_endsWith", &test_String_endsWith);
   describe("test_String_indexes", &test_String_indexes);
   describe("test_String_fromNumber", &test_String_fromNumber);
   describe("test_String_toInt", &test_String_toInt);
