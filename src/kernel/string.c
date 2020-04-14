@@ -289,14 +289,18 @@ Closure String_trim = {
  * String.trimLeft
  */
 static void* eval_String_trimLeft(void* args[]) {
-  ElmString16* str = args[1];
+  ElmString16* str = args[0];
   size_t len = code_units(str);
-  size_t start = 0;
+  ptrdiff_t start = 0;
   while (is_whitespace(str->words16[start]) && start < len) {
     start++;
   }
-  size_t n_bytes = (len - start) * 2;
-  return NEW_ELM_STRING(n_bytes, (char*)(&str->words16[start]));
+  ptrdiff_t n_units = len - start;
+  ElmString16* result = NEW_ELM_STRING16(n_units);
+  if (n_units > 0) {
+    memcpy(result->words16, &str->words16[start], n_units * 2);
+  }
+  return result;
 }
 Closure String_trimLeft = {
     .header = HEADER_CLOSURE(0),
@@ -308,14 +312,18 @@ Closure String_trimLeft = {
  * String.trimRight
  */
 static void* eval_String_trimRight(void* args[]) {
-  ElmString16* str = args[1];
+  ElmString16* str = args[0];
   size_t len = code_units(str);
-  size_t end = len - 1;
-  while (is_whitespace(str->words16[end])) {
+  ptrdiff_t end = len - 1;
+  while (is_whitespace(str->words16[end]) && end >= 0) {
     end--;
   }
-  size_t n_bytes = (end + 1) * 2;
-  return NEW_ELM_STRING(n_bytes, (char*)(&str->words16[0]));
+  ptrdiff_t n_units = end + 1;
+  ElmString16* result = NEW_ELM_STRING16(n_units);
+  if (n_units > 0) {
+    memcpy(result->words16, str->words16, n_units * 2);
+  }
+  return result;
 }
 Closure String_trimRight = {
     .header = HEADER_CLOSURE(0),

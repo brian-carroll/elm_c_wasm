@@ -347,18 +347,29 @@ void* test_String_trim() {
 }
 
 void* test_String_trimLeft() {
-  // TODO
-  // "hello \t \r\n" == trimLeft " \n hello \t \r\n"
-  // "" == trimLeft " \n \t \r\n"
-  // "" == trimLeft ""
+  expect_string("trim \" \\n a \\t \\r\\n\"",
+      "a \t \r\n",
+      A1(&String_trimLeft, create_string(" \n a \t \r\n")));
+
+  expect_string(
+      "trim \" \\n \\t \\r\\n\"", "", A1(&String_trimLeft, create_string(" \n \t \r\n")));
+
+  expect_string("trim \"\"", "", A1(&String_trimLeft, create_string("")));
+
   return NULL;
 }
 
 void* test_String_trimRight() {
-  // TODO
-  // " \n hello" == trimRight " \n hello \t \r\n"
-  // "" == trimRight " \n \t \r\n"
-  // "" == trimRight ""
+  expect_string("trim \" \\n a \\t \\r\\n\"",
+      " \n a",
+      A1(&String_trimRight, create_string(" \n a \t \r\n")));
+
+  expect_string("trim \" \\n \\t \\r\\n\"",
+      "",
+      A1(&String_trimRight, create_string(" \n \t \r\n")));
+
+  expect_string("trim \"\"", "", A1(&String_trimRight, create_string("")));
+
   return NULL;
 }
 
@@ -467,23 +478,23 @@ char* string_test() {
     printf("------\n");
   }
 
-  // describe("test_String_uncons", &test_String_uncons);
-  // describe("test_String_append", &test_String_append);
-  // mu_run_test(test_code_units);
-  // mu_run_test(test_find_reverse);
-  // describe("test_String_split", &test_String_split);
-  // describe("test_String_join", &test_String_join);
-  // describe("test_String_slice", &test_String_slice);
+  describe("test_String_uncons", &test_String_uncons);
+  describe("test_String_append", &test_String_append);
+  mu_run_test(test_code_units);
+  mu_run_test(test_find_reverse);
+  describe("test_String_split", &test_String_split);
+  describe("test_String_join", &test_String_join);
+  describe("test_String_slice", &test_String_slice);
   describe("test_String_trim", &test_String_trim);
-  // // describe("test_String_trimLeft", &test_String_trimLeft); // TODO
-  // // describe("test_String_trimRight", &test_String_trimRight); // TODO
+  describe("test_String_trimLeft", &test_String_trimLeft);
+  describe("test_String_trimRight", &test_String_trimRight);
   // // describe("test_String_all", &test_String_all); // TODO
   // // describe("test_String_contains", &test_String_contains); // TODO
   // // describe("test_String_startsWith", &test_String_startsWith); // TODO
   // // describe("test_String_endsWith", &test_String_endsWith); // TODO
-  // describe("test_String_indexes", &test_String_indexes);
-  // describe("test_String_fromNumber", &test_String_fromNumber);
-  // describe("test_String_toInt", &test_String_toInt);
+  describe("test_String_indexes", &test_String_indexes);
+  describe("test_String_fromNumber", &test_String_fromNumber);
+  describe("test_String_toInt", &test_String_toInt);
 
   return NULL;
 }
