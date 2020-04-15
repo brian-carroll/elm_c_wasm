@@ -585,11 +585,12 @@ char* string_test() {
     printf("------\n");
   }
 
-  describe("test_String_uncons", &test_String_uncons);
-  describe("test_String_append", &test_String_append);
   mu_run_test(test_code_units);
   mu_run_test(test_find_reverse);
   mu_run_test(test_find_forward);
+
+  describe("test_String_uncons", &test_String_uncons);
+  describe("test_String_append", &test_String_append);
   describe("test_String_split", &test_String_split);
   describe("test_String_join", &test_String_join);
   describe("test_String_slice", &test_String_slice);
