@@ -96,6 +96,35 @@ char* test_number_binops() {
   return NULL;
 }
 
+char* test_number_unops() {
+  if (verbose) {
+    printf("\n");
+    printf("## Numerical unary operators\n");
+    printf("\n");
+  }
+  // Basics.negate
+  mu_assert("-(3.14) == -3.14", ftest(A1(&Basics_negate, NEW_ELM_FLOAT(3.14)), -3.14));
+  mu_assert("-(-3.14) == 3.14", ftest(A1(&Basics_negate, NEW_ELM_FLOAT(-3.14)), 3.14));
+  mu_assert("-(123) == -123", itest(A1(&Basics_negate, NEW_ELM_INT(-123)), 123));
+  mu_assert("-(-123) == 123", itest(A1(&Basics_negate, NEW_ELM_INT(123)), -123));
+
+  // Basics.toFloat
+  mu_assert("toFloat -123 == -123.0", ftest(A1(&Basics_toFloat, NEW_ELM_INT(-123)), -123.0));
+
+  // Basics.floor
+  mu_assert("floor 3.9 == 3", itest(A1(&Basics_floor, NEW_ELM_FLOAT(3.9)), 3));
+  mu_assert("floor -3.14 == -4", itest(A1(&Basics_floor, NEW_ELM_FLOAT(-3.14)), -4));
+
+  // Basics.ceiling
+  mu_assert("ceiling 3.14 == 4", itest(A1(&Basics_ceiling, NEW_ELM_FLOAT(3.14)), 4));
+  mu_assert("ceiling -4.9 == -4", itest(A1(&Basics_ceiling, NEW_ELM_FLOAT(-4.9)), -4));
+
+  // Basics_log
+  mu_assert("log 2.71828 == 1.0", ftest(A1(&Basics_log, NEW_ELM_FLOAT(2.71828)), 1.0));
+
+  return NULL;
+}
+
 char* basics_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -106,5 +135,6 @@ char* basics_test() {
   }
 
   mu_run_test(test_number_binops);
+  mu_run_test(test_number_unops);
   return NULL;
 }
