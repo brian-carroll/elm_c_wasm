@@ -8,9 +8,9 @@
 - [x] Basics.toFloat
 - [x] Basics.floor
 - [x] Basics.ceiling
-- [ ] Basics.not
-- [ ] Basics.and
-- [ ] Basics.or
+- [x] Basics.not
+- [x] Basics.and
+- [x] Basics.or
 - [ ] Basics.modBy
 - [ ] Basics.remainderBy
 - [x] Basics.log

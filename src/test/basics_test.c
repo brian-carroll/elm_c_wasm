@@ -109,7 +109,8 @@ char* test_number_unops() {
   mu_assert("-(-123) == 123", itest(A1(&Basics_negate, NEW_ELM_INT(123)), -123));
 
   // Basics.toFloat
-  mu_assert("toFloat -123 == -123.0", ftest(A1(&Basics_toFloat, NEW_ELM_INT(-123)), -123.0));
+  mu_assert(
+      "toFloat -123 == -123.0", ftest(A1(&Basics_toFloat, NEW_ELM_INT(-123)), -123.0));
 
   // Basics.floor
   mu_assert("floor 3.9 == 3", itest(A1(&Basics_floor, NEW_ELM_FLOAT(3.9)), 3));
@@ -125,6 +126,32 @@ char* test_number_unops() {
   return NULL;
 }
 
+char* test_logical_ops() {
+  if (verbose) {
+    printf("\n");
+    printf("## Logical operators\n");
+    printf("\n");
+  }
+
+  // not
+  mu_assert("not True == False", A1(&Basics_not, &True) == &False);
+  mu_assert("not False == True", A1(&Basics_not, &False) == &True);
+
+  // and
+  mu_assert("False && False == False", A2(&Basics_and, &False, &False) == &False);
+  mu_assert("False && True == False", A2(&Basics_and, &False, &True) == &False);
+  mu_assert("True && False == False", A2(&Basics_and, &True, &False) == &False);
+  mu_assert("True && True == True", A2(&Basics_and, &True, &True) == &True);
+
+  // or
+  mu_assert("False || False == False", A2(&Basics_or, &False, &False) == &False);
+  mu_assert("False || True == True", A2(&Basics_or, &False, &True) == &True);
+  mu_assert("True || False == True", A2(&Basics_or, &True, &False) == &True);
+  mu_assert("True || True == True", A2(&Basics_or, &True, &True) == &True);
+
+  return NULL;
+}
+
 char* basics_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -136,5 +163,6 @@ char* basics_test() {
 
   mu_run_test(test_number_binops);
   mu_run_test(test_number_unops);
+  mu_run_test(test_logical_ops);
   return NULL;
 }

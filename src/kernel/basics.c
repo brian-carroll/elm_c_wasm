@@ -228,7 +228,7 @@ static void* eval_not(void* args[2]) {
 Closure Basics_not = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_not,
-    .max_values = 2,
+    .max_values = 1,
 };
 
 /**
