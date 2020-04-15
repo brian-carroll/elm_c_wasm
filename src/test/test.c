@@ -41,6 +41,51 @@ Custom g_elm_core_Maybe_Nothing = {
     .ctor = CTOR_Nothing,
 };
 
+
+// ---------------------------------------------------------
+//
+//                TESTING UTILITIES
+// 
+// Till now I've been using minunit
+// But now I'm finding it too minimal so I'm switching to this
+//
+// ---------------------------------------------------------
+
+char* test_description;
+void* test_heap_ptr;
+
+void describe(char* description, void* (*test)()) {
+  tests_run++;
+  test_description = description;
+  test_heap_ptr = GC_malloc(0);
+  if (verbose) {
+    printf("\n%s\n", description);
+  }
+  if (test() == pGcFull) {
+    fprintf(stderr, "Heap overflow in test \"%s\"\n", description);
+    print_heap();
+  }
+}
+
+void* expect_equal(char* expect_description, void* left, void* right) {
+  bool ok = A2(&Utils_equal, left, right) == &True;
+  if (!ok) {
+    if (!verbose) {
+      printf("\n%s\n", test_description);
+    }
+    printf("FAIL: %s\n", expect_description);
+    printf("Left: %p\n", left);
+    printf("Right: %p\n", right);
+    print_heap_range(test_heap_ptr, GC_malloc(0));
+    printf("\n");
+    tests_failed++;
+  } else if (verbose) {
+    printf("PASS: %s\n", expect_description);
+  }
+  assertions_made++;
+  return NULL;
+}
+
 // Debug function, with pre-allocated memory for strings
 // Avoiding use of malloc in test code in case it screws up GC
 // A single printf may require many separate hex strings

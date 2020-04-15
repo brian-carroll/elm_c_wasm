@@ -16,22 +16,6 @@ ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len);
 //
 // ---------------------------------------------------------
 
-char* test_description;
-void* test_heap_ptr;
-
-void describe(char* description, void* (*test)()) {
-  tests_run++;
-  test_description = description;
-  test_heap_ptr = GC_malloc(0);
-  if (verbose) {
-    printf("\n%s\n", description);
-  }
-  if (test() == pGcFull) {
-    fprintf(stderr, "Heap overflow in test \"%s\"\n", description);
-    print_heap();
-  }
-}
-
 ElmString16* create_string(char* c_string) {
   size_t c_len = (size_t)strlen(c_string);
   size_t bytes_utf16 = c_len * 2;
@@ -50,25 +34,6 @@ void print_elm_string(ElmString16* str) {
     printf("%c", (char)c);
   }
   printf("\"");
-}
-
-void* expect_equal(char* expect_description, void* left, void* right) {
-  bool ok = A2(&Utils_equal, left, right) == &True;
-  if (!ok) {
-    if (!verbose) {
-      printf("\n%s\n", test_description);
-    }
-    printf("FAIL: %s\n", expect_description);
-    printf("Left: %p\n", left);
-    printf("Right: %p\n", right);
-    print_heap_range(test_heap_ptr, GC_malloc(0));
-    printf("\n");
-    tests_failed++;
-  } else if (verbose) {
-    printf("PASS: %s\n", expect_description);
-  }
-  assertions_made++;
-  return NULL;
 }
 
 void* expect_string(char* call_expr, char* expected_c_str, ElmString16* actual) {

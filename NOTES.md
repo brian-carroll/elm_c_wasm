@@ -1,3 +1,21 @@
+# C core lib tests TODO
+
+- Char.toCode
+- List.map2
+- Basics.negate
+- Basics.fdiv
+- Basics.idiv
+- Basics.toFloat
+- Basics.floor
+- Basics.ceiling
+- Basics.not
+- Basics.and
+- Basics.or
+- Basics.modBy
+- Basics.remainderBy
+- Basics.log
+
+
 # JS arrays passed into Wasm!
 Some core packages are using their own weird JS data structures
 that contain arrays. `Json` is one of them.
