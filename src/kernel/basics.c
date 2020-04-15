@@ -116,7 +116,8 @@ Closure Basics_fdiv = {
 static void* eval_idiv(void* args[2]) {
   ElmInt* ia = args[0];
   ElmInt* ib = args[1];
-  return NEW_ELM_FLOAT(ia->value / ib->value);
+  i32 result = ia->value / ib->value;
+  return NEW_ELM_INT(result);
 }
 Closure Basics_idiv = {
     .header = HEADER_CLOSURE(0),

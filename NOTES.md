@@ -3,8 +3,8 @@
 - [x] Char.toCode
 - [x] List.map2
 - [ ] Basics.negate
-- [ ] Basics.fdiv
-- [ ] Basics.idiv
+- [x] Basics.fdiv
+- [x] Basics.idiv
 - [ ] Basics.toFloat
 - [ ] Basics.floor
 - [ ] Basics.ceiling
