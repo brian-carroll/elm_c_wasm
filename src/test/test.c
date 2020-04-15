@@ -9,12 +9,12 @@
 #include "../kernel/kernel.h"
 #include "./gc_test.h"
 
-
 char* types_test();
 char* utils_test();
 char* basics_test();
 char* string_test();
 char* char_test();
+char* list_test();
 
 // Avoid wrapper compile errors using dummy app params
 FieldGroup* Wrapper_appFieldGroups[] = {};
@@ -120,7 +120,8 @@ char* hex_ptr(void* ptr) {
   return hex(&ptr, sizeof(void*));
 }
 
-char* test_all(bool types, bool utils, bool basics, bool string, bool chr, bool gc) {
+char* test_all(
+    bool types, bool utils, bool basics, bool string, bool chr, bool list, bool gc) {
   if (verbose) {
     printf("Selected tests: ");
     if (types) printf("types ");
@@ -128,6 +129,7 @@ char* test_all(bool types, bool utils, bool basics, bool string, bool chr, bool 
     if (basics) printf("basics ");
     if (string) printf("string ");
     if (chr) printf("char ");
+    if (list) printf("list ");
     if (gc) printf("gc ");
     printf("\n\n");
   }
@@ -136,6 +138,7 @@ char* test_all(bool types, bool utils, bool basics, bool string, bool chr, bool 
   if (basics) mu_run_test(basics_test);
   if (string) mu_run_test(string_test);
   if (chr) mu_run_test(char_test);
+  if (list) mu_run_test(list_test);
   if (gc) mu_run_test(gc_test);
 
   return NULL;
@@ -152,6 +155,7 @@ int main(int argc, char** argv) {
       {"basics", no_argument, NULL, 'b'},
       {"string", no_argument, NULL, 's'},
       {"char", no_argument, NULL, 'c'},
+      {"list", no_argument, NULL, 'l'},
       {"gc", no_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
   };
@@ -162,6 +166,7 @@ int main(int argc, char** argv) {
   bool string = false;
   bool chr = false;
   bool utils = false;
+  bool list = false;
   bool gc = false;
 
 // Running in a Windows CMD shell
@@ -172,8 +177,10 @@ int main(int argc, char** argv) {
   verbose = true;
 #endif
 
+  char options[] = "vatubsclg";
+
   int opt;
-  while ((opt = getopt_long(argc, argv, "vatubscg", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
     switch (opt) {
       case 'v':
         verbose = true;
@@ -201,16 +208,19 @@ int main(int argc, char** argv) {
       case 'c':
         chr = true;
         break;
+      case 'l':
+        list = true;
+        break;
       case 'g':
         gc = true;
         break;
       default:
-        fprintf(stderr, "Usage: %s [-vatubscg]\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-%s]\n", argv[0], options);
         exit(EXIT_FAILURE);
     }
   }
 
-  char* mu_error_message = test_all(types, utils, basics, string, chr, gc);
+  char* mu_error_message = test_all(types, utils, basics, string, chr, list, gc);
   int exit_code;
 
   if (tests_failed) {
