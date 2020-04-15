@@ -7,11 +7,14 @@
 #include <unistd.h>
 
 #include "../kernel/kernel.h"
-#include "./basics_test.h"
 #include "./gc_test.h"
-#include "./string_test.h"
-#include "./types_test.h"
-#include "./utils_test.h"
+
+
+char* types_test();
+char* utils_test();
+char* basics_test();
+char* string_test();
+char* char_test();
 
 // Avoid wrapper compile errors using dummy app params
 FieldGroup* Wrapper_appFieldGroups[] = {};
@@ -41,11 +44,10 @@ Custom g_elm_core_Maybe_Nothing = {
     .ctor = CTOR_Nothing,
 };
 
-
 // ---------------------------------------------------------
 //
 //                TESTING UTILITIES
-// 
+//
 // Till now I've been using minunit
 // But now I'm finding it too minimal so I'm switching to this
 //
@@ -118,13 +120,14 @@ char* hex_ptr(void* ptr) {
   return hex(&ptr, sizeof(void*));
 }
 
-char* test_all(bool types, bool utils, bool basics, bool string, bool gc) {
+char* test_all(bool types, bool utils, bool basics, bool string, bool chr, bool gc) {
   if (verbose) {
     printf("Selected tests: ");
     if (types) printf("types ");
     if (utils) printf("utils ");
     if (basics) printf("basics ");
     if (string) printf("string ");
+    if (chr) printf("char ");
     if (gc) printf("gc ");
     printf("\n\n");
   }
@@ -132,6 +135,7 @@ char* test_all(bool types, bool utils, bool basics, bool string, bool gc) {
   if (utils) mu_run_test(utils_test);
   if (basics) mu_run_test(basics_test);
   if (string) mu_run_test(string_test);
+  if (chr) mu_run_test(char_test);
   if (gc) mu_run_test(gc_test);
 
   return NULL;
@@ -147,6 +151,7 @@ int main(int argc, char** argv) {
       {"utils", no_argument, NULL, 'u'},
       {"basics", no_argument, NULL, 'b'},
       {"string", no_argument, NULL, 's'},
+      {"char", no_argument, NULL, 'c'},
       {"gc", no_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
   };
@@ -155,6 +160,7 @@ int main(int argc, char** argv) {
   bool types = false;
   bool basics = false;
   bool string = false;
+  bool chr = false;
   bool utils = false;
   bool gc = false;
 
@@ -167,7 +173,7 @@ int main(int argc, char** argv) {
 #endif
 
   int opt;
-  while ((opt = getopt_long(argc, argv, "vatubsg", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "vatubscg", long_options, NULL)) != -1) {
     switch (opt) {
       case 'v':
         verbose = true;
@@ -177,6 +183,7 @@ int main(int argc, char** argv) {
         utils = true;
         basics = true;
         string = true;
+        chr = true;
         gc = true;
         break;
       case 't':
@@ -191,16 +198,19 @@ int main(int argc, char** argv) {
       case 's':
         string = true;
         break;
+      case 'c':
+        chr = true;
+        break;
       case 'g':
         gc = true;
         break;
       default:
-        fprintf(stderr, "Usage: %s [-vatubsg]\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-vatubscg]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
   }
 
-  char* mu_error_message = test_all(types, utils, basics, string, gc);
+  char* mu_error_message = test_all(types, utils, basics, string, chr, gc);
   int exit_code;
 
   if (tests_failed) {
