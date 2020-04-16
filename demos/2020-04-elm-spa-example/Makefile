@@ -21,9 +21,9 @@ build/elm/elm.c: $(ELM_SOURCES)
 build/elm/elm.js: build/elm/elm.c
 	@:
 
-build/emscripten/elm.c: build/elm/elm.c
+build/emscripten/elm.c: build/elm/elm.c codemods.js
 	@mkdir -p build/emscripten
-	node ./fix-kernel-path.js build/elm/elm.c > build/emscripten/elm.c
+	node codemods.js build/elm/elm.c > build/emscripten/elm.c
 
 build/emscripten/elm.wasm: build-wasm.sh build/emscripten/elm.c $(KERNELC) $(KERNELH)
 	@dos2unix -q build-wasm.sh
