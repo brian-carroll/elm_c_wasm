@@ -136,7 +136,7 @@ function wrapWasmElmApp(
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
-  const elmFunctionWrappers = [identity, identity, F2, F3, F4];
+  const elmFunctionWrappers = [identity, identity, F2, F3, F4, F5, F6, F7, F8, F9];
 
   enum Tag {
     Int = 0x0,

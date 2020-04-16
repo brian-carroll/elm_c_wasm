@@ -21,36 +21,14 @@ declare function _Utils_Tuple3<A, B, C>(
 ): { $: '#2'; a: A; b: B; c: C };
 declare function _Utils_chr(c: string): String;
 
-/* Curry
- */
-declare function F2<A, B, C>(fun: (a: A, b: B) => C): (a: A) => (b: B) => C;
-
-declare function F3<A, B, C, D>(
-  fun: (a: A, b: B, c: C) => D
-): (a: A) => (b: B) => (c: C) => D;
-
-declare function F4<A, B, C, D, E>(
-  fun: (a: A, b: B, c: C, d: D) => E
-): (a: A) => (b: B) => (c: C) => (d: D) => E;
-
-/* Apply
- */
-declare function A2<A, B, C>(fun: (a: A) => (b: B) => C, a: A, b: B): C;
-
-declare function A3<A, B, C, D>(
-  fun: (a: A) => (b: B) => (c: C) => D,
-  a: A,
-  b: B,
-  c: C
-): D;
-
-declare function A4<A, B, C, D, E>(
-  fun: (a: A) => (b: B) => (c: C) => (d: D) => E,
-  a: A,
-  b: B,
-  c: C,
-  d: D
-): E;
+declare const F2: Function;
+declare const F3: Function;
+declare const F4: Function;
+declare const F5: Function;
+declare const F6: Function;
+declare const F7: Function;
+declare const F8: Function;
+declare const F9: Function;
 
 /*----------------------------
   TEST HELPER DECLARATIONS
