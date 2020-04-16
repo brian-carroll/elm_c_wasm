@@ -11,8 +11,8 @@
 - [x] Basics.not
 - [x] Basics.and
 - [x] Basics.or
-- [ ] Basics.modBy
-- [ ] Basics.remainderBy
+- [x] Basics.modBy
+- [x] Basics.remainderBy
 - [x] Basics.log
 
 

@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 
 /**
  * negate
@@ -258,22 +259,22 @@ Closure Basics_or = {
 /**
  * modBy
  */
-static void* eval_modBy(void* args[]) {
-  ElmInt* a = args[0];
-  ElmInt* b = args[1];
-  return NEW_ELM_INT(a->value % b->value);
+static void* eval_remainderBy(void* args[]) {
+  ElmInt* den = args[0];
+  ElmInt* num = args[1];
+  return NEW_ELM_INT(num->value % den->value);
 }
-Closure Basics_modBy = {
+Closure Basics_remainderBy = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &eval_modBy,
+    .evaluator = &eval_remainderBy,
     .max_values = 2,
 };
 
 /**
- * remainderBy
+ * modBy
  * https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/divmodnote-letter.pdf
  */
-static void* eval_remainderBy(void* args[]) {
+static void* eval_modBy(void* args[]) {
   ElmInt* a0 = args[0];
   ElmInt* a1 = args[1];
   i32 modulus = a0->value;
@@ -286,9 +287,9 @@ static void* eval_remainderBy(void* args[]) {
                          ? answer + modulus
                          : answer);
 }
-Closure Basics_remainderBy = {
+Closure Basics_modBy = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &eval_remainderBy,
+    .evaluator = &eval_modBy,
     .max_values = 2,
 };
 

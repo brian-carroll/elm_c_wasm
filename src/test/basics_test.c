@@ -23,6 +23,7 @@ char* test_number_binops() {
   ElmInt* i1 = NEW_ELM_INT(1);
   ElmInt* i2 = NEW_ELM_INT(2);
   ElmInt* im = NEW_ELM_INT(-1);
+
   ElmInt* ibig1 = NEW_ELM_INT(123456);
   ElmInt* ibig2 = NEW_ELM_INT(654321);
   ElmInt* imbig1 = NEW_ELM_INT(-123456);
@@ -92,6 +93,21 @@ char* test_number_binops() {
 
   mu_assert("Expect: 1.0 ^ 3.14 = 1.0", ftest(A2(&Basics_pow, f1, f2), 1.0));
   mu_assert("Expect: 3.14 ^ 1.0 = 3.14", ftest(A2(&Basics_pow, f2, f1), 3.14));
+
+  ElmInt* i3 = NEW_ELM_INT(3);
+  ElmInt* i8 = NEW_ELM_INT(8);
+  ElmInt* im3 = NEW_ELM_INT(-3);
+  ElmInt* im8 = NEW_ELM_INT(-8);
+
+  mu_assert("modBy 3 8 == 2", itest(A2(&Basics_modBy, i3, i8), 2));
+  mu_assert("modBy 3 -8 == 1", itest(A2(&Basics_modBy, i3, im8), 1));
+  mu_assert("modBy -3 -8 == -2", itest(A2(&Basics_modBy, im3, im8), -2));
+  mu_assert("modBy -3 8 == -1", itest(A2(&Basics_modBy, im3, i8), -1));
+
+  mu_assert("remainderBy 3 8 == 2", itest(A2(&Basics_remainderBy, i3, i8), 2));
+  mu_assert("remainderBy 3 -8 == -2", itest(A2(&Basics_remainderBy, i3, im8), -2));
+  mu_assert("remainderBy -3 -8 == -2", itest(A2(&Basics_remainderBy, im3, im8), -2));
+  mu_assert("remainderBy -3 8 == 2", itest(A2(&Basics_remainderBy, im3, i8), 2));
 
   return NULL;
 }
