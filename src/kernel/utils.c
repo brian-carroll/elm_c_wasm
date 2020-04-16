@@ -115,69 +115,82 @@ Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   return r_new;
 }
 
-void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
+void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
   void** args;
   Closure* c;
 
-  void* replay = GC_apply_replay();
-  if (replay != NULL) {
-    c = replay;
-    if (c->header.tag != Tag_Closure) {
-      return replay;
-    }
-    if (c->n_values != c->max_values) {
-      return replay;
-    }
-    args = c->values;
-  } else if (c_old->max_values == n_applied) {
-    // 'saturated' call. No need to allocate a new Closure.
-    c = c_old;
-    args = applied;
-  } else if (n_applied == 0) {
-    // a full closure (thunk)
-    // from JS wrapper (or resumed tailcall? not sure if this happens)
-    c = c_old;
-    args = c_old->values;
-  } else {
-    u8 n_old = c_old->n_values;
-    u8 n_new = n_old + n_applied;
+  for (;;) {
+    void* replay = GC_apply_replay();
+    if (replay != NULL) {
+      c = replay;
+      if (c->header.tag != Tag_Closure) {
+        return replay;
+      }
+      if (c->n_values != c->max_values) {
+        return replay;
+      }
+      args = c->values;
+    } else if (c_old->max_values == n_applied) {
+      // 'saturated' call. No need to allocate a new Closure.
+      c = c_old;
+      args = applied;
+    } else if (n_applied == 0) {
+      // a full closure (thunk)
+      // from JS wrapper (or resumed tailcall? not sure if this happens)
+      c = c_old;
+      args = c_old->values;
+    } else {
+      u16 n_old = c_old->n_values;
+      u16 n_new = n_old + n_applied;
 
-    size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
-    size_t size_applied = n_applied * sizeof(void*);
-    size_t size_new = size_old + size_applied;
+      size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
+      size_t size_applied = n_applied * sizeof(void*);
+      size_t size_new = size_old + size_applied;
 
-    c = CAN_THROW(GC_malloc(size_new));
-    GC_memcpy(c, c_old, size_old);
-    GC_memcpy(&c->values[n_old], applied, size_applied);
-    c->header = HEADER_CLOSURE(n_new);
-    c->n_values = n_new;
+      c = CAN_THROW(GC_malloc(size_new));
+      GC_memcpy(c, c_old, size_old);
+      GC_memcpy(&c->values[n_old], applied, size_applied);
+      c->header = HEADER_CLOSURE(n_new);
+      c->n_values = n_new;
 
-    if (n_new != c->max_values) {
-      // Partial application (not calling evaluator => no stack push)
-      return c;
+      if (n_new < c->max_values) {
+        // Partial application (not calling evaluator => no stack push)
+        return c;
+      }
+      args = c->values;
     }
-    args = c->values;
+
+    void* push = CAN_THROW(GC_stack_push());
+    // #ifdef DEBUG
+    // gc_debug_stack_trace(push, c);
+    // #endif
+
+    ElmValue* result = (*c->evaluator)(args);
+    if ((void*)result == pGcFull) {
+      return result;
+    }
+
+    void* pop = CAN_THROW(GC_stack_pop(result, push));
+    // #ifdef DEBUG
+    // gc_debug_stack_trace(pop, c);
+    // #else
+    (void)pop;  // suppress "unused variable" warning
+
+    // #endif
+
+    // In some cases, we may still have args to be applied.
+    // The first few were used to create a Closure
+    // Now we need to apply the rest to that new Closure... etc.
+    u16 n_total = c_old->n_values + n_applied;
+    u16 n_done = c_old->max_values;
+    if (n_total > n_done) {
+      c_old = (Closure*)result;
+      n_applied = n_total - n_done;
+      applied = &args[n_done];
+    } else {
+      return result;
+    }
   }
-
-  void* push = CAN_THROW(GC_stack_push());
-  // #ifdef DEBUG
-  // gc_debug_stack_trace(push, c);
-  // #endif
-
-  ElmValue* result = (*c->evaluator)(args);
-  if ((void*)result == pGcFull) {
-    return result;
-  }
-
-  void* pop = CAN_THROW(GC_stack_pop(result, push));
-  // #ifdef DEBUG
-  // gc_debug_stack_trace(pop, c);
-  // #else
-  (void)pop;  // suppress "unused variable" warning
-
-  // #endif
-
-  return result;
 }
 
 /**

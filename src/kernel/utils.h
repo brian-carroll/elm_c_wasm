@@ -17,7 +17,7 @@ Custom Utils_LT;
 Custom Utils_EQ;
 Custom Utils_GT;
 
-void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]);
+void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
 void* Utils_destruct_index(ElmValue* v, size_t index);
 void* Utils_clone(void* x);
