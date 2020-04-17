@@ -99,11 +99,11 @@ typedef struct {
 #define HEADER_GC_STACK_TC \
   (Header) { .tag = Tag_GcStackTailCall, .size = sizeof(GcStackMap) / SIZE_UNIT }
 
-#define CAN_THROW(expr)         \
-  ({                            \
-    void* x = expr;             \
-    if (x == pGcFull) return x; \
-    x;                          \
+#define CAN_THROW(expr)                                 \
+  ({                                                    \
+    void* tmp_CAN_THROW = expr;                         \
+    if (tmp_CAN_THROW == pGcFull) return tmp_CAN_THROW; \
+    tmp_CAN_THROW;                                      \
   })
 
 // LIST
@@ -235,15 +235,15 @@ typedef struct {
   Header header;
   u16 n_values;  // current number of applied args
   u16 max_values;
-  void* (*evaluator)(void* []);  // pointer to a function that takes an array of pointers
-                                 // and returns a pointer
+  void* (*evaluator)(void*[]);  // pointer to a function that takes an array of pointers
+                                // and returns a pointer
   void* values[];
 } Closure;
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
 
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]);
+    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]);
 #define NEW_CLOSURE(n, m, e, v) CAN_THROW(ctorClosure(n, m, e, v))
 
 // GARBAGE COLLECTOR TYPES

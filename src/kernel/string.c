@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "gc.h"
-#include "maybe.h"
+#include "elm.h"
 #include "types.h"
 #include "utils.h"
 
@@ -106,7 +106,7 @@ Closure String_uncons = {
 /*
  * String.append
  */
-void* String_append_eval(void* args[2]) {
+void* eval_String_append(void* args[2]) {
   ElmString16* a = args[0];
   ElmString16* b = args[1];
 
@@ -122,7 +122,7 @@ void* String_append_eval(void* args[2]) {
 }
 Closure String_append = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &String_append_eval,
+    .evaluator = &eval_String_append,
     .max_values = 2,
 };
 

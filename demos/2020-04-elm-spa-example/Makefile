@@ -40,4 +40,4 @@ dist/elm.js: build/emscripten/elm.js build/elm/elm.js
 	cat build/emscripten/elm.js build/elm/elm.js > dist/elm.js
 
 dist/test: $(KERNELC) $(KERNELH) build/emscripten/elm.c
-	gcc -Wall -O0 -g $(KERNELC) build/emscripten/elm.c -o $@ -lm -Wno-unused-variable &> gcc.log
+	gcc -Wall -O0 -g $(KERNELC) build/emscripten/elm.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types

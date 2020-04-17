@@ -160,8 +160,10 @@ Closure* ctorClosure(
   c->n_values = n_values;
   c->max_values = max_values;
   c->evaluator = evaluator;
-  for (size_t i = 0; i < n_values; ++i) {
-    c->values[i] = values[i];
+  if (values != NULL) {
+    for (size_t i = 0; i < n_values; ++i) {
+      c->values[i] = values[i];
+    }
   }
   return c;
 }
