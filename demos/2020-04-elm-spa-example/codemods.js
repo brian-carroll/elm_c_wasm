@@ -15,7 +15,7 @@ const evalFuncDecls = before.match(/void\s*\*\s*eval_\w+\(/g);
 const evalFuncNames = evalFuncDecls.map(s =>
   s.replace('void * ', '').replace('(', '')
 );
-const incudeStandardIO = '#include <stdio.h>;\n';
+const incudeStandardIO = '#include <stdio.h>\n';
 const printFuncAddrs = evalFuncNames.map(
  fname => `    printf("%zd ${fname}\\n", (size_t)&${fname});\n`
 ).join('');
