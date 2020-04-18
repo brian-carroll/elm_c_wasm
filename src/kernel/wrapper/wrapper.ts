@@ -30,6 +30,12 @@ interface GeneratedAppTypes {
   fieldGroups: string[];
 }
 
+interface ElmCurriedFunction {
+  (...args: any[]): any;
+  a: number;
+  f: Function;
+}
+
 /*********************************************************************************************
  * `wrapWasmElmApp`
  *
@@ -50,7 +56,7 @@ function wrapWasmElmApp(
   wasmBuffer: ArrayBuffer,
   wasmExports: ElmWasmExports,
   generatedAppTypes: GeneratedAppTypes,
-  kernelFuncRecord: Record<string, Function>
+  kernelFuncRecord: Record<string, ElmCurriedFunction>
 ) {
   if (!(wasmBuffer instanceof ArrayBuffer))
     throw new Error('Expected wasmMemory to be an ArrayBuffer');
@@ -301,13 +307,27 @@ function wrapWasmElmApp(
   }
 
   function evalKernelThunk(metadata: ClosureMetadata): any {
-    const { n_values, evaluator, argsIndex } = metadata;
-    let kernelValue = kernelFunctions[evaluator];
-    for (let i = argsIndex; i < argsIndex + n_values; i++) {
-      const arg = readWasmValue(mem32[i]);
-      kernelValue = kernelValue(arg);
+    let { n_values, evaluator, argsIndex } = metadata;
+    let kernelFn: ElmCurriedFunction = kernelFunctions[evaluator];
+    while (n_values) {
+      let f: Function;
+      let nArgs: number;
+      if (kernelFn.a && kernelFn.f && n_values >= kernelFn.a) {
+        f = kernelFn.f;
+        nArgs = kernelFn.a;
+      } else {
+        f = kernelFn;
+        nArgs = kernelFn.length || 1;
+      }
+      const args: any[] = [];
+      mem32.slice(argsIndex, argsIndex + nArgs).forEach(argAddr => {
+        args.push(readWasmValue(argAddr));
+      });
+      n_values -= nArgs;
+      argsIndex += nArgs;
+      kernelFn = f(...args);
     }
-    return kernelValue as any;
+    return kernelFn as any;
   }
 
   function createWasmCallback(metadata: ClosureMetadata): Function {
