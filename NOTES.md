@@ -1,19 +1,15 @@
-# C core lib tests TODO
+# Ports bug
 
-- [x] Char.toCode
-- [x] List.map2
-- [x] Basics.negate
-- [x] Basics.fdiv
-- [x] Basics.idiv
-- [x] Basics.toFloat
-- [x] Basics.floor
-- [x] Basics.ceiling
-- [x] Basics.not
-- [x] Basics.and
-- [x] Basics.or
-- [x] Basics.modBy
-- [x] Basics.remainderBy
-- [x] Basics.log
+Generated code is trying to recreate each port every time is used, and it breaks.
+Need to rework how JS values are referenced from Wasm.
+Currently it assumes I can recreate a value as many times as I want and it's OK. (Because pure functional yadda yadda.)
+But in the case of a port it is a long-lived _instance_. Trying to recreate it again throws an error.
+
+I need to generate it on the JS side and then reference that instance.
+Probably need to do the same for (other) Effect Managers. Am I doing that already?
+
+Naming issue:
+The array of JS values currently assumes they are all following the kernel naming convention but ports follow the Globals naming convention. Need to change how that Set works.
 
 
 # JS arrays passed into Wasm!
