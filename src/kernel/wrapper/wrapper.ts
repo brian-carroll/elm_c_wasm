@@ -58,9 +58,6 @@ function wrapWasmElmApp(
   generatedAppTypes: GeneratedAppTypes,
   kernelFuncRecord: Record<string, ElmCurriedFunction>
 ) {
-  if (!(wasmBuffer instanceof ArrayBuffer))
-    throw new Error('Expected wasmMemory to be an ArrayBuffer');
-
   /* --------------------------------------------------
 
                INITIALISATION & CONSTANTS
