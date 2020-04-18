@@ -43,14 +43,14 @@ interface GeneratedAppTypes {
  * @param wasmBuffer         The `ArrayBuffer` memory block shared between JS and Wasm
  * @param wasmExports        Object of exported functions from the Wasm module
  * @param generatedAppTypes  App-specific type info passed from Elm compiler to this wrapper
- * @param kernelFunctions    Array of all JS kernel functions called by the Elm Wasm module
+ * @param kernelFuncRecord   Record of all JS kernel functions called by the Elm Wasm module
  *
  /********************************************************************************************/
 function wrapWasmElmApp(
   wasmBuffer: ArrayBuffer,
   wasmExports: ElmWasmExports,
   generatedAppTypes: GeneratedAppTypes,
-  kernelFunctions: Function[]
+  kernelFuncRecord: Record<string, Function>
 ) {
   if (!(wasmBuffer instanceof ArrayBuffer))
     throw new Error('Expected wasmMemory to be an ArrayBuffer');
@@ -126,6 +126,9 @@ function wrapWasmElmApp(
     }, {});
   }
 
+  const kernelFunctions = Object.values(kernelFuncRecord);
+  const kernelFunctionNames = Object.keys(kernelFuncRecord); // for debug
+
   const WORD = 4;
   const TAG_MASK = 0xf0000000;
   const TAG_SHIFT = 28;
@@ -136,7 +139,18 @@ function wrapWasmElmApp(
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
-  const elmFunctionWrappers = [identity, identity, F2, F3, F4, F5, F6, F7, F8, F9];
+  const elmFunctionWrappers = [
+    identity,
+    identity,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9
+  ];
 
   enum Tag {
     Int = 0x0,
