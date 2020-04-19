@@ -608,30 +608,32 @@ function wrapWasmElmApp(
         };
       }
       case Tag.Record: {
-        const keys = Object.keys(value);
-        keys.sort();
-        const builder: WasmBuilder = {
-          body: [],
-          jsChildren: keys.map(k => value[k]),
-          bodyWriter: null
-        };
+        const body: number[] = [];
+        const jsChildren: any[] = [];
+        const keys = Object.keys(value).sort();
         const fgName = keys.join(' ');
         const fgAddrStatic = appTypes.fieldGroups[fgName];
         if (fgAddrStatic) {
-          builder.body.push(fgAddrStatic);
+          body.push(fgAddrStatic);
         } else {
-          builder.jsChildren.unshift(new FieldGroup(keys));
+          jsChildren.push(new FieldGroup(keys));
         }
-        return builder;
+        keys.forEach(k => jsChildren.push(value[k]));
+        return {
+          body,
+          jsChildren,
+          bodyWriter: null
+        };
       }
       case Tag.FieldGroup: {
         const fieldNames: string[] = value.fieldNames;
-        const fieldIds = fieldNames.map(n => appTypes.fields[n]);
+        const body = [fieldNames.length];
+        fieldNames.forEach(name => body.push(appTypes.fields[name]));
         return {
-          body: [fieldNames.length].concat(fieldIds),
+          body,
           jsChildren: [],
           bodyWriter: null
-        }
+        };
       }
       case Tag.Closure: {
         const fun = value.f || value;
