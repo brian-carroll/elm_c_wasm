@@ -46,7 +46,10 @@ size_t child_count(ElmValue* v) {
       return custom_params(&v->custom);
 
     case Tag_Record:
-      return v->record.fieldgroup->size;
+      return v->header.size - (sizeof(Record) / SIZE_UNIT);
+
+    case Tag_FieldGroup:
+      return 0;
 
     case Tag_Closure:
       return v->closure.n_values;
@@ -61,9 +64,6 @@ size_t child_count(ElmValue* v) {
     case Tag_GcStackPop:
     case Tag_GcStackTailCall:
       return 2;
-
-    case Tag_Unused:
-      return 0;
   }
 }
 

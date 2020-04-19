@@ -98,10 +98,13 @@ function wrapWasmElmApp(
   interface IntToName {
     [int: number]: string;
   }
+  interface IntToNames {
+    [int: number]: string[];
+  }
   interface AppTypes {
     ctors: NameToInt & IntToName;
     fields: NameToInt & IntToName;
-    fieldGroups: NameToInt & IntToName;
+    fieldGroups: NameToInt & IntToNames;
   }
 
   const CTOR_KERNEL_ARRAY = 'CTOR_KERNEL_ARRAY';
@@ -111,10 +114,10 @@ function wrapWasmElmApp(
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
     fieldGroups: generatedAppTypes.fieldGroups.reduce(
-      (enumObj: NameToInt & IntToName, name) => {
+      (enumObj: NameToInt & IntToNames, name) => {
         const addr = wasmExports._getNextFieldGroup();
         enumObj[name] = addr;
-        enumObj[addr] = name;
+        enumObj[addr] = name.split(' ');
         return enumObj;
       },
       {}
@@ -165,13 +168,13 @@ function wrapWasmElmApp(
     Tuple3 = 0x6,
     Custom = 0x7,
     Record = 0x8,
-    Closure = 0x9,
-    GcException = 0xa,
-    GcStackEmpty = 0xb,
-    GcStackPush = 0xc,
-    GcStackPop = 0xd,
-    GcStackTailCall = 0xe,
-    Unused = 0xf
+    FieldGroup = 0x9,
+    Closure = 0xa,
+    GcException = 0xb,
+    GcStackEmpty = 0xc,
+    GcStackPush = 0xd,
+    GcStackPop = 0xe,
+    GcStackTailCall = 0xf
   }
 
   /* --------------------------------------------------
@@ -271,17 +274,21 @@ function wrapWasmElmApp(
       }
       case Tag.Record: {
         const record: Record<string, any> = {};
-        const fgIndex = mem32[index + 1] >> 2;
-        const fgSize = mem32[fgIndex];
-        const fields = appTypes.fields;
-        for (let i = 1; i <= fgSize; i++) {
-          const fieldId = mem32[fgIndex + i];
-          const valAddr = mem32[index + 1 + i];
-          const fieldName = fields[fieldId];
-          const value = readWasmValue(valAddr);
-          record[fieldName] = value;
-        }
+        const fgAddr = mem32[index + 1];
+        const fieldNames =
+          appTypes.fieldGroups[fgAddr] || readWasmValue(fgAddr);
+        fieldNames.forEach((fieldName, i) => {
+          const valAddr = mem32[index + 2 + i];
+          record[fieldName] = readWasmValue(valAddr);
+        });
         return record;
+      }
+      case Tag.FieldGroup: {
+        const fieldNames: string[] = [];
+        mem32.slice(index + 2, index + size).forEach(fieldId => {
+          fieldNames.push(appTypes.fields[fieldId]);
+        });
+        return fieldNames;
       }
       case Tag.Closure: {
         const idx16 = index << 1;
@@ -469,6 +476,10 @@ function wrapWasmElmApp(
         kind: 'kernelArray';
       };
 
+  class FieldGroup {
+    constructor(public fieldNames: string[]) {}
+  }
+
   function detectElmType(elmValue: any): TypeInfo {
     if (elmValue === null || elmValue === undefined) {
       return { kind: 'constAddr', value: wasmConstAddrs.JsNull };
@@ -500,6 +511,9 @@ function wrapWasmElmApp(
       case 'object': {
         if (elmValue instanceof String) {
           return { kind: 'tag', value: Tag.Char };
+        }
+        if (elmValue instanceof FieldGroup) {
+          return { kind: 'tag', value: Tag.FieldGroup };
         }
         if (Array.isArray(elmValue)) {
           return { kind: 'kernelArray' };
@@ -594,18 +608,30 @@ function wrapWasmElmApp(
         };
       }
       case Tag.Record: {
-        // JS doesn't have the concept of fieldgroups but Wasm does.
-        // It's a structure containing info about a specific Record type
-        // Need to look it up in the appTypes.
         const keys = Object.keys(value);
         keys.sort();
-        const fgName = keys.join(' ');
-        const fgAddr = appTypes.fieldGroups[fgName];
-        return {
-          body: [fgAddr],
+        const builder: WasmBuilder = {
+          body: [],
           jsChildren: keys.map(k => value[k]),
           bodyWriter: null
         };
+        const fgName = keys.join(' ');
+        const fgAddrStatic = appTypes.fieldGroups[fgName];
+        if (fgAddrStatic) {
+          builder.body.push(fgAddrStatic);
+        } else {
+          builder.jsChildren.unshift(new FieldGroup(keys));
+        }
+        return builder;
+      }
+      case Tag.FieldGroup: {
+        const fieldNames: string[] = value.fieldNames;
+        const fieldIds = fieldNames.map(n => appTypes.fields[n]);
+        return {
+          body: [fieldNames.length].concat(fieldIds),
+          jsChildren: [],
+          bodyWriter: null
+        }
       }
       case Tag.Closure: {
         const fun = value.f || value;

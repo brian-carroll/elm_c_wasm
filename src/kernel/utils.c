@@ -275,11 +275,16 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       return 1;
     }
 
-    case Tag_Record:
-      // Elm guarantees same Record type => same fieldgroup
-      for (u32 i = 0; i < pa->record.fieldgroup->size; ++i)
+    case Tag_Record: {
+      // Fieldgroup assumed to be equal due to Elm type checking
+      u32 nparams = pa->header.size - (sizeof(Record)/SIZE_UNIT);
+      for (u32 i = 0; i < nparams; ++i)
         if (!eq_help(pa->record.values[i], pb->record.values[i], depth + 1, pstack))
           return 0;
+      return 1;
+    }
+
+    case Tag_FieldGroup:
       return 1;
 
     case Tag_Closure:
@@ -300,7 +305,6 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_GcStackPush:
     case Tag_GcStackPop:
     case Tag_GcStackTailCall:
-    case Tag_Unused:
       return 0;
   }
 }

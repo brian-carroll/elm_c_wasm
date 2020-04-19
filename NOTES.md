@@ -1,4 +1,19 @@
-# Ports bug
+# Dynamic field groups
+
+Some field groups are not known to the code gen at compile time!
+HTTP response for example.
+SPA example has this issue. No Elm code ever creates a Response record. Only JS kernel code does.
+This means the wrapper can fail to find the right fieldGroup and it ends up being a NULL.
+Need to be able to create FieldGroups dynamically if we don't find them.
+But this means they end up in the heap, which means they need to become first-class citizens and get a header with a tag.
+Good job we already have one handy, Tag_Unused
+TODO
+- Change Tag_Unused to Tag_FieldGroup
+- Make sure GC `child_count` gets the right answer (0)
+- Make sure that equality still works OK on records
+
+
+# Ports bug (FIXED)
 
 Generated code is trying to recreate each port every time is used, and it breaks.
 Need to rework how JS values are referenced from Wasm.

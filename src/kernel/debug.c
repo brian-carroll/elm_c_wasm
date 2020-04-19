@@ -81,6 +81,10 @@ void print_value(void* p) {
       }
       break;
     }
+    case Tag_FieldGroup: {
+      printf("Fieldgroup");
+      break;
+    }
     case Tag_Closure: {
       printf("Closure (%p) n_values: %d max_values: %d values: ",
           v->closure.evaluator,
@@ -114,8 +118,6 @@ void print_value(void* p) {
     case Tag_GcStackEmpty:
       printf("GcStackEmpty newer: %p", v->gc_stackmap.newer);
       break;
-    case Tag_Unused:
-      printf("Unused tag!!");
   }
   printf("\n");
 }
