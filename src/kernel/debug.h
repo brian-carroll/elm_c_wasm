@@ -1,4 +1,5 @@
 #include <stdbool.h>
+
 #include "./types.h"
 #ifndef ELM_KERNEL_DEBUG
 #define ELM_KERNEL_DEBUG
@@ -10,6 +11,15 @@
 #define FORMAT_HEX "%08zx"
 #define FORMAT_PTR "%8p"
 #endif
+
+void Debug_pretty(const char* label, void* p);
+extern char* Debug_ctors[];
+extern char* Debug_fields[];
+extern char* Debug_jsValues[];
+extern int Debug_ctors_size;
+extern int Debug_fields_size;
+extern int Debug_jsValues_size;
+extern char* Debug_evaluator_name(void*);
 
 bool is_marked(void* p);
 void print_value(void* p);

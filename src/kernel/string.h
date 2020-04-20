@@ -4,6 +4,7 @@
 #include "types.h"
 
 void* eval_String_append(void* args[]);  // exposed for `++` (Utils_append)
+size_t code_units(ElmString16* s);
 
 // Closure String_cons;
 Closure String_uncons;

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "./gc-internals.h"
+#include "./string.h"
 #include "./types.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -26,6 +27,183 @@ bool is_marked(void* p) {
   size_t masked = state->heap.bitmap[word] & mask;
   size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
   return (bool)downshift;
+}
+
+static void print_indent(int indent) {
+  for (int i = 0; i < indent; i++) {
+    printf(" ");
+  }
+}
+
+static void Debug_prettyHelp(int indent, void* p) {
+  ElmValue* v = p;
+
+  int deeper = indent + 2;
+  int deeper2 = indent + 4;
+
+  if (p == &True) {
+    printf("True\n");
+    return;
+  }
+  if (p == &False) {
+    printf("False\n");
+    return;
+  }
+  if (p == &Unit) {
+    printf("Unit\n");
+    return;
+  }
+
+  switch (v->header.tag) {
+    case Tag_Int:
+      printf("Int %d\n", v->elm_int.value);
+      break;
+    case Tag_Float:
+      printf("Float %f\n", v->elm_float.value);
+      break;
+    case Tag_Char:
+      printf("Char 0x%8x\n", v->elm_char.value);
+      break;
+    case Tag_String: {
+      printf("String \"");
+      ElmString16* s = p;
+      for (size_t i = 0; i < code_units(s); i++) {
+        u16 unit = s->words16[i];
+        if (unit) {
+          if (unit < 128) {
+            printf("%c", (char)unit);
+          } else {
+            printf("#");
+          }
+        }
+      }
+      printf("\"\n");
+      break;
+    }
+    case Tag_List: {
+      if (p == pNil) {
+        printf("[]\n");
+      } else {
+        printf("[\n");
+        for (Cons* cell = p; cell != &Nil; cell = cell->tail) {
+          print_indent(deeper);
+          Debug_prettyHelp(deeper, cell->head);
+        }
+        print_indent(indent);
+        printf("]\n");
+      }
+      break;
+    }
+    case Tag_Tuple2: {
+      printf("(\n");
+      print_indent(deeper);
+      Debug_prettyHelp(deeper, v->tuple2.a);
+      print_indent(deeper);
+      Debug_prettyHelp(deeper, v->tuple2.b);
+      print_indent(indent);
+      printf(")\n");
+      break;
+    }
+    case Tag_Tuple3: {
+      printf("(\n");
+      print_indent(deeper);
+      Debug_prettyHelp(deeper, v->tuple3.a);
+      print_indent(deeper);
+      Debug_prettyHelp(deeper, v->tuple3.b);
+      print_indent(deeper);
+      Debug_prettyHelp(deeper, v->tuple3.c);
+      print_indent(indent);
+      printf(")\n");
+      break;
+    }
+    case Tag_Custom: {
+      u32 ctor = v->custom.ctor;
+      if (ctor < Debug_ctors_size) {
+        size_t offset = sizeof("CTOR");
+        printf("%s\n", &Debug_ctors[ctor][offset]);
+      } else {
+        printf("Custom (ctor %d)\n", ctor);
+      }
+      for (int i = 0; i < custom_params(p); i++) {
+        print_indent(deeper);
+        Debug_prettyHelp(deeper, v->custom.values[i]);
+      }
+      break;
+    }
+    case Tag_Record: {
+      printf("{\n");
+      FieldGroup* fg = v->record.fieldgroup;
+      u32 n_fields = v->header.size - (sizeof(Record) / SIZE_UNIT);
+      for (int i = 0; i < n_fields; i++) {
+        print_indent(deeper);
+        u32 field = fg->fields[i];
+        if (field < Debug_fields_size) {
+          size_t offset = sizeof("FIELD");
+          printf("%s:\n", &Debug_fields[field][offset]);
+        } else {
+          printf("%d:\n", field);
+        }
+        print_indent(deeper2);
+        Debug_prettyHelp(deeper2, v->custom.values[i]);
+      }
+      print_indent(indent);
+      printf("}\n");
+      break;
+    }
+    case Tag_FieldGroup: {
+      printf("FieldGroup\n");
+      u32 n_fields = v->fieldgroup.size;
+      for (int i = 0; i < n_fields; i++) {
+        print_indent(deeper);
+        u32 field = v->fieldgroup.fields[i];
+        if (field < Debug_fields_size) {
+          size_t offset = sizeof("FIELD");
+          printf("%s\n", &Debug_fields[field][offset]);
+        } else {
+          printf("%d\n", field);
+        }
+      }
+      break;
+    }
+    case Tag_Closure: {
+      if (v->closure.max_values != NEVER_EVALUATE) {
+        printf("Closure %s\n", Debug_evaluator_name(v->closure.evaluator));
+      } else {
+        size_t js_value_id = (size_t)v->closure.evaluator;
+        size_t offset = sizeof("JS");
+        printf("JavaScript reference %s\n",
+            js_value_id < Debug_jsValues_size ? Debug_jsValues[js_value_id] : "(unknown)");
+      }
+      for (int i = 0; i < v->closure.n_values; i++) {
+        print_indent(deeper);
+        Debug_prettyHelp(deeper, v->closure.values[i]);
+      }
+      break;
+    }
+    case Tag_GcException:
+      printf("GC marker (Exception)\n");
+      break;
+    case Tag_GcStackEmpty:
+      printf("GC marker (Stack Empty)\n");
+      break;
+    case Tag_GcStackPush:
+      printf("GC marker (Stack Push)\n");
+      break;
+    case Tag_GcStackPop:
+      printf("GC marker (Stack Pop)\n");
+      break;
+    case Tag_GcStackTailCall:
+      printf("GC marker (Stack Tail Call)\n");
+      break;
+    default:
+      printf("CORRUPTED!! tag %x size %d\n", v->header.tag, v->header.size);
+      break;
+  }
+}
+
+void Debug_pretty(const char* label, void* p) {
+  printf("%s\n  ", label);
+  Debug_prettyHelp(2, p);
 }
 
 void print_value(void* p) {
