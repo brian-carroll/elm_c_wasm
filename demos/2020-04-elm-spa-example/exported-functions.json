@@ -13,5 +13,6 @@
   "writeF64",
   "evalClosure",
   "collectGarbage",
-  "debugHeapState"
+  "debugHeapState",
+  "debugEvaluatorName"
 ]

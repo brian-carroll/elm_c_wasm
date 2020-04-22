@@ -35,6 +35,16 @@ static void print_indent(int indent) {
   }
 }
 
+static void Debug_prettyHelp(int indent, void* p);
+
+void pretty_print_child(int indent, void* p) {
+  printf(FORMAT_PTR, p);
+  for (int i = 0; i < indent; i++) {
+    printf(" ");
+  }
+  Debug_prettyHelp(indent, p);
+}
+
 static void Debug_prettyHelp(int indent, void* p) {
   ElmValue* v = p;
 
@@ -86,33 +96,27 @@ static void Debug_prettyHelp(int indent, void* p) {
       } else {
         printf("[\n");
         for (Cons* cell = p; cell != &Nil; cell = cell->tail) {
-          print_indent(deeper);
-          Debug_prettyHelp(deeper, cell->head);
+          pretty_print_child(deeper, cell->head);
         }
-        print_indent(indent);
+        print_indent(FORMAT_PTR_LEN + indent);
         printf("]\n");
       }
       break;
     }
     case Tag_Tuple2: {
       printf("(\n");
-      print_indent(deeper);
-      Debug_prettyHelp(deeper, v->tuple2.a);
-      print_indent(deeper);
-      Debug_prettyHelp(deeper, v->tuple2.b);
-      print_indent(indent);
+      pretty_print_child(deeper, v->tuple2.a);
+      pretty_print_child(deeper, v->tuple2.b);
+      print_indent(FORMAT_PTR_LEN + indent);
       printf(")\n");
       break;
     }
     case Tag_Tuple3: {
       printf("(\n");
-      print_indent(deeper);
-      Debug_prettyHelp(deeper, v->tuple3.a);
-      print_indent(deeper);
-      Debug_prettyHelp(deeper, v->tuple3.b);
-      print_indent(deeper);
-      Debug_prettyHelp(deeper, v->tuple3.c);
-      print_indent(indent);
+      pretty_print_child(deeper, v->tuple3.a);
+      pretty_print_child(deeper, v->tuple3.b);
+      pretty_print_child(deeper, v->tuple3.c);
+      print_indent(FORMAT_PTR_LEN + indent);
       printf(")\n");
       break;
     }
@@ -120,13 +124,12 @@ static void Debug_prettyHelp(int indent, void* p) {
       u32 ctor = v->custom.ctor;
       if (ctor < Debug_ctors_size) {
         size_t offset = sizeof("CTOR");
-        printf("%s\n", &Debug_ctors[ctor][offset]);
+        printf("%s\n", &Debug_ctors[ctor][offset], p);
       } else {
-        printf("Custom (ctor %d)\n", ctor);
+        printf("Custom (ctor %d)\n", ctor, p);
       }
       for (int i = 0; i < custom_params(p); i++) {
-        print_indent(deeper);
-        Debug_prettyHelp(deeper, v->custom.values[i]);
+        pretty_print_child(deeper, v->custom.values[i]);
       }
       break;
     }
@@ -135,18 +138,19 @@ static void Debug_prettyHelp(int indent, void* p) {
       FieldGroup* fg = v->record.fieldgroup;
       u32 n_fields = v->header.size - (sizeof(Record) / SIZE_UNIT);
       for (int i = 0; i < n_fields; i++) {
+        void* child = v->custom.values[i];
+        printf(FORMAT_PTR, child);
         print_indent(deeper);
         u32 field = fg->fields[i];
         if (field < Debug_fields_size) {
           size_t offset = sizeof("FIELD");
-          printf("%s:\n", &Debug_fields[field][offset]);
+          printf("%s = ", &Debug_fields[field][offset]);
         } else {
-          printf("%d:\n", field);
+          printf("%d = ", field);
         }
-        print_indent(deeper2);
-        Debug_prettyHelp(deeper2, v->custom.values[i]);
+        Debug_prettyHelp(deeper2, child);
       }
-      print_indent(indent);
+      print_indent(FORMAT_PTR_LEN + indent);
       printf("}\n");
       break;
     }
@@ -172,11 +176,11 @@ static void Debug_prettyHelp(int indent, void* p) {
         size_t js_value_id = (size_t)v->closure.evaluator;
         size_t offset = sizeof("JS");
         printf("JavaScript reference %s\n",
-            js_value_id < Debug_jsValues_size ? Debug_jsValues[js_value_id] : "(unknown)");
+            js_value_id < Debug_jsValues_size ? Debug_jsValues[js_value_id]
+                                              : "(unknown)");
       }
       for (int i = 0; i < v->closure.n_values; i++) {
-        print_indent(deeper);
-        Debug_prettyHelp(deeper, v->closure.values[i]);
+        pretty_print_child(deeper, v->closure.values[i]);
       }
       break;
     }
@@ -202,8 +206,12 @@ static void Debug_prettyHelp(int indent, void* p) {
 }
 
 void Debug_pretty(const char* label, void* p) {
-  printf("%s\n  ", label);
-  Debug_prettyHelp(2, p);
+  printf("\n");
+  for (int i = 0; i < FORMAT_PTR_LEN; i++) {
+    printf("-");
+  }
+  printf("  %s\n", label);
+  pretty_print_child(2, p);
 }
 
 void print_value(void* p) {
@@ -264,8 +272,8 @@ void print_value(void* p) {
       break;
     }
     case Tag_Closure: {
-      printf("Closure (%p) n_values: %d max_values: %d values: ",
-          v->closure.evaluator,
+      printf("Closure (%s) n_values: %d max_values: %d values: ",
+          Debug_evaluator_name(v->closure.evaluator),
           v->closure.n_values,
           v->closure.max_values);
       size_t header_kids = (size_t)(v->header.size) - (sizeof(Closure) / sizeof(void*));
@@ -326,7 +334,7 @@ void print_heap_range(size_t* start, size_t* end) {
       }
       ElmValue* v = (ElmValue*)p;
       print_value(v);
-      if (v->header.size > 0 && v->header.size < 128) {
+      if (v->header.size > 0 && v->header.size < 102400) {
         next_value += v->header.size;
       } else {
         next_value++;
@@ -403,6 +411,11 @@ void print_state() {
   printf("replay_ptr %p\n", state->replay_ptr);
 
   // print_bitmap();
+}
+
+// Execute the JS `debugger` statement (browser devtools)
+void Debug_pause() {
+  emscripten_run_script("debugger;");
 }
 
 void log_error(char* fmt, ...) {

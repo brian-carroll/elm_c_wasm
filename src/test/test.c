@@ -16,16 +16,18 @@ char* string_test();
 char* char_test();
 char* list_test();
 
-// Avoid wrapper compile errors using dummy app params
-FieldGroup* Wrapper_appFieldGroups[] = {};
-void** Wrapper_mainsArray[] = {};
-
 int verbose = false;
 int tests_run = 0;
 int tests_failed = 0;
 int assertions_made = 0;
 
-// Elm-defined stuff used in Kernel code
+
+// ---------------------------------------------------------
+// 
+//  "Compiler-generated" values
+// 
+// ---------------------------------------------------------
+
 enum {
   CTOR_Nothing,
   CTOR_Just,
@@ -43,6 +45,22 @@ Custom g_elm_core_Maybe_Nothing = {
     .header = HEADER_CUSTOM(0),
     .ctor = CTOR_Nothing,
 };
+
+FieldGroup* Wrapper_appFieldGroups[] = {NULL};
+void** Wrapper_mainsArray[] = {NULL};
+
+char Debug_evaluator_name_buf[1024];
+char* Debug_evaluator_name(void* p) {
+  sprintf(Debug_evaluator_name_buf, "%p", p);
+  return Debug_evaluator_name_buf;
+}
+char* Debug_ctors[] = {};
+char* Debug_fields[] = {};
+char* Debug_jsValues[] = {};
+int Debug_ctors_size = 0;
+int Debug_fields_size = 0;
+int Debug_jsValues_size = 0;
+
 
 // ---------------------------------------------------------
 //

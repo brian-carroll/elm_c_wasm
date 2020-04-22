@@ -99,3 +99,7 @@ void EMSCRIPTEN_KEEPALIVE debugHeapState() {
   print_heap();
   print_state();
 }
+
+void EMSCRIPTEN_KEEPALIVE debugEvaluatorName(size_t addr) {
+  printf("%s\n", Debug_evaluator_name(addr));
+}
