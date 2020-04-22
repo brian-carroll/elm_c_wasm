@@ -1,3 +1,11 @@
+# Bad code gen for case expressions
+Some case expressions can `goto` a default clause.
+JS uses early return but it also can wrap those in IIFE's if needed. I can't. So if I use early return I'll run into other edge cases.
+
+We need a `do ... while(0)` with `break`s in the "other", non-goto branches.
+The final (labelled) default clause should be inside the while.
+That way, we can "early break" out of the block rather than early return.
+
 # Dynamic field groups
 
 Some field groups are not known to the code gen at compile time!
