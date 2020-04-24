@@ -390,13 +390,6 @@ function wrapWasmElmApp(
     mem32[index] = value;
   }
 
-  function write16(index: number, value: number) {
-    if (index > maxWriteIndex16) {
-      throw heapOverflowError;
-    }
-    mem16[index] = value;
-  }
-
   interface WriteResult {
     addr: number; // address the value was written to (8-bit resolution, handy for pointers)
     nextIndex: number; // next available index for writing (32-bit resolution, handy for alignment)
@@ -568,8 +561,11 @@ function wrapWasmElmApp(
             const s: string = value;
             const offset16 = bodyAddr >> 1;
             const lenAligned = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
+            if (offset16 + lenAligned > maxWriteIndex16) {
+              throw heapOverflowError;
+            }
             for (let i = 0; i < lenAligned; i++) {
-              write16(offset16 + i, s.charCodeAt(i));
+              mem16[offset16 + i] = s.charCodeAt(i);
             }
             const wordsWritten = lenAligned >> 1;
             return wordsWritten;
