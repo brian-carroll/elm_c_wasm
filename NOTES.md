@@ -1,4 +1,106 @@
+# JSON issues
+
+When you call `Json.Decode.decodeString` you get back a suspended thunk, not a decoded Elm value!
+There's some code in the SPA example that then does a `case` on the decoded value, expecting it to be a custom type.
+But it's not, it's a thunk. We haven't called out to JS yet. Oops!
+The system I've built only really works for `Cmd`s. If Elm code tries to work on the suspended call, it breaks.
+
+Need to implement the JSON library somehow
+
+## Fix for serialisable values only
+
+Always take JSON values as strings.
+Write a parser for the string into some Custom type representing JSON
+Write all the JS kernel bits in pure Elm, compile it to C
+But this will run into trouble as soon as we get to HTML Events and so on.
+
+## Quick, inefficient fix to get HTTP working
+
+Import one particular JS function and call it synchronously
+- reads your decoder and your _string_ to decode
+- converts decoder thunks and whatnot
+- Writes the result back
+- So it's a synchronous thunk evaluator. Just readWasmValue and write back the result.
+- I will currently use it only for Json.Decode.decodeString but it's a general thing.
+
+
+## Fully general solution (incl. circular structures)
+
+### Garbage collection of JS references
+
+Will require JS references in the GC
+Need to keep them in a JS array but how do we GC that array?
+Could keep a linked list of all the JS refs.
+Do a first stage of marking where the list itself is not included.
+Then traverse the list, finding dead JsRefs. Kill them in JS as you go using an imported JS function.
+If the JsRef is live, then also mark the corresponding Cons as live.
+Jump over the dead cells.
+
+What structure to use on the JS side?
+- Don't really want an array that's full of holes.
+- Ooh, what about keeping a matching linked list in JS?
+- Use an array, but replace it with a "compacted" one every GC cycle!
+  - While marking in Wasm, also call a JS "mark" function that pushes the ref onto a new JsRef array
+  - After marking, call a "compact" function in JS
+    - This needs to keep stuff we didn't bother getting to in this (minor) GC cycle
+    - Probably want to reverse the JS list and concat it to the untouched stuff
+    - Need a 2nd pass over the Wasm list to update the JS indices to the new (reversed + concat'ed) array indices
+      - We have now learned the number of untouched JS refs, and the number of moved ones.
+
+OK cross-language GC is actually not the end of the world but it's definitely more complexity
+
+### Json.Value in C
+
+Need a new tag for this, which is annoying cos I'm out of bits
+Maybe free up some space by redesigning the GC book-keeping. Use ctors instead of tags to distinguish them.
+Or redesign Lists and Tuples to be the same as Custom, get rid of the index function
+
+### Actual JSON decoding
+
+To decode a value, get a JsRef to it
+  - how does the wrapper know what to pass to Wasm as a Json.Value?
+  - where can Values come from?
+    - HTML events
+    - ports
+    - Cmds
+  - need to catch this kind of `Value`s on the way from runtime to Wasm
+    - wrap it in a some WasmJsRef() constructor
+    - don't run the wrapper conversion on it
+    - instead, push it onto the JsRef array
+OK so if I can figure all that out, then what?
+
+* Decoding a string
+
+call out to JSON.parse, then decode a Value. Cos the value is harder
+
+* Decoding a value
+
+Somehow get a JsRef in Wasm containing an index into a JS value store
+Json.Decode doesn't say "what are you?". It says "you should be a string", and produces either Ok or Error
+Need something like `_Json_runHelp` on the JS side.
+
+Main difference:  the return value gets encoded to binary Elm, wrapped in Ok/Error
+Nested decoder functions are all Wasm callbacks
+Equivalent data structures are defined on both sides (just like the other Elm structures!!)
+You build up a decoder in Wasm, then call out to JS to execute it
+
+What do we actually gain by building the data structure in C?
+- Constructor functions are all in C
+- No back-and-forth just to create the decoder, only to run it
+  - Could also reduce for run by just returning a dummy WasmRef
+  - This would mean you run your combining functions all in C
+  - But this has GC issues
+    - Would need some indirection for addresses in case there's a GC during JSON decoding.
+    - Make a list of all the Elm values we're constructing
+    - When JS requests a Wasm collection to be constructed, it will refer to list indices
+    - But while building it on the Wasm side, we translate to real addresses
+    - Could be an exported C function that mutates the structure in place
+- Becomes version-dependent. Constructor tags change between Json 1.0.0 and 1.1.2
+
+---
+
 # Bad code gen for case expressions
+
 Some case expressions can `goto` a default clause.
 JS uses early return but it also can wrap those in IIFE's if needed. I can't. So if I use early return I'll run into other edge cases.
 
