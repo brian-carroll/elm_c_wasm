@@ -21,8 +21,19 @@ Import one particular JS function and call it synchronously
 - converts decoder thunks and whatnot
 - Writes the result back
 - So it's a synchronous thunk evaluator. Just readWasmValue and write back the result.
+```js
+var wasmWrapper;
+const imports = {
+  evaluateInJs: addr => wasmWrapper.writeWasmValue(
+    wasmWrapper.readWasmValue(addr)
+  )
+}
+```
 - I will currently use it only for Json.Decode.decodeString but it's a general thing.
-
+- The simplest way to fit it into the current architecture is to write C kernel for all the JS stuff. They can mostly be the same as what the compiler would have generated. But `decodeString` and maybe some other stuff call out to `evaluateInJs`.
+- the wrapper needs to assign an ID to `decodeString` even though we're now generating it in C `kernelFuncRecord`
+  - we can just be overcautious and add one for every single function in that kernel module, just in case we need it. It's zero size in Wasm and small in JS.
+  - However we want to prevent the compiler from generating the Closure thunks! We may want to override those with our own stuff.
 
 ## Fully general solution (incl. circular structures)
 
