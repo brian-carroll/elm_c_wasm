@@ -1,3 +1,11 @@
+# Status 29 Apr 2020
+
+## SPA example bugs
+
+- Stack overflow on the HTTP response, in Json Decode
+- URL string for the HTTP call is mangled
+- Saw a dynamically generated FieldGroup with 0's for field IDs
+
 # JSON issues
 
 When you call `Json.Decode.decodeString` you get back a suspended thunk, not a decoded Elm value!
