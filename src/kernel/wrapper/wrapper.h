@@ -7,7 +7,6 @@
 extern FieldGroup* Wrapper_appFieldGroups[];
 extern void** Wrapper_mainsArray[];
 
-// JS imported function
-extern size_t Wrapper_evaluateInJs(size_t addr);
+void* Wrapper_callJsSync(u32 jsFnIndex, u16 n_args, void* args[]);
 
 #endif

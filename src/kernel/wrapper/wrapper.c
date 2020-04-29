@@ -103,3 +103,11 @@ void EMSCRIPTEN_KEEPALIVE debugHeapState() {
 void EMSCRIPTEN_KEEPALIVE debugEvaluatorName(size_t addr) {
   printf("%s\n", Debug_evaluator_name(addr));
 }
+
+extern size_t evalWasmThunkInJs(size_t addr);
+
+void* Wrapper_callJsSync(u32 jsFnIndex, u16 n_args, void* args[]) {
+  Closure* jsThunk = NEW_CLOSURE(n_args, NEVER_EVALUATE, (void*)jsFnIndex, args);
+  size_t resultAddr = evalWasmThunkInJs((size_t)jsThunk);
+  return (void*)resultAddr;
+}

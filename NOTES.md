@@ -35,6 +35,27 @@ const imports = {
   - we can just be overcautious and add one for every single function in that kernel module, just in case we need it. It's zero size in Wasm and small in JS.
   - However we want to prevent the compiler from generating the Closure thunks! We may want to override those with our own stuff.
 
+### Compiling synchronous JS calls
+
+Random list of considerations:
+- writing everything in C
+  - every Closure we generate needs an enum entry JS_Json_thing
+  - if I manually write all the Closures then how do I force the compiler to add *all* the enum entries? Even unused.
+  - just have a set of predefined ones? Or make it part of adding that kernel? it's a bit yuck
+  - if they are `extern` then they are not compile-time known, so need to be initialised.
+- generating most stuff as normal
+  - how do I make exceptions for Json_run and Json_runOnString?
+  - exceptional code gen for the call
+    - not really good enough, only accounts for simple saturated calls. Partial application and `>>` would break.
+  - exceptional code gen for a reference
+    - yep that's the ticket
+    - Expression.hs, `Opt.VarKernel home name ->`
+      - this has a simple expression right now but make it more complicated
+      - instead of just having a `Set` of modules, make a full `case`. Look at name as well as home.
+      - for the C-implemented stuff, don't generate any code.
+        - So the compiler has special info about what exists in Json lib, which is not core. Well sort-of not core! It's already pretty special TBH. Used for flags and ports and things.
+
+
 ## Fully general solution (incl. circular structures)
 
 ### Garbage collection of JS references
