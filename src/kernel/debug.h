@@ -6,11 +6,11 @@
 
 #ifdef TARGET_64BIT
 #define FORMAT_HEX "%016zx"
-#define FORMAT_PTR "%014p"
+#define FORMAT_PTR "%14p"
 #define FORMAT_PTR_LEN 14
 #else
 #define FORMAT_HEX "%08zx"
-#define FORMAT_PTR "%08p"
+#define FORMAT_PTR "%8p"
 #define FORMAT_PTR_LEN 8
 #endif
 

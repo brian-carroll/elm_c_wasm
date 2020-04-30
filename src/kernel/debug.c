@@ -124,9 +124,9 @@ static void Debug_prettyHelp(int indent, void* p) {
       u32 ctor = v->custom.ctor;
       if (ctor < Debug_ctors_size) {
         size_t offset = sizeof("CTOR");
-        printf("%s\n", &Debug_ctors[ctor][offset], p);
+        printf("%s\n", &Debug_ctors[ctor][offset]);
       } else {
-        printf("Custom (ctor %d)\n", ctor, p);
+        printf("Custom (ctor %d)\n", ctor);
       }
       for (int i = 0; i < custom_params(p); i++) {
         pretty_print_child(deeper, v->custom.values[i]);
@@ -170,15 +170,18 @@ static void Debug_prettyHelp(int indent, void* p) {
       break;
     }
     case Tag_Closure: {
+      char* name;
       if (v->closure.max_values != NEVER_EVALUATE) {
-        printf("Closure %s\n", Debug_evaluator_name(v->closure.evaluator));
+        name = Debug_evaluator_name(v->closure.evaluator);
       } else {
         size_t js_value_id = (size_t)v->closure.evaluator;
-        size_t offset = sizeof("JS");
-        printf("JavaScript reference %s\n",
-            js_value_id < Debug_jsValues_size ? Debug_jsValues[js_value_id]
-                                              : "(unknown)");
+        if (js_value_id < Debug_jsValues_size) {
+          name = Debug_jsValues[js_value_id];
+        } else {
+          name = "(unknown)";
+        }
       }
+      printf("Closure %s\n", name);
       for (int i = 0; i < v->closure.n_values; i++) {
         pretty_print_child(deeper, v->closure.values[i]);
       }
@@ -272,10 +275,17 @@ void print_value(void* p) {
       break;
     }
     case Tag_Closure: {
-      printf("Closure (%s) n_values: %d max_values: %d values: ",
-          Debug_evaluator_name(v->closure.evaluator),
-          v->closure.n_values,
-          v->closure.max_values);
+      if (v->closure.max_values != NEVER_EVALUATE) {
+        printf("Closure (%s) n_values: %d max_values: %d values: ",
+            Debug_evaluator_name(v->closure.evaluator),
+            v->closure.n_values,
+            v->closure.max_values);
+      } else {
+        size_t js_value_id = (size_t)v->closure.evaluator;
+        char* name =
+            js_value_id < Debug_jsValues_size ? Debug_jsValues[js_value_id] : "unknown";
+        printf("JS Closure (%s) n_values: %d values: ", name, v->closure.n_values);
+      }
       size_t header_kids = (size_t)(v->header.size) - (sizeof(Closure) / sizeof(void*));
       for (size_t i = 0; i < header_kids; ++i) {
         printf("%p ", v->closure.values[i]);
