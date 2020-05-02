@@ -107,8 +107,7 @@ function wrapWasmElmApp(
     fieldGroups: NameToInt & IntToNames;
   }
 
-  const CTOR_KERNEL_ARRAY = 'CTOR_KERNEL_ARRAY';
-  generatedAppTypes.ctors.push(CTOR_KERNEL_ARRAY);
+  const CTOR_KERNEL_ARRAY = 0xffffffff;
 
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
@@ -253,9 +252,7 @@ function wrapWasmElmApp(
           return custom;
         }
 
-        const jsCtor: string = appTypes.ctors[wasmCtor];
-
-        if (jsCtor === CTOR_KERNEL_ARRAY) {
+        if (wasmCtor === CTOR_KERNEL_ARRAY) {
           const kernelArray: any[] = [];
           mem32.slice(index + 2, index + nFields).forEach(childAddr => {
             kernelArray.push(readWasmValue(childAddr));
@@ -263,6 +260,7 @@ function wrapWasmElmApp(
           return kernelArray;
         }
 
+        const jsCtor: string = appTypes.ctors[wasmCtor];
         const custom: Record<string, any> = { $: jsCtor };
         const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
         for (let i = 0; i < nFields; i++) {
