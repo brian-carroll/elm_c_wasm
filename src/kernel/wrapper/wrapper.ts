@@ -236,34 +236,23 @@ function wrapWasmElmApp(
       case Tag.Custom: {
         const elmConst = wasmConstAddrs[addr]; // True/False/Unit/JsNull
         if (elmConst !== undefined) return elmConst;
-        const nFields = size - 2;
         const wasmCtor = mem32[index + 1];
-
-        if (wasmCtor >= KERNEL_CTOR_OFFSET) {
-          const custom: Record<string, any> = {
-            $: wasmCtor - KERNEL_CTOR_OFFSET
-          };
-          const fieldNames = readWasmValue(mem32[index + 2]).split(' ');
-          for (let i = 1; i < nFields; i++) {
-            const field = fieldNames[i];
-            const childAddr = mem32[index + 2 + i];
-            custom[field] = readWasmValue(childAddr);
-          }
-          return custom;
-        }
 
         if (wasmCtor === CTOR_KERNEL_ARRAY) {
           const kernelArray: any[] = [];
-          mem32.slice(index + 2, index + nFields).forEach(childAddr => {
+          mem32.slice(index + 2, index + size).forEach(childAddr => {
             kernelArray.push(readWasmValue(childAddr));
           });
           return kernelArray;
         }
 
-        const jsCtor: string = appTypes.ctors[wasmCtor];
+        const jsCtor: number | string =
+          wasmCtor >= KERNEL_CTOR_OFFSET
+            ? wasmCtor - KERNEL_CTOR_OFFSET
+            : appTypes.ctors[wasmCtor];
         const custom: Record<string, any> = { $: jsCtor };
         const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
-        for (let i = 0; i < nFields; i++) {
+        for (let i = 0; i < size - 2; i++) {
           const field = fieldNames[i];
           const childAddr = mem32[index + 2 + i];
           custom[field] = readWasmValue(childAddr);
@@ -432,10 +421,12 @@ function wrapWasmElmApp(
         return writeFromBuilder(nextIndex, builder, tag);
       }
       case 'kernelArray': {
-        const customObj = value.slice();
-        customObj.$ = CTOR_KERNEL_ARRAY;
-        const builder: WasmBuilder = wasmBuilder(Tag.Custom, customObj);
-        return writeFromBuilder(nextIndex, builder, Tag.Closure);
+        const builder: WasmBuilder = {
+          body: [CTOR_KERNEL_ARRAY],
+          jsChildren: value,
+          bodyWriter: null
+        };
+        return writeFromBuilder(nextIndex, builder, Tag.Custom);
       }
     }
   }
@@ -584,22 +575,29 @@ function wrapWasmElmApp(
         };
       case Tag.Custom: {
         const jsCtor: string | number = value.$;
-        let body: number[];
-        const jsChildren: any[] = [];
         const keys = Object.keys(value).filter(k => k !== '$');
-        if (typeof jsCtor === 'number') {
-          body = [KERNEL_CTOR_OFFSET + jsCtor];
-          const keyString: string = keys.join(' ');
-          jsChildren.push(keyString);
+        if (typeof jsCtor === 'string') {
+          return {
+            body: [appTypes.ctors[jsCtor]],
+            jsChildren: keys.map(k => value[k]),
+            bodyWriter: null
+          };
         } else {
-          body = [appTypes.ctors[jsCtor]];
+          const jsChildren: any[] = [];
+          const fieldNames = 'abcdefghijklmnopqrstuvwxyz'.split('');
+          keys.forEach(k => {
+            const i = fieldNames.indexOf(k);
+            if (i === -1) {
+              throw new Error(`Unsupported Kernel Custom field '${k}'`);
+            }
+            jsChildren[i] = value[k];
+          });
+          return {
+            body: [KERNEL_CTOR_OFFSET + jsCtor],
+            jsChildren,
+            bodyWriter: null
+          };
         }
-        keys.forEach(k => jsChildren.push(value[k]));
-        return {
-          body,
-          jsChildren,
-          bodyWriter: null
-        };
       }
       case Tag.Record: {
         const body: number[] = [];
@@ -681,11 +679,12 @@ function wrapWasmElmApp(
        */
       const { body, jsChildren } = builder;
       const childAddrs: number[] = [];
-      jsChildren.forEach(child => {
+      for (let i = 0; i < jsChildren.length; i++) {
+        const child = jsChildren[i];
         const update = writeWasmValue(nextIndex, child); // recurse
         childAddrs.push(update.addr);
         nextIndex = update.nextIndex;
-      });
+      }
 
       const addr = nextIndex << 2;
       const size = 1 + body.length + childAddrs.length;

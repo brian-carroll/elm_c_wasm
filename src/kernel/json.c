@@ -63,7 +63,8 @@ Custom Json_decodeString = {
 };
 
 static void* eval_Json_decodeList(void* args[]) {
-  return NEW_CUSTOM(LIST, 1, args);
+  void* decoder = args[0];
+  return NEW_CUSTOM(LIST, 2, ((void*[]){&Unit, decoder}));
 }
 Closure Json_decodeList = {
     .header = HEADER_CLOSURE(0),
@@ -72,7 +73,8 @@ Closure Json_decodeList = {
 };
 
 static void* eval_Json_decodeArray(void* args[]) {
-  return NEW_CUSTOM(ARRAY, 1, args);
+  void* decoder = args[0];
+  return NEW_CUSTOM(ARRAY, 2, ((void*[]){&Unit, decoder}));
 }
 Closure Json_decodeArray = {
     .header = HEADER_CLOSURE(0),
@@ -81,7 +83,8 @@ Closure Json_decodeArray = {
 };
 
 static void* eval_Json_decodeNull(void* args[]) {
-  return NEW_CUSTOM(NULL_, 1, args);
+  void* value = args[0];
+  return NEW_CUSTOM(NULL_, 3, ((void*[]){&Unit, &Unit, value}));
 }
 Closure Json_decodeNull = {
     .header = HEADER_CLOSURE(0),
@@ -90,7 +93,16 @@ Closure Json_decodeNull = {
 };
 
 static void* eval_Json_decodeField(void* args[]) {
-  return NEW_CUSTOM(FIELD, 2, args);
+  void* field = args[0];
+  void* decoder = args[1];
+  return NEW_CUSTOM(FIELD,
+      4,
+      ((void*[]){
+          /*a*/&Unit,
+          /*b*/decoder,
+          /*c*/&Unit,
+          /*d*/field,
+      }));
 }
 Closure Json_decodeField = {
     .header = HEADER_CLOSURE(0),
@@ -99,7 +111,17 @@ Closure Json_decodeField = {
 };
 
 static void* eval_Json_decodeIndex(void* args[]) {
-  return NEW_CUSTOM(INDEX, 2, args);
+  void* index = args[0];
+  void* decoder = args[1];
+  return NEW_CUSTOM(INDEX,
+      5,
+      ((void*[]){
+          /*a*/ &Unit,
+          /*b*/ decoder,
+          /*c*/ &Unit,
+          /*d*/ &Unit,
+          /*e*/ index,
+      }));
 }
 Closure Json_decodeIndex = {
     .header = HEADER_CLOSURE(0),
@@ -108,7 +130,8 @@ Closure Json_decodeIndex = {
 };
 
 static void* eval_Json_decodeKeyValuePairs(void* args[]) {
-  return NEW_CUSTOM(KEY_VALUE, 1, args);
+  void* decoder = args[0];
+  return NEW_CUSTOM(KEY_VALUE, 2, ((void*[]){&Unit, decoder}));
 }
 Closure Json_decodeKeyValuePairs = {
     .header = HEADER_CLOSURE(0),
@@ -117,7 +140,20 @@ Closure Json_decodeKeyValuePairs = {
 };
 
 static void* eval_Json_andThen(void* args[]) {
-  return NEW_CUSTOM(AND_THEN, 2, args);
+  void* callback = args[0];
+  void* decoder = args[1];
+  return NEW_CUSTOM(AND_THEN,
+      8,
+      ((void*[]){
+          /*a*/ &Unit,
+          /*b*/ decoder,
+          /*c*/ &Unit,
+          /*d*/ &Unit,
+          /*e*/ &Unit,
+          /*f*/ &Unit,
+          /*g*/ &Unit,
+          /*h*/ callback,
+      }));
 }
 Closure Json_andThen = {
     .header = HEADER_CLOSURE(0),
@@ -126,7 +162,18 @@ Closure Json_andThen = {
 };
 
 static void* eval_Json_oneOf(void* args[]) {
-  return NEW_CUSTOM(ONE_OF, 1, args);
+  void* decoders = args[0];
+  return NEW_CUSTOM(ONE_OF,
+      7,
+      ((void*[]){
+          /*a*/ &Unit,
+          /*b*/ &Unit,
+          /*c*/ &Unit,
+          /*d*/ &Unit,
+          /*e*/ &Unit,
+          /*f*/ &Unit,
+          /*g*/ decoders,
+      }));
 }
 Closure Json_oneOf = {
     .header = HEADER_CLOSURE(0),
@@ -144,7 +191,17 @@ static void* eval_Json_mapMany(void* args[]) {
   u32 n_decoders = (u32)args[0];
   Closure* f = args[1];
   Custom* decoders = NEW_CUSTOM(CTOR_KERNEL_ARRAY, n_decoders, &args[2]);
-  return NEW_CUSTOM(MAP, 2, ((void*[]){f, decoders}));
+  return NEW_CUSTOM(MAP,
+      7,
+      ((void*[]){
+          /*a*/ &Unit,
+          /*b*/ &Unit,
+          /*c*/ &Unit,
+          /*d*/ &Unit,
+          /*e*/ &Unit,
+          /*f*/ f,
+          /*g*/ decoders,
+      }));
 }
 Closure Json_map1 = {
     .evaluator = &eval_Json_mapMany,
