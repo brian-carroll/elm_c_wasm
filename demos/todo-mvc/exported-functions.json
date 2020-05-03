@@ -1,0 +1,18 @@
+[
+  "getMains",
+  "getJsNull",
+  "getUnit",
+  "getNil",
+  "getTrue",
+  "getFalse",
+  "getNextFieldGroup",
+  "getMaxWriteAddr",
+  "getWriteAddr",
+  "finishWritingAt",
+  "readF64",
+  "writeF64",
+  "evalClosure",
+  "collectGarbage",
+  "debugHeapState",
+  "debugEvaluatorName"
+]
