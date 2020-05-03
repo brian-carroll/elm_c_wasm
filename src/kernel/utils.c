@@ -119,7 +119,7 @@ Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
 void* eval_Utils_append(void* args[]) {
   Header* h = args[0];
   if (h->tag == Tag_List) {
-    return eval_elm_core_List_append(args);
+    return eval_List_append(args);
   } else {
     return eval_String_append(args);
   }

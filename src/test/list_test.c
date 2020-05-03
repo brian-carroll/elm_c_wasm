@@ -21,6 +21,21 @@ void* test_List_create() {
   return NULL;
 }
 
+void* test_List_append() {
+  Cons* l1 = List_create(3, (void*[]){&one, &two, &three});
+  Cons* l2 = List_create(2, (void*[]){&four, &five});
+
+  expect_equal("[1,2,3] ++ [4,5] == [1,2,3,4,5]",
+      A2(&List_append, l1, l2),
+      List_create(5, (void*[]){&one, &two, &three, &four, &five}));
+
+  expect_equal("[1,2,3] ++ [] == [1,2,3]", A2(&List_append, l1, &Nil), l1);
+  expect_equal("[] ++ [4,5] == [4,5]", A2(&List_append, &Nil, l2), l2);
+  expect_equal("[] ++ [] == []", A2(&List_append, &Nil, &Nil), &Nil);
+
+  return NULL;
+}
+
 void* test_List_map2() {
   Cons* l1 = List_create(3, (void*[]){&one, &two, &three});
   Cons* l2 = List_create(2, (void*[]){&four, &five});
@@ -54,6 +69,7 @@ char* list_test() {
   }
 
   describe("test_List_create", test_List_create);
+  describe("test_List_append", test_List_append);
   describe("test_List_map2", test_List_map2);
 
   return NULL;

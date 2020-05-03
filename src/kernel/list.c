@@ -48,6 +48,40 @@ Closure List_cons = {
     .max_values = 2,
 };
 
+// append
+// we need a Kernel version so that Utils_append always has something to refer to
+void* eval_List_append(void* args[]) {
+  Cons* xs = args[0];
+  Cons* ys = args[1];
+
+  if (xs == &Nil) return ys;
+  if (ys == &Nil) return xs;
+
+  ptrdiff_t len_x = 0;
+  for (Cons* cell = xs; cell != &Nil; cell = cell->tail) {
+    len_x++;
+  }
+  Cons* new_cells = GC_malloc(sizeof(Cons) * len_x);
+  if (new_cells == pGcFull) return pGcFull;
+
+  ptrdiff_t i = len_x - 1;
+  for (Cons* old_cell = xs; old_cell != &Nil; old_cell = old_cell->tail) {
+    new_cells[i] = (Cons){
+        .header = HEADER_LIST,
+        .head = old_cell->head,
+        .tail = i ? &new_cells[i - 1] : ys,
+    };
+    i--;
+  }
+
+  return &new_cells[len_x - 1];
+}
+Closure List_append = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_List_append,
+    .max_values = 2,
+};
+
 // map2
 
 static void* eval_List_map2(void* args[]) {
