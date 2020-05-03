@@ -242,7 +242,7 @@ static u32 fieldgroup_seek(FieldGroup* fieldgroup, u32 search) {
  *   user    0m0.328s
  *   sys     0m0.000s
  */
-int main(int argc, char** argv) {
+int perf_main(int argc, char** argv) {
   int count;
   int size;
   int algo;

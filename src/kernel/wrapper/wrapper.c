@@ -3,6 +3,7 @@
 #include <emscripten/emscripten.h>
 #else
 #define EMSCRIPTEN_KEEPALIVE
+#include <stdio.h>
 #endif
 #include "../debug.h"
 #include "../gc-internals.h"

@@ -188,9 +188,9 @@ Closure Json_oneOf = {
 // ----------------------------------------------------
 
 static void* eval_Json_mapMany(void* args[]) {
-  u32 n_decoders = (u32)args[0];
+  size_t n_decoders = (size_t)args[0];
   Closure* f = args[1];
-  Custom* decoders = NEW_CUSTOM(CTOR_KERNEL_ARRAY, n_decoders, &args[2]);
+  Custom* decoders = NEW_CUSTOM(CTOR_KERNEL_ARRAY, (u32)n_decoders, &args[2]);
   return NEW_CUSTOM(MAP,
       7,
       ((void*[]){
