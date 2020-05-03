@@ -103,7 +103,7 @@ char* test_replay_tce_saturated_iter2() {
 
   // GC + REPLAY
   GC_collect_full();
-  GC_start_replay();
+  GC_prep_replay();
   Utils_apply(&mock_func_tail, 2, (void* []){&zero, NULL});
 
   // pointer gets moved

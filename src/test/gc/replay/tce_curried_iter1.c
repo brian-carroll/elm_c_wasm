@@ -78,7 +78,7 @@ char* test_replay_tce_curried_iter1() {
 
   // GC + REPLAY
   GC_collect_full();
-  GC_start_replay();
+  GC_prep_replay();
   Utils_apply(&mock_func_tail, 1, (void* []){&zero});
   Utils_apply(curried, 1, (void* []){NULL});
 

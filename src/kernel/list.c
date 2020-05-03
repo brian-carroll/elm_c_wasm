@@ -1,6 +1,9 @@
+#include <stddef.h>
 #include <stdlib.h>
+
 #include "./gc.h"
 #include "./types.h"
+#include "./utils.h"
 
 // Allocate an entire list at once, with no recursion overhead
 // First value in the array becomes the head of the list
@@ -48,32 +51,32 @@ Closure List_cons = {
 // map2
 
 static void* eval_List_map2(void* args[]) {
-  const size_t CHUNK = 8;
   Closure* f = args[0];
-  void* xs = args[1];
-  void* ys = args[2];
+  Cons* xs = args[1];
+  Cons* ys = args[2];
 
-  Custom* tmpArray = GC_malloc(sizeof(Custom));
-  if (tmpArray == pGcFull) return pGcFull;
-  tmpArray->header = HEADER_CUSTOM(0);
+  Custom* growingArray = GC_malloc(sizeof(Custom));
+  if (growingArray == pGcFull) return pGcFull;
+  growingArray->header = HEADER_CUSTOM(0);
 
   ptrdiff_t i = 0;
+  const size_t CHUNK = 8;
   for (; xs != &Nil && ys != &Nil; i += 2, xs = xs->tail, ys = ys->tail) {
     if (i % CHUNK == 0) {
       if (GC_malloc(CHUNK * sizeof(void*)) == pGcFull) {
         return pGcFull;
       }
-      tmpArray->header.size += CHUNK;
+      growingArray->header.size += CHUNK;
     }
-    tmpArray->values[i] = xs->head;
-    tmpArray->values[i + 1] = ys->head;
+    growingArray->values[i] = xs->head;
+    growingArray->values[i + 1] = ys->head;
   }
 
   Cons* head = &Nil;
   for (i -= 2; i >= 0; i -= 2) {
-    void* x = tmpArray->values[i];
-    void* y = tmpArray->values[i + 1];
-    void* result = A2(f, x, y);
+    void* y = growingArray->values[i + 1];
+    void* x_ = growingArray->values[i];
+    void* result = A2(f, x_, y);
     head = NEW_CONS(result, head);
   }
   return head;

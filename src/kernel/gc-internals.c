@@ -46,7 +46,10 @@ size_t child_count(ElmValue* v) {
       return custom_params(&v->custom);
 
     case Tag_Record:
-      return v->record.fieldgroup->size;
+      return v->header.size - (sizeof(Record) / SIZE_UNIT);
+
+    case Tag_FieldGroup:
+      return 0;
 
     case Tag_Closure:
       return v->closure.n_values;
@@ -61,9 +64,6 @@ size_t child_count(ElmValue* v) {
     case Tag_GcStackPop:
     case Tag_GcStackTailCall:
       return 2;
-
-    case Tag_Unused:
-      return 0;
   }
 }
 
@@ -257,7 +257,9 @@ void mark(GcState* state, size_t* ignore_below) {
   bitmap_reset(&state->heap);
 
   // Mark values freshly allocated in still-running function calls
-  mark_stack_map(state, ignore_below);
+  if (state->stack_depth > 0) {
+    mark_stack_map(state, ignore_below);
+  }
 
   // Mark GC roots (mutable values in Elm effect managers, including the program's
   // `model`)
@@ -486,6 +488,11 @@ void compact(GcState* state, size_t* compact_start) {
     state->stack_map_empty = (GcStackMap*)forwarding_address(heap, stack_map_empty);
   }
 
+  size_t* roots = (size_t*)state->roots;
+  if (roots > first_move_to) {
+    state->roots = (Cons*)forwarding_address(heap, roots);
+  }
+
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {
     size_t** root_mutable_pointer = root_cell->head;
     size_t* live_heap_value = *root_mutable_pointer;
@@ -550,7 +557,7 @@ void collect(GcState* state, size_t* ignore_below) {
   mark(state, ignore_below);
 
 #ifdef DEBUG
-  if (!is_marked(state->stack_map_empty)) {
+  if (state->stack_depth && !is_marked(state->stack_map_empty)) {
     log_error("stack_empty is not marked\n");
   }
 #endif

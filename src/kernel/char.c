@@ -1,10 +1,27 @@
 #include "char.h"
+#include <stdio.h>
 
 static void* eval_toCode(void* args[]) {
   ElmChar* c = args[0];
   u32 high = (u32)(c->words16[0]);
   u32 low = (u32)(c->words16[1]);
-  u32 codepoint = (((high - 0xD800) << 10) | (low - 0xDC00)) + 0x10000;
+  u32 codepoint;
+  if (high) {
+    codepoint = (((high - 0xD800) << 10) | (low - 0xDC00)) + 0x10000;
+  } else {
+    codepoint = low;
+  }
+
+  printf(
+      "high = %d "
+      "low = %d "
+      "codepoint = %d "
+      "\n",
+      high,
+      low,
+      codepoint
+  );
+
   return NEW_ELM_INT(codepoint);
 }
 Closure Char_toCode = {

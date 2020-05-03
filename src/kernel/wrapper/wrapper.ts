@@ -5,6 +5,7 @@
  */
 interface ElmWasmExports {
   _getNextMain: () => number;
+  _getJsNull: () => number;
   _getUnit: () => number;
   _getNil: () => number;
   _getTrue: () => number;
@@ -29,6 +30,12 @@ interface GeneratedAppTypes {
   fieldGroups: string[];
 }
 
+interface ElmCurriedFunction {
+  (...args: any[]): any;
+  a: number;
+  f: Function;
+}
+
 /*********************************************************************************************
  * `wrapWasmElmApp`
  *
@@ -42,18 +49,15 @@ interface GeneratedAppTypes {
  * @param wasmBuffer         The `ArrayBuffer` memory block shared between JS and Wasm
  * @param wasmExports        Object of exported functions from the Wasm module
  * @param generatedAppTypes  App-specific type info passed from Elm compiler to this wrapper
- * @param kernelFunctions    Array of all JS kernel functions called by the Elm Wasm module
+ * @param kernelFuncRecord   Record of all JS kernel functions called by the Elm Wasm module
  *
  /********************************************************************************************/
 function wrapWasmElmApp(
   wasmBuffer: ArrayBuffer,
   wasmExports: ElmWasmExports,
   generatedAppTypes: GeneratedAppTypes,
-  kernelFunctions: Function[]
+  kernelFuncRecord: Record<string, ElmCurriedFunction>
 ) {
-  if (!(wasmBuffer instanceof ArrayBuffer))
-    throw new Error('Expected wasmMemory to be an ArrayBuffer');
-
   /* --------------------------------------------------
 
                INITIALISATION & CONSTANTS
@@ -63,20 +67,23 @@ function wrapWasmElmApp(
   const mem32 = new Uint32Array(wasmBuffer);
   const mem16 = new Uint16Array(wasmBuffer);
 
-  const wasmConstAddrs = (function() {
+  const wasmConstAddrs = (function () {
     const Unit = wasmExports._getUnit();
     const Nil = wasmExports._getNil();
     const True = wasmExports._getTrue();
     const False = wasmExports._getFalse();
+    const JsNull = wasmExports._getJsNull();
     return {
       Unit,
       Nil,
       True,
       False,
+      JsNull,
       [Unit]: _Utils_Tuple0,
       [Nil]: _List_Nil,
       [True]: true,
-      [False]: false
+      [False]: false,
+      [JsNull]: null
     };
   })();
 
@@ -91,30 +98,41 @@ function wrapWasmElmApp(
   interface IntToName {
     [int: number]: string;
   }
+  interface IntToNames {
+    [int: number]: string[];
+  }
   interface AppTypes {
     ctors: NameToInt & IntToName;
     fields: NameToInt & IntToName;
-    fieldGroups: NameToInt & IntToName;
+    fieldGroups: NameToInt & IntToNames;
   }
+
+  const CTOR_KERNEL_ARRAY = 0xffffffff;
 
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
-    fieldGroups: generatedAppTypes.fieldGroups.reduce((enumObj, name) => {
-      const addr = wasmExports._getNextFieldGroup();
-      enumObj[name] = addr;
-      enumObj[addr] = name;
-      return enumObj;
-    }, {})
+    fieldGroups: generatedAppTypes.fieldGroups.reduce(
+      (enumObj: NameToInt & IntToNames, name) => {
+        const addr = wasmExports._getNextFieldGroup();
+        enumObj[name] = addr;
+        enumObj[addr] = name.split(' ');
+        return enumObj;
+      },
+      {}
+    )
   };
 
   function arrayToEnum(names: string[]): NameToInt & IntToName {
-    return names.reduce((enumObj, name, index) => {
+    return names.reduce((enumObj: NameToInt & IntToName, name, index) => {
       enumObj[name] = index;
       enumObj[index] = name;
       return enumObj;
     }, {});
   }
+
+  const kernelFunctions = Object.values(kernelFuncRecord);
+  const kernelFunctionNames = Object.keys(kernelFuncRecord); // for debug
 
   const WORD = 4;
   const TAG_MASK = 0xf0000000;
@@ -122,10 +140,22 @@ function wrapWasmElmApp(
   const SIZE_MASK = 0x0fffffff;
   const SIZE_SHIFT = 0;
   const NEVER_EVALUATE = 0xffff;
+  const KERNEL_CTOR_OFFSET = 1024 * 1000;
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
-  const elmFunctionWrappers = [identity, identity, F2, F3, F4];
+  const elmFunctionWrappers = [
+    identity,
+    identity,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9
+  ];
 
   enum Tag {
     Int = 0x0,
@@ -137,13 +167,13 @@ function wrapWasmElmApp(
     Tuple3 = 0x6,
     Custom = 0x7,
     Record = 0x8,
-    Closure = 0x9,
-    GcException = 0xa,
-    GcStackEmpty = 0xb,
-    GcStackPush = 0xc,
-    GcStackPop = 0xd,
-    GcStackTailCall = 0xe,
-    Unused = 0xf
+    FieldGroup = 0x9,
+    Closure = 0xa,
+    GcException = 0xb,
+    GcStackEmpty = 0xc,
+    GcStackPush = 0xd,
+    GcStackPop = 0xe,
+    GcStackTailCall = 0xf
   }
 
   /* --------------------------------------------------
@@ -160,6 +190,7 @@ function wrapWasmElmApp(
   }
 
   function readWasmValue(addr: number): any {
+    if (!addr) return null;
     const index = addr >> 2;
     const header = mem32[index];
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
@@ -203,14 +234,25 @@ function wrapWasmElmApp(
         );
       }
       case Tag.Custom: {
-        const elmConst = wasmConstAddrs[addr]; // True/False/Unit
+        const elmConst = wasmConstAddrs[addr]; // True/False/Unit/JsNull
         if (elmConst !== undefined) return elmConst;
         const wasmCtor = mem32[index + 1];
-        const jsCtor = appTypes.ctors[wasmCtor];
+
+        if (wasmCtor === CTOR_KERNEL_ARRAY) {
+          const kernelArray: any[] = [];
+          mem32.slice(index + 2, index + size).forEach(childAddr => {
+            kernelArray.push(readWasmValue(childAddr));
+          });
+          return kernelArray;
+        }
+
+        const jsCtor: number | string =
+          wasmCtor >= KERNEL_CTOR_OFFSET
+            ? wasmCtor - KERNEL_CTOR_OFFSET
+            : appTypes.ctors[wasmCtor];
         const custom: Record<string, any> = { $: jsCtor };
         const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
-        const nFields = size - 2;
-        for (let i = 0; i < nFields; i++) {
+        for (let i = 0; i < size - 2; i++) {
           const field = fieldNames[i];
           const childAddr = mem32[index + 2 + i];
           custom[field] = readWasmValue(childAddr);
@@ -219,17 +261,21 @@ function wrapWasmElmApp(
       }
       case Tag.Record: {
         const record: Record<string, any> = {};
-        const fgIndex = mem32[index + 1] >> 2;
-        const fgSize = mem32[fgIndex];
-        const fields = appTypes.fields;
-        for (let i = 1; i <= fgSize; i++) {
-          const fieldId = mem32[fgIndex + i];
-          const valAddr = mem32[index + 1 + i];
-          const fieldName = fields[fieldId];
-          const value = readWasmValue(valAddr);
-          record[fieldName] = value;
-        }
+        const fgAddr = mem32[index + 1];
+        const fieldNames =
+          appTypes.fieldGroups[fgAddr] || readWasmValue(fgAddr);
+        fieldNames.forEach((fieldName, i) => {
+          const valAddr = mem32[index + 2 + i];
+          record[fieldName] = readWasmValue(valAddr);
+        });
         return record;
+      }
+      case Tag.FieldGroup: {
+        const fieldNames: string[] = [];
+        mem32.slice(index + 2, index + size).forEach(fieldId => {
+          fieldNames.push(appTypes.fields[fieldId]);
+        });
+        return fieldNames;
       }
       case Tag.Closure: {
         const idx16 = index << 1;
@@ -239,12 +285,9 @@ function wrapWasmElmApp(
           evaluator: mem32[index + 2],
           argsIndex: index + 3
         };
-        const isKernelThunk = metadata.max_values === NEVER_EVALUATE;
-        if (isKernelThunk) {
-          return evalKernelThunk(metadata);
-        } else {
-          return createWasmCallback(metadata);
-        }
+        return metadata.max_values === NEVER_EVALUATE
+          ? evalKernelThunk(metadata)
+          : createWasmCallback(metadata);
       }
       default:
         throw new Error(
@@ -254,17 +297,31 @@ function wrapWasmElmApp(
     }
   }
 
-  function evalKernelThunk(metadata: ClosureMetadata) {
-    const { n_values, evaluator, argsIndex } = metadata;
-    let kernelValue = kernelFunctions[evaluator];
-    for (let i = argsIndex; i < argsIndex + n_values; i++) {
-      const arg = readWasmValue(mem32[i]);
-      kernelValue = kernelValue(arg);
+  function evalKernelThunk(metadata: ClosureMetadata): any {
+    let { n_values, evaluator, argsIndex } = metadata;
+    let kernelFn: ElmCurriedFunction = kernelFunctions[evaluator];
+    while (n_values) {
+      let f: Function;
+      let nArgs: number;
+      if (kernelFn.a && kernelFn.f && n_values >= kernelFn.a) {
+        f = kernelFn.f;
+        nArgs = kernelFn.a;
+      } else {
+        f = kernelFn;
+        nArgs = kernelFn.length || 1;
+      }
+      const args: any[] = [];
+      mem32.slice(argsIndex, argsIndex + nArgs).forEach(argAddr => {
+        args.push(readWasmValue(argAddr));
+      });
+      n_values -= nArgs;
+      argsIndex += nArgs;
+      kernelFn = f(...args);
     }
-    return kernelValue as any;
+    return kernelFn as any;
   }
 
-  function createWasmCallback(metadata: ClosureMetadata) {
+  function createWasmCallback(metadata: ClosureMetadata): Function {
     const { n_values, max_values, evaluator, argsIndex } = metadata;
     const freeVars: any[] = [];
     for (let i = argsIndex; i < argsIndex + n_values; i++) {
@@ -320,13 +377,6 @@ function wrapWasmElmApp(
     mem32[index] = value;
   }
 
-  function write16(index: number, value: number) {
-    if (index > maxWriteIndex16) {
-      throw heapOverflowError;
-    }
-    mem16[index] = value;
-  }
-
   interface WriteResult {
     addr: number; // address the value was written to (8-bit resolution, handy for pointers)
     nextIndex: number; // next available index for writing (32-bit resolution, handy for alignment)
@@ -362,23 +412,24 @@ function wrapWasmElmApp(
    */
   function writeWasmValue(nextIndex: number, value: any): WriteResult {
     const typeInfo: TypeInfo = detectElmType(value);
-    if (typeInfo.kind === 'constAddr') {
-      return { addr: typeInfo.value, nextIndex };
-    }
-    const tag: Tag = typeInfo.value;
-    const builder: WasmBuilder = wasmBuilder(tag, value);
-    return writeFromBuilder(nextIndex, builder, tag);
-  }
-
-  type TypeInfo =
-    | {
-        kind: 'tag';
-        value: Tag;
+    switch (typeInfo.kind) {
+      case 'constAddr':
+        return { addr: typeInfo.value, nextIndex };
+      case 'tag': {
+        const tag: Tag = typeInfo.value;
+        const builder: WasmBuilder = wasmBuilder(tag, value);
+        return writeFromBuilder(nextIndex, builder, tag);
       }
-    | {
-        kind: 'constAddr';
-        value: number;
-      };
+      case 'kernelArray': {
+        const builder: WasmBuilder = {
+          body: [CTOR_KERNEL_ARRAY],
+          jsChildren: value,
+          bodyWriter: null
+        };
+        return writeFromBuilder(nextIndex, builder, Tag.Custom);
+      }
+    }
+  }
 
   // Info needed to build any Elm Wasm value
   // The shape is always the same, which helps JS engines to optimise
@@ -394,7 +445,27 @@ function wrapWasmElmApp(
         bodyWriter: null;
       };
 
+  type TypeInfo =
+    | {
+        kind: 'tag';
+        value: Tag;
+      }
+    | {
+        kind: 'constAddr';
+        value: number;
+      }
+    | {
+        kind: 'kernelArray';
+      };
+
+  class FieldGroup {
+    constructor(public fieldNames: string[]) {}
+  }
+
   function detectElmType(elmValue: any): TypeInfo {
+    if (elmValue === null || elmValue === undefined) {
+      return { kind: 'constAddr', value: wasmConstAddrs.JsNull };
+    }
     switch (typeof elmValue) {
       case 'number': {
         // There's no way to tell `1 : Int` from `1.0 : Float` at this low level. But `1.2` is definitely a Float.
@@ -422,6 +493,12 @@ function wrapWasmElmApp(
       case 'object': {
         if (elmValue instanceof String) {
           return { kind: 'tag', value: Tag.Char };
+        }
+        if (elmValue instanceof FieldGroup) {
+          return { kind: 'tag', value: Tag.FieldGroup };
+        }
+        if (Array.isArray(elmValue)) {
+          return { kind: 'kernelArray' };
         }
         switch (elmValue.$) {
           case undefined:
@@ -473,8 +550,11 @@ function wrapWasmElmApp(
             const s: string = value;
             const offset16 = bodyAddr >> 1;
             const lenAligned = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
+            if (offset16 + lenAligned > maxWriteIndex16) {
+              throw heapOverflowError;
+            }
             for (let i = 0; i < lenAligned; i++) {
-              write16(offset16 + i, s.charCodeAt(i));
+              mem16[offset16 + i] = s.charCodeAt(i);
             }
             const wordsWritten = lenAligned >> 1;
             return wordsWritten;
@@ -494,55 +574,81 @@ function wrapWasmElmApp(
           bodyWriter: null
         };
       case Tag.Custom: {
-        const jsCtor: string = value.$;
+        const jsCtor: string | number = value.$;
+        const keys = Object.keys(value).filter(k => k !== '$');
+        if (typeof jsCtor === 'string') {
+          return {
+            body: [appTypes.ctors[jsCtor]],
+            jsChildren: keys.map(k => value[k]),
+            bodyWriter: null
+          };
+        } else {
+          const jsChildren: any[] = [];
+          const fieldNames = 'abcdefghijklmnopqrstuvwxyz'.split('');
+          keys.forEach(k => {
+            const i = fieldNames.indexOf(k);
+            if (i === -1) {
+              throw new Error(`Unsupported Kernel Custom field '${k}'`);
+            }
+            jsChildren[i] = value[k];
+          });
+          return {
+            body: [KERNEL_CTOR_OFFSET + jsCtor],
+            jsChildren,
+            bodyWriter: null
+          };
+        }
+      }
+      case Tag.Record: {
+        const body: number[] = [];
         const jsChildren: any[] = [];
-        Object.keys(value).forEach(k => {
-          if (k !== '$') jsChildren.push(value[k]);
-        });
+        const keys = Object.keys(value).sort();
+        const fgName = keys.join(' ');
+        const fgAddrStatic = appTypes.fieldGroups[fgName];
+        if (fgAddrStatic) {
+          body.push(fgAddrStatic);
+        } else {
+          jsChildren.push(new FieldGroup(keys));
+        }
+        keys.forEach(k => jsChildren.push(value[k]));
         return {
-          body: [appTypes.ctors[jsCtor]],
+          body,
           jsChildren,
           bodyWriter: null
         };
       }
-      case Tag.Record: {
-        // JS doesn't have the concept of fieldgroups but Wasm does.
-        // It's a structure containing info about a specific Record type
-        // Need to look it up in the appTypes.
-        const keys = Object.keys(value);
-        keys.sort();
-        const fgName = keys.join('$');
-        const fgAddr = appTypes.fieldGroups[fgName];
+      case Tag.FieldGroup: {
+        const fieldNames: string[] = value.fieldNames;
+        const body = [fieldNames.length];
+        fieldNames.forEach(name => body.push(appTypes.fields[name]));
         return {
-          body: [fgAddr],
-          jsChildren: keys.map(k => value[k]),
+          body,
+          jsChildren: [],
           bodyWriter: null
         };
       }
       case Tag.Closure: {
-        // The only Closures that get written back (so far) are Wasm constructor functions.
-        // They get passed to Task.map (Wasm) to wrap a value from JS runtime in a Msg constructor,
-        // in preparation for a call to `update`
-        // If attaching properties to JS functions causes de-optimisation in JS engines,
-        // it might actually be worth implementing Task.map and Cmd.map in JS rather than Wasm.
-        // (This code will break if JS tries to partially apply an arg before writing to Wasm!
-        // That would require custom F2, F3... But I don't think it happens. Wait for a use case.)
-        const freeVars = value.freeVars;
-        const max_values = value.max_values;
-        const evaluator = value.evaluator;
-        if (!evaluator) {
-          console.error(value);
-          throw new Error(
-            "Can't write a Closure without a reference to a Wasm evaluator function!" +
-              ' Writing arbitrary JS functions is not supported'
-          );
+        const fun = value.f || value;
+        if (fun.evaluator) {
+          const { freeVars, max_values, evaluator } = fun;
+          const n_values = freeVars.length;
+          return {
+            body: [(max_values << 16) | n_values, evaluator],
+            jsChildren: freeVars,
+            bodyWriter: null
+          };
+        } else {
+          let evaluator = kernelFunctions.findIndex(f => f === value);
+          if (evaluator === -1) {
+            kernelFunctions.push(value);
+            evaluator = kernelFunctions.length - 1;
+          }
+          return {
+            body: [NEVER_EVALUATE << 16, evaluator],
+            jsChildren: [],
+            bodyWriter: null
+          };
         }
-        const n_values = freeVars.length;
-        return {
-          body: [(max_values << 16) | n_values, evaluator],
-          jsChildren: freeVars,
-          bodyWriter: null
-        };
       }
     }
     console.error(value);
@@ -573,11 +679,12 @@ function wrapWasmElmApp(
        */
       const { body, jsChildren } = builder;
       const childAddrs: number[] = [];
-      jsChildren.forEach(child => {
+      for (let i = 0; i < jsChildren.length; i++) {
+        const child = jsChildren[i];
         const update = writeWasmValue(nextIndex, child); // recurse
         childAddrs.push(update.addr);
         nextIndex = update.nextIndex;
-      });
+      }
 
       const addr = nextIndex << 2;
       const size = 1 + body.length + childAddrs.length;

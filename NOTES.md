@@ -1,3 +1,253 @@
+# Status 29 Apr 2020
+
+## SPA example bugs
+
+- Stack overflow on the HTTP response, in Json Decode
+- URL string for the HTTP call is mangled
+- Saw a dynamically generated FieldGroup with 0's for field IDs
+
+# JSON issues
+
+When you call `Json.Decode.decodeString` you get back a suspended thunk, not a decoded Elm value!
+There's some code in the SPA example that then does a `case` on the decoded value, expecting it to be a custom type.
+But it's not, it's a thunk. We haven't called out to JS yet. Oops!
+The system I've built only really works for `Cmd`s. If Elm code tries to work on the suspended call, it breaks.
+
+Need to implement the JSON library somehow
+
+## Fix for serialisable values only
+
+Always take JSON values as strings.
+Write a parser for the string into some Custom type representing JSON
+Write all the JS kernel bits in pure Elm, compile it to C
+But this will run into trouble as soon as we get to HTML Events and so on.
+
+## Quick, inefficient fix to get HTTP working
+
+Import one particular JS function and call it synchronously
+- reads your decoder and your _string_ to decode
+- converts decoder thunks and whatnot
+- Writes the result back
+- So it's a synchronous thunk evaluator. Just readWasmValue and write back the result.
+```js
+var wasmWrapper;
+const imports = {
+  evaluateInJs: addr => wasmWrapper.writeWasmValue(
+    wasmWrapper.readWasmValue(addr)
+  )
+}
+```
+- I will currently use it only for Json.Decode.decodeString but it's a general thing.
+- The simplest way to fit it into the current architecture is to write C kernel for all the JS stuff. They can mostly be the same as what the compiler would have generated. But `decodeString` and maybe some other stuff call out to `evaluateInJs`.
+- the wrapper needs to assign an ID to `decodeString` even though we're now generating it in C `kernelFuncRecord`
+  - we can just be overcautious and add one for every single function in that kernel module, just in case we need it. It's zero size in Wasm and small in JS.
+  - However we want to prevent the compiler from generating the Closure thunks! We may want to override those with our own stuff.
+
+### Compiling synchronous JS calls
+
+Random list of considerations:
+- writing everything in C
+  - every Closure we generate needs an enum entry JS_Json_thing
+  - if I manually write all the Closures then how do I force the compiler to add *all* the enum entries? Even unused.
+  - just have a set of predefined ones? Or make it part of adding that kernel? it's a bit yuck
+  - if they are `extern` then they are not compile-time known, so need to be initialised.
+- generating most stuff as normal
+  - how do I make exceptions for Json_run and Json_runOnString?
+  - exceptional code gen for the call
+    - not really good enough, only accounts for simple saturated calls. Partial application and `>>` would break.
+  - exceptional code gen for a reference
+    - yep that's the ticket
+    - Expression.hs, `Opt.VarKernel home name ->`
+      - this has a simple expression right now but make it more complicated
+      - instead of just having a `Set` of modules, make a full `case`. Look at name as well as home.
+      - for the C-implemented stuff, don't generate any code.
+        - So the compiler has special info about what exists in Json lib, which is not core. Well sort-of not core! It's already pretty special TBH. Used for flags and ports and things.
+
+
+## Fully general solution (incl. circular structures)
+
+### Garbage collection of JS references
+
+Will require JS references in the GC
+Need to keep them in a JS array but how do we GC that array?
+Could keep a linked list of all the JS refs.
+Do a first stage of marking where the list itself is not included.
+Then traverse the list, finding dead JsRefs. Kill them in JS as you go using an imported JS function.
+If the JsRef is live, then also mark the corresponding Cons as live.
+Jump over the dead cells.
+
+What structure to use on the JS side?
+- Don't really want an array that's full of holes.
+- Ooh, what about keeping a matching linked list in JS?
+- Use an array, but replace it with a "compacted" one every GC cycle!
+  - While marking in Wasm, also call a JS "mark" function that pushes the ref onto a new JsRef array
+  - After marking, call a "compact" function in JS
+    - This needs to keep stuff we didn't bother getting to in this (minor) GC cycle
+    - Probably want to reverse the JS list and concat it to the untouched stuff
+    - Need a 2nd pass over the Wasm list to update the JS indices to the new (reversed + concat'ed) array indices
+      - We have now learned the number of untouched JS refs, and the number of moved ones.
+
+OK cross-language GC is actually not the end of the world but it's definitely more complexity
+
+### Json.Value in C
+
+Need a new tag for this, which is annoying cos I'm out of bits
+Maybe free up some space by redesigning the GC book-keeping. Use ctors instead of tags to distinguish them.
+Or redesign Lists and Tuples to be the same as Custom, get rid of the index function
+
+### Actual JSON decoding
+
+To decode a value, get a JsRef to it
+  - how does the wrapper know what to pass to Wasm as a Json.Value?
+  - where can Values come from?
+    - HTML events
+    - ports
+    - Cmds
+  - need to catch this kind of `Value`s on the way from runtime to Wasm
+    - wrap it in a some WasmJsRef() constructor
+    - don't run the wrapper conversion on it
+    - instead, push it onto the JsRef array
+OK so if I can figure all that out, then what?
+
+* Decoding a string
+
+call out to JSON.parse, then decode a Value. Cos the value is harder
+
+* Decoding a value
+
+Somehow get a JsRef in Wasm containing an index into a JS value store
+Json.Decode doesn't say "what are you?". It says "you should be a string", and produces either Ok or Error
+Need something like `_Json_runHelp` on the JS side.
+
+Main difference:  the return value gets encoded to binary Elm, wrapped in Ok/Error
+Nested decoder functions are all Wasm callbacks
+Equivalent data structures are defined on both sides (just like the other Elm structures!!)
+You build up a decoder in Wasm, then call out to JS to execute it
+
+What do we actually gain by building the data structure in C?
+- Constructor functions are all in C
+- No back-and-forth just to create the decoder, only to run it
+  - Could also reduce for run by just returning a dummy WasmRef
+  - This would mean you run your combining functions all in C
+  - But this has GC issues
+    - Would need some indirection for addresses in case there's a GC during JSON decoding.
+    - Make a list of all the Elm values we're constructing
+    - When JS requests a Wasm collection to be constructed, it will refer to list indices
+    - But while building it on the Wasm side, we translate to real addresses
+    - Could be an exported C function that mutates the structure in place
+- Becomes version-dependent. Constructor tags change between Json 1.0.0 and 1.1.2
+
+---
+
+# Bad code gen for case expressions
+
+Some case expressions can `goto` a default clause.
+JS uses early return but it also can wrap those in IIFE's if needed. I can't. So if I use early return I'll run into other edge cases.
+
+We need a `do ... while(0)` with `break`s in the "other", non-goto branches.
+The final (labelled) default clause should be inside the while.
+That way, we can "early break" out of the block rather than early return.
+
+# Dynamic field groups
+
+Some field groups are not known to the code gen at compile time!
+HTTP response for example.
+SPA example has this issue. No Elm code ever creates a Response record. Only JS kernel code does.
+This means the wrapper can fail to find the right fieldGroup and it ends up being a NULL.
+Need to be able to create FieldGroups dynamically if we don't find them.
+But this means they end up in the heap, which means they need to become first-class citizens and get a header with a tag.
+Good job we already have one handy, Tag_Unused
+TODO
+- Change Tag_Unused to Tag_FieldGroup
+- Make sure GC `child_count` gets the right answer (0)
+- Make sure that equality still works OK on records
+
+
+# Ports bug (FIXED)
+
+Generated code is trying to recreate each port every time is used, and it breaks.
+Need to rework how JS values are referenced from Wasm.
+Currently it assumes I can recreate a value as many times as I want and it's OK. (Because pure functional yadda yadda.)
+But in the case of a port it is a long-lived _instance_. Trying to recreate it again throws an error.
+
+I need to generate it on the JS side and then reference that instance.
+Probably need to do the same for (other) Effect Managers. Am I doing that already?
+
+Naming issue:
+The array of JS values currently assumes they are all following the kernel naming convention but ports follow the Globals naming convention. Need to change how that Set works.
+
+
+# JS arrays passed into Wasm!
+Some core packages are using their own weird JS data structures
+that contain arrays. `Json` is one of them.
+It's probably best to leave JSON decoding in JS.
+  - It can handle non-serialisable objects
+  - It handles JS edge cases like NaN, Int vs Float ranges, etc.
+  - There's a lot of code. The C version would be buggy!
+How to model JS arrays using what we have already?
+
+Feck, they also have numeric $ constructors
+$: 13
+encode as -14 => Uint32Array 4294967282
+read back 4294967282, this should go into the ctors enum object
+{
+  4294967282: 13,
+}
+
+Don't really need the 13 as a key
+
+- `Record`
+  - This is how the wrapper currently treats them, with 0 fieldgroup (coerced into the ArrayBuffer from `undefined`.)
+  - Special case:
+    - Reading. Detect NULL pointer in FG and decode to array instead of object
+    - Writing: no special case
+  - Downside:
+    - we have NULL pointer in C. Shouldn't matter because no code should touch it. But I have _some_ out of bounds issue somewhere and I can't eliminate this if it's still hanging around.
+
+- `Custom`
+  - Naturally looks like an array
+  - Special cases:
+    - Writing: type detection & Custom writer
+    - Add CTOR_JS_ARRAY to ctors
+    - Custom reader: detect CTOR_JS_ARRAY, make an array.
+  - Upsides:
+    - ctor field is a number, not a pointer
+    - easiest mental model
+
+- `Closure`
+  - Suspended call to the "kernel" JS function, the Array constructor.
+  - Special cases:
+    - Writing: Detect type, make it look like a wasmCallback
+    - Reading: no special case
+  - Upsides:
+    - Puts it in the Kernel section where it makes sense to be!
+    - Marked NEVER_EVALUATE, which is nice
+  - Downsides:
+    - A bit too clever
+    - Array constructor function needs to be curried, but also needs to be of arbitrary length... agh, need a few of them
+
+
+# Elm code layer within the core?
+
+Problem:
+
+- Need the C kernel to have the exact same API as the JS kernel, but C is a pain to write and debug.
+- A lot of the kernel functions in Elm.js are delegating directly to JS built-ins that we'd have to rewrite in C.
+
+Solution:
+
+- Implement more of the Kernel functions in Elm, built on top of really fundamental C functions
+- Pre-compile those Elm modules and bundle the result with the core C lib
+- Can use a dummy app to provide an Elm `main`. It can have a folder per core module.
+- Extract the compiled C functions out of that dummy app. Ideally using some build script.
+  - Run a pattern matcher on the C text, grab what we need
+  - leave behind the dummy app stuff and the actual handwritten C kernel stuff
+  - Write it all out to a generated.c file that gets included with the kernel lib
+  - End of the eval function is the next line that begins with `}` rather than whitespace
+- Approaches
+  - Node script (really dumb, just count parens and brackets)
+  - Haskell Language.C (Proper parsing, filtering and writing out again)
+
 # Get repo in a less-embarrassing state
 
 - Fix compiler errors for new functions

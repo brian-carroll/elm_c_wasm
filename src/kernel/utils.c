@@ -1,6 +1,9 @@
 #include "./utils.h"
+
 #include <assert.h>
 #include <string.h>
+
+#include "./elm.h"
 #include "./gc.h"
 #include "./list.h"
 #include "./string.h"
@@ -8,21 +11,33 @@
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
+
 #include "./debug.h"
 extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #else
 #define log_error(...)
 #endif
 
-void Utils_initGlobal(void** global, void* (*init_func)()) {
-  GC_register_root(global);
+/**
+ * Initialise a global value by evaluating an Elm expression
+ *
+ * global_permanent_ptr:  location of a pointer outside the heap
+ *           that always points to the current heap location.
+ *           GC will update this as it moves the value around.
+ * init_func:   a function that evaluates the Elm expression
+ *           to initialise the global value
+ */
+void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
+  GC_register_root(global_permanent_ptr);
   for (;;) {
-    void* val = init_func();
-    if (val != pGcFull) {
-      *global = val;
+    void* heap_value = init_func();
+    if (heap_value != pGcFull) {
+      *global_permanent_ptr = heap_value;
+      GC_stack_empty();
       return;
     }
     GC_collect_full();
+    GC_prep_replay();
   }
 }
 
@@ -101,71 +116,102 @@ Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   return r_new;
 }
 
-void* Utils_apply(Closure* c_old, u8 n_applied, void* applied[]) {
+void* eval_Utils_append(void* args[]) {
+  Header* h = args[0];
+  if (h->tag == Tag_List) {
+    return eval_elm_core_List_append(args);
+  } else {
+    return eval_String_append(args);
+  }
+}
+Closure Utils_append = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_Utils_append,
+    .max_values = 2,
+};
+
+
+void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
   void** args;
   Closure* c;
 
-  void* replay = GC_apply_replay();
-  if (replay != NULL) {
-    c = replay;
-    if (c->header.tag != Tag_Closure) {
-      return replay;
-    }
-    if (c->n_values != c->max_values) {
-      return replay;
-    }
-    args = c->values;
-  } else if (c_old->max_values == n_applied) {
-    // 'saturated' call. No need to allocate a new Closure.
-    c = c_old;
-    args = applied;
-  } else if (n_applied == 0) {
-    // a full closure (thunk)
-    // from JS wrapper (or resumed tailcall? not sure if this happens)
-    c = c_old;
-    args = c_old->values;
-  } else {
-    u8 n_old = c_old->n_values;
-    u8 n_new = n_old + n_applied;
+  for (;;) {
+    void* replay = GC_apply_replay();
+    if (replay != NULL) {
+      c = replay;
+      if (c->header.tag != Tag_Closure) {
+        return replay;
+      }
+      if (c->n_values != c->max_values) {
+        return replay;
+      }
+      args = c->values;
+    } else if (c_old->max_values == n_applied) {
+      // 'saturated' call. No need to allocate a new Closure.
+      c = c_old;
+      args = applied;
+    } else if (n_applied == 0) {
+      // a full closure (thunk)
+      // from JS wrapper (or resumed tailcall? not sure if this happens)
+      c = c_old;
+      args = c_old->values;
+    } else {
+      u16 n_old = c_old->n_values;
+      u16 n_new = n_old + n_applied;
 
-    size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
-    size_t size_applied = n_applied * sizeof(void*);
-    size_t size_new = size_old + size_applied;
+      size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
+      size_t size_applied = n_applied * sizeof(void*);
+      size_t size_new = size_old + size_applied;
 
-    c = CAN_THROW(GC_malloc(size_new));
-    GC_memcpy(c, c_old, size_old);
-    GC_memcpy(&c->values[n_old], applied, size_applied);
-    c->header = HEADER_CLOSURE(n_new);
-    c->n_values = n_new;
+      c = CAN_THROW(GC_malloc(size_new));
+      GC_memcpy(c, c_old, size_old);
+      GC_memcpy(&c->values[n_old], applied, size_applied);
+      c->header = HEADER_CLOSURE(n_new);
+      c->n_values = n_new;
 
-    if (n_new != c->max_values) {
-      // Partial application (not calling evaluator => no stack push)
-      return c;
+      if (n_new < c->max_values) {
+        // Partial application (not calling evaluator => no stack push)
+        return c;
+      }
+      args = c->values;
     }
-    args = c->values;
+
+    void* push = CAN_THROW(GC_stack_push());
+    // #ifdef DEBUG
+    // gc_debug_stack_trace(push, c);
+    // #endif
+
+    ElmValue* result = (*c->evaluator)(args);
+    if ((void*)result == pGcFull) {
+      return result;
+    }
+
+    void* pop = CAN_THROW(GC_stack_pop(result, push));
+    // #ifdef DEBUG
+    // gc_debug_stack_trace(pop, c);
+    // #else
+    (void)pop;  // suppress "unused variable" warning
+
+    // #endif
+
+    // In some cases, we may still have args to be applied.
+    // The first few were used to create a Closure
+    // Now we need to apply the rest to that new Closure... etc.
+    u16 n_total = c_old->n_values + n_applied;
+    u16 n_done = c_old->max_values;
+    if (n_total > n_done) {
+      c_old = (Closure*)result;
+      n_applied = n_total - n_done;
+      applied = &args[n_done];
+    } else {
+      return result;
+    }
   }
-
-  void* push = CAN_THROW(GC_stack_push());
-  // #ifdef DEBUG
-  // gc_debug_stack_trace(push, c);
-  // #endif
-
-  ElmValue* result = (*c->evaluator)(args);
-  if ((void*)result == pGcFull) {
-    return result;
-  }
-
-  void* pop = CAN_THROW(GC_stack_pop(result, push));
-  // #ifdef DEBUG
-  // gc_debug_stack_trace(pop, c);
-  // #else
-  (void)pop;  // suppress "unused variable" warning
-
-  // #endif
-
-  return result;
 }
 
+/**
+ * EQUALITY
+ */
 static ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
   Tuple2* t2 = NEW_TUPLE2(pa, pb);
   Cons* c = NEW_CONS(t2, *pstack);
@@ -229,11 +275,16 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       return 1;
     }
 
-    case Tag_Record:
-      // Elm guarantees same Record type => same fieldgroup
-      for (u32 i = 0; i < pa->record.fieldgroup->size; ++i)
+    case Tag_Record: {
+      // Fieldgroup assumed to be equal due to Elm type checking
+      u32 nparams = pa->header.size - (sizeof(Record)/SIZE_UNIT);
+      for (u32 i = 0; i < nparams; ++i)
         if (!eq_help(pa->record.values[i], pb->record.values[i], depth + 1, pstack))
           return 0;
+      return 1;
+    }
+
+    case Tag_FieldGroup:
       return 1;
 
     case Tag_Closure:
@@ -254,7 +305,6 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_GcStackPush:
     case Tag_GcStackPop:
     case Tag_GcStackTailCall:
-    case Tag_Unused:
       return 0;
   }
 }
@@ -279,24 +329,19 @@ Closure Utils_equal = {
     .max_values = 2,
 };
 
-static void* append_eval(void* args[2]) {
-  Header* h = (Header*)args[0];
-
-  switch (h->tag) {
-    case Tag_String:
-      return String_append_eval(args);
-
-    case Tag_List:
-      return List_append_eval(args);
-
-    default:
-      log_error("Tried to Utils_append non-appendable\n");
-      return args[0];
+/**
+ * INEQUALITY
+ */
+static void* eval_notEqual(void* args[2]) {
+  void* equal = eq_eval(args);
+  if (equal == pGcFull) {
+    return pGcFull;
   }
+  return equal == &False ? &True : &False;
 }
-Closure Utils_append = {
+Closure Utils_notEqual = {
     .header = HEADER_CLOSURE(0),
-    .evaluator = &append_eval,
+    .evaluator = &eval_notEqual,
     .max_values = 2,
 };
 

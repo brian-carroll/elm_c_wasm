@@ -64,23 +64,28 @@ When the browser sends a string to Wasm, calls an "exported" function in the Was
 
 The proposal does actually mention UTF-8 encoded strings as one of the possible interface types. It also mentions ArrayBuffer and JSON. The JSON data is "parsed as if it were passed to `JSON.parse()`", which sort of implies UTF-16, I think. It remains to be seen how many Web APIs will actually provide the UTF-8 String argument type.
 
-## Conclusions on string encoding
+## Performance
 
-If Elm was targeting native compilation then UTF-8 would definitely be the way to go. But it's quite focused on the browser as a platform, so it seems like there may be real performance reasons to use UTF-16. It's probably worth doing some benchmarking once the Web APIs become available in Wasm.
+I've done some benchmarking on decoding UTF-8 and UTF-16 bytes from an `ArrayBuffer` to a JavaScript string that can be written to a DOM API like `HTMLElement.prototype.innerText`. Details are [here](../demos/2020-04-string-encoding).
 
-UTF-16 has a bit of a bad reputation because of buggy implementations that have been done in the past. There are a lot of UTF-16 string APIs that confuse characters with code units, including JavaScript's (and in some cases, even Elm's!). But as far as I know it's perfectly possible to do a _good_ implementation.
+The summary is that UTF-16 is faster for non-ASCII text because it has to be re-encoded. But UTF-8 is faster for ASCII because it doesn't have to be re-encoded and being half the byte size makes it quicker to copy. (Note that non-English web pages still have to use ASCII text for DOM node tags and other Web API strings.)
 
-I feel like it might be a controversial thing to say but here goes:
+The decoding time is quite quick overall, ranging from 0.07-0.44ms for 60kB of text.
 
-> I think UTF-8 is not the right choice for Elm in the browser environment, and that it should use UTF-16 instead.
+## Backward compatibility
 
-But I also think we should fix stuff like this:
+Using UTF-8 would require API changes to the String and Char libraries. For example `String.length` would return a different result for the same content.
 
-```elm
-> s = "🙈🙉🙊"
-"🙈🙉🙊" : String
-> String.length s
-6 : Int
-> List.length (String.toList s)
-3 : Int
-```
+This would break some existing apps, making it harder to port them to Wasm.
+
+Porting existing apps to Wasm is also the best way to test and debug this Elm-in-WebAssembly project. That in itself is a big incentive to keep the same APIs for the core libraries! The loss of productivity would be enormous if we couldn't compile existing example apps and expect them to work.
+
+Of course if we stick with JS-compatible strings for this reason, it could create problems like Python 2.7, which survived 12 years after the release of Python 3. In large part, that was because of breaking changes related to string encoding.
+
+## Conclusions
+
+I think for practical reasons I have to stick with JS-compatible strings for the development phase so that I can run existing apps.
+
+Migrating to UTF-8 seems like a bigger change than migrating to WebAssembly!
+
+This project may even need two versions of the String and Char libraries, perhaps selected by means of a compile option. I already have a C macro to switch between UTF-8 and UTF-16 implementations, although I haven't made much effort to keep UTF-8 updated.

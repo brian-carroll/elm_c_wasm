@@ -12,6 +12,7 @@ src/wrapper/*.js
 
 # Generated files
 *.wasm
+*.wasm.map
 *.wat
 *.o
 *.d

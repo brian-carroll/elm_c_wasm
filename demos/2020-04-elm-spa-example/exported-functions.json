@@ -1,5 +1,6 @@
 [
   "getMains",
+  "getJsNull",
   "getUnit",
   "getNil",
   "getTrue",
@@ -12,5 +13,6 @@
   "writeF64",
   "evalClosure",
   "collectGarbage",
-  "debugHeapState"
+  "debugHeapState",
+  "debugEvaluatorName"
 ]

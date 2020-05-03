@@ -6,33 +6,17 @@ Richard's repo is a Git submodule of this one, so I can use the original source 
 
 ### Issues currently causing C compiler errors
 
-#### Kernel functions not written yet
+#### Kernel code not written yet
 
-- A5
-- String_all
-- String_length
-- String_slice
-- String_toInt
-- String_uncons
+- String_contains
+- String_indexes
+- String_startsWith
+- String_trim
 
-#### Elm functions not generated
+#### Closures used before they are declared
 
 - elm_core_Basics_negate
-- elm_core_List_foldrHelper
-- elm_json_Json_Decode_errorToString
-- elm_json_Json_Decode_errorToStringHelp
 
-#### Constructor IDs not generated
-
-All of these are used in elm_json_Json_Decode_errorToStringHelp. Maybe if that bug is fixed, this one will go away too.
-
-- CTOR_Field
-- CTOR_Index
-- CTOR_OneOf
-
-#### `args` array not defined for some recursive functions
-
-- eval_elm_core_List_foldl
-- eval_elm_core_List_rangeHelp
-- eval_elm_json_Json_Decode_errorToStringHelp
-- eval_elm_parser_Parser_Advanced_chompWhileHelp
+  - This ends up being self-referential
+  - The `negate` function is `x -> -x`, but the `-` operator is generated as the `negate` function!
+  - JS code gen does optimisations for saturated Basics calls, which gets around this circular definition. I was going to leave those optimisations for later but apparently need them now!

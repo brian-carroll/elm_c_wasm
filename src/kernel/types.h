@@ -28,13 +28,13 @@ typedef enum {
   Tag_Tuple3,           // 6
   Tag_Custom,           // 7
   Tag_Record,           // 8
-  Tag_Closure,          // 9
-  Tag_GcException,      // a
-  Tag_GcStackEmpty,     // b
-  Tag_GcStackPush,      // c
-  Tag_GcStackPop,       // d
-  Tag_GcStackTailCall,  // e
-  Tag_Unused,           // f
+  Tag_FieldGroup,       // 9
+  Tag_Closure,          // a
+  Tag_GcException,      // b
+  Tag_GcStackEmpty,     // c
+  Tag_GcStackPush,      // d
+  Tag_GcStackPop,       // e
+  Tag_GcStackTailCall,  // f
 } Tag;
 
 typedef struct {
@@ -83,6 +83,8 @@ typedef struct {
   (Header) { .tag = Tag_Custom, .size = (sizeof(Custom) + p * sizeof(void*)) / SIZE_UNIT }
 #define HEADER_RECORD(p) \
   (Header) { .tag = Tag_Record, .size = (sizeof(Record) + p * sizeof(void*)) / SIZE_UNIT }
+#define HEADER_FIELDGROUP(p) \
+  (Header) { .tag = Tag_FieldGroup, .size = (sizeof(FieldGroup) + p * sizeof(u32)) / SIZE_UNIT }
 #define HEADER_CLOSURE(p)                                                         \
   (Header) {                                                                      \
     .tag = Tag_Closure, .size = (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT \
@@ -99,11 +101,11 @@ typedef struct {
 #define HEADER_GC_STACK_TC \
   (Header) { .tag = Tag_GcStackTailCall, .size = sizeof(GcStackMap) / SIZE_UNIT }
 
-#define CAN_THROW(expr)         \
-  ({                            \
-    void* x = expr;             \
-    if (x == pGcFull) return x; \
-    x;                          \
+#define CAN_THROW(expr)                                 \
+  ({                                                    \
+    void* tmp_CAN_THROW = expr;                         \
+    if (tmp_CAN_THROW == pGcFull) return tmp_CAN_THROW; \
+    tmp_CAN_THROW;                                      \
   })
 
 // LIST
@@ -180,13 +182,15 @@ typedef struct {
   u8 bytes[];
 } ElmString;
 ElmString* ctorElmString(size_t n, char* str);
+#define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 
 typedef struct {
   Header header;
   u16 words16[];
 } ElmString16;
+ElmString16* ctorElmString16(size_t n);
+#define NEW_ELM_STRING16(len16) CAN_THROW(ctorElmString16(len16))
 
-#define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 enum {
   UTF8,
   UTF16,
@@ -208,6 +212,7 @@ Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]);
 // RECORD
 
 typedef struct {
+  Header header;
   u32 size;
   u32 fields[];
 } FieldGroup;
@@ -233,15 +238,15 @@ typedef struct {
   Header header;
   u16 n_values;  // current number of applied args
   u16 max_values;
-  void* (*evaluator)(void* []);  // pointer to a function that takes an array of pointers
-                                 // and returns a pointer
+  void* (*evaluator)(void*[]);  // pointer to a function that takes an array of pointers
+                                // and returns a pointer
   void* values[];
 } Closure;
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
 
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]);
+    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]);
 #define NEW_CLOSURE(n, m, e, v) CAN_THROW(ctorClosure(n, m, e, v))
 
 // GARBAGE COLLECTOR TYPES
@@ -274,6 +279,7 @@ typedef union {
   Tuple3 tuple3;
   Custom custom;
   Record record;
+  FieldGroup fieldgroup;
   Closure closure;
   GcException gc_exception;
   GcStackMap gc_stackmap;

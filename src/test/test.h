@@ -34,7 +34,13 @@
     if (message != NULL) return message; \
   } while (0)
 
-extern int tests_run, assertions_made, verbose;
+extern int tests_run, tests_failed, assertions_made, verbose;
 
 char* hex(void* addr, int size);
 char* hex_ptr(void* ptr);
+
+extern char* test_description;
+extern void* test_heap_ptr;
+
+void describe(char* description, void* (*test)()) ;
+void* expect_equal(char* expect_description, void* left, void* right);
