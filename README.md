@@ -37,14 +37,14 @@ I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-co
 Here's roughly how I see the project progressing from here, as of April 2020. (Unless some big unknown bites me, which it might!)
 
 - [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][demo-unit-tests-core].
-- [x] Do some initial exploration of C code generation in a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/tree/c). Understand how it works and what's involved.
+- [x] Do some initial exploration of C code generation in a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/). Understand how it works and what's involved.
 - [x] Implement a [Garbage Collector](./docs/gc.md) in C and compile it to Wasm. Prove it works using [in-browser unit tests][demo-unit-tests-gc] and an [elm-benchmark app][demo-benchmark].
 - [x] Create a wrapper to connect a WebAssembly module to Elm's kernel JavaScript.
   - [x] Test on a simple example app.
 - [x] Finish code generation for the full Elm AST (outputting both C and JS)
   - [x] Test on the same [simple example app](demo-app) created for testing the wrapper
   - [x] Test on [TODO MVC](todo-app), a slightly more complex app
-  - [ ] Test on Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), a much more complex app
+  - [ ] (**WIP**) Test on Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), a much more complex app
 - [ ] Complete the kernel code for the core libraries. This is a large task!
 - [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
