@@ -75,8 +75,11 @@ wrapper:
 codegen:
 	cd $(ROOT)/demos/2019-12-code-gen && make clean && make
 
+todo:
+	cd $(ROOT)/demos/todo-mvc && make clean && make
+
 gh-pages: CFLAGS=-Wall -O3
-gh-pages: www benchmark codegen
+gh-pages: www codegen todo
 	mkdir -p $(DEPLOY)/unit-tests/dist/www
 	mkdir -p $(DEPLOY)/wrapper/dist
 	mkdir -p $(DEPLOY)/benchmark/dist
@@ -87,10 +90,10 @@ gh-pages: www benchmark codegen
 	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
 	cp $(ROOT)/demos/index.html $(DEPLOY)
 	cp $(ROOT)/demos/favicon.png $(DEPLOY)
-	cp $(ROOT)/demos/2019-08-benchmark/index.html $(DEPLOY)/benchmark/index.html
-	cp $(ROOT)/demos/2019-08-benchmark/dist/* $(DEPLOY)/benchmark/dist/
 	cp $(ROOT)/demos/2019-12-code-gen/index.html $(DEPLOY)/code-gen/index.html
 	cp $(ROOT)/demos/2019-12-code-gen/dist/* $(DEPLOY)/code-gen/dist/
+	cp $(ROOT)/demos/todo-mvc/index.html $(DEPLOY)/todo-mvc/index.html
+	cp $(ROOT)/demos/todo-mvc/dist/* $(DEPLOY)/todo-mvc/dist/
 	cd $(DEPLOY) && git add . && git commit -m 'update' && git push
 
 
