@@ -1,6 +1,7 @@
 .PHONY: all
 
-ELM_SOURCES := $(shell find elm-spa-example/src -name '*.elm')
+SUBMODULE_DIR := "repo"
+ELM_SOURCES := $(shell find $(SUBMODULE_DIR)/src -name '*.elm')
 KERNELC := $(shell find ../../src/kernel -name '*.c')
 KERNELH := $(shell find ../../src/kernel -name '*.h')
 
@@ -16,7 +17,7 @@ clean:
 
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
-	cd elm-spa-example; $(ELM_TO_C) make src/Main.elm --output ../build/elm/elm.c
+	cd $(SUBMODULE_DIR); $(ELM_TO_C) make src/Main.elm --output ../build/elm/elm.c
 
 build/elm/elm.js: build/elm/elm.c
 	@:
