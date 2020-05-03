@@ -43,19 +43,17 @@ Here's roughly how I see the project progressing from here, as of April 2020. (U
   - [x] Test on a simple example app.
 - [x] Finish code generation for the full Elm AST (outputting both C and JS)
   - [x] Test on the same [simple example app](demo-app) created for testing the wrapper
+  - [x] Test on [TODO MVC](todo-app) created for testing the wrapper
   - [ ] Test on Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), adding implementations of core Kernel functions as needed
 - [ ] Complete the kernel code for the core libraries. This is a large task!
 - [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
 - [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
 
-My general approach is to explore all the different pieces, then work on the biggest unknown until I understand the important issues and/or solved some problem. Once I feel like I understand that well, move on to the next biggest unknown.
-
-This means gradual progress on lots of pieces, with no end-to-end system for quite a long time. But I feel that focusing on the biggest unknowns first will lead to a good design and avoid going down dead ends. Not everyone likes this style but it works for me!
-
-[demo-app]: https://brian-carroll.github.io/elm_c_wasm/code-gen/index.html
-[demo-unit-tests-core]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose
-[demo-unit-tests-gc]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/index.html?argv=--gc+--verbose
-[demo-benchmark]: https://brian-carroll.github.io/elm_c_wasm/benchmark/index.html
+[todo-app]: https://brian-carroll.github.io/elm_c_wasm/todo-mvc/
+[demo-app]: https://brian-carroll.github.io/elm_c_wasm/code-gen/
+[demo-unit-tests-core]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/?argv=--types+--utils+--basics+--string+--verbose
+[demo-unit-tests-gc]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/?argv=--gc+--verbose
+[demo-benchmark]: https://brian-carroll.github.io/elm_c_wasm/benchmark/
 
 &nbsp;
 
