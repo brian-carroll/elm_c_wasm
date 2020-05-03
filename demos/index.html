@@ -33,7 +33,7 @@
         <tbody>
           <tr>
             <td>
-              <a href="todo-mvc/index.html">
+              <a href="todo-mvc/">
                 TODO MVC example
               </a>
             </td>
@@ -47,7 +47,7 @@
 
           <tr>
             <td>
-              <a href="code-gen/index.html">
+              <a href="code-gen/">
                 Simple Elm app
               </a>
             </td>
@@ -65,7 +65,7 @@
           <tr>
             <td>
               <a
-                href="unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose"
+                href="unit-tests/?argv=--types+--utils+--basics+--string+--verbose"
               >
                 Kernel unit tests
               </a>
@@ -119,7 +119,7 @@
 
           <tr>
             <td>
-              <a href="unit-tests/index.html?argv=--gc+--verbose"
+              <a href="unit-tests/?argv=--gc+--verbose"
                 >GC unit tests</a
               >
               <br />
@@ -146,49 +146,6 @@
                 </li>
                 <li>
                   Currently fits in 6kB .wasm file, though not complete yet!
-                </li>
-              </ul>
-            </td>
-          </tr>
-
-          <!----------------------------------->
-
-          <tr>
-            <td>
-              <a href="update-int/index.html">Elm in JS & Wasm</a>
-              <br />
-              <br />
-              (<a
-                href="https://github.com/brian-carroll/elm_c_wasm/tree/master/demos/update-int"
-                >source code</a
-              >)
-            </td>
-            <td>
-              Set up a test environment to allow an Elm program to be
-              implemented partly in JS and partly in Wasm. Gives me a starting
-              point to make incremental progress.
-              <ul>
-                <li>
-                  Basic up/down counter example, using <code>Int</code> for both
-                  <code>Model</code> and <code>Msg</code> types
-                </li>
-                <li>
-                  Only the <code>update</code> function is running in Wasm, the
-                  rest is running in JS
-                </li>
-                <li>
-                  Wasm <code>update</code> function is "hand compiled". I
-                  manually wrote the C code that I think a future Elm compiler
-                  could generate, then compiled that to Wasm.
-                </li>
-                <li>
-                  The Wasm is inserted into the Elm program by running the
-                  generated JS through a Bash script. This would eventually be
-                  done by the code generator in the Elm compiler.
-                </li>
-                <li>
-                  This was an early demo. The "benchmark" example is more
-                  developed.
                 </li>
               </ul>
             </td>

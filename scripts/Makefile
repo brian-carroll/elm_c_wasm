@@ -82,8 +82,8 @@ gh-pages: CFLAGS=-Wall -O3
 gh-pages: www codegen todo
 	mkdir -p $(DEPLOY)/unit-tests/dist/www
 	mkdir -p $(DEPLOY)/wrapper/dist
-	mkdir -p $(DEPLOY)/benchmark/dist
 	mkdir -p $(DEPLOY)/code-gen/dist
+	mkdir -p $(DEPLOY)/todo-mvc/dist
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
 	cp $(ROOT)/favicon.png $(DEPLOY)/unit-tests/
 	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www

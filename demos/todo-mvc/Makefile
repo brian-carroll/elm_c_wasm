@@ -10,7 +10,7 @@ ELM_TO_C := $(HOME)/Code/wasm/compiler/.stack-work/install/x86_64-linux/lts-13.2
 
 .PHONY: all clean
 
-all: dist/elm.wasm dist/elm.js
+all: dist/elm.wasm dist/elm.js dist/style.css
 
 clean:
 	rm -rf build/* dist/*
@@ -39,6 +39,9 @@ dist/elm.wasm: build/emscripten/elm.wasm
 
 dist/elm.js: build/emscripten/elm.js build/elm/elm.js
 	cat build/emscripten/elm.js build/elm/elm.js > dist/elm.js
+
+dist/style.css:
+	cp repo/style.css dist/style.css
 
 dist/test: $(KERNELC) $(KERNELH) build/emscripten/elm.c
 	gcc -Wall -O0 -g $(KERNELC) build/emscripten/elm.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types
