@@ -51,7 +51,7 @@ Here's roughly how I see the project progressing from here, as of April 2020. (U
 
 [todo-app]: https://brian-carroll.github.io/elm_c_wasm/todo-mvc/
 [demo-app]: https://brian-carroll.github.io/elm_c_wasm/code-gen/
-[demo-unit-tests-core]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/?argv=--types+--utils+--basics+--string+--verbose
+[demo-unit-tests-core]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/?argv=--types+--utils+--basics+--string+--list+--verbose
 [demo-unit-tests-gc]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/?argv=--gc+--verbose
 [demo-benchmark]: https://brian-carroll.github.io/elm_c_wasm/benchmark/
 
