@@ -17,6 +17,9 @@
         border: solid black 1px;
         padding: 10px;
       }
+      td:first-child {
+        text-align: center;
+      }
     </style>
   </head>
   <body>
@@ -29,64 +32,38 @@
       <table>
         <tbody>
           <tr>
-            <td style="text-align: center">
+            <td>
+              <a href="todo-mvc/index.html">
+                TODO MVC example
+              </a>
+            </td>
+            <td>
+              Evan Czaplicki's TODO MVC example, implemented in WebAssembly
+              <br />
+              Pure Elm code is in WebAssembly, and effectful Kernel code uses
+              standard library JavaScript implementations
+            </td>
+          </tr>
+
+          <tr>
+            <td>
               <a href="code-gen/index.html">
                 Simple Elm app
               </a>
             </td>
             <td>
-              A simple Elm app implemented in WebAssembly<br />
+              An extremely basic Elm app implemented in WebAssembly
+              <br />
+              Simple enough for me to "compile" to C by hand, and <i>just</i>
+              complex enough to exercise the main parts of the Elm architecture.
+              <br />
               Pure Elm code is in WebAssembly, and effectful Kernel code uses
               standard library JavaScript implementations
             </td>
           </tr>
-          <tr>
-            <td style="text-align: center">
-              <a href="benchmark/index.html">Wasm & JS Benchmarks</a>
-              <br />
-              <br />
-              (<a
-                href="https://github.com/brian-carroll/elm_c_wasm/tree/master/demos/benchmark/src/Main.elm"
-                >source code</a
-              >)
-            </td>
-            <td>
-              Micro-benchmarks of some Elm functions compiled to Wasm and JS.<br />
-              <b>Notes:</b>
-              <ul>
-                <li>
-                  The Wasm numbers are an order of magnitude slower than JS at
-                  the moment. Partly because they're skewed by several effects
-                  (see below) and partly because it's early days.
-                </li>
-                <li>
-                  The benchmarking loop crosses over and back across the JS/Wasm
-                  language boundary on every iteration. This slows down the Wasm
-                  cases a lot, distorting the results.<br />
-                  In a real Elm program these language barrier crossings would
-                  much less frequent or completely absent. But we're not ready
-                  yet for full programs.
-                </li>
-                <li>
-                  It also seems like crossing the language barrier is preventing
-                  the browser engine from doing some optimisations that it can
-                  do in the JS-only implementation.
-                </li>
-                <li>
-                  The Wasm GC is using a ridiculously small heap size (64-128k)
-                  because this made things more manageable during development.
-                </li>
-                <li>
-                  All of this means I don't trust the numbers, but the benchmark
-                  format is very good for flushing out bugs and design flaws.
-                </li>
-              </ul>
-            </td>
-          </tr>
-          <!----------------------------------->
 
           <tr>
-            <td style="text-align: center">
+            <td>
               <a
                 href="unit-tests/index.html?argv=--types+--utils+--basics+--string+--verbose"
               >
@@ -141,7 +118,7 @@
           <!----------------------------------->
 
           <tr>
-            <td style="text-align: center">
+            <td>
               <a href="unit-tests/index.html?argv=--gc+--verbose"
                 >GC unit tests</a
               >
@@ -177,7 +154,7 @@
           <!----------------------------------->
 
           <tr>
-            <td style="text-align: center">
+            <td>
               <a href="update-int/index.html">Elm in JS & Wasm</a>
               <br />
               <br />
