@@ -7,7 +7,7 @@ extra_opt=""
 extra_opt="$extra_opt -O1"
 
 extra_opt="$extra_opt -g4"
-extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/2020-04-elm-spa-example/"
+extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/"
 
 mkdir -p build/emscripten
 
