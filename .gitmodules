@@ -1,3 +1,6 @@
 [submodule "demos/2020-04-elm-spa-example/elm-spa-example"]
 	path = demos/elm-spa-example/repo
 	url = git@github.com:rtfeldman/elm-spa-example.git
+[submodule "demos/todo-mvc/repo"]
+	path = demos/todo-mvc/repo
+	url = https://github.com/evancz/elm-todomvc.git
