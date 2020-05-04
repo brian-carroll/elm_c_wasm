@@ -37,7 +37,6 @@ Release/
 *.workspace
 src/*.mk
 src/*.txt
-/Makefile
 
 # Generated report
 opt.md

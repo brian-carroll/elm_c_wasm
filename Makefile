@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -O1
 
-ROOT := ..
+ROOT := .
 SRC := $(ROOT)/src
 KERNEL := $(ROOT)/src/kernel
 TEST := $(ROOT)/src/test
