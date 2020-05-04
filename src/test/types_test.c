@@ -270,147 +270,29 @@ char* test_strings() {
     printf("## test_strings\n");
     printf("\n");
     printf("sizeof(ElmString) = %zd\n", sizeof(ElmString));
-    printf("&str4->bytes - str4 = %zd\n", (void*)&str4->bytes - (void*)str4);
-    printf("\n");
-    printf("str0: tag=%d, size=%d, hex=%s\n",
-        str0->header.tag,
-        str0->header.size,
-        hex(str0, str0->header.size * SIZE_UNIT));
-    printf("str1: tag=%d, size=%d, hex=%s\n",
-        str1->header.tag,
-        str1->header.size,
-        hex(str1, str1->header.size * SIZE_UNIT));
-    printf("str2: tag=%d, size=%d, hex=%s\n",
-        str2->header.tag,
-        str2->header.size,
-        hex(str2, str2->header.size * SIZE_UNIT));
-    printf("str3: tag=%d, size=%d, hex=%s\n",
-        str3->header.tag,
-        str3->header.size,
-        hex(str3, str3->header.size * SIZE_UNIT));
-    printf("str4: tag=%d, size=%d, hex=%s\n",
-        str4->header.tag,
-        str4->header.size,
-        hex(str4, str4->header.size * SIZE_UNIT));
-    printf("str5: tag=%d, size=%d, hex=%s\n",
-        str5->header.tag,
-        str5->header.size,
-        hex(str5, str5->header.size * SIZE_UNIT));
-    printf("str7: tag=%d, size=%d, hex=%s\n",
-        str7->header.tag,
-        str7->header.size,
-        hex(str7, str7->header.size * SIZE_UNIT));
-    printf("str8: tag=%d, size=%d, hex=%s\n",
-        str8->header.tag,
-        str8->header.size,
-        hex(str8, str8->header.size * SIZE_UNIT));
-    printf("str9: tag=%d, size=%d, hex=%s\n",
-        str9->header.tag,
-        str9->header.size,
-        hex(str9, str9->header.size * SIZE_UNIT));
-    printf("strN: tag=%d, size=%d, hex=%s\n",
-        strN->header.tag,
-        strN->header.size,
-        hex(strN, strN->header.size * SIZE_UNIT));
-
     printf("\n");
   }
 
 #ifdef TARGET_64BIT
-#if STRING_ENCODING == UTF16
-  mu_assert("0-byte string should have correct body & padding",
-      memcmp(str0->bytes, "\0\0\0\0", (str0->header.size * 8) - 4) == 0);
-  mu_assert("1-byte string should have correct body & padding",
-      memcmp(str1->bytes, "1\0\0\0", (str1->header.size * 8) - 4) == 0);
-  mu_assert("2-byte string should have correct body & padding",
-      memcmp(str2->bytes, "12\0\0", (str2->header.size * 8) - 4) == 0);
-  mu_assert("3-byte string should have correct body & padding",
-      memcmp(str3->bytes, "123", (str3->header.size * 8) - 4) == 0);
-  mu_assert("4-byte string should have correct body & padding",
-      memcmp(str4->bytes, "1234\0\0\0\0", (str4->header.size * 8) - 4) == 0);
-  mu_assert("5-byte string should have correct body & padding",
-      memcmp(str5->bytes, "12345\0\0\0\0\0\0\0", (str5->header.size * 8) - 4) == 0);
-  mu_assert("7-byte string should have correct body & padding",
-      memcmp(str7->bytes, "1234567\0\0\0\0\0", (str7->header.size * 8) - 4) == 0);
-  mu_assert("8-byte string should have correct body & padding",
-      memcmp(str8->bytes, "12345678\0\0\0\0", (str8->header.size * 8) - 4) == 0);
-  mu_assert("9-byte string should have correct body & padding",
-      memcmp(str9->bytes, "123456789\0\0\0", (str9->header.size * 8) - 4) == 0);
-  mu_assert("N-byte string should have correct body & padding",
-      memcmp(strN->bytes,
-          "The quick brown fox jumped over the lazy dog, yeah.",
-          (strN->header.size * 8) - 4) == 0);
+  mu_expect_equal("0-byte string should have correct size field", str0->header.size, 1);
+  mu_expect_equal("1-byte string should have correct size field", str1->header.size, 1);
+  mu_expect_equal("2-byte string should have correct size field", str2->header.size, 1);
+  mu_expect_equal("3-byte string should have correct size field", str3->header.size, 1);
+  mu_expect_equal("4-byte string should have correct size field", str4->header.size, 1);
+  mu_expect_equal("5-byte string should have correct size field", str5->header.size, 2);
+  mu_expect_equal("7-byte string should have correct size field", str7->header.size, 2);
+  mu_expect_equal("8-byte string should have correct size field", str8->header.size, 2);
+  mu_expect_equal("9-byte string should have correct size field", str9->header.size, 2);
+  mu_expect_equal("N-byte string should have correct size field", strN->header.size, 7);
 #else
-  mu_assert("0-byte string should have correct body & padding",
-      memcmp(str0->bytes, "\0\0\0\3", (str0->header.size * 8) - 4) == 0);
-  mu_assert("1-byte string should have correct body & padding",
-      memcmp(str1->bytes, "1\0\0\2", (str1->header.size * 8) - 4) == 0);
-  mu_assert("2-byte string should have correct body & padding",
-      memcmp(str2->bytes, "12\0\1", (str2->header.size * 8) - 4) == 0);
-  mu_assert("3-byte string should have correct body & padding",
-      memcmp(str3->bytes, "123", (str3->header.size * 8) - 4) == 0);
-  mu_assert("4-byte string should have correct body & padding",
-      memcmp(str4->bytes, "1234\0\0\0\0\0\0\0\7", (str4->header.size * 8) - 4) == 0);
-  mu_assert("5-byte string should have correct body & padding",
-      memcmp(str5->bytes, "12345\0\0\0\0\0\0\6", (str5->header.size * 8) - 4) == 0);
-  mu_assert("7-byte string should have correct body & padding",
-      memcmp(str7->bytes, "1234567\0\0\0\0\4", (str7->header.size * 8) - 4) == 0);
-  mu_assert("8-byte string should have correct body & padding",
-      memcmp(str8->bytes, "12345678\0\0\0\3", (str8->header.size * 8) - 4) == 0);
-  mu_assert("9-byte string should have correct body & padding",
-      memcmp(str9->bytes, "123456789\0\0\2", (str9->header.size * 8) - 4) == 0);
-  mu_assert("N-byte string should have correct body & padding",
-      memcmp(strN->bytes,
-          "The quick brown fox jumped over the lazy dog, yeah.",
-          (strN->header.size * 8) - 4) == 0);
-#endif
-
-  mu_assert("0-byte string should have correct size field", str0->header.size == 1);
-  mu_assert("1-byte string should have correct size field", str1->header.size == 1);
-  mu_assert("2-byte string should have correct size field", str2->header.size == 1);
-  mu_assert("3-byte string should have correct size field", str3->header.size == 1);
-#if STRING_ENCODING == UTF16
-  mu_assert("4-byte string should have correct size field", str4->header.size == 1);
-#else
-  mu_assert("4-byte string should have correct size field", str4->header.size == 2);
-#endif
-  mu_assert("5-byte string should have correct size field", str5->header.size == 2);
-  mu_assert("7-byte string should have correct size field", str7->header.size == 2);
-  mu_assert("8-byte string should have correct size field", str8->header.size == 2);
-  mu_assert("9-byte string should have correct size field", str9->header.size == 2);
-  mu_assert("N-byte string should have correct size field", strN->header.size == 7);
-#else
-  mu_assert("0-byte string should have correct body & padding",
-      memcmp(str0->bytes, "\0\0\0\3", (str0->header.size * 4) - 4) == 0);
-  mu_assert("1-byte string should have correct body & padding",
-      memcmp(str1->bytes, "1\0\0\2", (str1->header.size * 4) - 4) == 0);
-  mu_assert("2-byte string should have correct body & padding",
-      memcmp(str2->bytes, "12\0\1", (str2->header.size * 4) - 4) == 0);
-  mu_assert("3-byte string should have correct body & padding",
-      memcmp(str3->bytes, "123", (str3->header.size * 4) - 4) == 0);
-  mu_assert("4-byte string should have correct body & padding",
-      memcmp(str4->bytes, "1234\0\0\0\3", (str4->header.size * 4) - 4) == 0);
-  mu_assert("5-byte string should have correct body & padding",
-      memcmp(str5->bytes, "12345\0\0\2", (str5->header.size * 4) - 4) == 0);
-  mu_assert("7-byte string should have correct body & padding",
-      memcmp(str7->bytes, "1234567", (str7->header.size * 4) - 4) == 0);
-  mu_assert("8-byte string should have correct body & padding",
-      memcmp(str8->bytes, "12345678\0\0\0\3", (str8->header.size * 4) - 4) == 0);
-  mu_assert("9-byte string should have correct body & padding",
-      memcmp(str9->bytes, "123456789\0\0\2", (str9->header.size * 4) - 4) == 0);
-  mu_assert("51-byte string should have correct body & padding",
-      memcmp(strN->bytes,
-          "The quick brown fox jumped over the lazy dog, yeah.",
-          (strN->header.size * 4) - 4) == 0);
-
-  mu_expect_equal("0-byte string should have correct size field", str0->header.size, 2);
+  mu_expect_equal("0-byte string should have correct size field", str0->header.size, 1);
   mu_expect_equal("1-byte string should have correct size field", str1->header.size, 2);
   mu_expect_equal("2-byte string should have correct size field", str2->header.size, 2);
   mu_expect_equal("3-byte string should have correct size field", str3->header.size, 2);
-  mu_expect_equal("4-byte string should have correct size field", str4->header.size, 3);
+  mu_expect_equal("4-byte string should have correct size field", str4->header.size, 2);
   mu_expect_equal("5-byte string should have correct size field", str5->header.size, 3);
   mu_expect_equal("7-byte string should have correct size field", str7->header.size, 3);
-  mu_expect_equal("8-byte string should have correct size field", str8->header.size, 4);
+  mu_expect_equal("8-byte string should have correct size field", str8->header.size, 3);
   mu_expect_equal("9-byte string should have correct size field", str9->header.size, 4);
   mu_expect_equal("51-byte string should have correct size field",
       strN->header.size,
