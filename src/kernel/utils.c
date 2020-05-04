@@ -18,15 +18,13 @@ extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #define log_error(...)
 #endif
 
-/**
- * Initialise a global value by evaluating an Elm expression
- *
- * global_permanent_ptr:  location of a pointer outside the heap
- *           that always points to the current heap location.
- *           GC will update this as it moves the value around.
- * init_func:   a function that evaluates the Elm expression
- *           to initialise the global value
- */
+// Initialise a global value by evaluating an Elm expression
+//
+// global_permanent_ptr:  location of a pointer outside the heap
+//           that always points to the current heap location.
+//           GC will update this as it moves the value around.
+// init_func:   a function that evaluates the Elm expression
+//           to initialise the global value
 void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
   for (;;) {
@@ -42,10 +40,11 @@ void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
   }
 }
 
+// Destructure by index
+//    custom, cons, or tuple
+// Dynamic type check needed, since Cons and tuples are using "special-case" structs
+// and compiler code gen doesn't have type info to distinguish them from generic Custom
 void* Utils_destruct_index(ElmValue* v, size_t index) {
-  // Destructure by index: custom, cons, or tuple
-  // Dynamic type check needed, since Cons and tuples are using "special-case" structs
-  // and compiler code gen doesn't have type info to distinguish them from generic Custom
   void** children;
   switch (v->header.tag) {
     case Tag_Custom:
@@ -66,6 +65,9 @@ void* Utils_destruct_index(ElmValue* v, size_t index) {
   return children[index];
 }
 
+// -----------------------------------------------------------
+// Clone a value
+// -----------------------------------------------------------
 void* Utils_clone(void* x) {
   Header* h = (Header*)x;
   if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 0)) return x;
@@ -74,6 +76,10 @@ void* Utils_clone(void* x) {
   GC_memcpy(x_new, x, n_bytes);
   return x_new;
 }
+
+// -----------------------------------------------------------
+//      RECORD OPERATORS
+// -----------------------------------------------------------
 
 static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
   u32 first = 0;
@@ -117,6 +123,9 @@ Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   return r_new;
 }
 
+// -----------------------------------------------------------
+//      APPEND OPERATOR (++)
+// -----------------------------------------------------------
 void* eval_Utils_append(void* args[]) {
   Header* h = args[0];
   if (h->tag == Tag_List) {
@@ -131,6 +140,9 @@ Closure Utils_append = {
     .max_values = 2,
 };
 
+// -----------------------------------------------------------
+//      FUNCTION APPLICATION
+// -----------------------------------------------------------
 
 void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
   void** args;
@@ -178,9 +190,6 @@ void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
     }
 
     void* push = CAN_THROW(GC_stack_push());
-    // #ifdef DEBUG
-    // gc_debug_stack_trace(push, c);
-    // #endif
 
     ElmValue* result = (*c->evaluator)(args);
     if ((void*)result == pGcFull) {
@@ -188,12 +197,7 @@ void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
     }
 
     void* pop = CAN_THROW(GC_stack_pop(result, push));
-    // #ifdef DEBUG
-    // gc_debug_stack_trace(pop, c);
-    // #else
     (void)pop;  // suppress "unused variable" warning
-
-    // #endif
 
     // In some cases, we may still have args to be applied.
     // The first few were used to create a Closure
@@ -210,9 +214,10 @@ void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
   }
 }
 
-/**
- * EQUALITY
- */
+// -----------------------------------------------------------
+// EQUALITY OPERATOR (==)
+// -----------------------------------------------------------
+
 static ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
   Tuple2* t2 = NEW_TUPLE2(pa, pb);
   Cons* c = NEW_CONS(t2, *pstack);
@@ -242,11 +247,8 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_String: {
       size_t* a_words = (size_t*)pa;
       size_t* b_words = (size_t*)pb;
-#ifdef TARGET_64BIT
-      size_t start = 0;  // first word contains header AND some chars
-#else
-      size_t start = 1;  // first word is just header, already compared it
-#endif
+      // start at first word that contains characters (index 0 or 1)
+      size_t start = ((void*)pa->elm_string.bytes - (void*)pa) / sizeof(void*);
       for (size_t i = start; i < pa->header.size; ++i) {
         if (a_words[i] != b_words[i]) return 0;
       }
@@ -289,16 +291,14 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       return 1;
 
     case Tag_Closure:
-// C doesn't have exceptions, would have to call out to JS.
-// For now it's a warning rather than error and returns False
-#ifdef DEBUG
-      fprintf(stderr,
-          "Warning: Trying to use `(==)` on functions.\nThere is no way to know if "
-          "functions are \"the same\" in the "
-          "Elm sense.\nRead more about this at "
+      // C doesn't have exceptions, would have to call out to JS.
+      // For now it's a warning rather than error and returns False
+      log_error(stderr,
+          "Warning: Trying to use `(==)` on functions.\n"
+          "There is no way to know if functions are \"the same\" in the Elm sense.\n"
+          "Read more about this at "
           "https://package.elm-lang.org/packages/elm/core/latest/Basics#== which "
           "describes why it is this way and what the better version will look like.\n");
-#endif
       return 0;
 
     case Tag_GcException:
@@ -330,9 +330,7 @@ Closure Utils_equal = {
     .max_values = 2,
 };
 
-/**
- * INEQUALITY
- */
+// INEQUALITY
 static void* eval_notEqual(void* args[2]) {
   void* equal = eq_eval(args);
   if (equal == pGcFull) {
@@ -345,6 +343,10 @@ Closure Utils_notEqual = {
     .evaluator = &eval_notEqual,
     .max_values = 2,
 };
+
+// -----------------------------------------------------------
+// COMPARISON OPERATORS (<,>,>=,<=)
+// -----------------------------------------------------------
 
 static void* compare_help(ElmValue* x, ElmValue* y) {
   if (x == y) return &Utils_EQ;

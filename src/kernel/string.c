@@ -69,8 +69,8 @@ ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len) {
     }
 
     if (sub_idx >= sub_len) return str_idx - sub_len;  // Found it!
-    if (str_idx >= str_len) return -1; // Matched some more chars then ran out => not found.
-    str_idx = retry_idx;            // Only a partial match. Backtrack and try again.
+    if (str_idx >= str_len) return -1;                 // Reached end without full match
+    str_idx = retry_idx;  // Only a partial match. Backtrack and try again.
   }
 }
 
