@@ -1,5 +1,4 @@
 #include "char.h"
-#include <stdio.h>
 
 static void* eval_toCode(void* args[]) {
   ElmChar* c = args[0];
@@ -11,15 +10,6 @@ static void* eval_toCode(void* args[]) {
   } else {
     codepoint = low;
   }
-
-  printf(
-      "high = %d "
-      "low = %d "
-      "codepoint = %d "
-      "\n",
-      high,
-      low,
-      codepoint);
 
   return NEW_ELM_INT(codepoint);
 }
