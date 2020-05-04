@@ -172,13 +172,13 @@ int main(int argc, char** argv) {
   static struct option long_options[] = {
       {"verbose", no_argument, NULL, 'v'},
       {"all", no_argument, NULL, 'a'},
-      {"types", no_argument, NULL, 't'},
-      {"utils", no_argument, NULL, 'u'},
-      {"basics", no_argument, NULL, 'b'},
-      {"string", no_argument, NULL, 's'},
-      {"char", no_argument, NULL, 'c'},
-      {"list", no_argument, NULL, 'l'},
-      {"gc", no_argument, NULL, 'g'},
+      {"types", optional_argument, NULL, 't'},
+      {"utils", optional_argument, NULL, 'u'},
+      {"basics", optional_argument, NULL, 'b'},
+      {"string", optional_argument, NULL, 's'},
+      {"char", optional_argument, NULL, 'c'},
+      {"list", optional_argument, NULL, 'l'},
+      {"gc", optional_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
   };
 
@@ -213,28 +213,29 @@ int main(int argc, char** argv) {
         basics = true;
         string = true;
         chr = true;
+        list = true;
         gc = true;
         break;
       case 't':
-        types = true;
+        types = !optarg;
         break;
       case 'u':
-        utils = true;
+        utils = !optarg;
         break;
       case 'b':
-        basics = true;
+        basics = !optarg;
         break;
       case 's':
-        string = true;
+        string = !optarg;
         break;
       case 'c':
-        chr = true;
+        chr = !optarg;
         break;
       case 'l':
-        list = true;
+        list = !optarg;
         break;
       case 'g':
-        gc = true;
+        gc = !optarg;
         break;
       default:
         fprintf(stderr, "Usage: %s [-%s]\n", argv[0], options);

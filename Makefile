@@ -23,7 +23,7 @@ DATA_INC := $(DATA_TSV:.tsv=.inc)
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
-	$(DIST)/bin/test -a
+	$(DIST)/bin/test --verbose --all --gc=skip
 
 debug: CFLAGS += -DDEBUG
 debug: clean all
