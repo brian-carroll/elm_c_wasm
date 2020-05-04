@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "gc.h"
 #include "elm.h"
+#include "gc.h"
 #include "types.h"
 #include "utils.h"
 

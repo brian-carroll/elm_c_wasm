@@ -42,5 +42,5 @@ char* hex_ptr(void* ptr);
 extern char* test_description;
 extern void* test_heap_ptr;
 
-void describe(char* description, void* (*test)()) ;
+void describe(char* description, void* (*test)());
 void* expect_equal(char* expect_description, void* left, void* right);

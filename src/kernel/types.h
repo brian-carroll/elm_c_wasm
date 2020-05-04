@@ -83,8 +83,10 @@ typedef struct {
   (Header) { .tag = Tag_Custom, .size = (sizeof(Custom) + p * sizeof(void*)) / SIZE_UNIT }
 #define HEADER_RECORD(p) \
   (Header) { .tag = Tag_Record, .size = (sizeof(Record) + p * sizeof(void*)) / SIZE_UNIT }
-#define HEADER_FIELDGROUP(p) \
-  (Header) { .tag = Tag_FieldGroup, .size = (sizeof(FieldGroup) + p * sizeof(u32)) / SIZE_UNIT }
+#define HEADER_FIELDGROUP(p)                                                          \
+  (Header) {                                                                          \
+    .tag = Tag_FieldGroup, .size = (sizeof(FieldGroup) + p * sizeof(u32)) / SIZE_UNIT \
+  }
 #define HEADER_CLOSURE(p)                                                         \
   (Header) {                                                                      \
     .tag = Tag_Closure, .size = (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT \
@@ -238,15 +240,15 @@ typedef struct {
   Header header;
   u16 n_values;  // current number of applied args
   u16 max_values;
-  void* (*evaluator)(void*[]);  // pointer to a function that takes an array of pointers
-                                // and returns a pointer
+  void* (*evaluator)(void* []);  // pointer to a function that takes an array of pointers
+                                 // and returns a pointer
   void* values[];
 } Closure;
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
 
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]);
+    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]);
 #define NEW_CLOSURE(n, m, e, v) CAN_THROW(ctorClosure(n, m, e, v))
 
 // GARBAGE COLLECTOR TYPES

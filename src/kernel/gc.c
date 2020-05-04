@@ -370,8 +370,8 @@ void* GC_tce_iteration(size_t n_args) {
 
 // Evaluate a tail call elminated Elm function,
 // managing all of the GC related stuff for it
-void* GC_tce_eval(void* (*tce_eval)(void*[], void**),
-    void* (*eval)(void*[]),
+void* GC_tce_eval(void* (*tce_eval)(void* [], void**),
+    void* (*eval)(void* []),
     u32 n_args,
     void* args[]) {
   GcState* state = &gc_state;

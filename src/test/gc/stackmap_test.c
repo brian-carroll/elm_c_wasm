@@ -65,8 +65,8 @@ void parse_heap_spec_line(u8* line, HeapSpec* spec, int line_idx) {
   HeapSpecLine* line_spec = &spec->lines[line_idx];
 
   // int cols =
-  sscanf((char*)line, "%d\t%s\t%d\t%s\t%d\t%s", &idx, tag, &depth, mark, &backlink,
-         replay);
+  sscanf(
+      (char*)line, "%d\t%s\t%d\t%s\t%d\t%s", &idx, tag, &depth, mark, &backlink, replay);
 
   if (idx != line_idx) {
     sprintf(err, "Wrong index. Found %d, should be %d\n", idx, line_idx);
@@ -119,8 +119,11 @@ void parse_heap_spec(HeapSpec* spec) {
 }
 
 void format_addr(void* addr, char s[15]) {
-  sprintf(s, "%04llx_%04llx_%04llx", ((u64)addr & 0xffff00000000) >> 32,
-          ((u64)addr & 0x0000ffff0000) >> 16, ((u64)addr & 0x00000000ffff));
+  sprintf(s,
+      "%04llx_%04llx_%04llx",
+      ((u64)addr & 0xffff00000000) >> 32,
+      ((u64)addr & 0x0000ffff0000) >> 16,
+      ((u64)addr & 0x00000000ffff));
 }
 
 int find_idx_from_pointer(void* p, HeapSpec* spec) {
@@ -145,10 +148,22 @@ bool addr_is_marked(void* p) {
 void validate_heap_item(HeapSpec* spec, int idx) {
   HeapSpecLine* line = &spec->lines[idx];
   char* tag_names[16] = {
-      "Int            ", "Float          ", "Char           ", "String         ",
-      "Nil            ", "Cons           ", "Tuple2         ", "Tuple3         ",
-      "Custom         ", "Record         ", "Closure        ", "GcException    ",
-      "GcStackEmpty   ", "GcStackPush    ", "GcStackPop     ", "GcStackTailCall",
+      "Int            ",
+      "Float          ",
+      "Char           ",
+      "String         ",
+      "Nil            ",
+      "Cons           ",
+      "Tuple2         ",
+      "Tuple3         ",
+      "Custom         ",
+      "Record         ",
+      "Closure        ",
+      "GcException    ",
+      "GcStackEmpty   ",
+      "GcStackPush    ",
+      "GcStackPop     ",
+      "GcStackTailCall",
       // 234567890123456
   };
   char addr[16];
@@ -181,8 +196,10 @@ void validate_heap_item(HeapSpec* spec, int idx) {
           int actual_backlink = find_idx_from_pointer(stackmap->older, spec);
           if (actual_backlink != line->backlink) {
             sprintf(err,
-                    "Heap incorrectly populated. %d should link back to %d, not %d\n",
-                    line->idx, line->backlink, actual_backlink);
+                "Heap incorrectly populated. %d should link back to %d, not %d\n",
+                line->idx,
+                line->backlink,
+                actual_backlink);
             append_error(spec, err);
           }
         }
@@ -200,11 +217,17 @@ void validate_heap_item(HeapSpec* spec, int idx) {
       sprintf(backlink, "   ");
 
     if (verbose)
-      printf("%14s  %14s  %2s  |  %3d  %15s  %3d     %c    %3s      %c\n", addr, link,
-             mark,
-             //------
-             line->idx, tag_names[line->tag], line->depth, line->mark ? 'X' : ' ',
-             backlink, line->replay ? 'X' : ' ');
+      printf("%14s  %14s  %2s  |  %3d  %15s  %3d     %c    %3s      %c\n",
+          addr,
+          link,
+          mark,
+          //------
+          line->idx,
+          tag_names[line->tag],
+          line->depth,
+          line->mark ? 'X' : ' ',
+          backlink,
+          line->replay ? 'X' : ' ');
   }
 }
 
@@ -349,7 +372,7 @@ char* stackmap_mark_test() {
     printf("------------------\n");
     printf("\n");
     printf(" - Fill up the heap with a data pattern specified by one of %d .tsv files\n",
-           NUM_SPEC_FILES);
+        NUM_SPEC_FILES);
     printf(
         " - Heap now looks as if Elm functions have been running. Throw a GC 'heap full' "
         "exception.\n");
@@ -365,8 +388,8 @@ char* stackmap_mark_test() {
     bool pass = !spec->err_buf[0];
     if (!pass) failed_specs++;
     if (verbose)
-      printf("\n%s\n%s\n---------------------\n\n", pass ? "PASS" : "FAIL",
-             spec->err_buf);
+      printf(
+          "\n%s\n%s\n---------------------\n\n", pass ? "PASS" : "FAIL", spec->err_buf);
   }
   if (verbose) {
     printf("\nSUMMARY\n");

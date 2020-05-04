@@ -1,6 +1,6 @@
+#include "../kernel/types.h"
 #include <string.h>
 #include <unistd.h>
-#include "../kernel/types.h"
 #include "./test.h"
 
 char* test_wasm_types() {

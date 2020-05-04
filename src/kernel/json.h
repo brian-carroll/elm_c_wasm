@@ -1,7 +1,6 @@
 #ifndef ELM_JSON_H
 #define ELM_JSON_H
 
-
 Closure Json_succeed;
 Closure Json_fail;
 

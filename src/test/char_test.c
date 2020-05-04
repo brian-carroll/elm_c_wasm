@@ -19,7 +19,6 @@ char* test_Char_toCode() {
   ElmInt* dollar_code = A1(&Char_toCode, &dollar);
   mu_expect_equal("toCode '$' == 0x24", dollar_code->value, 0x0024);
 
-
   ElmChar euro = (ElmChar){
       .words16 = {0x0000, 0x20AC},  // €
       .header = HEADER_CHAR,
@@ -27,14 +26,12 @@ char* test_Char_toCode() {
   ElmInt* euro_code = A1(&Char_toCode, &euro);
   mu_expect_equal("toCode euro == 0x20AC", euro_code->value, 0x20AC);
 
-
   ElmChar deseret = (ElmChar){
       .words16 = {0xD801, 0xDC37},  // 𐐷
       .header = HEADER_CHAR,
   };
   ElmInt* deseret_code = A1(&Char_toCode, &deseret);
   mu_expect_equal("toCode deseret == 0x10437", deseret_code->value, 0x10437);
-
 
   ElmChar han = (ElmChar){
       .words16 = {0xD852, 0xDF62},  // 𤭢

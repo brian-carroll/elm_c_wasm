@@ -222,15 +222,14 @@ static u32 fieldgroup_seek(FieldGroup* fieldgroup, u32 search) {
   return 0;
 }
 
-
 /**
  * Performance testing for record field search
- * 
+ *
  * Question: Is binary search really the way to go?
  * Most record fieldgroups are small, so maybe hopping around
  * is actually bad for branch prediction and it's better to
  * do a simple linear search?
- * 
+ *
  * Answer: No! Binary search wins!
  *   $ gcc -O3 ./field_search_perf.c
  *   $ time ./a.out 100000000 5 0 575

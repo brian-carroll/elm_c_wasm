@@ -280,7 +280,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
 
     case Tag_Record: {
       // Fieldgroup assumed to be equal due to Elm type checking
-      u32 nparams = pa->header.size - (sizeof(Record)/SIZE_UNIT);
+      u32 nparams = pa->header.size - (sizeof(Record) / SIZE_UNIT);
       for (u32 i = 0; i < nparams; ++i)
         if (!eq_help(pa->record.values[i], pb->record.values[i], depth + 1, pstack))
           return 0;

@@ -19,8 +19,7 @@ static void* eval_toCode(void* args[]) {
       "\n",
       high,
       low,
-      codepoint
-  );
+      codepoint);
 
   return NEW_ELM_INT(codepoint);
 }

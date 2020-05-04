@@ -194,7 +194,9 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 #ifdef DEBUG
     if ((size_t*)child > heap->end) {
       log_error("BUG mark_trace: %p out of bounds, reached via %p with header tag %d\n",
-                child, v, v->header.tag);
+          child,
+          v,
+          v->header.tag);
       return;
     }
     if (child > v) {
@@ -207,10 +209,8 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 }
 
 // Trace all Elm value between two memory addresses
-void mark_trace_values_between(void* start,
-                               void* end,
-                               GcHeap* heap,
-                               size_t* ignore_below) {
+void mark_trace_values_between(
+    void* start, void* end, GcHeap* heap, size_t* ignore_below) {
   ElmValue* v = start;
   ElmValue* endval = end;
   while (v < endval) {
@@ -242,8 +242,8 @@ void mark_stack_map(GcState* state, size_t* ignore_below) {
 
     // Trace everything in this live section
     // including stack map items, and therefore any returned values from completed calls
-    mark_trace_values_between(oldest_in_live_section, newest_in_live_section,
-                              &state->heap, ignore_below);
+    mark_trace_values_between(
+        oldest_in_live_section, newest_in_live_section, &state->heap, ignore_below);
 
     // Check if we've gone all the way back to the start of the stack map
     if (tag == Tag_GcStackEmpty) return;
@@ -385,7 +385,9 @@ size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
 #ifdef DEBUG
   if (new_pointer > heap->end || new_pointer < heap->start) {
     log_error("BUG: forwarding_address out of range moving %p to %p (-%zd)\n",
-              old_pointer, new_pointer, old_pointer - new_pointer);
+        old_pointer,
+        new_pointer,
+        old_pointer - new_pointer);
   }
 #endif
 
@@ -438,8 +440,11 @@ void compact(GcState* state, size_t* compact_start) {
 
 #ifdef DEBUG_LOG
     printf("Moving %zd words down by %zd from (%p - %p) to %p\n",
-           next_garbage - live_patch_start, garbage_so_far, live_patch_start,
-           next_garbage - 1, to);
+        next_garbage - live_patch_start,
+        garbage_so_far,
+        live_patch_start,
+        next_garbage - 1,
+        to);
 #endif
 
     // Copy each value in the live patch
@@ -452,8 +457,11 @@ void compact(GcState* state, size_t* compact_start) {
 
 #ifdef DEBUG
       if (n_children > 10 || next_value > heap->end || v->header.size > 100) {
-        log_error("Possibly corrupted object at %p : tag 0x%x size %d children %zd\n", v,
-                  v->header.tag, v->header.size, n_children);
+        log_error("Possibly corrupted object at %p : tag 0x%x size %d children %zd\n",
+            v,
+            v->header.tag,
+            v->header.size,
+            n_children);
       }
 #endif
 

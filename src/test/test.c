@@ -21,11 +21,10 @@ int tests_run = 0;
 int tests_failed = 0;
 int assertions_made = 0;
 
-
 // ---------------------------------------------------------
-// 
+//
 //  "Compiler-generated" values
-// 
+//
 // ---------------------------------------------------------
 
 enum {
@@ -65,7 +64,6 @@ size_t evalWasmThunkInJs(size_t addr) {
   void* result = Utils_apply((Closure*)addr, 0, NULL);
   return (size_t)result;
 }
-
 
 // ---------------------------------------------------------
 //

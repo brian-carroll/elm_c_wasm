@@ -122,7 +122,7 @@ ElmString16* ctorElmString16(size_t len16) {
 
   if (aligned_bytes != used_bytes) {
     size_t* words = (size_t*)p;
-    words[aligned_words - 1] = 0; // set padding to zero
+    words[aligned_words - 1] = 0;  // set padding to zero
   }
 
   // Write header _after_ padding in case there's only one word!
@@ -154,7 +154,7 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   return r;
 }
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
+    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]) {
   Closure* c = CAN_THROW(GC_malloc(sizeof(Closure) + n_values * sizeof(void*)));
   c->header = HEADER_CLOSURE(n_values);
   c->n_values = n_values;

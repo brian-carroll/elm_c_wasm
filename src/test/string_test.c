@@ -229,7 +229,7 @@ void* test_String_split() {
   expect_equal("split \"/\" \"home/steve/Desktop\" == [\"home\",\"steve\",\"Desktop\"]",
       A2(&String_split, create_string("/"), create_string("home/steve/Desktop")),
       List_create(3,
-          (void*[]){
+          (void* []){
               create_string("home"),
               create_string("steve"),
               create_string("Desktop"),
@@ -247,7 +247,7 @@ void* test_String_split() {
   expect_equal("split \"\" \"ab\" == [\"a\",\"b\"]  # split on empty string",
       A2(&String_split, empty, ab),
       List_create(2,
-          (void*[]){
+          (void* []){
               create_string("a"),
               create_string("b"),
           }));
@@ -255,7 +255,7 @@ void* test_String_split() {
   expect_equal("split \"ab\" \"ab\" == [\"\",\"\"]",
       A2(&String_split, ab, ab),
       List_create(2,
-          (void*[]){
+          (void* []){
               empty,
               empty,
           }));
@@ -274,7 +274,7 @@ void* test_String_join() {
       A2(&String_join,
           slash,
           List_create(3,
-              (void*[]){
+              (void* []){
                   create_string("home"),
                   create_string("steve"),
                   create_string("Desktop"),
@@ -324,7 +324,7 @@ void* test_String_indexes() {
   expect_equal("indexes \"/\" \"home/steve/Desktop\" == [4,10]",
       A2(&String_indexes, create_string("/"), create_string("home/steve/Desktop")),
       List_create(2,
-          (void*[]){
+          (void* []){
               NEW_ELM_INT(4),
               NEW_ELM_INT(10),
           }));
