@@ -23,8 +23,6 @@ DATA_INC := $(DATA_TSV:.tsv=.inc)
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
-
-check: $(DIST)/bin/test
 	$(DIST)/bin/test -a
 
 debug: CFLAGS += -DDEBUG
@@ -134,6 +132,6 @@ $(DIST)/bin/compiled-elm: $(KSOURCES) $(KHEADERS) $(SRC)/compiled/elm.c
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'
 %::
-	@make --no-print-directory
+	@make $(DIST)/bin/test --no-print-directory
 	$(DIST)/bin/test -$@
 
