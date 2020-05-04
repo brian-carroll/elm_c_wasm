@@ -67,10 +67,11 @@ size_t evalWasmThunkInJs(size_t addr) {
 
 // ---------------------------------------------------------
 //
-//                TESTING UTILITIES
+//          HIGHER LEVEL TESTING (ELM VALUES)
 //
-// Till now I've been using minunit
-// But now I'm finding it too minimal so I'm switching to this
+// Test kernel functions using the Elm equality operator etc.
+// Not for lowest-level stuff like GC, or the equality op itself!
+// But good for most kernel modules.
 //
 // ---------------------------------------------------------
 
@@ -241,18 +242,13 @@ int main(int argc, char** argv) {
     }
   }
 
-  char* mu_error_message = test_all(types, utils, basics, string, chr, list, gc);
+  test_all(types, utils, basics, string, chr, list, gc);
   int exit_code;
 
   if (tests_failed) {
-    printf("FAILED %d new-style tests\n", tests_failed);
+    printf("FAILED %d tests\n", tests_failed);
     exit_code = EXIT_FAILURE;
-  }
-  if (mu_error_message != NULL) {
-    printf("FAILED min_unit test: %s\n", mu_error_message);
-    exit_code = EXIT_FAILURE;
-  }
-  if (!tests_failed && !mu_error_message) {
+  } else {
     printf("\nALL TESTS PASSED\n");
     exit_code = EXIT_SUCCESS;
   }

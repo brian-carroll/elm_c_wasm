@@ -725,11 +725,11 @@ char* gc_test() {
         "                              Garbage Collector tests\n");
 
   mu_run_test(gc_replay_test);
-  mu_run_test(replay_scenario_tests);
-  mu_run_test(stackmap_mark_test);
+  // mu_run_test(replay_scenario_tests);
+  // mu_run_test(stackmap_mark_test);
   mu_run_test(gc_bitmap_test);
   mu_run_test(gc_dead_between_test);
-  mu_run_test(gc_mark_compact_test);
+  // mu_run_test(gc_mark_compact_test);
   mu_run_test(gc_bitmap_next_test);
 
   return NULL;

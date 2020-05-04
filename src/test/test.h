@@ -1,37 +1,43 @@
 #define __USE_MINGW_ANSI_STDIO 1
 #include <stdio.h>
 
+// ---------------------------------------------------------
+//
+//             LOW-LEVEL TESTING (BYTES, NUMBERS)
+//
+// Based on minunit http://www.jera.com/techinfo/jtns/jtn002.html
+// but no early return. Print all failures.
+//
+// ---------------------------------------------------------
 #define mu_assert(message, test)     \
   do {                               \
     assertions_made++;               \
     if (!(test)) {                   \
-      return message;                \
+      tests_failed++;                \
+      printf("FAIL: %s\n", message); \
     } else if (verbose) {            \
       printf("PASS: %s\n", message); \
     }                                \
   } while (0)
 
-#define mu_expect_equal(message, expr1, expr2)             \
-  do {                                                     \
-    assertions_made++;                                     \
-    if (expr1 != expr2) {                                  \
-      if (verbose) {                                       \
-        printf("FAIL: %s\n  LHS : 0x%zx\n  RHS : 0x%zx\n", \
-            message,                                       \
-            (size_t)(expr1),                               \
-            (size_t)(expr2));                              \
-      }                                                    \
-      return message;                                      \
-    } else if (verbose) {                                  \
-      printf("PASS: %s\n", message);                       \
-    }                                                      \
+#define mu_expect_equal(message, expr1, expr2)           \
+  do {                                                   \
+    assertions_made++;                                   \
+    if (expr1 != expr2) {                                \
+      tests_failed++;                                    \
+      printf("FAIL: %s\n  LHS : 0x%zx\n  RHS : 0x%zx\n", \
+          message,                                       \
+          (size_t)(expr1),                               \
+          (size_t)(expr2));                              \
+    } else if (verbose) {                                \
+      printf("PASS: %s\n", message);                     \
+    }                                                    \
   } while (0)
 
-#define mu_run_test(test)                \
-  do {                                   \
-    char* message = test();              \
-    tests_run++;                         \
-    if (message != NULL) return message; \
+#define mu_run_test(test) \
+  do {                    \
+    test();               \
+    tests_run++;          \
   } while (0)
 
 extern int tests_run, tests_failed, assertions_made, verbose;

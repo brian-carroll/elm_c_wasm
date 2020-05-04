@@ -129,7 +129,9 @@ char* assert_heap_values(char* description, void* values[]) {
     i++;
   }
 
+  assertions_made++;
   if (bad_addr) {
+    tests_failed++;
     print_heap();
     sprintf(assert_heap_message,
         "%s\nExpected %p to be " FORMAT_HEX " but found " FORMAT_HEX "\n",
@@ -147,7 +149,7 @@ char* assert_heap_values(char* description, void* values[]) {
 static char* run() {
   mu_run_test(test_replay_finished);
   mu_run_test(test_replay_saturated);
-  // mu_run_test(test_replay_curried);  // TODO: fix this, there's a real bug!
+  mu_run_test(test_replay_curried);  // TODO: fix this, there's a real bug!
   mu_run_test(test_replay_tce_saturated_iter1);
   mu_run_test(test_replay_tce_saturated_iter2);
   mu_run_test(test_replay_tce_curried_iter1);

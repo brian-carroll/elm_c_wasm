@@ -1,6 +1,8 @@
 #include "../kernel/utils.h"
+
 #include <stdlib.h>
 #include <string.h>
+
 #include "../kernel/basics.h"
 #include "../kernel/types.h"
 #include "./gc_test.h"
@@ -116,8 +118,8 @@ char* test_records() {
         "r3: addr=%zx val=%s\n", (size_t)r3, hex(r3, sizeof(Record) + 3 * sizeof(void*)));
   }
 
-  mu_assert("Record accessor should return 123 for r1", int1->value = 123);
-  mu_assert("Record accessor should return 321 for r2", int2->value = 321);
+  mu_assert("Record accessor should return 123 for r1", int1->value == 123);
+  mu_assert("Record accessor should return 321 for r2", int2->value == 321);
 
   mu_assert("Updated record r3 should have same fieldgroup as r2",
       r3->fieldgroup == r2->fieldgroup);
@@ -234,8 +236,8 @@ char* test_apply(void) {
   }
 
   ElmInt expected_answer = (ElmInt){.header = HEADER_INT, .value = 6};
-  mu_assert(
-      "answer should be ElmInt 6", memcmp(answer, &expected_answer, sizeof(ElmInt)) == 0);
+  mu_assert("Utils_apply: Example function call should return ElmInt 6",
+      memcmp(answer, &expected_answer, sizeof(ElmInt)) == 0);
   return NULL;
 }
 
