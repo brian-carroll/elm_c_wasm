@@ -96,20 +96,13 @@ int GC_init() {
   }
   size_t* heap_bottom = (size_t*)break_aligned;
 
-  // Initialise state with zero heap size
-  *state = (GcState){
-      .heap =
-          (GcHeap){
-              .start = heap_bottom,
-              .end = heap_bottom,
-              .system_end = heap_bottom,
-              .bitmap = heap_bottom,
-              .offsets = heap_bottom,
-          },
-      .next_alloc = heap_bottom,
-      .roots = &Nil,
-      .stack_map = NULL,
-      .stack_depth = 0,
+  // Initialise heap with zero size
+  state->heap = (GcHeap){
+      .start = heap_bottom,
+      .end = heap_bottom,
+      .system_end = heap_bottom,
+      .bitmap = heap_bottom,
+      .offsets = heap_bottom,
   };
 
   // Ask the system for more memory
@@ -120,6 +113,7 @@ int GC_init() {
 
   int err = set_heap_end(&state->heap, top_of_nth_page);
 
+  reset_state(state);
   if (!err) {
     GC_stack_empty();
   }

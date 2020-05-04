@@ -48,12 +48,8 @@ char* find_closure_func_name(Closure* c) {
 
 void gc_test_reset() {
   GcState* state = &gc_state;
-  for (size_t* word = state->heap.start; word < state->heap.system_end; word++) {
-    *word = 0;
-  }
-  state->next_alloc = state->heap.start;
-  state->roots = &Nil;
-  state->stack_depth = 0;
+  bitmap_reset(&state->heap);
+  reset_state(state);
   GC_stack_empty();
 }
 

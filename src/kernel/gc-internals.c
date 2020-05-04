@@ -19,6 +19,17 @@ static int brk(void* ptr) {
 
 static size_t ALL_ONES = -1;  // 0xfffff...
 
+void reset_state(GcState* state) {
+  void* start = state->heap.start;
+  state->nursery = start;
+  state->next_alloc = start;
+  state->roots = &Nil;
+  state->stack_map = start;
+  state->stack_map_empty = start;
+  state->stack_depth = 0;
+  state->replay_ptr = NULL;
+}
+
 /* ====================================================
 
                 ELM VALUES

@@ -35,6 +35,7 @@ typedef struct {
   size_t* replay_ptr;
 } GcState;
 
+void reset_state(GcState*);
 void bitmap_reset(GcHeap*);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer);
