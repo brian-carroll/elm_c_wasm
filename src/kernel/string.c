@@ -85,15 +85,18 @@ static void* eval_String_uncons(void* args[]) {
   }
   u16 word = string->words16[0];
   u32 codepoint = (u32)word;
-  size_t i = 0;
+  size_t char_units;
   if (IS_LOW_SURROGATE(word)) {
-    i = 1;
+    char_units = 2;
     codepoint |= (string->words16[1] << 16);
+  } else {
+    char_units = 1;
   }
   ElmChar* c = NEW_ELM_CHAR(codepoint);
 
-  char* remainder = (char*)(&string->words16[i + 1]);
-  ElmString16* s = NEW_ELM_STRING(len - i, remainder);
+  char* remainder = (char*)(&string->words16[char_units]);
+  size_t payload_bytes = (len - char_units) * 2;
+  ElmString16* s = NEW_ELM_STRING(payload_bytes, remainder);
 
   return A1(&g_elm_core_Maybe_Just, NEW_TUPLE2(c, s));
 }
