@@ -30,6 +30,7 @@ extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
   for (;;) {
+    GC_stack_empty();
     void* heap_value = init_func();
     if (heap_value != pGcFull) {
       *global_permanent_ptr = heap_value;

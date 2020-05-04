@@ -79,6 +79,7 @@ void EMSCRIPTEN_KEEPALIVE writeF64(size_t addr, f64 value) {
 
 size_t EMSCRIPTEN_KEEPALIVE evalClosure(size_t addr) {
   for (size_t attempts = 0; attempts < 1000; attempts++) {
+    GC_stack_empty();
     void* result = Utils_apply((Closure*)addr, 0, NULL);  // addr ignored on replay
     if (result != pGcFull) {
       GC_stack_empty();
