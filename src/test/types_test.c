@@ -478,9 +478,6 @@ char* test_record() {
         hex(r, sizeof(Record) + 2 * sizeof(void*)));
   }
 
-  mu_assert("FieldGroup struct with no fields should be the same size as an integer",
-      sizeof(FieldGroup) == sizeof(u32));
-
 #ifdef TARGET_64BIT
   mu_assert(
       "Record struct with no fields should be the right size for a header, 4 bytes of "
