@@ -2,8 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "../../kernel/debug.h"
 #include "../../kernel/gc-internals.h"
 #include "../../kernel/gc.h"
+#include "../../kernel/list.h"
 #include "../../kernel/types.h"
 #include "../gc_test.h"
 #include "../test.h"
@@ -271,9 +274,7 @@ HeapSpecLine* populate_heap_from_spec(HeapSpecLine* line, HeapSpec* spec) {
           if (line->tag == Tag_GcException) return line;
           isTailcall = line->tag == Tag_GcStackTailCall;
           if (isTailcall) {
-            size_t n_args = 2;
-            size_t size = sizeof(Closure) + n_args * sizeof(void*);
-            Closure* c = GC_malloc(size);
+            Closure* c = NEW_CLOSURE(2, 2, &eval_List_append, ((void*[]){&Nil, &Nil}));
             line->addr = GC_stack_tailcall(c, push);
           } else {
             line->addr = GC_stack_pop(last_alloc, push);
@@ -374,7 +375,8 @@ char* stackmap_mark_test() {
     printf("stackmap_mark_test\n");
     printf("------------------\n");
     printf("\n");
-    printf(" - Fill up the heap with a data pattern specified by one of the .tsv files\n");
+    printf(
+        " - Fill up the heap with a data pattern specified by one of the .tsv files\n");
     printf(
         " - Heap now looks as if Elm functions have been running. Throw a GC 'heap full' "
         "exception.\n");
