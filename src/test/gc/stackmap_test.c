@@ -324,12 +324,10 @@ void test_stackmap_spec(HeapSpec* spec) {
   validate_heap(spec);
 }
 
-#define NUM_SPEC_FILES 6
-
 char* stackmap_mark_test() {
   int failed_specs = 0;
 
-  HeapSpec specs[NUM_SPEC_FILES] = {
+  HeapSpec specs[] = {
       {
           .filename = "full_completion.tsv",
           .text = full_completion_tsv,
@@ -360,6 +358,11 @@ char* stackmap_mark_test() {
           .text = throw_one_call_deep_tsv,
           .text_len = throw_one_call_deep_tsv_len,
       },
+      {
+          .filename = NULL,
+          .text = NULL,
+          .text_len = 0,
+      },
   };
 
   if (verbose) {
@@ -371,8 +374,7 @@ char* stackmap_mark_test() {
     printf("stackmap_mark_test\n");
     printf("------------------\n");
     printf("\n");
-    printf(" - Fill up the heap with a data pattern specified by one of %d .tsv files\n",
-        NUM_SPEC_FILES);
+    printf(" - Fill up the heap with a data pattern specified by one of the .tsv files\n");
     printf(
         " - Heap now looks as if Elm functions have been running. Throw a GC 'heap full' "
         "exception.\n");
@@ -382,8 +384,8 @@ char* stackmap_mark_test() {
     printf("\n");
   }
 
-  for (int i = 0; i < NUM_SPEC_FILES; i++) {
-    HeapSpec* spec = &specs[i];
+  int num_spec_files = 0;
+  for (HeapSpec* spec = &specs[0]; spec->filename != NULL; spec++, num_spec_files++) {
     test_stackmap_spec(spec);
     bool pass = !spec->err_buf[0];
     if (!pass) failed_specs++;
@@ -393,18 +395,19 @@ char* stackmap_mark_test() {
   }
   if (verbose) {
     printf("\nSUMMARY\n");
-    printf("%d test specs\n", NUM_SPEC_FILES);
-    printf("%d passed\n", NUM_SPEC_FILES - failed_specs);
+    printf("%d test specs\n", num_spec_files);
+    printf("%d passed\n", num_spec_files - failed_specs);
     printf("%d failed\n", failed_specs);
     printf("\n\n");
   }
   if (failed_specs) {
+    tests_failed += failed_specs;
     fprintf(stderr, "\nSTACKMAP TEST FAILURES\n----------------------\n");
-    for (int i = 0; i < NUM_SPEC_FILES; i++)
+    for (int i = 0; i < num_spec_files; i++)
       if (specs[i].err_buf[0]) {
         fprintf(stderr, "%s:\n%s\n", specs[i].filename, specs[i].err_buf);
         if (verbose) fprintf(stdout, "%s:\n%s\n", specs[i].filename, specs[i].err_buf);
       }
   }
-  return failed_specs ? "GC stackmap should match all 6 specs" : NULL;
+  return failed_specs ? "GC stackmap should match all specs" : NULL;
 }
