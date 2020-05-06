@@ -25,8 +25,8 @@ DATA_INC := $(DATA_TSV:.tsv=.inc)
 all: $(DIST)/bin/test
 	$(DIST)/bin/test --verbose --all --gc=skip
 
-debug: CFLAGS += -DDEBUG
-debug: clean all
+debug: CFLAGS += -DDEBUG -DDEBUG_LOG
+debug: clean $(DIST)/bin/test
 	@:
 
 release: clean all
@@ -116,7 +116,7 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 # Binary & Wasm
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS)
-	$(CC) -Wall -O0 -ggdb $(SOURCES) -o $@ -lm
+	$(CC) $(CFLAGS) -ggdb $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
 	@mkdir -p $(DIST)/www
