@@ -419,6 +419,7 @@ void print_state() {
   printf("stack_map %p\n", state->stack_map);
   printf("stack_depth %zd\n", state->stack_depth);
   printf("replay_ptr %p\n", state->replay_ptr);
+  printf("\n");
 
   // print_bitmap();
 }

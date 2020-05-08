@@ -8,7 +8,7 @@
 #include "../kernel/types.h"
 #include "../kernel/utils.h"
 #include "./gc/replay_test.h"
-#include "./gc/stackmap_test.h"
+#include "./gc/stackmap_mark_test.h"
 #include "./test.h"
 
 extern GcState gc_state;

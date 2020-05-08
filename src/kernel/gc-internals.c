@@ -590,3 +590,8 @@ void collect(GcState* state, size_t* ignore_below) {
   printf("---------- / After GC --------------\n");
 #endif
 }
+
+/*
+Maybe bring the closure executor in here and then run the tests on that
+*/
+
