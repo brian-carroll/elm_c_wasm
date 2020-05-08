@@ -26,7 +26,7 @@ all: $(DIST)/bin/test
 	$(DIST)/bin/test --verbose --all --gc=skip
 
 debug: CFLAGS += -DDEBUG -DDEBUG_LOG
-debug: clean $(DIST)/bin/test
+debug: $(DIST)/bin/test
 	@:
 
 release: clean all
@@ -115,7 +115,7 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 
 # Binary & Wasm
 
-$(DIST)/bin/test: $(SOURCES) $(HEADERS)
+$(DIST)/bin/test: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
 	$(CC) $(CFLAGS) -ggdb $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
