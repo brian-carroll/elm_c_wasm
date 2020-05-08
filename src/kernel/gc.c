@@ -281,15 +281,6 @@ void* GC_memcpy(void* dest, void* src, size_t bytes) {
 
 void* GC_stack_empty() {
   GcState* state = &gc_state;
-  state->stack_depth = 0;
-
-  bool is_already_empty = state->stack_map == state->stack_map_empty &&
-                          state->stack_map_empty->header.tag == Tag_GcStackEmpty &&
-                          state->next_alloc == ((size_t*)state->stack_map_empty +
-                                                   sizeof(GcStackMap) / SIZE_UNIT);
-  if (is_already_empty) {
-    return state->stack_map_empty;
-  }
   GcStackMap* p = GC_malloc(sizeof(GcStackMap));
   if (p == pGcFull) return pGcFull;
   *p = (GcStackMap){
@@ -300,6 +291,7 @@ void* GC_stack_empty() {
   };
   state->stack_map = p;
   state->stack_map_empty = p;
+  state->stack_depth = 0;
   return p;
 }
 
