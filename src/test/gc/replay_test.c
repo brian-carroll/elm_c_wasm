@@ -10,9 +10,8 @@ char* test_replay_tce_curried_iter2();
 char* test_replay_apply_alloc_failed();
 
 Tag mock_func_ops[10];  // list of operations for the mock function, encoded as tags
-size_t mock_func_ops_index;
 char mock_func_err[1024];
-u32 INT_OFFSET = 256000;
+u32 TEST_INT_OFFSET = 256000;  // Not zero! Unlikely to happen by accident
 
 static void* eval_mock_func_tce(void* args[2], void** gc_tce_data) {
   ElmInt* last_alloc = args[0];
@@ -63,11 +62,10 @@ Closure mock_func;
 
 void* eval_mock_func(void* args[2]) {
   void* last_alloc = NULL;
-  mock_func_ops_index = (size_t)args[0];
-  for (;;mock_func_ops_index++) {
-    switch (mock_func_ops[mock_func_ops_index]) {
+  for (size_t i = 0;; i++) {
+    switch (mock_func_ops[i]) {
       case Tag_Int:
-        last_alloc = NEW_ELM_INT(INT_OFFSET + mock_func_ops_index);
+        last_alloc = NEW_ELM_INT(TEST_INT_OFFSET + i);
         if (gc_state.replay_ptr) {
           Tag replayed_tag = ((Header*)last_alloc)->tag;
           if (replayed_tag != Tag_Int) {
@@ -86,11 +84,8 @@ void* eval_mock_func(void* args[2]) {
         return pGcFull;
       case Tag_GcStackPop:
         return last_alloc;
-      case Tag_GcStackPush:
-        Utils_apply(&mock_func, 2, (void* []){(void*)(mock_func_ops_index+1), NULL});
-        return pGcFull; // don't let stack depth change
       default:
-        fprintf(stderr, "Unhandled tag in eval_mock_func %x\n", mock_func_ops[mock_func_ops_index]);
+        fprintf(stderr, "Unhandled tag in eval_mock_func %x\n", mock_func_ops[i]);
     }
   }
 }
@@ -111,7 +106,7 @@ char* assert_heap_values(char* description, void* values[]) {
 
   while (true) {
     ElmValue* v = (ElmValue*)values[i];
-    if (v == NULL) break;  // end of expected heap array
+    if (v == NULL) break;  // marker for end of expected heap array
 
     size_t* p = (size_t*)values[i];
     size_t* v_end = p + v->header.size;
@@ -141,11 +136,20 @@ char* assert_heap_values(char* description, void* values[]) {
     tests_failed++;
     print_heap();
     sprintf(assert_heap_message,
-        "%s\nExpected %p to be " FORMAT_HEX " but found " FORMAT_HEX "\n",
+        "FAIL: %s\nExpected %p to be " FORMAT_HEX " but found " FORMAT_HEX "\n",
         description,
         bad_addr,
         expected_value,
         *bad_addr);
+    return assert_heap_message;
+  } else if (gc_state.next_alloc != heap_value) {
+    tests_failed++;
+    print_heap();
+    sprintf(assert_heap_message,
+        "FAIL: %s\nExpected next_alloc to be %p but it is %p\n",
+        description,
+        heap_value,
+        gc_state.next_alloc);
     return assert_heap_message;
   } else {
     if (verbose) printf("PASS: %s\n", description);
@@ -155,8 +159,8 @@ char* assert_heap_values(char* description, void* values[]) {
 
 static char* run() {
   mu_run_test(test_replay_finished);
-  // mu_run_test(test_replay_saturated); // OK
-  // mu_run_test(test_replay_curried);  // TODO: fix this, there's a real bug!
+  // mu_run_test(test_replay_saturated);  // OK
+  // mu_run_test(test_replay_curried);    // TODO: fix this, there's a real bug!
   // mu_run_test(test_replay_tce_saturated_iter1);
   // mu_run_test(test_replay_tce_saturated_iter2);
   // mu_run_test(test_replay_tce_curried_iter1);

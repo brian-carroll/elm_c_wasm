@@ -35,11 +35,11 @@ char* test_replay_saturated() {
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = INT_OFFSET,
+          .value = TEST_INT_OFFSET,
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = INT_OFFSET + 1,
+          .value = TEST_INT_OFFSET + 1,
       },
       NULL,
   };
@@ -64,11 +64,11 @@ char* test_replay_saturated() {
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = INT_OFFSET,
+          .value = TEST_INT_OFFSET,
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = INT_OFFSET + 1,
+          .value = TEST_INT_OFFSET + 1,
       },
       NULL,
   };

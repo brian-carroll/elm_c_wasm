@@ -721,6 +721,7 @@ void GC_prep_replay() {
   size_t* first_allocated = (size_t*)(state->stack_map_empty + 1);
   state->replay_ptr = first_allocated;
   state->stack_depth = 0;
+  state->stack_map = state->stack_map_empty;
 }
 
 /* ====================================================

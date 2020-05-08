@@ -18,8 +18,8 @@ void* eval_mock_func(void**);
 Closure mock_func_tail;
 void* eval_mock_func_tail(void* args[]);
 char* assert_heap_values(char* description, void* values[]);
-extern GcState gc_state;
-extern Tag mock_func_ops[10];
-extern u32 INT_OFFSET;
+GcState gc_state;
+Tag mock_func_ops[10];
+u32 TEST_INT_OFFSET;
 
 #endif

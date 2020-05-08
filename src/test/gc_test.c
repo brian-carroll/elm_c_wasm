@@ -726,7 +726,7 @@ char* gc_test() {
         "                              Garbage Collector tests\n");
 
   mu_run_test(gc_replay_test);
-  // mu_run_test(replay_scenario_tests); // broken
+  mu_run_test(replay_scenario_tests); // broken
   mu_run_test(stackmap_mark_test);
   mu_run_test(gc_bitmap_test);
   mu_run_test(gc_dead_between_test);
