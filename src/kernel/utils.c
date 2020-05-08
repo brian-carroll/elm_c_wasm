@@ -293,7 +293,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_Closure:
       // C doesn't have exceptions, would have to call out to JS.
       // For now it's a warning rather than error and returns False
-      log_error(stderr,
+      log_error(
           "Warning: Trying to use `(==)` on functions.\n"
           "There is no way to know if functions are \"the same\" in the Elm sense.\n"
           "Read more about this at "
