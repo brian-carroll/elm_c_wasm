@@ -1,40 +1,59 @@
 #include "../replay_test.h"
 
-static ElmInt zero = {
+static void* tce_mock_sat(void* args[], void** gc_tce_data) {
+  static i32 throw_after = 3;
+tce_loop:;
+  ElmInt* count = args[0];
+  ElmInt* max_count = args[1];
+  void* tmp0;
+  do {
+    if (count->value >= max_count->value) {
+      // Throw again at the end so we can examine GC state
+      tmp0 = pGcFull;
+      break;
+    } else {
+      NEW_ELM_INT(count->value + 1);
+      NEW_ELM_INT(count->value + 2);
+      if (count->value >= throw_after) {
+        throw_after = 1000000;
+        return pGcFull;
+      }
+      void* tmp0 = NEW_ELM_INT(count->value + 3);
+      *gc_tce_data = CAN_THROW(GC_tce_iteration(2));
+      args[0] = tmp0;
+      goto tce_loop;
+      break;
+    }
+  } while (0);
+  return tmp0;
+}
+
+static void* eval_mock_sat(void* args[2]) {
+  return GC_tce_eval(&tce_mock_sat, &eval_mock_sat, 2, args);
+}
+static Closure mock_tce_sat = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0,
+    .max_values = 2,
+    .evaluator = &eval_mock_sat,
+};
+
+static ElmInt arg_init_count = {
     .header = HEADER_INT,
     .value = 0,
 };
 
-static Closure partial_call = {
-    .header = HEADER_CLOSURE(1),
-    .max_values = 2,
-    .n_values = 1,
-    .evaluator = &eval_mock_func_tail,
-    .values = {&zero},
+static ElmInt arg_max_count = {
+    .header = HEADER_INT,
+    .value = 5,
 };
 
-static Closure full_call = {
+static Closure full_spec = {
     .header = HEADER_CLOSURE(2),
     .max_values = 2,
     .n_values = 2,
-    .evaluator = &eval_mock_func_tail,
-    .values = {&zero, NULL},
-};
-
-static Closure closure_spec_iter1 = {
-    .header = HEADER_CLOSURE(2),
-    .max_values = 2,
-    .n_values = 2,
-    .evaluator = &eval_mock_func_tail,
-    .values = {NULL, NULL},
-};
-
-static Closure closure_spec_iter2 = {
-    .header = HEADER_CLOSURE(2),
-    .max_values = 2,
-    .n_values = 2,
-    .evaluator = &eval_mock_func_tail,
-    .values = {NULL, NULL},
+    .evaluator = &eval_mock_sat,
+    .values = {&arg_init_count, &arg_max_count},
 };
 
 char* test_replay_tce_curried_iter2() {
@@ -47,76 +66,44 @@ char* test_replay_tce_curried_iter2() {
 
   // SETUP
   gc_test_reset();
-  memcpy(mock_func_ops,
-      (Tag[]){
-          Tag_Int,
-          Tag_Int,
-          Tag_Int,
-          Tag_GcStackTailCall,
-          Tag_Int,
-          Tag_Int,
-          Tag_GcException,
-      },
-      sizeof(Tag[7]));
 
   // RUN
-  void* curried = Utils_apply(&mock_func_tail, 1, (void* []){&zero});
-  void* result1 = Utils_apply(curried, 1, (void* []){NULL});
+  void* result1 =
+      Utils_apply(&mock_tce_sat, 2, (void*[]){&arg_init_count, &arg_max_count});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
 
-  void* int4 = h + 3 * sizeof(GcStackMap) + 3 * sizeof(Closure) + 5 * sizeof(void*) +
-               2 * sizeof(ElmInt);
-  closure_spec_iter1.values[0] = int4;
-  closure_spec_iter2.values[0] = int4;
-
-  void* push = h + sizeof(GcStackMap) + 2 * sizeof(Closure) + 3 * sizeof(void*);
-
-  size_t zero = 0;
+  void* count_iter2 = h + 2 * sizeof(GcStackMap) +
+                      (sizeof(Closure) + 2 * sizeof(void*) + sizeof(GcStackMap)) +
+                      2 * sizeof(ElmInt);
+  full_spec.values[0] = count_iter2;
 
   // HEAP BEFORE GC
   void* heap_before_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
       },
-      &partial_call,
-      &full_call,
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
           .older = h,
       },
-      &closure_spec_iter1,
-      &zero,
-      &zero,
-      &zero,
-      &zero,
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 0,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 1,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 4,
-      },
-      &closure_spec_iter2,
+      &full_spec,
+      &GARBAGE,
+      &GARBAGE,
+      &GARBAGE,
+      &GARBAGE,
+      &(ElmInt){.header = HEADER_INT, .value = 1},
+      &(ElmInt){.header = HEADER_INT, .value = 2},
+      &(ElmInt){.header = HEADER_INT, .value = 3},
+      &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
-          .older = push,
-          .replay = int4 + sizeof(ElmInt),
+          .older = h + sizeof(GcStackMap),
+          .replay = count_iter2 + sizeof(ElmInt),
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 4,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 5,
-      },
+      &(ElmInt){.header = HEADER_INT, .value = 4},
+      &(ElmInt){.header = HEADER_INT, .value = 5},
       NULL,
   };
   char* heap_err_before_gc = assert_heap_values("Heap before GC", heap_before_spec);
@@ -125,45 +112,43 @@ char* test_replay_tce_curried_iter2() {
   // GC + REPLAY
   GC_collect_full();
   GC_prep_replay();
-  Utils_apply(&mock_func_tail, 1, (void* []){&zero});
-  Utils_apply(curried, 1, (void* []){NULL});
+  Utils_apply(&mock_tce_sat, 2, (void*[]){&arg_init_count, &arg_max_count});
 
-  // moved pointers
-  int4 = push + sizeof(GcStackMap);  // push is still in the same place
-  closure_spec_iter2.values[0] = int4;
+  mark(&gc_state, gc_state.heap.start);  // make it easier to understand print_heap
+  void* final_return_val = h + 2 * sizeof(GcStackMap) + sizeof(ElmInt) +
+                           (sizeof(Closure) + 2 * sizeof(void*) + sizeof(GcStackMap)) +
+                           2 * sizeof(ElmInt);
+  void* tc1 =
+      h + 2 * sizeof(GcStackMap) + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*));
+  full_spec.values[0] = final_return_val;
 
   // HEAP AFTER GC
   void* heap_after_spec[] = {
       &(GcStackMap){
           .header = HEADER_GC_STACK_EMPTY,
-          .newer = push,
+          .newer = h + sizeof(GcStackMap),
       },
-      &partial_call,
-      &full_call,
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
           .older = h,
-          .newer = int4 + sizeof(ElmInt) + sizeof(Closure) + 2 * sizeof(void*),
+          .newer = tc1,
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 4,
-      },
-      &closure_spec_iter2,
+      &(ElmInt){.header = HEADER_INT, .value = 3},
+      &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
-          .older = push,
-          .replay = int4 + sizeof(ElmInt),
-          .newer = int4 + sizeof(ElmInt) + sizeof(Closure) + 2 * sizeof(void*) +
-                   sizeof(GcStackMap) + 2 * sizeof(ElmInt),
+          .older = h + sizeof(GcStackMap),
+          .replay = tc1 - (sizeof(Closure) + 2 * sizeof(void*)),
+          .newer = tc1 + sizeof(GcStackMap) + 2 * sizeof(ElmInt),
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 4,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 5,
+      &(ElmInt){.header = HEADER_INT, .value = 4},
+      &(ElmInt){.header = HEADER_INT, .value = 5},
+      &(ElmInt){.header = HEADER_INT, .value = 6},
+      &full_spec,
+      &(GcStackMap){
+          .header = HEADER_GC_STACK_TC,
+          .older = h + sizeof(GcStackMap),
+          .replay = final_return_val + sizeof(ElmInt),
       },
       NULL,
   };
@@ -171,10 +156,11 @@ char* test_replay_tce_curried_iter2() {
   char* heap_err_after = assert_heap_values("Heap after GC", heap_after_spec);
   if (heap_err_after) return heap_err_after;
 
-  mu_assert("GC State replay_ptr", gc_state.replay_ptr == NULL);
-  mu_assert("GC State stack_depth", gc_state.stack_depth == 1);
+  mu_expect_equal("GC State replay_ptr", gc_state.replay_ptr, NULL);
+  mu_expect_equal("GC State stack_depth", gc_state.stack_depth, 1);
   mu_expect_equal("GC State stackmap",
       (void*)gc_state.stack_map,
-      int4 + sizeof(ElmInt) + sizeof(Closure) + 2 * sizeof(void*));
+      final_return_val + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*)));
+
   return NULL;
 }
