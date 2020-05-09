@@ -117,8 +117,8 @@ char* assert_heap_values(char* description, void* values[]) {
       if (*heap_word != expected_value) {
         bad_addr = heap_word;
         if (verbose) {
-          printf("\nMismatch at %p\n", heap_word);
-          print_value(v);
+          printf("\nMismatch at %p ! Expected to match the following:\n", heap_word);
+          print_heap_range((size_t*)v, v_end);
         }
         break;
       }
@@ -163,7 +163,7 @@ static char* run() {
   mu_run_test(test_replay_finished);
   mu_run_test(test_replay_saturated);
   mu_run_test(test_replay_curried);
-  // mu_run_test(test_replay_tce_saturated_iter1);
+  mu_run_test(test_replay_tce_saturated_iter1);
   // mu_run_test(test_replay_tce_saturated_iter2);
   // mu_run_test(test_replay_tce_curried_iter1);
   // mu_run_test(test_replay_tce_curried_iter2);
