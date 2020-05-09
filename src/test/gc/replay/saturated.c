@@ -2,7 +2,6 @@
 
 void* eval_mock_func_saturated(void* args[]) {
   static bool is_first_call = true;
-  printf("eval_mock_func_saturated, is_first_call=%d\n", is_first_call);
   NEW_ELM_INT(TEST_INT_OFFSET + 1);
   NEW_ELM_INT(TEST_INT_OFFSET + 2);
   if (is_first_call) {

@@ -429,6 +429,7 @@ void Debug_pause() {
   emscripten_run_script("debugger;");
 }
 
+#ifdef __EMSCRIPTEN__
 void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -441,3 +442,11 @@ void log_error(char* fmt, ...) {
   va_end(args);
   emscripten_run_script("debugger;");
 }
+#else
+void log_error(char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  printf(fmt, args);
+  va_end(args);
+}
+#endif

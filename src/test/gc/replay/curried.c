@@ -1,23 +1,38 @@
 #include "../replay_test.h"
 
-// static
-// const
+void* eval_mock_func_curried(void* args[]) {
+  static bool is_first_call = true;
+  NEW_ELM_INT(TEST_INT_OFFSET + 1);
+  NEW_ELM_INT(TEST_INT_OFFSET + 2);
+  if (is_first_call) {
+    is_first_call = false;
+    return pGcFull;
+  }
+  NEW_ELM_INT(TEST_INT_OFFSET + 3);
+  return pGcFull;
+}
+
+Closure mock_func_curried = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0,
+    .max_values = 2,
+    .evaluator = &eval_mock_func_curried,
+};
+
 Closure partial_spec = {
     .header = HEADER_CLOSURE(1),
     .max_values = 2,
     .n_values = 1,
-    .evaluator = &eval_mock_func,
-    .values = {NULL},
+    .evaluator = &eval_mock_func_curried,
+    .values = {&Unit},
 };
 
-// static
-// const
 Closure full_spec = {
     .header = HEADER_CLOSURE(2),
     .max_values = 2,
     .n_values = 2,
-    .evaluator = &eval_mock_func,
-    .values = {NULL, NULL},
+    .evaluator = &eval_mock_func_curried,
+    .values = {&Unit, &Unit},
 };
 
 char* test_replay_curried() {
@@ -30,17 +45,10 @@ char* test_replay_curried() {
 
   // SETUP
   gc_test_reset();
-  memcpy(mock_func_ops,
-      (Tag[]){
-          Tag_Int,
-          Tag_Int,
-          Tag_GcException,
-      },
-      sizeof(Tag[4]));
 
   // RUN
-  void* curried = Utils_apply(&mock_func, 1, (void* []){NULL});
-  void* result1 = Utils_apply(curried, 1, (void* []){NULL});
+  void* curried = Utils_apply(&mock_func_curried, 1, (void*[]){&Unit});
+  void* result1 = Utils_apply(curried, 1, (void*[]){&Unit});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
@@ -58,11 +66,11 @@ char* test_replay_curried() {
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = TEST_INT_OFFSET,
+          .value = TEST_INT_OFFSET + 1,
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = TEST_INT_OFFSET + 1,
+          .value = TEST_INT_OFFSET + 2,
       },
       NULL,
   };
@@ -72,8 +80,9 @@ char* test_replay_curried() {
   // GC + REPLAY
   GC_collect_full();
   GC_prep_replay();
-  Utils_apply(&mock_func, 1, (void* []){NULL});
-  Utils_apply(curried, 1, (void* []){NULL});
+
+  Utils_apply(&mock_func_curried, 1, (void*[]){&Unit});
+  Utils_apply(curried, 1, (void*[]){&Unit});
 
   // HEAP AFTER GC
   void* heap_after_spec[] = {
@@ -91,11 +100,16 @@ char* test_replay_curried() {
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = TEST_INT_OFFSET,
+          .value = TEST_INT_OFFSET + 1,
       },
       &(ElmInt){
           .header = HEADER_INT,
-          .value = TEST_INT_OFFSET + 1,
+          .value = TEST_INT_OFFSET + 2,
+      },
+      // Prove the function has resumed executing
+      &(ElmInt){
+          .header = HEADER_INT,
+          .value = TEST_INT_OFFSET + 3,
       },
       NULL,
   };
@@ -103,13 +117,11 @@ char* test_replay_curried() {
   char* heap_err_after = assert_heap_values("Heap after GC", heap_after_spec);
   if (heap_err_after) return heap_err_after;
 
-  print_heap();
-  print_state();
-
-  mu_assert("GC State replay_ptr", gc_state.replay_ptr == NULL);
-  mu_assert("GC State stack_depth", gc_state.stack_depth == 1);
-  mu_assert("GC State stackmap",
-      (void*)gc_state.stack_map - (void*)gc_state.heap.start == sizeof(GcStackMap));
+  mu_expect_equal("exited replay mode", gc_state.replay_ptr, NULL);
+  mu_expect_equal("resumed at correct stack_depth", gc_state.stack_depth, 1);
+  mu_expect_equal("stackmap pointing at the right place",
+      (void*)gc_state.stack_map,
+      h + sizeof(GcStackMap) + 2 * sizeof(Closure) + 3 * sizeof(void*));
 
   return NULL;
 }

@@ -639,7 +639,7 @@ void* GC_apply_replay(void** apply_push) {
       break;
 
     case Unfinished_Curried_Normal:
-      replay = RE_EXECUTE;
+      replay = closure;
       stackmap_next = push;
       stack_depth_increment = 1;
       replay_next = next_heap_value(stackmap_next);
@@ -692,6 +692,7 @@ void* GC_apply_replay(void** apply_push) {
   printf("  stack_depth_increment = %zu\n", stack_depth_increment);
   printf("  replay = %p\n", replay);
   printf("  replay_next = %p\n", replay_next);
+  printf("  push = %p\n", push);
   printf("\n");
 #endif
 

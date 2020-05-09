@@ -25,7 +25,7 @@ DATA_INC := $(DATA_TSV:.tsv=.inc)
 all: $(DIST)/bin/test
 	$(DIST)/bin/test --verbose --all --gc=skip
 
-debug: CFLAGS += -DDEBUG -DDEBUG_LOG
+debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
 debug: $(DIST)/bin/test
 	@:
 
