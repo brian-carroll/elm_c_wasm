@@ -89,14 +89,8 @@ char* test_replay_tce_saturated_iter1() {
           .older = h + sizeof(GcStackMap),
           .replay = h + 2 * sizeof(GcStackMap),
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 1,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 2,
-      },
+      &(ElmInt){.header = HEADER_INT, .value = 1},
+      &(ElmInt){.header = HEADER_INT, .value = 2},
       NULL,
   };
   char* heap_err_before_gc = assert_heap_values("Heap before GC", heap_before_spec);
@@ -132,18 +126,9 @@ char* test_replay_tce_saturated_iter1() {
           .newer = h + 3 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*) +
                    2 * sizeof(ElmInt),
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 1,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 2,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 3,
-      },
+      &(ElmInt){.header = HEADER_INT, .value = 1},
+      &(ElmInt){.header = HEADER_INT, .value = 2},
+      &(ElmInt){.header = HEADER_INT, .value = 3},
       &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,

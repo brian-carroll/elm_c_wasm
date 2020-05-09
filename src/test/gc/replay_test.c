@@ -119,7 +119,7 @@ char* assert_heap_values(char* description, void* values[]) {
 
     do {
       expected_value = *p;
-      if (*heap_word != expected_value) {
+      if (*heap_word != expected_value && expected_value != GARBAGE) {
         bad_addr = heap_word;
         if (verbose) {
           printf("\nMismatch at %p ! Expected to match the following:\n", heap_word);
