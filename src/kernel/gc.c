@@ -414,10 +414,12 @@ void* GC_tce_eval(void* (*tce_eval)(void* [], void**),
   GC_memcpy(c_replay, c_mutable, closure_bytes);
 
   GcStackMap* tailcall = (GcStackMap*)(gc_tce_data + closure_bytes);
-  tailcall->header = HEADER_GC_STACK_TC;
-  tailcall->older = push;
-  tailcall->replay = c_replay;
-
+  *tailcall = (GcStackMap){
+      .header = HEADER_GC_STACK_TC,
+      .newer = NULL,
+      .older = push,
+      .replay = c_replay,
+  };
   return pGcFull;
 }
 

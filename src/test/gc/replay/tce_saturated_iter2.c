@@ -1,7 +1,7 @@
 #include "../replay_test.h"
 
 static void* tce_mock_sat(void* args[], void** gc_tce_data) {
-  static bool should_throw = true;
+  static i32 throw_after = 3;
 tce_loop:;
   ElmInt* count = args[0];
   ElmInt* max_count = args[1];
@@ -14,8 +14,8 @@ tce_loop:;
     } else {
       NEW_ELM_INT(count->value + 1);
       NEW_ELM_INT(count->value + 2);
-      if (should_throw) {
-        should_throw = false;
+      if (count->value >= throw_after) {
+        throw_after = 1000000;
         return pGcFull;
       }
       void* tmp0 = NEW_ELM_INT(count->value + 3);
@@ -45,7 +45,7 @@ static ElmInt arg_init_count = {
 
 static ElmInt arg_max_count = {
     .header = HEADER_INT,
-    .value = 3,
+    .value = 5,
 };
 
 static Closure full_spec = {
@@ -56,11 +56,11 @@ static Closure full_spec = {
     .values = {&arg_init_count, &arg_max_count},
 };
 
-char* test_replay_tce_saturated_iter1() {
+char* test_replay_tce_saturated_iter2() {
   if (verbose) {
     printf(
         "\n"
-        "## test_replay_tce_saturated_iter1\n"
+        "## test_replay_tce_saturated_iter2\n"
         "\n");
   }
 
@@ -74,6 +74,11 @@ char* test_replay_tce_saturated_iter1() {
 
   void* h = gc_state.heap.start;
 
+  void* count_iter2 = h + 2 * sizeof(GcStackMap) +
+                      (sizeof(Closure) + 2 * sizeof(void*) + sizeof(GcStackMap)) +
+                      2 * sizeof(ElmInt);
+  full_spec.values[0] = count_iter2;
+
   // HEAP BEFORE GC
   void* heap_before_spec[] = {
       &(GcStackMap){
@@ -84,19 +89,21 @@ char* test_replay_tce_saturated_iter1() {
           .older = h,
       },
       &full_spec,
+      &GARBAGE,
+      &GARBAGE,
+      &GARBAGE,
+      &GARBAGE,
+      &(ElmInt){.header = HEADER_INT, .value = 1},
+      &(ElmInt){.header = HEADER_INT, .value = 2},
+      &(ElmInt){.header = HEADER_INT, .value = 3},
+      &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
           .older = h + sizeof(GcStackMap),
-          .replay = h + 2 * sizeof(GcStackMap),
+          .replay = count_iter2 + sizeof(ElmInt),
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 1,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 2,
-      },
+      &(ElmInt){.header = HEADER_INT, .value = 4},
+      &(ElmInt){.header = HEADER_INT, .value = 5},
       NULL,
   };
   char* heap_err_before_gc = assert_heap_values("Heap before GC", heap_before_spec);
@@ -108,9 +115,11 @@ char* test_replay_tce_saturated_iter1() {
   Utils_apply(&mock_tce_sat, 2, (void*[]){&arg_init_count, &arg_max_count});
 
   mark(&gc_state, gc_state.heap.start);  // make it easier to understand print_heap
-  void* final_return_val = h + 2 * sizeof(GcStackMap) +
+  void* final_return_val = h + 2 * sizeof(GcStackMap) + sizeof(ElmInt) +
                            (sizeof(Closure) + 2 * sizeof(void*) + sizeof(GcStackMap)) +
                            2 * sizeof(ElmInt);
+  void* tc1 =
+      h + 2 * sizeof(GcStackMap) + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*));
   full_spec.values[0] = final_return_val;
 
   // HEAP AFTER GC
@@ -122,28 +131,19 @@ char* test_replay_tce_saturated_iter1() {
       &(GcStackMap){
           .header = HEADER_GC_STACK_PUSH,
           .older = h,
-          .newer = h + 2 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*),
+          .newer = tc1,
       },
+      &(ElmInt){.header = HEADER_INT, .value = 3},
       &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,
           .older = h + sizeof(GcStackMap),
-          .replay = h + 2 * sizeof(GcStackMap),
-          .newer = h + 3 * sizeof(GcStackMap) + sizeof(Closure) + 2 * sizeof(void*) +
-                   2 * sizeof(ElmInt),
+          .replay = tc1 - (sizeof(Closure) + 2 * sizeof(void*)),
+          .newer = tc1 + sizeof(GcStackMap) + 2 * sizeof(ElmInt),
       },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 1,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 2,
-      },
-      &(ElmInt){
-          .header = HEADER_INT,
-          .value = 3,
-      },
+      &(ElmInt){.header = HEADER_INT, .value = 4},
+      &(ElmInt){.header = HEADER_INT, .value = 5},
+      &(ElmInt){.header = HEADER_INT, .value = 6},
       &full_spec,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,

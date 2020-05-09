@@ -50,6 +50,9 @@ void gc_test_reset() {
   GcState* state = &gc_state;
   bitmap_reset(&state->heap);
   reset_state(state);
+  for (size_t* p = state->heap.start; p < state->heap.end; p++) {
+    *p = 0;
+  }
   GC_stack_empty();
 }
 

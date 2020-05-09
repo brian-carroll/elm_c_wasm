@@ -21,5 +21,6 @@ char* assert_heap_values(char* description, void* values[]);
 GcState gc_state;
 Tag mock_func_ops[10];
 u32 TEST_INT_OFFSET;
+size_t GARBAGE;
 
 #endif
