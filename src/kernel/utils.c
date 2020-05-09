@@ -147,49 +147,53 @@ Closure Utils_append = {
 void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
   void** args;
   Closure* c;
+  void* push = NULL;
 
   for (;;) {
-    void* replay = GC_apply_replay();
+    void* replay = GC_apply_replay(&push);
     if (replay != NULL) {
       c = replay;
       if (c->header.tag != Tag_Closure) {
         return replay;
       }
-      if (c->n_values != c->max_values) {
+      if (c->n_values < c->max_values) {
         return replay;
       }
       args = c->values;
-    } else if (c_old->max_values == n_applied) {
-      // 'saturated' call. No need to allocate a new Closure.
-      c = c_old;
-      args = applied;
-    } else if (n_applied == 0) {
-      // a full closure (thunk)
-      // from JS wrapper (or resumed tailcall? not sure if this happens)
-      c = c_old;
-      args = c_old->values;
     } else {
-      u16 n_old = c_old->n_values;
-      u16 n_new = n_old + n_applied;
+      if (c_old->max_values == n_applied) {
+        // 'saturated' call. No need to allocate a new Closure.
+        c = c_old;
+        args = applied;
+      } else if (n_applied == 0) {
+        // a full closure (thunk)
+        // from JS wrapper (or resumed tailcall? not sure if this happens)
+        c = c_old;
+        args = c_old->values;
+      } else {
+        u16 n_old = c_old->n_values;
+        u16 n_new = n_old + n_applied;
 
-      size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
-      size_t size_applied = n_applied * sizeof(void*);
-      size_t size_new = size_old + size_applied;
+        size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
+        size_t size_applied = n_applied * sizeof(void*);
+        size_t size_new = size_old + size_applied;
 
-      c = CAN_THROW(GC_malloc(size_new));
-      GC_memcpy(c, c_old, size_old);
-      GC_memcpy(&c->values[n_old], applied, size_applied);
-      c->header = HEADER_CLOSURE(n_new);
-      c->n_values = n_new;
+        c = CAN_THROW(GC_malloc(size_new));
+        GC_memcpy(c, c_old, size_old);
+        GC_memcpy(&c->values[n_old], applied, size_applied);
+        c->header = HEADER_CLOSURE(n_new);
+        c->n_values = n_new;
 
-      if (n_new < c->max_values) {
-        // Partial application (not calling evaluator => no stack push)
-        return c;
+        if (n_new < c->max_values) {
+          // Partial application (not calling evaluator => no stack push)
+          return c;
+        }
+        args = c->values;
       }
-      args = c->values;
     }
-
-    void* push = CAN_THROW(GC_stack_push());
+    if (!push) {
+      push = CAN_THROW(GC_stack_push());
+    }
 
     ElmValue* result = (*c->evaluator)(args);
     if ((void*)result == pGcFull) {

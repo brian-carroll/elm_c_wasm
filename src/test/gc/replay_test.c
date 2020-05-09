@@ -141,6 +141,7 @@ char* assert_heap_values(char* description, void* values[]) {
         bad_addr,
         expected_value,
         *bad_addr);
+    printf("%s", assert_heap_message);
     return assert_heap_message;
   } else if (gc_state.next_alloc != heap_value) {
     tests_failed++;
@@ -150,6 +151,7 @@ char* assert_heap_values(char* description, void* values[]) {
         description,
         heap_value,
         gc_state.next_alloc);
+    printf("%s", assert_heap_message);
     return assert_heap_message;
   } else {
     if (verbose) printf("PASS: %s\n", description);
@@ -159,7 +161,7 @@ char* assert_heap_values(char* description, void* values[]) {
 
 static char* run() {
   mu_run_test(test_replay_finished);
-  // mu_run_test(test_replay_saturated);  // OK
+  mu_run_test(test_replay_saturated);
   // mu_run_test(test_replay_curried);    // TODO: fix this, there's a real bug!
   // mu_run_test(test_replay_tce_saturated_iter1);
   // mu_run_test(test_replay_tce_saturated_iter2);

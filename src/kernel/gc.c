@@ -297,8 +297,6 @@ void* GC_stack_empty() {
 
 void* GC_stack_push() {
   GcState* state = &gc_state;
-  if (state->replay_ptr != NULL) return state->replay_ptr;
-
   GcStackMap* p = GC_malloc(sizeof(GcStackMap));
   if (p == pGcFull) return pGcFull;
   *p = (GcStackMap){
@@ -481,14 +479,11 @@ char* scenario_to_string(ReplayScenario scenario) {
 }
 #endif
 
-void* GC_apply_replay() {
+void* GC_apply_replay(void** apply_push) {
   GcState* state = &gc_state;
   if (state->replay_ptr == NULL) return NULL;
 
   Tag replay_tag = ((Header*)state->replay_ptr)->tag;
-#ifdef DEBUG_LOG
-  printf("GC_apply_replay: replay_ptr = %p, tag = %x\n", state->replay_ptr, replay_tag);
-#endif
 
   /*
   Analyse heap values to work out which of several scenarios we're in.
@@ -506,7 +501,7 @@ void* GC_apply_replay() {
   */
 
   ReplayScenario scenario;
-  GcStackMap* push;
+  GcStackMap* push = NULL;
   GcStackMap* newer;
   Closure* closure;
   size_t* after_closure;
@@ -684,20 +679,35 @@ void* GC_apply_replay() {
 
   // Update the state
   // Don't do the memory access unless value is changed
-
-  if (stackmap_next != STACKMAP_UNCHANGED) {
-    state->stack_map = stackmap_next;
-  }
-
-  if (stack_depth_increment) {
-    state->stack_depth += stack_depth_increment;
-  }
-
   if (replay_next >= state->next_alloc) {
     replay_next = EXIT_REPLAY_MODE;
   }
+
+#ifdef DEBUG_LOG
+  printf("GC_apply_replay:\n");
+  printf("  replay_ptr = %p\n", state->replay_ptr);
+  printf("  replay_tag = %x\n", replay_tag);
+  printf("  scenario = %s\n", scenario_to_string(scenario));
+  printf("  stackmap_next = %p\n", stackmap_next);
+  printf("  stack_depth_increment = %zu\n", stack_depth_increment);
+  printf("  replay = %p\n", replay);
+  printf("  replay_next = %p\n", replay_next);
+  printf("\n");
+#endif
+
+  // Write to GC state
+  if (stackmap_next != STACKMAP_UNCHANGED) {
+    state->stack_map = stackmap_next;
+  }
+  if (stack_depth_increment) {
+    state->stack_depth += stack_depth_increment;
+  }
   state->replay_ptr = replay_next;
 
+  // Write to Utils_apply local variable. Location for next pop to link back to
+  if (push) {
+    *apply_push = push;
+  }
   return replay;
 }
 
