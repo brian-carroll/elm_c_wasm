@@ -670,17 +670,7 @@ void* GC_apply_replay(void** apply_push) {
       break;
   }
 
-  // #ifdef DEBUG
-  // printf("GC_apply_replay:\n");
-  // printf("    scenario = %s\n", scenario_to_string(scenario));
-  // printf("    replay = %p\n", replay);
-  // printf("    stackmap_next = %p\n", stackmap_next);
-  // printf("    stack_depth_increment = %zd\n", stack_depth_increment);
-  // printf("    replay_next = %p\n", replay_next);
-  // #endif
-
-  // Update the state
-  // Don't do the memory access unless value is changed
+  // Have we run out of values to replay?
   if (replay_next >= state->next_alloc) {
     replay_next = EXIT_REPLAY_MODE;
   }
@@ -698,7 +688,8 @@ void* GC_apply_replay(void** apply_push) {
   printf("\n");
 #endif
 
-  // Write to GC state
+  // Update the GC state
+  // Don't do the memory write unless the value is changed
   if (stackmap_next != STACKMAP_UNCHANGED) {
     state->stack_map = stackmap_next;
   }
