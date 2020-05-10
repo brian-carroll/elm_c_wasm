@@ -720,6 +720,17 @@ void* GC_apply_replay(void** apply_push) {
 
    ==================================================== */
 
+static void collect(GcState* state, size_t* ignore_below) {
+  mark(state, ignore_below);
+
+  compact(state, ignore_below);
+
+  bool stack_empty_was_deleted = (size_t*)state->stack_map_empty >= state->next_alloc;
+  if (stack_empty_was_deleted) {
+    GC_stack_empty();
+  }
+}
+
 void GC_collect_full() {
   collect(&gc_state, gc_state.heap.start);
 }

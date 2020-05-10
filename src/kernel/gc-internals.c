@@ -1,11 +1,14 @@
 #include "./gc-internals.h"
+
 #include <errno.h>
 #include <stdbool.h>
 #include <unistd.h>
+
 #include "./types.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
+
 #include "./debug.h"
 #else
 #define log_error(...)
@@ -559,39 +562,6 @@ void reverse_stack_map(GcState* state) {
   stack_item->newer = newer_item;
 }
 
-/* ====================================================
-
-                COLLECT
-
-   ==================================================== */
-
-void collect(GcState* state, size_t* ignore_below) {
-#ifdef DEBUG_LOG
-  printf("---------- Before GC --------------\n");
-  print_state();
-  print_heap();
-  printf("---------- / Before GC --------------\n");
-#endif
-
-  mark(state, ignore_below);
-
-#ifdef DEBUG
-  if (state->stack_depth && !is_marked(state->stack_map_empty)) {
-    log_error("stack_empty is not marked\n");
-  }
-#endif
-
-  compact(state, ignore_below);
-
-#ifdef DEBUG_LOG
-  printf("---------- After GC --------------\n");
-  print_state();
-  print_heap();
-  printf("---------- / After GC --------------\n");
-#endif
-}
-
 /*
 Maybe bring the closure executor in here and then run the tests on that
 */
-

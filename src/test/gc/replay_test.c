@@ -172,8 +172,8 @@ static char* run() {
   mu_run_test(test_replay_tce_saturated_iter1);
   mu_run_test(test_replay_tce_saturated_iter2);
   mu_run_test(test_replay_tce_curried_iter1);
-  // mu_run_test(test_replay_tce_curried_iter2);
-  // mu_run_test(test_replay_apply_alloc_failed);
+  mu_run_test(test_replay_tce_curried_iter2);
+  mu_run_test(test_replay_apply_alloc_failed);
   return NULL;
 }
 

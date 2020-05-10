@@ -25,7 +25,6 @@ char* test_replay_apply_alloc_failed() {
   mu_expect_equal("Heap should overflow on making a function call", result, pGcFull);
 
   GC_collect_full();
-  GC_stack_empty(); // TODO: How to handle this in reality? What does it look like?
   GC_prep_replay();
 
   result = Utils_apply(&Utils_equal, 2, (void*[]){&Unit, &Unit});

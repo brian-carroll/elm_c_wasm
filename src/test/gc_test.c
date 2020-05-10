@@ -1,7 +1,9 @@
 #include "../kernel/gc.h"
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "../kernel/basics.h"
 #include "../kernel/debug.h"
 #include "../kernel/gc-internals.h"
@@ -721,6 +723,42 @@ char* gc_replay_test() {
   return NULL;
 }
 
+static void* gc_stack_empty_survival_root1;
+static void* gc_stack_empty_survival_root2;
+
+char* gc_stack_empty_survival_test() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## gc_stack_empty_survival_test\n"
+        "The 'stack empty' marker can get deleted if we do a collection while no "
+        "functions are running.\n"
+        "Make sure it gets restored.\n"
+        "\n");
+  }
+
+  gc_test_reset();
+
+  // Make sure we're not looking at an overly-simple special case with no roots
+  // (Lots of GC state pointers would hold the same address, confusing matters)
+  GC_register_root(&gc_stack_empty_survival_root1);
+  GC_register_root(&gc_stack_empty_survival_root2);
+  gc_stack_empty_survival_root1 = NEW_ELM_INT(123);
+  gc_stack_empty_survival_root2 = NEW_ELM_INT(456);
+  GC_stack_empty();
+
+  void* push = GC_stack_push();
+  GC_stack_pop(pUnit, push);
+  GC_stack_empty();
+
+  GC_collect_full();
+
+  mu_assert("stack empty marker should survive a GC with no functions running",
+      (size_t*)gc_state.stack_map_empty < gc_state.next_alloc);
+
+  return NULL;
+}
+
 char* gc_test() {
   if (verbose)
     printf(
@@ -729,12 +767,13 @@ char* gc_test() {
         "                              Garbage Collector tests\n");
 
   mu_run_test(gc_replay_test);
-  mu_run_test(replay_scenario_tests); // broken
+  mu_run_test(replay_scenario_tests);
   mu_run_test(stackmap_mark_test);
   mu_run_test(gc_bitmap_test);
   mu_run_test(gc_dead_between_test);
   mu_run_test(gc_mark_compact_test);
   mu_run_test(gc_bitmap_next_test);
+  mu_run_test(gc_stack_empty_survival_test);
 
   return NULL;
 }
