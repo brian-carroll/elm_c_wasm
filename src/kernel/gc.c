@@ -107,7 +107,7 @@ int GC_init() {
 
   // Ask the system for more memory
   size_t top_of_current_page = (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
-  size_t pages = 1;
+  size_t pages = 16;
   size_t* top_of_nth_page =
       (size_t*)(top_of_current_page + (pages * GC_WASM_PAGE_BYTES) + 1);
 
