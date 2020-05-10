@@ -51,6 +51,9 @@ www-debug: clean www
 www-release: clean www
 	@:
 
+node: $(SRC)/test/test-runner.js $(DIST)/www/test.html
+	node $< --all
+
 gc-size:
 	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/www/gc.js
 	ls -lh $(DIST)/www/gc.wasm
