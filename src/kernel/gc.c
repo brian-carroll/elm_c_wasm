@@ -764,7 +764,7 @@ int main(int argc, char** argv) {
   // coming from outside world so compiler can't eliminate.
   // We don't need to run this, just compile it,
   // so segfaults are not an issue!
-  ElmValue** root = (ElmValue**)argv[0];
+  void** root = (void**)argv[0];
   size_t word = (size_t)argc;
   size_t* pword = (size_t*)argv[3];
   Closure* c = (Closure*)argv[1];
@@ -779,7 +779,7 @@ int main(int argc, char** argv) {
   GC_memcpy(dest, src, word);
 
   void* push = GC_stack_push();
-  // GC_stack_tailcall(c, push);
+  GC_stack_tailcall(c, push);
   GC_stack_pop(v, push);
 
   mark(state, pword);
@@ -789,7 +789,7 @@ int main(int argc, char** argv) {
   GC_tce_iteration(word);
   GC_tce_eval(&dummy_tce_eval, NULL, 3, pointer_array);
 
-  GC_apply_replay();
+  GC_apply_replay(&push);
 
   return 0;
 }

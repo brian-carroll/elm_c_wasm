@@ -18,7 +18,7 @@ HEADERS := $(KHEADERS) $(THEADERS)
 DATA_TSV := $(shell find $(SRC) -name '*.tsv')
 DATA_INC := $(DATA_TSV:.tsv=.inc)
 
-.PHONY: all check dist www gc-size clean watch benchmark codegen
+.PHONY: all check check-bin check-node debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
 all: check
@@ -54,7 +54,7 @@ www-debug: www
 
 gc-size:
 	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/www/gc.js
-	ls -lh $(DIST)/www/gc.wasm
+	/bin/ls -lh $(DIST)/www/gc.wasm
 
 clean:
 	@echo 'Deleting generated files'
