@@ -15,6 +15,7 @@ set -x
 
 emcc build/emscripten/$FILENAME.c \
   $KERNELS \
+  --pre-js ../../src/kernel/wrapper/emscripten-module.js \
   --js-library ../../src/kernel/wrapper/imports.js \
   -o build/emscripten/$FILENAME.js \
   -Wno-incompatible-pointer-types \
