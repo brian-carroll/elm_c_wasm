@@ -127,7 +127,6 @@ char* test_replay_tce_curried_iter1() {
 
   void* tc1 = push + sizeof(GcStackMap) + (sizeof(Closure) + 2 * sizeof(void*));
   void* iter1_result = tc1 + sizeof(GcStackMap) + 2 * sizeof(ElmInt);
-  void* tc2 = iter1_result + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*));
 
   full_spec2.values[0] = iter1_result;
 
