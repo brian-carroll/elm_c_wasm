@@ -1,4 +1,3 @@
-CC=gcc
 CFLAGS=-Wall -O1
 
 ROOT := .
@@ -22,17 +21,22 @@ DATA_INC := $(DATA_TSV:.tsv=.inc)
 .PHONY: all check dist www gc-size clean watch benchmark codegen
 
 # 'all' = default for `make` with no arguments
-all: $(DIST)/bin/test
-	$(DIST)/bin/test --verbose --all --gc=skip
+all: check
+	@:
 
-check: $(DIST)/bin/test
+check: check-bin check-node
+	@:
+
+check-bin: $(DIST)/bin/test
+	@echo "\n\nRunning tests with binary executable"
 	$(DIST)/bin/test --all
+
+check-node: $(TEST)/test-runner.js $(DIST)/www/test.html
+	@echo "\n\nRunning tests with Node.js WebAssembly"
+	node $< --all
 
 debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
 debug: $(DIST)/bin/test
-	@:
-
-release: clean all
 	@:
 
 verbose: $(DIST)/bin/test
@@ -44,15 +48,9 @@ dist: clean check www
 www: $(DIST)/www/test.html
 	@:
 
-www-debug: CFLAGS += -DDEBUG
-www-debug: clean www
+www-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
+www-debug: www
 	@:
-
-www-release: clean www
-	@:
-
-node: $(SRC)/test/test-runner.js $(DIST)/www/test.html
-	node $< --all
 
 gc-size:
 	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/www/gc.js
@@ -66,9 +64,8 @@ clean:
 watch:
 	(while true ; do make build.log; sleep 1; done) | grep -v make
 
-
 build.log: $(SOURCES) $(HEADERS)
-	make gh-pages | tee build.log
+	make check-bin | tee build.log
 
 benchmark:
 	cd $(ROOT)/demos/2019-08-benchmark && make clean && make
@@ -122,18 +119,11 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 # Binary & Wasm
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
-	$(CC) $(CFLAGS) -ggdb $(SOURCES) -o $@ -lm
+	gcc $(CFLAGS) -ggdb $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS)
 	@mkdir -p $(DIST)/www
 	emcc $(CFLAGS) $(SOURCES) -o $@
-
-$(DIST)/bin/fake-ast: $(KSOURCES) $(KHEADERS) $(SRC)/hand-compiled/fake-ast.c
-	$(CC) $(CFLAGS) $(SRC)/hand-compiled/fake-ast.c $(KSOURCES) -o $@ -lm -Wno-discarded-qualifiers
-
-$(DIST)/bin/compiled-elm: $(KSOURCES) $(KHEADERS) $(SRC)/compiled/elm.c
-	$(CC) $(CFLAGS) $(SRC)/compiled/elm.c $(KSOURCES) -o $@ -lm -Wno-discarded-qualifiers
-
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'
