@@ -440,7 +440,7 @@ void log_error(char* fmt, ...) {
   printf("False = %p\n", &False);
   fprintf(stderr, fmt, args);
   va_end(args);
-  emscripten_run_script("debugger;");
+  // emscripten_run_script("debugger;");
 }
 #else
 void log_error(char* fmt, ...) {

@@ -1,3 +1,9 @@
+Bad code gen for case:
+
+eval_elm_core_Dict_removeHelpPrepEQGT
+
+
+
 # Status 29 Apr 2020
 
 ## SPA example bugs

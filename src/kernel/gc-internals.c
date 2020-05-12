@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "./types.h"
 
@@ -195,12 +196,12 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
     ElmValue* child = child_ptr_array[i];
 
 #ifdef DEBUG
-    if ((size_t*)child > heap->end) {
+    if ((size_t)child > (size_t)heap->end) {
       log_error("BUG mark_trace: %p out of bounds, reached via %p with header tag %d\n",
           child,
           v,
           v->header.tag);
-      return;
+      assert(0);
     }
     if (child > v) {
       log_error("BUG mark_trace: older %p points to newer %p\n", v, child);

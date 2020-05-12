@@ -51,6 +51,7 @@
 */
 #include "gc.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <string.h>
@@ -180,6 +181,7 @@ void* GC_malloc(size_t bytes) {
           words,
           replay_words,
           replay);
+      assert(0);
     }
 #endif
 
@@ -351,16 +353,12 @@ void* GC_stack_tailcall(Closure* c, void* push) {
 // we can skip previous iterations (and their garbage)
 // Creates lots of extra garbage in order to be able to clean it all up!
 void* GC_tce_iteration(size_t n_args) {
-  GcState* state = &gc_state;
-  size_t closure_bytes = sizeof(Closure) + n_args * sizeof(void*);
-  size_t cont_bytes = closure_bytes + sizeof(GcStackMap);
-
-  void* tce_space = GC_malloc(cont_bytes);
-  if (tce_space != pGcFull) {
-    GcStackMap* tailcall = (GcStackMap*)(tce_space + closure_bytes);
-    state->stack_map = tailcall;
+  Closure* c = NEW_CLOSURE(n_args, n_args, NULL, NULL);
+  for (size_t i = 0; i < n_args; ++i) {
+    c->values[i] = NULL;
   }
-  return tce_space;
+  GC_stack_tailcall(c, NULL);
+  return c;
 }
 
 // Evaluate a tail call elminated Elm function,

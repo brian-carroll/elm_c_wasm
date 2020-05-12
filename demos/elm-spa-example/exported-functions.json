@@ -14,5 +14,6 @@
   "evalClosure",
   "collectGarbage",
   "debugHeapState",
+  "debugAddrRange",
   "debugEvaluatorName"
 ]
