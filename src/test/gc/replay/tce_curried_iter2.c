@@ -84,8 +84,8 @@ char* test_replay_tce_curried_iter2() {
   gc_test_reset();
 
   // RUN
-  void* partial = Utils_apply(&mock_tce_curried, 1, (void*[]){&arg_init_count});
-  void* result1 = Utils_apply(partial, 1, (void*[]){&arg_max_count});
+  void* partial = Utils_apply(&mock_tce_curried, 1, (void* []){&arg_init_count});
+  void* result1 = Utils_apply(partial, 1, (void* []){&arg_max_count});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
@@ -131,12 +131,13 @@ char* test_replay_tce_curried_iter2() {
   // GC + REPLAY
   GC_collect_full();
   GC_prep_replay();
-  partial = Utils_apply(&mock_tce_curried, 1, (void*[]){&arg_init_count});
-  Utils_apply(partial, 1, (void*[]){&arg_max_count});
+  partial = Utils_apply(&mock_tce_curried, 1, (void* []){&arg_init_count});
+  Utils_apply(partial, 1, (void* []){&arg_max_count});
 
   mark(&gc_state, gc_state.heap.start);  // make it easier to understand print_heap
 
-  void* tc1 = push + sizeof(GcStackMap) + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*));
+  void* tc1 =
+      push + sizeof(GcStackMap) + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*));
   void* final_return_val = tc1 + sizeof(GcStackMap) + 2 * sizeof(ElmInt);
 
   full_spec2.values[0] = final_return_val;

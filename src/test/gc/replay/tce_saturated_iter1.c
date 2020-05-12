@@ -69,7 +69,7 @@ char* test_replay_tce_saturated_iter1() {
 
   // RUN
   void* result1 =
-      Utils_apply(&mock_tce_sat, 2, (void*[]){&arg_init_count, &arg_max_count});
+      Utils_apply(&mock_tce_sat, 2, (void* []){&arg_init_count, &arg_max_count});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
@@ -99,7 +99,7 @@ char* test_replay_tce_saturated_iter1() {
   // GC + REPLAY
   GC_collect_full();
   GC_prep_replay();
-  Utils_apply(&mock_tce_sat, 2, (void*[]){&arg_init_count, &arg_max_count});
+  Utils_apply(&mock_tce_sat, 2, (void* []){&arg_init_count, &arg_max_count});
 
   mark(&gc_state, gc_state.heap.start);  // make it easier to understand print_heap
   void* final_return_val = h + 2 * sizeof(GcStackMap) +

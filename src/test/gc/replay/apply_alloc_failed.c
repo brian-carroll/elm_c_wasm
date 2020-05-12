@@ -21,13 +21,13 @@ char* test_replay_apply_alloc_failed() {
       gc_state.heap.end - gc_state.next_alloc,
       words_to_leave);
 
-  void* result = Utils_apply(&Utils_equal, 2, (void*[]){&Unit, &Unit});
+  void* result = Utils_apply(&Utils_equal, 2, (void* []){&Unit, &Unit});
   mu_expect_equal("Heap should overflow on making a function call", result, pGcFull);
 
   GC_collect_full();
   GC_prep_replay();
 
-  result = Utils_apply(&Utils_equal, 2, (void*[]){&Unit, &Unit});
+  result = Utils_apply(&Utils_equal, 2, (void* []){&Unit, &Unit});
 
   void* h = gc_state.heap.start;
 
