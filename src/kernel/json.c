@@ -1,5 +1,6 @@
 #include "./types.h"
 #include "./wrapper/wrapper.h"
+#include <stdio.h>
 
 #define CTOR_KERNEL_ARRAY 0xffffffff
 #define KERNEL_CTOR_OFFSET 1024 * 1000
@@ -314,13 +315,14 @@ https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
 */
 
-void* parse_bool(u16** cursor) {
+void* parse_bool(u16** cursor, u16* end) {
   u16* chars = *cursor;
-  if (chars[0] == 't' && chars[1] == 'r' && chars[2] == 'u' && chars[3] == 'e') {
+  if ((end - chars >= 4) && chars[0] == 't' && chars[1] == 'r' && chars[2] == 'u' &&
+      chars[3] == 'e') {
     *cursor += 4;
     return &True;
-  } else if (chars[0] == 'f' && chars[1] == 'a' && chars[2] == 'l' && chars[3] == 's' &&
-             chars[4] == 'e') {
+  } else if ((end - chars >= 5) && chars[0] == 'f' && chars[1] == 'a' && chars[2] == 'l' &&
+             chars[3] == 's' && chars[4] == 'e') {
     *cursor += 5;
     return &False;
   } else {
@@ -328,14 +330,43 @@ void* parse_bool(u16** cursor) {
   }
 }
 
-void* parse_null(u16** cursor) {
+void* parse_null(u16** cursor, u16* end) {
   u16* chars = *cursor;
-  if (chars[0] == 'n' && chars[1] == 'u' && chars[2] == 'l' && chars[3] == 'l') {
+  if ((end - chars >= 4) && chars[0] == 'n' && chars[1] == 'u' && chars[2] == 'l' &&
+      chars[3] == 'l') {
     *cursor += 4;
     return &JsNull;
   } else {
     return NULL;
   }
+}
+
+void* parse_int(u16** cursor, u16* end) {
+  u16* chars = *cursor;
+  i64 total = 0;
+
+  size_t negative = chars[0] == '-';
+  size_t start = negative;
+  size_t len = end - chars;
+  if (len > 11) len = 11;
+
+  size_t i;
+  for (i = start; i <= len; i++) {
+    i64 digit = chars[i] - '0';
+    if (digit < 0 || digit > 9) break;
+    total = (total * 10) + digit;
+  }
+
+  if (i == start) return NULL;  // no digits found
+  if (negative) {
+    total = -total;
+    if (total < -__INT32_MAX__ - 1) return NULL;
+  } else {
+    if (total > __INT32_MAX__) return NULL;
+  }
+
+  *cursor += i;
+  return NEW_ELM_INT((i32)total);
 }
 
 static void* eval_runOnString(void* args[]) {

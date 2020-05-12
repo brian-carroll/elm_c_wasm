@@ -1,4 +1,4 @@
-CFLAGS=-Wall -O1
+CFLAGS=-Wall
 
 ROOT := .
 SRC := $(ROOT)/src
