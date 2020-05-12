@@ -15,6 +15,7 @@ char* basics_test();
 char* string_test();
 char* char_test();
 char* list_test();
+char* json_test();
 
 int verbose = false;
 int tests_run = 0;
@@ -110,6 +111,16 @@ void* expect_equal(char* expect_description, void* left, void* right) {
   return NULL;
 }
 
+ElmString16* create_string(char* c_string) {
+  size_t c_len = (size_t)strlen(c_string);
+  size_t bytes_utf16 = c_len * 2;
+  ElmString16* s = NEW_ELM_STRING(bytes_utf16, NULL);
+  for (size_t i = 0; i < c_len; i++) {
+    s->words16[i] = (u16)c_string[i];
+  }
+  return s;
+}
+
 // Debug function, with pre-allocated memory for strings
 // Avoiding use of malloc in test code in case it screws up GC
 // A single printf may require many separate hex strings
@@ -142,8 +153,14 @@ char* hex_ptr(void* ptr) {
   return hex(&ptr, sizeof(void*));
 }
 
-char* test_all(
-    bool types, bool utils, bool basics, bool string, bool chr, bool list, bool gc) {
+char* test_all(bool types,
+    bool utils,
+    bool basics,
+    bool string,
+    bool chr,
+    bool list,
+    bool json,
+    bool gc) {
   if (verbose) {
     printf("Selected tests: ");
     if (types) printf("types ");
@@ -152,6 +169,7 @@ char* test_all(
     if (string) printf("string ");
     if (chr) printf("char ");
     if (list) printf("list ");
+    if (json) printf("json ");
     if (gc) printf("gc ");
     printf("\n\n");
   }
@@ -161,6 +179,7 @@ char* test_all(
   if (string) mu_run_test(string_test);
   if (chr) mu_run_test(char_test);
   if (list) mu_run_test(list_test);
+  if (json) mu_run_test(json_test);
   if (gc) mu_run_test(gc_test);
 
   return NULL;
@@ -178,6 +197,7 @@ int main(int argc, char** argv) {
       {"string", optional_argument, NULL, 's'},
       {"char", optional_argument, NULL, 'c'},
       {"list", optional_argument, NULL, 'l'},
+      {"json", optional_argument, NULL, 'j'},
       {"gc", optional_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
   };
@@ -189,6 +209,7 @@ int main(int argc, char** argv) {
   bool chr = false;
   bool utils = false;
   bool list = false;
+  bool json = false;
   bool gc = false;
 
 // Running in a Windows CMD shell
@@ -199,7 +220,7 @@ int main(int argc, char** argv) {
   verbose = true;
 #endif
 
-  char options[] = "vatubsclg";
+  char options[] = "vatubscljg";
 
   int opt;
   while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
@@ -214,6 +235,7 @@ int main(int argc, char** argv) {
         string = true;
         chr = true;
         list = true;
+        json = true;
         gc = true;
         break;
       case 't':
@@ -234,6 +256,9 @@ int main(int argc, char** argv) {
       case 'l':
         list = !optarg;
         break;
+      case 'j':
+        json = !optarg;
+        break;
       case 'g':
         gc = !optarg;
         break;
@@ -243,7 +268,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  test_all(types, utils, basics, string, chr, list, gc);
+  test_all(types, utils, basics, string, chr, list, json, gc);
   int exit_code;
 
   if (tests_failed) {

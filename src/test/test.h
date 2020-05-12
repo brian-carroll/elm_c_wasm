@@ -1,5 +1,6 @@
 #define __USE_MINGW_ANSI_STDIO 1
 #include <stdio.h>
+#include "../kernel/types.h"
 
 // ---------------------------------------------------------
 //
@@ -50,3 +51,4 @@ extern void* test_heap_ptr;
 
 void describe(char* description, void* (*test)());
 void* expect_equal(char* expect_description, void* left, void* right);
+ElmString16* create_string(char* c_string);

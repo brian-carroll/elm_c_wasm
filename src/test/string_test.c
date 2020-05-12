@@ -16,16 +16,6 @@ ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len);
 //
 // ---------------------------------------------------------
 
-ElmString16* create_string(char* c_string) {
-  size_t c_len = (size_t)strlen(c_string);
-  size_t bytes_utf16 = c_len * 2;
-  ElmString16* s = NEW_ELM_STRING(bytes_utf16, NULL);
-  for (size_t i = 0; i < c_len; i++) {
-    s->words16[i] = (u16)c_string[i];
-  }
-  return s;
-}
-
 void print_elm_string(ElmString16* str) {
   size_t len = code_units(str);
   printf("\"");

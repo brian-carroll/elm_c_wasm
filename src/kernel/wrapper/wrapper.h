@@ -8,5 +8,6 @@ extern FieldGroup* Wrapper_appFieldGroups[];
 extern void** Wrapper_mainsArray[];
 
 void* Wrapper_callJsSync(size_t jsFnIndex, u16 n_args, void* args[]);
+Custom JsNull;
 
 #endif

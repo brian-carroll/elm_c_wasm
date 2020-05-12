@@ -298,8 +298,9 @@ https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 - list
   - parse an array and create a Cons each time
 - array
-  - parse an array and create a red-black thingummy each time
+  - parse an array and call g_elm_core_Array_insert each time
 - field
+  - run through the field string, matching all the chars
   - grab the string and pass it to the decoder
 - index
   - skip through an array and then recurse
@@ -313,17 +314,29 @@ https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
 */
 
-static void* eval_run(void* args[]) {
-  size_t jsIndex = (size_t)args[0];
-  return Wrapper_callJsSync(jsIndex, 2, &args[1]);
+void* parse_bool(u16** cursor) {
+  u16* chars = *cursor;
+  if (chars[0] == 't' && chars[1] == 'r' && chars[2] == 'u' && chars[3] == 'e') {
+    *cursor += 4;
+    return &True;
+  } else if (chars[0] == 'f' && chars[1] == 'a' && chars[2] == 'l' && chars[3] == 's' &&
+             chars[4] == 'e') {
+    *cursor += 5;
+    return &False;
+  } else {
+    return NULL;
+  }
 }
-Closure Json_run = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 1,
-    .max_values = 3,
-    .evaluator = &eval_run,
-    .values = {NULL},
-};
+
+void* parse_null(u16** cursor) {
+  u16* chars = *cursor;
+  if (chars[0] == 'n' && chars[1] == 'u' && chars[2] == 'l' && chars[3] == 'l') {
+    *cursor += 4;
+    return &JsNull;
+  } else {
+    return NULL;
+  }
+}
 
 static void* eval_runOnString(void* args[]) {
   size_t jsIndex = (size_t)args[0];
@@ -334,6 +347,18 @@ Closure Json_runOnString = {
     .n_values = 1,
     .max_values = 3,
     .evaluator = &eval_runOnString,
+    .values = {NULL},
+};
+
+static void* eval_run(void* args[]) {
+  size_t jsIndex = (size_t)args[0];
+  return Wrapper_callJsSync(jsIndex, 2, &args[1]);
+}
+Closure Json_run = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 1,
+    .max_values = 3,
+    .evaluator = &eval_run,
     .values = {NULL},
 };
 
