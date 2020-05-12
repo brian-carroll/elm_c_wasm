@@ -119,7 +119,7 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 # Binary & Wasm
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
-	gcc $(CFLAGS) -ggdb $(SOURCES) -o $@ -lm
+	gcc $(CFLAGS) $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
 	@mkdir -p $(DIST)/www

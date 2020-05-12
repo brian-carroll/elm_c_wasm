@@ -103,6 +103,57 @@ void* test_Json_parse_int() {
   return NULL;
 }
 
+void* parse_float(u16** cursor, u16* end);
+void* test_Json_parse_float() {
+  ElmString16* json;
+  u16* cursor;
+  void* result;
+
+  json = create_string("123.456");
+  cursor = json->words16;
+  result = parse_float(&cursor, cursor + code_units(json));
+  expect_equal("parse_float(\"123.456\") == 123.456", result, NEW_ELM_FLOAT(123.456));
+  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 7);
+
+  json = create_string("-123.456");
+  cursor = json->words16;
+  result = parse_float(&cursor, cursor + code_units(json));
+  expect_equal("parse_float(\"-123.456\") == -123.456", result, NEW_ELM_FLOAT(-123.456));
+  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 8);
+
+  json = create_string("-123.456e-3");
+  cursor = json->words16;
+  result = parse_float(&cursor, cursor + code_units(json));
+  expect_equal("parse_float(\"-123.456e-3\") == -123.456e-3", result, NEW_ELM_FLOAT(-123.456e-3));
+  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 11);
+
+  json = create_string("-123.456E+1");
+  cursor = json->words16;
+  result = parse_float(&cursor, cursor + code_units(json));
+  expect_equal("parse_float(\"-123.456E+1\") == -1234.56", result, NEW_ELM_FLOAT(-1234.56));
+  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 11);
+
+  json = create_string("");
+  cursor = json->words16;
+  result = parse_float(&cursor, cursor + code_units(json));
+  mu_expect_equal("parse_float(\"\") == NULL", result, NULL);
+  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
+
+  json = create_string("-+e");
+  cursor = json->words16;
+  result = parse_float(&cursor, cursor + code_units(json));
+  mu_expect_equal("parse_float(\"-+e\") == NULL", result, NULL);
+  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
+
+  json = create_string("abc");
+  cursor = json->words16;
+  result = parse_float(&cursor, cursor + code_units(json));
+  mu_expect_equal("parse_float(\"abc\") == NULL", result, NULL);
+  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
+
+  return NULL;
+}
+
 char* json_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -115,6 +166,7 @@ char* json_test() {
   describe("test_Json_parse_bool", test_Json_parse_bool);
   describe("test_Json_parse_null", test_Json_parse_null);
   describe("test_Json_parse_int", test_Json_parse_int);
+  describe("test_Json_parse_float", test_Json_parse_float);
 
   return NULL;
 }

@@ -1,6 +1,6 @@
+#include <stdio.h>
 #include "./types.h"
 #include "./wrapper/wrapper.h"
-#include <stdio.h>
 
 #define CTOR_KERNEL_ARRAY 0xffffffff
 #define KERNEL_CTOR_OFFSET 1024 * 1000
@@ -321,8 +321,8 @@ void* parse_bool(u16** cursor, u16* end) {
       chars[3] == 'e') {
     *cursor += 4;
     return &True;
-  } else if ((end - chars >= 5) && chars[0] == 'f' && chars[1] == 'a' && chars[2] == 'l' &&
-             chars[3] == 's' && chars[4] == 'e') {
+  } else if ((end - chars >= 5) && chars[0] == 'f' && chars[1] == 'a' &&
+             chars[2] == 'l' && chars[3] == 's' && chars[4] == 'e') {
     *cursor += 5;
     return &False;
   } else {
@@ -367,6 +367,34 @@ void* parse_int(u16** cursor, u16* end) {
 
   *cursor += i;
   return NEW_ELM_INT((i32)total);
+}
+
+void* parse_float(u16** cursor, u16* end) {
+  u16* chars = *cursor;
+
+  size_t max = end - chars;
+  if (max > 31) max = 31;
+
+  char digits[32];
+  size_t d = 0;
+  for (size_t i = 0; i < max; i++) {
+    char c = (char)chars[i];
+    if ((c >= '0' && c <= '9') || c == '-' || c == '+' || c == 'e' || c == 'E' ||
+        c == '.') {
+      digits[d++] = c;
+    } else {
+      break;
+    }
+  }
+  if (!d) return NULL;
+  digits[d] = '\0';
+
+  f64 f;
+  int success = sscanf(digits, "%lg", &f);
+  if (!success) return NULL;
+
+  *cursor += d;
+  return NEW_ELM_FLOAT(f);
 }
 
 static void* eval_runOnString(void* args[]) {
