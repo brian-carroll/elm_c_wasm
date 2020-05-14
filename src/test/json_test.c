@@ -1,156 +1,88 @@
+#include <stddef.h>
+
 #include "../kernel/kernel.h"
 #include "./test.h"
 
+#define PARSE_TEST_MSG_LEN 1024
+char parse_test_msg[PARSE_TEST_MSG_LEN];
+
+char* parse_test_helper(void* (*parse_func)(u16** cursor, u16* end),
+    ElmString16* json,
+    void* expect_val,
+    size_t expect_chars_consumed) {
+  // ---
+  size_t len = code_units(json);
+  u16* cursor = json->words16;
+  void* result = (*parse_func)(&cursor, cursor + len);
+
+  int msg_prefix_len =
+      sprintf(parse_test_msg, "should %s '", expect_val ? "parse" : "reject");
+  int i;
+  for (i = 0; i < len && i < PARSE_TEST_MSG_LEN; i++) {
+    u16 c = json->words16[i];
+    parse_test_msg[msg_prefix_len + i] = (c > 255) ? '#' : c;
+  }
+  parse_test_msg[msg_prefix_len + i] = '\'';
+  parse_test_msg[msg_prefix_len + i + 1] = 0;
+
+  ptrdiff_t consumed = cursor - json->words16;
+
+  if (expect_val == NULL) {
+    mu_assert(parse_test_msg, result == NULL && consumed == 0);
+  } else if (consumed != expect_chars_consumed) {
+    printf("FAIL: %s\n", parse_test_msg);
+    printf("Expected to consume %zd characters but consumed %zd\n",
+        expect_chars_consumed,
+        consumed);
+    assertions_made++;
+    tests_failed++;
+  } else {
+    expect_equal(parse_test_msg, result, expect_val);
+  }
+
+  return NULL;
+}
+
 void* parse_bool(u16** cursor, u16* end);
 void* test_Json_parse_bool() {
-  ElmString16* json;
-  u16* cursor;
-  void* result;
-
-  json = create_string("true");
-  cursor = json->words16;
-  result = parse_bool(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_bool(\"true\") == True", result, &True);
-  mu_expect_equal(
-      "should advance cursor to the end of 'true'", cursor - json->words16, 4);
-
-  json = create_string("false");
-  cursor = json->words16;
-  result = parse_bool(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_bool(\"false\") == False", result, &False);
-  mu_expect_equal(
-      "should advance cursor to the end of 'false'", cursor - json->words16, 5);
-
-  json = create_string("truck");
-  cursor = json->words16;
-  result = parse_bool(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_bool(\"truck\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor for 'truck'", cursor - json->words16, 0);
-
-  json = create_string("f");
-  cursor = json->words16;
-  result = parse_bool(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_bool(\"f\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor for 'f'", cursor - json->words16, 0);
-
+  parse_test_helper(&parse_bool, create_string("true"), &True, 4);
+  parse_test_helper(&parse_bool, create_string("false"), &False, 5);
+  parse_test_helper(&parse_bool, create_string("truck"), NULL, 0);
+  parse_test_helper(&parse_bool, create_string("f"), NULL, 0);
+  parse_test_helper(&parse_bool, create_string(""), NULL, 0);
   return NULL;
 }
 
 void* parse_null(u16** cursor, u16* end);
 void* test_Json_parse_null() {
-  ElmString16* json;
-  u16* cursor;
-  void* result;
-
-  json = create_string("null");
-  cursor = json->words16;
-  result = parse_null(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_null(\"null\") == JsNull", result, &JsNull);
-  mu_expect_equal(
-      "should advance cursor to the end of 'null'", cursor - json->words16, 4);
-
-  json = create_string("nule");
-  cursor = json->words16;
-  result = parse_null(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_null(\"nule\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor for 'nule'", cursor - json->words16, 0);
-
-  json = create_string("n");
-  cursor = json->words16;
-  result = parse_null(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_null(\"n\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor for 'n'", cursor - json->words16, 0);
-
+  parse_test_helper(&parse_null, create_string("null"), &JsNull, 4);
+  parse_test_helper(&parse_null, create_string("nule"), NULL, 0);
+  parse_test_helper(&parse_null, create_string("n"), NULL, 0);
+  parse_test_helper(&parse_null, create_string(""), NULL, 0);
   return NULL;
 }
 
 void* parse_int(u16** cursor, u16* end);
 void* test_Json_parse_int() {
-  ElmString16* json;
-  u16* cursor;
-  void* result;
-
-  json = create_string("123");
-  cursor = json->words16;
-  result = parse_int(&cursor, cursor + code_units(json));
-  expect_equal("parse_int(\"123\") == 123", result, NEW_ELM_INT(123));
-  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 3);
-
-  json = create_string("-123");
-  cursor = json->words16;
-  result = parse_int(&cursor, cursor + code_units(json));
-  expect_equal("parse_int(\"-123\") == -123", result, NEW_ELM_INT(-123));
-  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 4);
-
-  json = create_string("");
-  cursor = json->words16;
-  result = parse_int(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_int(\"\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
-
-  json = create_string("-");
-  cursor = json->words16;
-  result = parse_int(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_int(\"-\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
-
-  json = create_string("abc");
-  cursor = json->words16;
-  result = parse_int(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_int(\"abc\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
-
+  parse_test_helper(&parse_int, create_string("123"), NEW_ELM_INT(123), 3);
+  parse_test_helper(&parse_int, create_string("-123"), NEW_ELM_INT(-123), 4);
+  parse_test_helper(&parse_int, create_string(""), NULL, 0);
+  parse_test_helper(&parse_int, create_string("-"), NULL, 0);
+  parse_test_helper(&parse_int, create_string("abc"), NULL, 0);
   return NULL;
 }
 
 void* parse_float(u16** cursor, u16* end);
 void* test_Json_parse_float() {
-  ElmString16* json;
-  u16* cursor;
-  void* result;
-
-  json = create_string("123.456");
-  cursor = json->words16;
-  result = parse_float(&cursor, cursor + code_units(json));
-  expect_equal("parse_float(\"123.456\") == 123.456", result, NEW_ELM_FLOAT(123.456));
-  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 7);
-
-  json = create_string("-123.456");
-  cursor = json->words16;
-  result = parse_float(&cursor, cursor + code_units(json));
-  expect_equal("parse_float(\"-123.456\") == -123.456", result, NEW_ELM_FLOAT(-123.456));
-  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 8);
-
-  json = create_string("-123.456e-3");
-  cursor = json->words16;
-  result = parse_float(&cursor, cursor + code_units(json));
-  expect_equal("parse_float(\"-123.456e-3\") == -123.456e-3", result, NEW_ELM_FLOAT(-123.456e-3));
-  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 11);
-
-  json = create_string("-123.456E+1");
-  cursor = json->words16;
-  result = parse_float(&cursor, cursor + code_units(json));
-  expect_equal("parse_float(\"-123.456E+1\") == -1234.56", result, NEW_ELM_FLOAT(-1234.56));
-  mu_expect_equal("should advance cursor to the end", cursor - json->words16, 11);
-
-  json = create_string("");
-  cursor = json->words16;
-  result = parse_float(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_float(\"\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
-
-  json = create_string("-+e");
-  cursor = json->words16;
-  result = parse_float(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_float(\"-+e\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
-
-  json = create_string("abc");
-  cursor = json->words16;
-  result = parse_float(&cursor, cursor + code_units(json));
-  mu_expect_equal("parse_float(\"abc\") == NULL", result, NULL);
-  mu_expect_equal("should not move cursor", cursor - json->words16, 0);
-
+  parse_test_helper(&parse_float, create_string("123.456"), NEW_ELM_FLOAT(123.456), 7);
+  parse_test_helper(&parse_float, create_string("-123.456"), NEW_ELM_FLOAT(-123.456), 8);
+  parse_test_helper(
+      &parse_float, create_string("-123.456e-3"), NEW_ELM_FLOAT(-123.456e-3), 11);
+  parse_test_helper(
+      &parse_float, create_string("-123.456E+1"), NEW_ELM_FLOAT(-1234.56), 11);
+  parse_test_helper(&parse_float, create_string(""), NULL, 0);
+  parse_test_helper(&parse_float, create_string("-+e"), NULL, 0);
+  parse_test_helper(&parse_float, create_string("abc"), NULL, 0);
   return NULL;
 }
 
