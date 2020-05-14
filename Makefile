@@ -35,7 +35,7 @@ check-node: $(TEST)/test-runner.js $(DIST)/www/test.html
 	@echo "\n\nRunning tests with Node.js WebAssembly"
 	node $< --all
 
-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
+debug: CFLAGS = -Wall -ggdb -DDEBUG -DDEBUG_LOG
 debug: $(DIST)/bin/test
 	@:
 

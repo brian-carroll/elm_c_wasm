@@ -15,8 +15,13 @@ char* parse_test_helper(void* (*parse_func)(u16** cursor, u16* end),
   u16* cursor = json->words16;
   void* result = (*parse_func)(&cursor, cursor + len);
 
-  int msg_prefix_len =
-      sprintf(parse_test_msg, "should %s '", expect_val ? "parse" : "reject");
+  int msg_prefix_len;
+  if (expect_val) {
+    msg_prefix_len = sprintf(
+        parse_test_msg, "should correctly parse %zd chars from '", expect_chars_consumed);
+  } else {
+    msg_prefix_len = sprintf(parse_test_msg, "should reject '");
+  }
   int i;
   for (i = 0; i < len && i < PARSE_TEST_MSG_LEN; i++) {
     u16 c = json->words16[i];
@@ -86,6 +91,79 @@ void* test_Json_parse_float() {
   return NULL;
 }
 
+#define DQUOTE "\""
+void* parse_string(u16** cursor, u16* end);
+ElmString16 unicode_test_string = {
+    .header = HEADER_STRING(2), .words16 = {0xD852, 0xDF62},  // 𤭢
+};
+
+void* test_Json_parse_string() {
+  // valid strings
+  parse_test_helper(
+      &parse_string, create_string(DQUOTE "hello" DQUOTE), create_string("hello"), 7);
+
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "hello" DQUOTE ": 123"),
+      create_string("hello"),
+      7);
+
+  parse_test_helper(&parse_string, create_string(DQUOTE DQUOTE), create_string(""), 2);
+
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "\\\""
+                           "\\\\"
+                           "\\/"
+                           "\\b"
+                           "\\f"
+                           "\\n"
+                           "\\r"
+                           "\\t" DQUOTE),
+      create_string("\""
+                    "\\"
+                    "/"
+                    "\b"
+                    "\f"
+                    "\n"
+                    "\r"
+                    "\t"),
+      18);
+
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "\\uD852\\uDF62" DQUOTE),
+      &unicode_test_string,
+      14);
+
+  // invalid JSON strings
+  parse_test_helper(
+      &parse_string, create_string("hello" DQUOTE), NULL, 0);  // no opening quotes
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "hello"),  // no closing quotes
+      NULL,
+      0);
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "\\g" DQUOTE),  // unknown escaped character
+      NULL,
+      0);
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "\\u123" DQUOTE),  // unicode sequence too short
+      NULL,
+      0);
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "\\u123X" DQUOTE),  // unicode sequence non-hex
+      NULL,
+      0);
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "\\" DQUOTE),  // escaped closing quote
+      NULL,
+      0);
+  parse_test_helper(&parse_string,
+      create_string(DQUOTE "hello\\"),  // escape char at end of input
+      NULL,
+      0);
+
+  return NULL;
+}
+
 char* json_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -99,6 +177,7 @@ char* json_test() {
   describe("test_Json_parse_null", test_Json_parse_null);
   describe("test_Json_parse_int", test_Json_parse_int);
   describe("test_Json_parse_float", test_Json_parse_float);
+  describe("test_Json_parse_string", test_Json_parse_string);
 
   return NULL;
 }

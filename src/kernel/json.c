@@ -1,4 +1,6 @@
 #include <stdio.h>
+
+#include "./gc.h"
 #include "./types.h"
 #include "./wrapper/wrapper.h"
 
@@ -65,7 +67,7 @@ Custom Json_decodeString = {
 
 static void* eval_Json_decodeList(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(LIST, 2, ((void* []){&Unit, decoder}));
+  return NEW_CUSTOM(LIST, 2, ((void*[]){&Unit, decoder}));
 }
 Closure Json_decodeList = {
     .header = HEADER_CLOSURE(0),
@@ -75,7 +77,7 @@ Closure Json_decodeList = {
 
 static void* eval_Json_decodeArray(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(ARRAY, 2, ((void* []){&Unit, decoder}));
+  return NEW_CUSTOM(ARRAY, 2, ((void*[]){&Unit, decoder}));
 }
 Closure Json_decodeArray = {
     .header = HEADER_CLOSURE(0),
@@ -85,7 +87,7 @@ Closure Json_decodeArray = {
 
 static void* eval_Json_decodeNull(void* args[]) {
   void* value = args[0];
-  return NEW_CUSTOM(NULL_, 3, ((void* []){&Unit, &Unit, value}));
+  return NEW_CUSTOM(NULL_, 3, ((void*[]){&Unit, &Unit, value}));
 }
 Closure Json_decodeNull = {
     .header = HEADER_CLOSURE(0),
@@ -98,7 +100,7 @@ static void* eval_Json_decodeField(void* args[]) {
   void* decoder = args[1];
   return NEW_CUSTOM(FIELD,
       4,
-      ((void* []){
+      ((void*[]){
           /*a*/ &Unit,
           /*b*/ decoder,
           /*c*/ &Unit,
@@ -116,7 +118,7 @@ static void* eval_Json_decodeIndex(void* args[]) {
   void* decoder = args[1];
   return NEW_CUSTOM(INDEX,
       5,
-      ((void* []){
+      ((void*[]){
           /*a*/ &Unit,
           /*b*/ decoder,
           /*c*/ &Unit,
@@ -132,7 +134,7 @@ Closure Json_decodeIndex = {
 
 static void* eval_Json_decodeKeyValuePairs(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(KEY_VALUE, 2, ((void* []){&Unit, decoder}));
+  return NEW_CUSTOM(KEY_VALUE, 2, ((void*[]){&Unit, decoder}));
 }
 Closure Json_decodeKeyValuePairs = {
     .header = HEADER_CLOSURE(0),
@@ -145,7 +147,7 @@ static void* eval_Json_andThen(void* args[]) {
   void* decoder = args[1];
   return NEW_CUSTOM(AND_THEN,
       8,
-      ((void* []){
+      ((void*[]){
           /*a*/ &Unit,
           /*b*/ decoder,
           /*c*/ &Unit,
@@ -166,7 +168,7 @@ static void* eval_Json_oneOf(void* args[]) {
   void* decoders = args[0];
   return NEW_CUSTOM(ONE_OF,
       7,
-      ((void* []){
+      ((void*[]){
           /*a*/ &Unit,
           /*b*/ &Unit,
           /*c*/ &Unit,
@@ -194,7 +196,7 @@ static void* eval_Json_mapMany(void* args[]) {
   Custom* decoders = NEW_CUSTOM(CTOR_KERNEL_ARRAY, (u32)n_decoders, &args[2]);
   return NEW_CUSTOM(MAP,
       7,
-      ((void* []){
+      ((void*[]){
           /*a*/ &Unit,
           /*b*/ &Unit,
           /*c*/ &Unit,
@@ -317,12 +319,13 @@ https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
 void* parse_bool(u16** cursor, u16* end) {
   u16* chars = *cursor;
-  if ((end - chars >= 4) && chars[0] == 't' && chars[1] == 'r' && chars[2] == 'u' &&
+  size_t len = end - chars;
+  if (len >= 4 && chars[0] == 't' && chars[1] == 'r' && chars[2] == 'u' &&
       chars[3] == 'e') {
     *cursor += 4;
     return &True;
-  } else if ((end - chars >= 5) && chars[0] == 'f' && chars[1] == 'a' &&
-             chars[2] == 'l' && chars[3] == 's' && chars[4] == 'e') {
+  } else if (len >= 5 && chars[0] == 'f' && chars[1] == 'a' && chars[2] == 'l' &&
+             chars[3] == 's' && chars[4] == 'e') {
     *cursor += 5;
     return &False;
   } else {
@@ -332,7 +335,8 @@ void* parse_bool(u16** cursor, u16* end) {
 
 void* parse_null(u16** cursor, u16* end) {
   u16* chars = *cursor;
-  if ((end - chars >= 4) && chars[0] == 'n' && chars[1] == 'u' && chars[2] == 'l' &&
+  size_t len = end - chars;
+  if (len >= 4 && chars[0] == 'n' && chars[1] == 'u' && chars[2] == 'l' &&
       chars[3] == 'l') {
     *cursor += 4;
     return &JsNull;
@@ -395,6 +399,100 @@ void* parse_float(u16** cursor, u16* end) {
 
   *cursor += d;
   return NEW_ELM_FLOAT(f);
+}
+
+void* parse_string(u16** cursor, u16* end) {
+  const size_t ALLOC_CHUNK_BYTES =
+      32;  // Gradually grow the output string in chunks this big
+  ElmString16* str = NEW_ELM_STRING16(ALLOC_CHUNK_BYTES / 2);
+  u16* str_end = &str->words16[ALLOC_CHUNK_BYTES / 2];
+
+  u16* from = *cursor;
+  u16* to = str->words16;
+
+  if (from >= end) return NULL;  // make sure it's safe to deref
+  if (*from != '"') return NULL;
+  from++;
+
+  for (;; to++, from++) {
+    if (from >= end) return NULL;
+    if (*from == '"') break;
+
+    if (to >= str_end) {
+      // Grow output string as needed, taking advantage of GC 'bump allocation'
+      void* more_space = GC_malloc(ALLOC_CHUNK_BYTES);
+      if (more_space == pGcFull) return pGcFull;
+      str->header.size += ALLOC_CHUNK_BYTES / SIZE_UNIT;
+      str_end += ALLOC_CHUNK_BYTES / 2;
+    }
+
+    if (*from == '\\') {
+      from++;
+      if (from >= end) return NULL;
+      switch (*from) {
+        case '"':
+        case '\\':
+        case '/':
+          *to = *from;
+          break;
+        case 'b':
+          *to = '\b';
+          break;
+        case 'f':
+          *to = '\f';
+          break;
+        case 'n':
+          *to = '\n';
+          break;
+        case 'r':
+          *to = '\r';
+          break;
+        case 't':
+          *to = '\t';
+          break;
+        case 'u': {
+          from++;
+          if (from + 4 >= end) return NULL;
+          u16 c = 0;
+          for (size_t i = 0; i < 4; i++) {
+            u16 h = from[i];
+            if (h >= '0' && h <= '9') {
+              c = (c * 16) + h - '0';
+            } else if (h >= 'a' && h <= 'f') {
+              c = (c * 16) + 10 + h - 'a';
+            } else if (h >= 'A' && h <= 'F') {
+              c = (c * 16) + 10 + h - 'A';
+            } else {
+              return NULL;
+            }
+          }
+          from += 3;  // we'll get another +1 in the for loop
+          *to = c;
+          break;
+        }
+        default:
+          return NULL;
+      }
+    } else if (*from > 0x1f) {
+      *to = *from;
+    } else {
+      return NULL;
+    }
+  }
+
+  // normalise the string length, chopping off any over-allocated space
+  size_t truncated_str_end_addr = ((size_t)to + SIZE_UNIT - 1) & (-SIZE_UNIT);
+  size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
+  str->header.size = (u32)final_size;
+
+  // zero out the unused characters at the end
+  for (; to < str_end; to++) {
+    *to = 0;
+  }
+
+  *cursor = ++from;
+
+  return str;
 }
 
 static void* eval_runOnString(void* args[]) {
