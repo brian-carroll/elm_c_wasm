@@ -407,28 +407,29 @@ void* parse_float(u16** cursor, u16* end) {
 }
 
 void* parse_string(u16** cursor, u16* end) {
-  const size_t ALLOC_CHUNK_BYTES =
-      32;  // Gradually grow the output string in chunks this big
-  ElmString16* str = NEW_ELM_STRING16(ALLOC_CHUNK_BYTES / 2);
-  u16* str_end = &str->words16[ALLOC_CHUNK_BYTES / 2];
-
   u16* from = *cursor;
-  u16* to = str->words16;
+  u16* to;
 
   if (from >= end) return NULL;  // make sure it's safe to deref
   if (*from != '"') return NULL;
   from++;
 
-  for (;; to++, from++) {
+
+  size_t alloc_chunk_bytes = 4 * SIZE_UNIT;  // Grow the output string in chunks this big
+  ElmString16* str = NEW_ELM_STRING16(alloc_chunk_bytes / 2);
+  u16* str_end = &str->words16[alloc_chunk_bytes / 2];
+
+  for (to = str->words16;; to++, from++) {
     if (from >= end) return NULL;
     if (*from == '"') break;
 
     if (to >= str_end) {
       // Grow output string as needed, taking advantage of GC 'bump allocation'
-      void* more_space = GC_malloc(ALLOC_CHUNK_BYTES);
+      void* more_space = GC_malloc(alloc_chunk_bytes);
       if (more_space == pGcFull) return pGcFull;
-      str->header.size += ALLOC_CHUNK_BYTES / SIZE_UNIT;
-      str_end += ALLOC_CHUNK_BYTES / 2;
+      str->header.size += alloc_chunk_bytes / SIZE_UNIT;
+      str_end += alloc_chunk_bytes / 2;
+      if (alloc_chunk_bytes < 1024) alloc_chunk_bytes *= 2;
     }
 
     if (*from == '\\') {
@@ -489,9 +490,7 @@ void* parse_string(u16** cursor, u16* end) {
   size_t truncated_str_end_addr = ((size_t)to + SIZE_UNIT - 1) & (-SIZE_UNIT);
   size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
   str->header.size = (u32)final_size;
-
-  // zero out the unused characters at the end
-  for (; to < str_end; to++) {
+  for (; to < (u16*)truncated_str_end_addr; to++) {
     *to = 0;
   }
 
