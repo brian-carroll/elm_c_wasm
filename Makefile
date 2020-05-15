@@ -123,7 +123,7 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
 	@mkdir -p $(DIST)/www
-	emcc $(CFLAGS) $(SOURCES) -o $@
+	emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'
