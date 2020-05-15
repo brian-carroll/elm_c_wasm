@@ -532,7 +532,9 @@ void gc_debug_stack_trace(GcStackMap* p, Closure* c) {
   // }
 
   if (sn_idx < MAX_STACKMAP_NAMES) {
-    stackmap_names[sn_idx++] = (struct sn){.stackmap = p, .name = name};
+    stackmap_names[sn_idx].stackmap = p;
+    stackmap_names[sn_idx].name = name;
+    sn_idx++;
   }
 }
 
@@ -601,73 +603,8 @@ char* gc_replay_test() {
   mu_assert("Expect GC exception when 'fib' called with insufficient heap space",
       result->header.tag == Tag_GcException);
 
-  if (verbose) {
-    printf("\n");
-    printf("stack depth = %zd\n", state->stack_depth);
-    printf("\n");
-    printf("Function addresses:\n");
-    for (int i = 0; i < NUM_FUNC_NAMES; i++)
-      printf("%p : %s\n", func_map[i].evaluator, func_map[i].name);
-
-    printf("\n");
-    printf("Value addresses:\n");
-    printf("True = %p\n", &True);
-    printf("False = %p\n", &False);
-    printf("Int 0 = %p\n", &literal_0);
-    printf("Int 1 = %p\n", &literal_1);
-    printf("Int %d = %p\n", literal_n.value, &literal_n);
-    printf("\n");
-  }
-
-  if (verbose) printf("Marking interrupted heap...\n\n");
-
-  mark(&gc_state, ignore_below);
-
-  if (verbose) {
-    printf("Finished marking...\n\n");
-
-    print_heap();
-    print_state();
-  }
-
-  if (verbose) printf("\n\nCompacting from %p\n\n", ignore_below);
-
-  compact(&gc_state, ignore_below);
-
-  if (verbose) {
-    printf("Finished compacting\n");
-    print_state();
-    printf("Reversing stack map linked list to prepare for replay\n\n");
-  }
-
-  reverse_stack_map(&gc_state);
-
-  if (verbose) {
-    printf("Finished reversing\n");
-    print_state();
-    printf("Marking compacted heap (to check integrity, would skip in 'real life')\n\n");
-  }
-
-  mark(&gc_state, ignore_below);
-
-  mu_assert("Compacted heap should be traceable by 'mark'",
-      bitmap_dead_between(&state->heap, ignore_below, state->next_alloc) == 0);
-
-  if (verbose) {
-    print_heap();
-    print_state();
-  }
-
-  GcStackMap* empty = (GcStackMap*)state->heap.start;
-  state->replay_ptr = empty->newer;
-  state->stack_depth = 0;
-
-  if (verbose) {
-    printf("\nSetting replay pointer to start of stackmap: %p\n", state->replay_ptr);
-    printf(
-        "Replaying interrupted functions to restore stack state, then continuing "
-        "execution...\n");
-  }
+  GC_collect_full();
+  GC_prep_replay();
 
   ElmValue* result_replay = gc_replay_test_catch();
 
