@@ -160,6 +160,7 @@ void* test_Json_parse_string() {
       create_string(DQUOTE "hello\\"),  // escape char at end of input
       NULL,
       0);
+  parse_test_helper(&parse_string, create_string(""), NULL, 0);
 
   return NULL;
 }
