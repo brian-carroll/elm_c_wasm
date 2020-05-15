@@ -115,11 +115,11 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 # Binary & Wasm
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
-	@echo Building native binary tests...
+	@echo Building tests as native binary...
 	@gcc $(CFLAGS) $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
-	@echo Building WebAssembly tests...
+	@echo Building tests as WebAssembly module...
 	@mkdir -p $(DIST)/www
 	@emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
 
