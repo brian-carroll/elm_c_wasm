@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include "./types.h"
 
@@ -88,13 +89,7 @@ size_t child_count(ElmValue* v) {
 
    ==================================================== */
 
-int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
-  int has_error = brk(new_break_ptr);
-  if (has_error) {
-    log_error("Failed to get heap memory. Error code %d\n", errno);
-    return errno;
-  }
-
+void set_heap_layout(GcHeap* heap, size_t* new_break_ptr) {
   size_t heap_words = new_break_ptr - heap->start;
 
   // This calculation is in bytes, not words, to prevent
@@ -117,11 +112,31 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
   size_t bitmap_words = GC_DIV_ROUND_UP(bitmap_bytes, bytes_per_word);
   size_t offset_words = GC_DIV_ROUND_UP(offset_bytes, bytes_per_word);
 
+
+  // printf("bytes_per_word %zu\n", bytes_per_word);
+  // printf("heap_bytes %zu\n", heap_bytes);
+  // printf("bitmap_bytes_per_block %zu\n", bitmap_bytes_per_block);
+  // printf("offset_bytes_per_block %zu\n", offset_bytes_per_block);
+  // printf("block_plus_overhead_bytes %zu\n", block_plus_overhead_bytes);
+  // printf("heap_blocks %zu\n", heap_blocks);
+  // printf("bitmap_bytes %zu\n", bitmap_bytes);
+  // printf("offset_bytes %zu\n", offset_bytes);
+  // printf("bitmap_words %zu (%0.2f)\n", bitmap_words, (100.0 * bitmap_words) / (1.0 * heap_words));
+  // printf("offset_words %zu (%0.2f)\n", offset_words, (100.0 * offset_words) / (1.0 * heap_words));
+
   heap->bitmap = new_break_ptr - bitmap_words;
   heap->offsets = heap->bitmap - offset_words;
   heap->end = heap->offsets;
   heap->system_end = new_break_ptr;
+}
 
+int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
+  int has_error = brk(new_break_ptr);
+  if (has_error) {
+    log_error("Failed to get heap memory. Error code %d\n", errno);
+    return errno;
+  }
+  set_heap_layout(heap, new_break_ptr);
   return 0;
 }
 

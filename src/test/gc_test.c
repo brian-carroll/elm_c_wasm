@@ -759,6 +759,49 @@ char* gc_stack_empty_survival_test() {
   return NULL;
 }
 
+void set_heap_layout(GcHeap* heap, size_t* new_break_ptr);
+char* test_heap_layout() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## test_heap_layout\n"
+        "\n");
+  }
+
+  gc_test_reset();
+
+  GcHeap* heap = &gc_state.heap;
+
+  for (size_t kb = 16; kb <= 1024; kb *= 2) {
+    size_t bytes = kb * 1024;
+    size_t words = bytes / sizeof(void*);
+    size_t* new_break_ptr = heap->start + words;
+
+    set_heap_layout(heap, new_break_ptr);
+
+    float percent_bitmap = 100.0 * (heap->system_end - heap->bitmap) / words;
+    float percent_offsets = 100.0 * (heap->bitmap - heap->offsets) / words;
+
+    bool bitmap_ok = (sizeof(void*) == sizeof(u64))
+                         ? (percent_bitmap > 1.5 && percent_bitmap < 1.6)
+                         : (percent_bitmap > 2.95 && percent_bitmap < 3.05);
+    bool offsets_ok = (percent_offsets > 1.45 && percent_offsets < 1.6);
+
+    assertions_made++;
+    if (!bitmap_ok || !offsets_ok) {
+      tests_failed++;
+      printf("FAIL: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
+      printf("bitmap %f %%\n", percent_bitmap);
+      printf("offsets %f %%\n", percent_offsets);
+    } else if (verbose) {
+      printf("PASS: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
+    }
+  }
+
+  gc_test_reset();
+  return NULL;
+}
+
 char* gc_test() {
   if (verbose)
     printf(
@@ -774,6 +817,7 @@ char* gc_test() {
   mu_run_test(gc_mark_compact_test);
   mu_run_test(gc_bitmap_next_test);
   mu_run_test(gc_stack_empty_survival_test);
+  mu_run_test(test_heap_layout);
 
   return NULL;
 }
