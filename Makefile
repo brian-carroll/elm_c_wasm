@@ -21,7 +21,7 @@ DATA_INC := $(DATA_TSV:.tsv=.inc)
 .PHONY: all check check-bin check-node debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
-all: check
+all: $(DIST)/bin/test
 	@:
 
 check: check-bin check-node
@@ -108,20 +108,16 @@ gh-pages: www codegen todo
 # https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
 
 
-# need to first find the tsv, then replace names with .tsv.inc, then make these the deps
-$(SRC)/test/gc/stackmap_test.c: $(DATA_INC)
-	@:
-
 # ../src/test/gc/stackmap_data/full_completion.tsv.inc: ../src/test/gc/stackmap_data/full_completion.tsv
 $(SRC)/%.inc : $(SRC)/%.tsv
 	@cd $$(dirname $@) ; xxd -i $$(basename $<) $$(basename $@)
 
 # Binary & Wasm
 
-$(DIST)/bin/test: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
+$(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
 	gcc $(CFLAGS) $(SOURCES) -o $@ -lm
 
-$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
+$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
 	@mkdir -p $(DIST)/www
 	emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
 
