@@ -268,6 +268,16 @@ int main(int argc, char** argv) {
     }
   }
 
+#ifdef __EMSCRIPTEN__
+  printf("\n");
+  printf("WebAssembly Tests\n");
+  printf("=================\n");
+#else
+  printf("\n");
+  printf("Native Binary Tests\n");
+  printf("===================\n");
+#endif
+
   test_all(types, utils, basics, string, chr, list, json, gc);
   int exit_code;
 
@@ -280,6 +290,7 @@ int main(int argc, char** argv) {
   }
   printf("Tests run: %d\n", tests_run);
   printf("Assertions made: %d\n", assertions_made);
+  printf("\n");
 
   exit(exit_code);
 }

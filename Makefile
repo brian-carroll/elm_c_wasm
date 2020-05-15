@@ -115,11 +115,13 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 # Binary & Wasm
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
-	gcc $(CFLAGS) $(SOURCES) -o $@ -lm
+	@echo Building native binary tests...
+	@gcc $(CFLAGS) $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
+	@echo Building WebAssembly tests...
 	@mkdir -p $(DIST)/www
-	emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
+	@emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'
