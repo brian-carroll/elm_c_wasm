@@ -52,7 +52,8 @@ void* parse_bool(u16** cursor, u16* end);
 void* test_Json_parse_bool() {
   parse_test_helper(&parse_bool, create_string("true"), &True, 4);
   parse_test_helper(&parse_bool, create_string("false"), &False, 5);
-  parse_test_helper(&parse_bool, create_string("truck"), NULL, 0);
+  parse_test_helper(&parse_bool, create_string("truh"), NULL, 0);
+  parse_test_helper(&parse_bool, create_string("falsy"), NULL, 0);
   parse_test_helper(&parse_bool, create_string("f"), NULL, 0);
   parse_test_helper(&parse_bool, create_string(""), NULL, 0);
   return NULL;
@@ -167,6 +168,34 @@ void* test_Json_parse_string() {
   return NULL;
 }
 
+void skip_whitespace(u16** cursor, u16* end);
+void* test_Json_skip_whitespace() {
+  ElmString16* json;
+  u16* cursor;
+
+  json = create_string("\t\r\n true \t\r\n");
+  cursor = json->words16;
+  skip_whitespace(&cursor, cursor + code_units(json));
+  mu_expect_equal("should move cursor to first non-whitespace", cursor, &json->words16[4]);
+
+  json = create_string("true \t\r\n");
+  cursor = json->words16;
+  skip_whitespace(&cursor, cursor + code_units(json));
+  mu_expect_equal("should do nothing if it's not on whitespace", cursor, json->words16);
+
+  json = create_string(" \t\r\n");
+  cursor = json->words16;
+  skip_whitespace(&cursor, cursor + code_units(json));
+  mu_expect_equal("should not run past end of string", cursor, &json->words16[4]);
+
+  json = create_string("");
+  cursor = json->words16;
+  skip_whitespace(&cursor, cursor + code_units(json));
+  mu_expect_equal("should handle empty string", cursor, json->words16);
+
+  return NULL;
+}
+
 char* json_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -181,6 +210,7 @@ char* json_test() {
   describe("test_Json_parse_int", test_Json_parse_int);
   describe("test_Json_parse_float", test_Json_parse_float);
   describe("test_Json_parse_string", test_Json_parse_string);
+  describe("test_Json_skip_whitespace", test_Json_skip_whitespace);  
 
   return NULL;
 }

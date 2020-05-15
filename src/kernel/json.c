@@ -317,6 +317,17 @@ https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
 */
 
+void skip_whitespace(u16** cursor, u16* end) {
+  u16* ptr;
+  for (ptr = *cursor; ptr < end; ptr++) {
+    u16 c = *ptr;
+    if (c != ' ' && c != '\t' && c != '\r' && c != '\n') {
+      break;
+    }
+  }
+  *cursor = ptr;
+}
+
 void* parse_bool(u16** cursor, u16* end) {
   size_t len = end - *cursor;
   u16* chars = *cursor;
@@ -413,7 +424,6 @@ void* parse_string(u16** cursor, u16* end) {
   if (from >= end) return NULL;  // make sure it's safe to deref
   if (*from != '"') return NULL;
   from++;
-
 
   size_t alloc_chunk_bytes = 4 * SIZE_UNIT;  // Grow the output string in chunks this big
   ElmString16* str = NEW_ELM_STRING16(alloc_chunk_bytes / 2);
