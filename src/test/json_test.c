@@ -161,6 +161,8 @@ void* test_Json_parse_string() {
       NULL,
       0);
   parse_test_helper(&parse_string, create_string(""), NULL, 0);
+  parse_test_helper(
+      &parse_string, create_string(DQUOTE "\t" DQUOTE), NULL, 0);  // unescaped tab
 
   return NULL;
 }
