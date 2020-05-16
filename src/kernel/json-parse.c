@@ -4,8 +4,6 @@
 #include "./json.h"
 
 Custom Json_Value_null = {.header = HEADER_CUSTOM(0), .ctor = JSON_VALUE_NULL};
-Custom Json_Value_true = {.header = HEADER_CUSTOM(0), .ctor = JSON_VALUE_TRUE};
-Custom Json_Value_false = {.header = HEADER_CUSTOM(0), .ctor = JSON_VALUE_FALSE};
 
 void skip_whitespace(u16** cursor, u16* end) {
   u16* ptr;
@@ -28,10 +26,10 @@ void* parse_bool(u16** cursor, u16* end) {
 
   if (len >= 4 && bytes64[0] == BYTES_TRUE) {
     *cursor += 4;
-    return &Json_Value_true;
+    return &True;
   } else if (len >= 5 && bytes64[0] == BYTES_FALS && chars[4] == 'e') {
     *cursor += 5;
-    return &Json_Value_false;
+    return &False;
   } else {
     return NULL;
   }

@@ -29,16 +29,10 @@ enum ctor_decoder {
 enum ctor_value {
   JSON_VALUE_JSREF = 0,
   JSON_VALUE_NULL = JSON_CTOR_OFFSET,
-  JSON_VALUE_TRUE,
-  JSON_VALUE_FALSE,
-  JSON_VALUE_NUMBER,
-  JSON_VALUE_STRING,
   JSON_VALUE_OBJECT,
   JSON_VALUE_ARRAY,
 };
 Custom Json_Value_null;
-Custom Json_Value_true;
-Custom Json_Value_false;
 
 Closure Json_succeed;
 Closure Json_fail;
