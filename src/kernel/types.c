@@ -138,8 +138,10 @@ Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
   Custom* c = CAN_THROW(GC_malloc(sizeof(Custom) + n_children * sizeof(void*)));
   c->header = HEADER_CUSTOM(n_children);
   c->ctor = ctor;
-  for (size_t i = 0; i < n_children; ++i) {
-    c->values[i] = children[i];
+  if (children != NULL) {
+    for (size_t i = 0; i < n_children; ++i) {
+      c->values[i] = children[i];
+    }
   }
   return c;
 }
