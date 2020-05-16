@@ -2,8 +2,14 @@
 
 #include <stdio.h>
 
-#include "./wrapper/wrapper.h"
 #include "./string.h"
+#include "./wrapper/wrapper.h"
+
+void* parse_json(ElmString16* json);  // json-parse.c
+
+void* Json_wrap(void* ptr) {
+  return ptr;
+}
 
 static void* eval_Json_succeed(void* args[]) {
   return NEW_CUSTOM(DECODER_SUCCEED, 1, args);
@@ -248,55 +254,7 @@ Closure Json_map8 = {
 //
 // ----------------------------------------------------
 
-/*
-parse JSON values from a UTF-16 string
-
-https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
-
-- boolean
-  - if first letter is t
-    - loop through the next 3 checking that they're "rue"
-  - if first letter is f
-    - loop through the next 4 checking that they're "alse"
-- int
-  - swscanf from wchar.h
-- float
-  - swscanf from wchar.h
-- string
-  - double quote
-    - escaped 8 things  \" \\ \/ \b \f \n \r \t
-    - escaped unicode
-      - \u002F (four digits, lowercase u, upper or lower a-f)
-      - Can have two in a row, already encoded as UTF-16 => easy
-      - unicode doesn't have to be escaped, it just can be
-    - no ASCII control chars allowed
-- null
-  - check for 4-char sequence
-- value
-  - Use a special Custom to wrap a string
-  - Special-case it in the wrapper. Read it through JSON.stringify()
-  - Json_run recognises the wrapped string and delegates to Json_runOnString
-
-- list
-  - parse an array and create a Cons each time
-- array
-  - parse an array and call g_elm_core_Array_insert each time
-- field
-  - run through the field string, matching all the chars
-  - grab the string and pass it to the decoder
-- index
-  - skip through an array and then recurse
-- key value
-  - Make a list of tuples (String, <decoded thing>)
-- map
-- and then
-- one of
-- fail
-- succeed
-
-*/
-
-void* runStringHelp(Custom* decoder, u16** cursor, u16* end) {
+void* runHelp(Custom* decoder, ElmValue* json) {
   // void* result;
 
   // skip_whitespace(cursor, end);
@@ -356,14 +314,51 @@ void* runStringHelp(Custom* decoder, u16** cursor, u16* end) {
   return NULL;
 }
 
+ElmString16 str_invalid_json = {
+    .header = HEADER_STRING(23),
+    .words16 =
+        {
+            'T',
+            'h',
+            'i',
+            's',
+            ' ',
+            'i',
+            's',
+            ' ',
+            'n',
+            'o',
+            't',
+            ' ',
+            'v',
+            'a',
+            'l',
+            'i',
+            'd',
+            ' ',
+            'J',
+            'S',
+            'O',
+            'N',
+            '!',
+        },
+};
+
 static void* eval_runOnString(void* args[]) {
   Custom* decoder = args[0];
   ElmString16* string = args[1];
 
-  u16* cursor = string->words16;
-  u16* end = string->words16 + code_units(string);
-
-  return runStringHelp(decoder, &cursor, end);
+  ElmValue* json = parse_json(string);
+  if (json == pGcFull) return pGcFull;
+  if (json == NULL) {
+    return eval_elm_core_Result_Err(((void*[]){
+        eval_elm_json_Json_Decode_Failure(((void*[]){
+            &str_invalid_json,
+            Json_wrap(string),
+        })),
+    }));
+  }
+  return runHelp(decoder, json);
 }
 Closure Json_runOnString = {
     .header = HEADER_CLOSURE(0),

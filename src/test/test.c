@@ -31,6 +31,12 @@ int assertions_made = 0;
 enum {
   CTOR_Nothing,
   CTOR_Just,
+  CTOR_Ok,
+  CTOR_Err,
+  CTOR_Failure,
+  CTOR_Field,
+  CTOR_Index,
+  CTOR_OneOf,
 };
 void* eval_elm_core_Maybe_Just(void* args[]) {
   return ctorCustom(CTOR_Just, 1, args);
@@ -45,6 +51,25 @@ Custom g_elm_core_Maybe_Nothing = {
     .header = HEADER_CUSTOM(0),
     .ctor = CTOR_Nothing,
 };
+
+void* eval_elm_core_Result_Ok(void* args[]) {
+  return ctorCustom(CTOR_Ok, 1, args);
+}
+void* eval_elm_core_Result_Err(void* args[]) {
+  return ctorCustom(CTOR_Err, 1, args);
+}
+void* eval_elm_json_Json_Decode_Failure(void* args[]) {
+  return ctorCustom(CTOR_Failure, 2, args);
+}
+void* eval_elm_json_Json_Decode_Field(void* args[]) {
+  return ctorCustom(CTOR_Field, 2, args);
+}
+void* eval_elm_json_Json_Decode_Index(void* args[]) {
+  return ctorCustom(CTOR_Index, 2, args);
+}
+void* eval_elm_json_Json_Decode_OneOf(void* args[]) {
+  return ctorCustom(CTOR_OneOf, 1, args);
+}
 
 FieldGroup* Wrapper_appFieldGroups[] = {NULL};
 void** Wrapper_mainsArray[] = {NULL};

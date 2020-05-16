@@ -1,7 +1,11 @@
+// Parse JSON values from a UTF-16 string
+// https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
+
 #include <stdio.h>
 
 #include "./gc.h"
 #include "./json.h"
+#include "./string.h"
 
 Custom Json_Value_null = {.header = HEADER_CUSTOM(0), .ctor = JSON_VALUE_NULL};
 
@@ -301,19 +305,6 @@ void* parse_recurse(u16** cursor, u16* end) {
     case 'f':
       return parse_bool(cursor, end);
 
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-    case '-':
-      return parse_number(cursor, end);
-
     case '"':
       return parse_string(cursor, end);
 
@@ -324,11 +315,13 @@ void* parse_recurse(u16** cursor, u16* end) {
       return parse_object(cursor, end);
 
     default:
-      return NULL;
+      return parse_number(cursor, end);
   }
 }
 
-void* parse_value(u16** cursor, u16* end) {
-  skip_whitespace(cursor, end);
-  return parse_recurse(cursor, end);
+ElmValue* parse_json(ElmString16* json) {
+  u16* cursor = json->words16;
+  u16* end = json->words16 + code_units(json);
+  skip_whitespace(&cursor, end);
+  return parse_recurse(&cursor, end);
 }

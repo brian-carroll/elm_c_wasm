@@ -294,7 +294,6 @@ void* test_Json_parse_object() {
       6);
 
   // // failure cases
-  parse_test(&parse_object, create_string(""), NULL, 0);
   parse_test(&parse_object, create_string("{null:123}"), NULL, 0);
   parse_test(&parse_object, create_string("{0:123}"), NULL, 0);
   parse_test(&parse_object, create_string("123"), NULL, 0);
@@ -310,6 +309,7 @@ void* test_Json_parse_object() {
   parse_test(&parse_object, create_string("{ \"a\""), NULL, 0);
   parse_test(&parse_object, create_string("{ "), NULL, 0);
   parse_test(&parse_object, create_string("{"), NULL, 0);
+  parse_test(&parse_object, create_string(""), NULL, 0);
 
   return NULL;
 }
