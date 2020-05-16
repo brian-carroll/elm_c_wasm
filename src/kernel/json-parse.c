@@ -52,35 +52,7 @@ void* parse_null(u16** cursor, u16* end) {
   }
 }
 
-void* parse_int(u16** cursor, u16* end) {
-  u16* chars = *cursor;
-  i64 total = 0;
-
-  size_t negative = chars[0] == '-';
-  size_t start = negative;
-  size_t len = end - chars;
-  if (len > 11) len = 11;
-
-  size_t i;
-  for (i = start; i <= len; i++) {
-    i64 digit = chars[i] - '0';
-    if (digit < 0 || digit > 9) break;
-    total = (total * 10) + digit;
-  }
-
-  if (i == start) return NULL;  // no digits found
-  if (negative) {
-    total = -total;
-    if (total < -__INT32_MAX__ - 1) return NULL;
-  } else {
-    if (total > __INT32_MAX__) return NULL;
-  }
-
-  *cursor += i;
-  return NEW_ELM_INT((i32)total);
-}
-
-void* parse_float(u16** cursor, u16* end) {
+void* parse_number(u16** cursor, u16* end) {
   u16* chars = *cursor;
 
   size_t max = end - chars;

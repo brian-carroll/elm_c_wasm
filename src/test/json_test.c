@@ -68,27 +68,17 @@ void* test_Json_parse_null() {
   return NULL;
 }
 
-void* parse_int(u16** cursor, u16* end);
-void* test_Json_parse_int() {
-  parse_test_helper(&parse_int, create_string("123"), NEW_ELM_INT(123), 3);
-  parse_test_helper(&parse_int, create_string("-123"), NEW_ELM_INT(-123), 4);
-  parse_test_helper(&parse_int, create_string(""), NULL, 0);
-  parse_test_helper(&parse_int, create_string("-"), NULL, 0);
-  parse_test_helper(&parse_int, create_string("abc"), NULL, 0);
-  return NULL;
-}
-
-void* parse_float(u16** cursor, u16* end);
-void* test_Json_parse_float() {
-  parse_test_helper(&parse_float, create_string("123.456"), NEW_ELM_FLOAT(123.456), 7);
-  parse_test_helper(&parse_float, create_string("-123.456"), NEW_ELM_FLOAT(-123.456), 8);
+void* parse_number(u16** cursor, u16* end);
+void* test_Json_parse_number() {
+  parse_test_helper(&parse_number, create_string("123.456"), NEW_ELM_FLOAT(123.456), 7);
+  parse_test_helper(&parse_number, create_string("-123.456"), NEW_ELM_FLOAT(-123.456), 8);
   parse_test_helper(
-      &parse_float, create_string("-123.456e-3"), NEW_ELM_FLOAT(-123.456e-3), 11);
+      &parse_number, create_string("-123.456e-3"), NEW_ELM_FLOAT(-123.456e-3), 11);
   parse_test_helper(
-      &parse_float, create_string("-123.456E+1"), NEW_ELM_FLOAT(-1234.56), 11);
-  parse_test_helper(&parse_float, create_string(""), NULL, 0);
-  parse_test_helper(&parse_float, create_string("-+e"), NULL, 0);
-  parse_test_helper(&parse_float, create_string("abc"), NULL, 0);
+      &parse_number, create_string("-123.456E+1"), NEW_ELM_FLOAT(-1234.56), 11);
+  parse_test_helper(&parse_number, create_string(""), NULL, 0);
+  parse_test_helper(&parse_number, create_string("-+e"), NULL, 0);
+  parse_test_helper(&parse_number, create_string("abc"), NULL, 0);
   return NULL;
 }
 
@@ -207,8 +197,7 @@ char* json_test() {
 
   describe("test_Json_parse_bool", test_Json_parse_bool);
   describe("test_Json_parse_null", test_Json_parse_null);
-  describe("test_Json_parse_int", test_Json_parse_int);
-  describe("test_Json_parse_float", test_Json_parse_float);
+  describe("test_Json_parse_number", test_Json_parse_number);
   describe("test_Json_parse_string", test_Json_parse_string);
   describe("test_Json_skip_whitespace", test_Json_skip_whitespace);  
 
