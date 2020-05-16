@@ -198,14 +198,24 @@ void* test_Json_parse_array() {
       12);
 
   parse_test(&parse_array,
-      create_string("[ 123, \"hi\" ]"),
+      create_string("[ 123,\"hi\" ]"),
       NEW_CUSTOM(JSON_VALUE_ARRAY,
           2,
           ((void*[]){
               NEW_ELM_FLOAT(123),
               create_string("hi"),
           })),
-      13);
+      12);
+
+  parse_test(&parse_array,
+      create_string("[123 , \"hi\"]"),
+      NEW_CUSTOM(JSON_VALUE_ARRAY,
+          2,
+          ((void*[]){
+              NEW_ELM_FLOAT(123),
+              create_string("hi"),
+          })),
+      12);
 
   parse_test(&parse_array, create_string("[]"), NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL), 2);
 
@@ -227,6 +237,83 @@ void* test_Json_parse_array() {
   return NULL;
 }
 
+void* parse_object(u16** cursor, u16* end);
+void* test_Json_parse_object() {
+  // valid objects
+
+  parse_test(&parse_object,
+      create_string("{\"a\":123}"),
+      NEW_CUSTOM(JSON_VALUE_OBJECT,
+          2,
+          ((void*[]){
+              create_string("a"),
+              NEW_ELM_FLOAT(123),
+          })),
+      9);
+
+  parse_test(&parse_object,
+      create_string("{ \"a\" : 123 } "),
+      NEW_CUSTOM(JSON_VALUE_OBJECT,
+          2,
+          ((void*[]){
+              create_string("a"),
+              NEW_ELM_FLOAT(123),
+          })),
+      13);
+
+  parse_test(&parse_object,
+      create_string("{ \"a\":123,\"stuff\":false }"),
+      NEW_CUSTOM(JSON_VALUE_OBJECT,
+          4,
+          ((void*[]){
+              create_string("a"),
+              NEW_ELM_FLOAT(123),
+              create_string("stuff"),
+              &False,
+          })),
+      25);
+
+  parse_test(&parse_object,
+      create_string("{\"a\":123 , \"stuff\":false}"),
+      NEW_CUSTOM(JSON_VALUE_OBJECT,
+          4,
+          ((void*[]){
+              create_string("a"),
+              NEW_ELM_FLOAT(123),
+              create_string("stuff"),
+              &False,
+          })),
+      25);
+
+  parse_test(
+      &parse_object, create_string("{}"), NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL), 2);
+
+  parse_test(&parse_object,
+      create_string("{ \r\n\t}"),
+      NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL),
+      6);
+
+  // // failure cases
+  parse_test(&parse_object, create_string(""), NULL, 0);
+  parse_test(&parse_object, create_string("{null:123}"), NULL, 0);
+  parse_test(&parse_object, create_string("{0:123}"), NULL, 0);
+  parse_test(&parse_object, create_string("123"), NULL, 0);
+
+  parse_test(&parse_object, create_string("{ \"a\" : 123 , }"), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\" : 123 , "), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\" : 123 ,"), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\" : 123 "), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\" : 123"), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\" : "), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\" :"), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\" "), NULL, 0);
+  parse_test(&parse_object, create_string("{ \"a\""), NULL, 0);
+  parse_test(&parse_object, create_string("{ "), NULL, 0);
+  parse_test(&parse_object, create_string("{"), NULL, 0);
+
+  return NULL;
+}
+
 char* json_test() {
   if (verbose) {
     printf("\n\n\n");
@@ -236,12 +323,13 @@ char* json_test() {
     printf("------\n");
   }
 
-  // describe("test_Json_parse_bool", test_Json_parse_bool);
-  // describe("test_Json_parse_null", test_Json_parse_null);
-  // describe("test_Json_parse_number", test_Json_parse_number);
-  // describe("test_Json_parse_string", test_Json_parse_string);
-  // describe("test_Json_skip_whitespace", test_Json_skip_whitespace);
+  describe("test_Json_parse_bool", test_Json_parse_bool);
+  describe("test_Json_parse_null", test_Json_parse_null);
+  describe("test_Json_parse_number", test_Json_parse_number);
+  describe("test_Json_parse_string", test_Json_parse_string);
+  describe("test_Json_skip_whitespace", test_Json_skip_whitespace);
   describe("test_Json_parse_array", test_Json_parse_array);
+  describe("test_Json_parse_object", test_Json_parse_object);
 
   return NULL;
 }

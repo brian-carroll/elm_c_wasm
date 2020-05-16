@@ -6,8 +6,8 @@
 Custom Json_Value_null = {.header = HEADER_CUSTOM(0), .ctor = JSON_VALUE_NULL};
 
 void skip_whitespace(u16** cursor, u16* end) {
-  u16* ptr;
-  for (ptr = *cursor; ptr < end; ptr++) {
+  u16* ptr = *cursor;
+  for (; ptr < end; ptr++) {
     u16 c = *ptr;
     if (c != ' ' && c != '\t' && c != '\r' && c != '\n') {
       break;
@@ -170,7 +170,7 @@ void* parse_string(u16** cursor, u16* end) {
   return str;
 }
 
-void* parse_value(u16** cursor, u16* end);  // pre-declare to allow recursion
+void* parse_recurse(u16** cursor, u16* end);
 
 void* parse_array(u16** cursor, u16* end) {
   u16* c = *cursor;
@@ -190,23 +190,27 @@ void* parse_array(u16** cursor, u16* end) {
   // gather the values into a List
   Cons* rev_values = &Nil;
   size_t len = 0;
-  for (;; c++) {
-    void* value = parse_value(&c, end);
+  for (;;) {
+    // parse value
+    void* value = parse_recurse(&c, end);
     if (value == pGcFull) return pGcFull;
     if (c >= end || value == NULL) return NULL;
 
+    // store value
     rev_values = NEW_CONS(value, rev_values);
     len++;
 
+    // separator/end
     skip_whitespace(&c, end);
     if (c >= end) return NULL;
-
     if (*c == ']') {
       c++;
       break;
     }
     if (*c != ',') return NULL;
+    c++;
 
+    // next value
     skip_whitespace(&c, end);
     if (c >= end) return NULL;
   }
@@ -222,30 +226,73 @@ void* parse_array(u16** cursor, u16* end) {
 }
 
 void* parse_object(u16** cursor, u16* end) {
-  /*
-    if not { then bail
-    skip whitespace
-    allocate a Custom
+  u16* c = *cursor;
 
-    loop while not end
-      parse_string
-      skip_whitespace
-      if not ':' then bail
-      skip_whitespace
-      parse_value
-      skip_whitespace
-      if '}', finish
-      if not ',' then bail
-      skip_whitespace
+  if (c >= end) return NULL;
+  if (*c != '{') return NULL;
+  c++;
 
-    shrink Custom to fit contents
-  */
-  return NULL;
+  skip_whitespace(&c, end);
+  if (c >= end) return NULL;
+
+  if (*c == '}') {
+    *cursor = ++c;
+    return NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL);
+  }
+
+  // temporary list-like structure for key-value pairs [field, value, last_pair]
+  Tuple3* rev_pairs = NULL;
+  size_t n_pairs = 0;
+  for (;;) {
+    // field
+    ElmString16* field = parse_string(&c, end);
+    if (field == pGcFull) return pGcFull;
+    if (c >= end || field == NULL) return NULL;
+
+    // colon
+    skip_whitespace(&c, end);
+    if (c >= end) return NULL;
+    if (*c != ':') return NULL;
+    c++;
+    skip_whitespace(&c, end);
+    if (c >= end) return NULL;
+
+    // value
+    void* value = parse_recurse(&c, end);
+    if (value == pGcFull) return pGcFull;
+    if (c >= end || value == NULL) return NULL;
+
+    // store pair
+    rev_pairs = NEW_TUPLE3(field, value, rev_pairs);
+    n_pairs++;
+
+    // end of pair
+    skip_whitespace(&c, end);
+    if (c >= end) return NULL;
+    if (*c == '}') {
+      c++;
+      break;
+    }
+    if (*c != ',') return NULL;
+    c++;
+
+    // next pair
+    skip_whitespace(&c, end);
+    if (c >= end) return NULL;
+  }
+
+  // reverse the list into an object
+  Custom* object = NEW_CUSTOM(JSON_VALUE_OBJECT, 2 * n_pairs, NULL);
+  for (size_t i = n_pairs - 1; rev_pairs != NULL; rev_pairs = rev_pairs->c, i--) {
+    object->values[2 * i] = rev_pairs->a;
+    object->values[2 * i + 1] = rev_pairs->b;
+  }
+
+  *cursor = c;
+  return object;
 }
 
-void* parse_value(u16** cursor, u16* end) {
-  skip_whitespace(cursor, end);
-
+void* parse_recurse(u16** cursor, u16* end) {
   switch (**cursor) {
     case 'n':
       return parse_null(cursor, end);
@@ -279,4 +326,9 @@ void* parse_value(u16** cursor, u16* end) {
     default:
       return NULL;
   }
+}
+
+void* parse_value(u16** cursor, u16* end) {
+  skip_whitespace(cursor, end);
+  return parse_recurse(cursor, end);
 }
