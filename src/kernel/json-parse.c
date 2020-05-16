@@ -173,21 +173,52 @@ void* parse_string(u16** cursor, u16* end) {
 void* parse_value(u16** cursor, u16* end);  // pre-declare to allow recursion
 
 void* parse_array(u16** cursor, u16* end) {
-  /*
-    if not [ then bail
-    skip whitespace
-    allocate a Custom
+  u16* c = *cursor;
 
-    loop while not end
-      parse_value
-      skip_whitespace
-      if ']', finish
-      if not ',' then bail
-      skip_whitespace
-    
-    shrink Custom to fit contents
-  */
-  return NULL;
+  if (c >= end) return NULL;
+  if (*c != '[') return NULL;
+  c++;
+
+  skip_whitespace(&c, end);
+  if (c >= end) return NULL;
+
+  if (*c == ']') {
+    *cursor = ++c;
+    return NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL);
+  }
+
+  // gather the values into a List
+  Cons* rev_values = &Nil;
+  size_t len = 0;
+  for (;; c++) {
+    void* value = parse_value(&c, end);
+    if (value == pGcFull) return pGcFull;
+    if (c >= end || value == NULL) return NULL;
+
+    rev_values = NEW_CONS(value, rev_values);
+    len++;
+
+    skip_whitespace(&c, end);
+    if (c >= end) return NULL;
+
+    if (*c == ']') {
+      c++;
+      break;
+    }
+    if (*c != ',') return NULL;
+
+    skip_whitespace(&c, end);
+    if (c >= end) return NULL;
+  }
+
+  // reverse the list into an array
+  Custom* array = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  for (size_t i = len - 1; rev_values != &Nil; rev_values = rev_values->tail, i--) {
+    array->values[i] = rev_values->head;
+  }
+
+  *cursor = c;
+  return array;
 }
 
 void* parse_object(u16** cursor, u16* end) {
@@ -206,7 +237,7 @@ void* parse_object(u16** cursor, u16* end) {
       if '}', finish
       if not ',' then bail
       skip_whitespace
-    
+
     shrink Custom to fit contents
   */
   return NULL;
