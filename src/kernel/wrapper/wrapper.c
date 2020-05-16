@@ -8,6 +8,7 @@
 #include "../debug.h"
 #include "../gc-internals.h"
 #include "../gc.h"
+#include "../json.h"
 #include "../types.h"
 #include "../utils.h"
 #include "./wrapper.h"
@@ -50,12 +51,8 @@ size_t EMSCRIPTEN_KEEPALIVE getTrue() {
 size_t EMSCRIPTEN_KEEPALIVE getFalse() {
   return (size_t)&False;
 }
-Custom JsNull = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = 0,
-};
 size_t EMSCRIPTEN_KEEPALIVE getJsNull() {
-  return (size_t)&JsNull;
+  return (size_t)&Json_Value_null;
 }
 
 size_t EMSCRIPTEN_KEEPALIVE getMaxWriteAddr() {
