@@ -1,6 +1,45 @@
 #ifndef ELM_JSON_H
 #define ELM_JSON_H
 
+#include "./types.h"
+
+// Pick offsets so we can easily read lower digits in either decimal or hex
+#define JSON_CTOR_OFFSET 0x2000 * 10000
+#define KERNEL_CTOR_OFFSET 0x400 * 1000
+
+enum ctor_decoder {
+  DECODER_SUCCEED = KERNEL_CTOR_OFFSET,
+  DECODER_FAIL,
+  DECODER_INT,
+  DECODER_BOOL,
+  DECODER_FLOAT,
+  DECODER_VALUE,
+  DECODER_STRING,
+  DECODER_LIST,
+  DECODER_ARRAY,
+  DECODER_NULL,
+  DECODER_FIELD,
+  DECODER_INDEX,
+  DECODER_KEY_VALUE,
+  DECODER_MAP,
+  DECODER_AND_THEN,
+  DECODER_ONE_OF,
+};
+
+enum ctor_value {
+  JSON_VALUE_JSREF = 0,
+  JSON_VALUE_NULL = JSON_CTOR_OFFSET,
+  JSON_VALUE_TRUE,
+  JSON_VALUE_FALSE,
+  JSON_VALUE_NUMBER,
+  JSON_VALUE_STRING,
+  JSON_VALUE_OBJECT,
+  JSON_VALUE_ARRAY,
+};
+Custom Json_Value_null;
+Custom Json_Value_true;
+Custom Json_Value_false;
+
 Closure Json_succeed;
 Closure Json_fail;
 

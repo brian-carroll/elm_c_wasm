@@ -50,8 +50,8 @@ char* parse_test_helper(void* (*parse_func)(u16** cursor, u16* end),
 
 void* parse_bool(u16** cursor, u16* end);
 void* test_Json_parse_bool() {
-  parse_test_helper(&parse_bool, create_string("true"), &True, 4);
-  parse_test_helper(&parse_bool, create_string("false"), &False, 5);
+  parse_test_helper(&parse_bool, create_string("true"), &Json_Value_true, 4);
+  parse_test_helper(&parse_bool, create_string("false"), &Json_Value_false, 5);
   parse_test_helper(&parse_bool, create_string("truh"), NULL, 0);
   parse_test_helper(&parse_bool, create_string("falsy"), NULL, 0);
   parse_test_helper(&parse_bool, create_string("f"), NULL, 0);
@@ -61,7 +61,7 @@ void* test_Json_parse_bool() {
 
 void* parse_null(u16** cursor, u16* end);
 void* test_Json_parse_null() {
-  parse_test_helper(&parse_null, create_string("null"), &JsNull, 4);
+  parse_test_helper(&parse_null, create_string("null"), &Json_Value_null, 4);
   parse_test_helper(&parse_null, create_string("nule"), NULL, 0);
   parse_test_helper(&parse_null, create_string("n"), NULL, 0);
   parse_test_helper(&parse_null, create_string(""), NULL, 0);
