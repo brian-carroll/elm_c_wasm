@@ -169,3 +169,83 @@ void* parse_string(u16** cursor, u16* end) {
 
   return str;
 }
+
+void* parse_value(u16** cursor, u16* end);  // pre-declare to allow recursion
+
+void* parse_array(u16** cursor, u16* end) {
+  /*
+    if not [ then bail
+    skip whitespace
+    allocate a Custom
+
+    loop while not end
+      parse_value
+      skip_whitespace
+      if ']', finish
+      if not ',' then bail
+      skip_whitespace
+    
+    shrink Custom to fit contents
+  */
+  return NULL;
+}
+
+void* parse_object(u16** cursor, u16* end) {
+  /*
+    if not { then bail
+    skip whitespace
+    allocate a Custom
+
+    loop while not end
+      parse_string
+      skip_whitespace
+      if not ':' then bail
+      skip_whitespace
+      parse_value
+      skip_whitespace
+      if '}', finish
+      if not ',' then bail
+      skip_whitespace
+    
+    shrink Custom to fit contents
+  */
+  return NULL;
+}
+
+void* parse_value(u16** cursor, u16* end) {
+  skip_whitespace(cursor, end);
+
+  switch (**cursor) {
+    case 'n':
+      return parse_null(cursor, end);
+
+    case 't':
+    case 'f':
+      return parse_bool(cursor, end);
+
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '-':
+      return parse_number(cursor, end);
+
+    case '"':
+      return parse_string(cursor, end);
+
+    case '[':
+      return parse_array(cursor, end);
+
+    case '{':
+      return parse_object(cursor, end);
+
+    default:
+      return NULL;
+  }
+}
