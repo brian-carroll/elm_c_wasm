@@ -213,7 +213,7 @@ void Debug_pretty(const char* label, void* p) {
   for (int i = 0; i < FORMAT_PTR_LEN; i++) {
     printf("-");
   }
-  printf("  %s\n", label);
+  printf("  %s (%p)\n", label, p);
   pretty_print_child(2, p);
 }
 

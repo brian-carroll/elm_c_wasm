@@ -23,7 +23,7 @@ void* test_decode_err(Custom* decoder, char* json_c_str, Custom* decode_error) {
   sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
   expect_equal(test_decode_buf,
       A2(&Json_runOnString, decoder, create_string(json_c_str)),
-      NEW_CUSTOM(CTOR_Err, 1, ((void*[]){decode_error})));
+      decode_error);
   return NULL;
 }
 
@@ -54,16 +54,16 @@ Custom* errIndex(u32 idx, Custom* error) {
 Custom* errOneOf(Cons* errors) {
   return NEW_CUSTOM(CTOR_OneOf, 1, (void*){errors});
 }
-Custom* errFailure(char* msg_c_str, char* json_c_str) {
+Custom* errFailure(char* msg_c_str, void* json_value) {
   return NEW_CUSTOM(CTOR_Failure,
       2,
       ((void*[]){
           create_string(msg_c_str),
-          parse_json(create_string(json_c_str)),
+          json_value,
       }));
 }
 Custom* err(Custom* error) {
-  return NEW_CUSTOM(CTOR_Err, 1, (void*){error});
+  return NEW_CUSTOM(CTOR_Err, 1, (void*[]){error});
 }
 
 //=================================================================================================
@@ -72,12 +72,12 @@ void* test_Json_decode_invalidJson() {
   char* json = "invalid JSON !";
   test_decode_err(&Json_decodeBool,
       json,
-      NEW_CUSTOM(CTOR_Failure,
+      err(NEW_CUSTOM(CTOR_Failure,
           2,
           ((void*[]){
               create_string("This is not valid JSON!"),
               Json_wrap(create_string(json)),
-          })));
+          }))));
 
   return NULL;
 }
@@ -112,6 +112,45 @@ void* test_Json_decodeFloat() {
   return NULL;
 }
 
+void* test_Json_decodeString() {
+  test_decode_ok(&Json_decodeString, "\"hello\"", create_string("hello"));
+  test_decode_errFailure(&Json_decodeString, "null", "Expecting a STRING");
+  return NULL;
+}
+
+void* test_Json_decodeValue() {
+  test_decode_ok(&Json_decodeValue,
+      "[1,2,3]",
+      Json_wrap(NEW_CUSTOM(JSON_VALUE_ARRAY,
+          3,
+          ((void*[]){
+              NEW_ELM_FLOAT(1),
+              NEW_ELM_FLOAT(2),
+              NEW_ELM_FLOAT(3),
+          }))));
+  return NULL;
+}
+
+void* test_Json_decodeList() {
+  Custom* decoder = A1(&Json_decodeList, &Json_decodeInt);
+
+  test_decode_ok(decoder,
+      "[1,2,3]",
+      List_create(3,
+          ((void*[]){
+              NEW_ELM_INT(1),
+              NEW_ELM_INT(2),
+              NEW_ELM_INT(3),
+          })));
+
+  test_decode_errFailure(decoder, "null", "Expecting a LIST");
+
+  test_decode_err(decoder,
+      "[null]",
+      err(errIndex(0, errFailure("Expecting an INT", &Json_Value_null))));
+  return NULL;
+}
+
 void json_decoder_test() {
   if (verbose) {
     printf("\n");
@@ -123,4 +162,7 @@ void json_decoder_test() {
   describe("test_Json_decodeBool", test_Json_decodeBool);
   describe("test_Json_decodeInt", test_Json_decodeInt);
   describe("test_Json_decodeFloat", test_Json_decodeFloat);
+  describe("test_Json_decodeString", test_Json_decodeString);
+  describe("test_Json_decodeValue", test_Json_decodeValue);
+  describe("test_Json_decodeList", test_Json_decodeList);
 }

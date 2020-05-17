@@ -117,10 +117,20 @@ char* Debug_evaluator_name(void* p) {
   sprintf(Debug_evaluator_name_buf, "%p", p);
   return Debug_evaluator_name_buf;
 }
-char* Debug_ctors[] = {};
+
+int Debug_ctors_size = 8;
+char* Debug_ctors[] = {
+    "CTOR_Nothing",
+    "CTOR_Just",
+    "CTOR_Ok",
+    "CTOR_Err",
+    "CTOR_Failure",
+    "CTOR_Field",
+    "CTOR_Index",
+    "CTOR_OneOf",
+};
 char* Debug_fields[] = {};
 char* Debug_jsValues[] = {};
-int Debug_ctors_size = 0;
 int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
 
@@ -161,10 +171,10 @@ void* expect_equal(char* expect_description, void* left, void* right) {
     if (!verbose) {
       printf("\n%s\n", test_description);
     }
-    printf("FAIL: %s\n", expect_description);
-    printf("Left: %p\n", left);
-    printf("Right: %p\n", right);
     print_heap_range(test_heap_ptr, GC_malloc(0));
+    printf("FAIL: %s\n", expect_description);
+    Debug_pretty("Left", left);
+    Debug_pretty("Right", right);
     printf("\n");
     tests_failed++;
   } else if (verbose) {
