@@ -102,6 +102,16 @@ void* test_Json_decodeInt() {
   return NULL;
 }
 
+void* test_Json_decodeFloat() {
+  test_decode_ok(&Json_decodeFloat, "3.14", NEW_ELM_FLOAT(3.14));
+  test_decode_ok(&Json_decodeFloat, "-3.14", NEW_ELM_FLOAT(-3.14));
+  test_decode_ok(&Json_decodeFloat, "-3.14e-1", NEW_ELM_FLOAT(-0.314));
+
+  test_decode_errFailure(&Json_decodeFloat, "null", "Expecting a FLOAT");
+
+  return NULL;
+}
+
 void json_decoder_test() {
   if (verbose) {
     printf("\n");
@@ -112,4 +122,5 @@ void json_decoder_test() {
   describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
   describe("test_Json_decodeBool", test_Json_decodeBool);
   describe("test_Json_decodeInt", test_Json_decodeInt);
+  describe("test_Json_decodeFloat", test_Json_decodeFloat);
 }
