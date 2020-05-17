@@ -26,13 +26,32 @@ void* test_Json_decode_invalidJson() {
   return NULL;
 }
 
-// void* test_Json_decode_bool() {
-//   Custom* decoder = &Json_decodeBool;
+void* test_Json_decodeBool() {
+  Custom* decoder = &Json_decodeBool;
 
-//   A2(&Json_runOnString, decoder, create_string(""));
+  expect_equal("should correctly decode 'true'",
+      A2(&Json_runOnString, decoder, create_string("true")),
+      NEW_CUSTOM(CTOR_Ok, 1, (void*[]){&True}));
 
-//   return NULL;
-// }
+  expect_equal("should correctly decode 'false'",
+      A2(&Json_runOnString, decoder, create_string("false")),
+      NEW_CUSTOM(CTOR_Ok, 1, (void*[]){&False}));
+
+  expect_equal("should fail with the expected message for 'null'",
+      A2(&Json_runOnString, decoder, create_string("null")),
+      NEW_CUSTOM(CTOR_Err,
+          1,
+          ((void*[]){
+              NEW_CUSTOM(CTOR_Failure,
+                  2,
+                  ((void*[]){
+                      create_string("Expecting a BOOL"),
+                      &Json_Value_null,
+                  })),
+          })));
+
+  return NULL;
+}
 
 void json_decoder_test() {
   if (verbose) {
@@ -42,5 +61,5 @@ void json_decoder_test() {
   }
 
   describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
-  // describe("test_Json_decode_bool", test_Json_decode_bool);
+  describe("test_Json_decodeBool", test_Json_decodeBool);
 }

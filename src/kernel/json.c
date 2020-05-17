@@ -433,7 +433,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
   switch (decoder->ctor) {
     case DECODER_BOOL:
       if (&value->custom == &True || &value->custom == &False) {
-        return value;
+        return Json_ok(value);
       }
       return Json_expecting(&str_err_Bool, value);
 
