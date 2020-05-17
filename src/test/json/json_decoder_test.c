@@ -148,6 +148,23 @@ void* test_Json_decodeList() {
   test_decode_err(decoder,
       "[null]",
       err(errIndex(0, errFailure("Expecting an INT", &Json_Value_null))));
+
+  return NULL;
+}
+
+void* test_Json_decodeArray() {
+  Custom* decoder = A1(&Json_decodeArray, &Json_decodeInt);
+
+  test_decode_ok(decoder,
+      "[0,1,2]",
+      A2(&g_elm_core_Array_initialize, NEW_ELM_INT(3), &Basics_identity));
+
+  test_decode_errFailure(decoder, "null", "Expecting an ARRAY");
+
+  test_decode_err(decoder,
+      "[null]",
+      err(errIndex(0, errFailure("Expecting an INT", &Json_Value_null))));
+
   return NULL;
 }
 
@@ -165,4 +182,5 @@ void json_decoder_test() {
   describe("test_Json_decodeString", test_Json_decodeString);
   describe("test_Json_decodeValue", test_Json_decodeValue);
   describe("test_Json_decodeList", test_Json_decodeList);
+  describe("test_Json_decodeArray", test_Json_decodeArray);
 }

@@ -15,6 +15,7 @@ enum {
   CTOR_Field,
   CTOR_Index,
   CTOR_OneOf,
+  CTOR_MockElmArray,
 };
 
 // ---------------------------------------------------------

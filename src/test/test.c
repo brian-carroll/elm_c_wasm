@@ -104,10 +104,19 @@ Closure g_elm_json_Json_Decode_OneOf = {
 };
 
 void* eval_elm_core_Array_initialize(void* args[]) {
-  printf(
-      "eval_elm_core_Array_initialize called with len = %p, fn = %p\n", args[0], args[1]);
-  return NULL;
+  ElmInt* len = args[0];
+  Closure* fn = args[1];
+  Custom* mock_array = NEW_CUSTOM(CTOR_MockElmArray, len->value, NULL);
+  for (size_t i=0; i< len->value; i++) {
+    mock_array->values[i] = A1(fn, NEW_ELM_INT(i));
+  }
+  return mock_array;
 }
+Closure g_elm_core_Array_initialize = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = &eval_elm_core_Array_initialize,
+};
 
 FieldGroup* Wrapper_appFieldGroups[] = {NULL};
 void** Wrapper_mainsArray[] = {NULL};
