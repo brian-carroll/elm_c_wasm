@@ -1,9 +1,25 @@
 #include "./json.h"
 
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 
+#include "./list.h"
 #include "./string.h"
+#include "./types.h"
+#include "./utils.h"
 #include "./wrapper/wrapper.h"
+
+enum JsonFields {
+  /*a*/ JsonField_msg,
+  /*b*/ JsonField_decoder,
+  /*c*/ JsonField_value,
+  /*d*/ JsonField_field,
+  /*e*/ JsonField_index,
+  /*f*/ JsonField_func,
+  /*g*/ JsonField_decoders,
+  /*h*/ JsonField_callback,
+};
 
 void* parse_json(ElmString16* json);  // json-parse.c
 
@@ -254,65 +270,95 @@ Closure Json_map8 = {
 //
 // ----------------------------------------------------
 
-void* runHelp(Custom* decoder, ElmValue* json) {
-  // void* result;
+ElmString16 str_err_expecting = {
+    .words16 = {'E', 'x', 'p', 'e', 'c', 't', 'i', 'n', 'g', ' '},
+    .header = HEADER_STRING(10),
+};
 
-  // skip_whitespace(cursor, end);
-
-  // switch (decoder->ctor) {
-  //   case DECODER_SUCCEED:
-  //     break;
-  //   case DECODER_FAIL:
-  //     break;
-  //   case DECODER_INT:
-  //     result = parse_int(cursor, end);
-  //     break;
-  //   case DECODER_BOOL:
-  //     result = parse_bool(cursor, end);
-  //     break;
-  //   case DECODER_FLOAT:
-  //     result = parse_number(cursor, end);
-  //     break;
-  //   case DECODER_VALUE:
-  //     // data structure representing the actual JSON
-  //     // ADT with 0=JSref, 1=prim, 2=array, 3=object
-  //     // wrapper should know about this at some point
-  //     // need an array parser and an object parser
-  //     break;
-  //   case DECODER_STRING:
-  //     result = parse_string(cursor, end);
-  //     break;
-  //   case DECODER_LIST:
-  //     // run the array parser & convert the Custom to a List
-  //     // use List_create!
-  //     break;
-  //   case DECODER_ARRAY:
-  //     // run the array parser & convert the Custom to an Elm Array
-  //     break;
-  //   case DECODER_NULL:
-  //     result = parse_null(cursor, end);
-  //     break;
-  //   case DECODER_FIELD:
-  //     // fields might not be in order!!
-  //     // pre-parsing would give faster access to each field
-  //     result = parse_string(cursor, end);
-  //     break;
-  //   case DECODER_INDEX:
-  //     // skip bits of the array
-  //     break;
-  //   case DECODER_KEY_VALUE:
-  //     break;
-  //   case DECODER_MAP:
-  //     break;
-  //   case DECODER_AND_THEN:
-  //     break;
-  //   case DECODER_ONE_OF:
-  //     break;
-  //   default:
-  //     break;
-  // }
-  return NULL;
-}
+ElmString16 str_err_Bool = {
+    .header = HEADER_STRING(6), .words16 = {'a', ' ', 'B', 'O', 'O', 'L'}};
+ElmString16 str_err_Int = {
+    .header = HEADER_STRING(6), .words16 = {'a', 'n', ' ', 'I', 'N', 'T'}};
+ElmString16 str_err_Float = {
+    .header = HEADER_STRING(7), .words16 = {'a', ' ', 'F', 'L', 'O', 'A', 'T'}};
+ElmString16 str_err_String = {
+    .header = HEADER_STRING(8), .words16 = {'a', ' ', 'S', 'T', 'R', 'I', 'N', 'G'}};
+ElmString16 str_err_Null = {.header = HEADER_STRING(4), .words16 = {'n', 'u', 'l', 'l'}};
+ElmString16 str_err_List = {
+    .header = HEADER_STRING(6), .words16 = {'a', ' ', 'L', 'I', 'S', 'T'}};
+ElmString16 str_err_Array = {
+    .header = HEADER_STRING(8), .words16 = {'a', 'n', ' ', 'A', 'R', 'R', 'A', 'Y'}};
+ElmString16 str_err_Object = {
+    .header = HEADER_STRING(9), .words16 = {'a', 'n', ' ', 'O', 'B', 'J', 'E', 'C', 'T'}};
+ElmString16 str_err_Field = {
+    .header = HEADER_STRING(30),
+    .words16 =
+        {
+            'a',
+            'n',
+            ' ',
+            'O',
+            'B',
+            'J',
+            'E',
+            'C',
+            'T',
+            ' ',
+            'w',
+            'i',
+            't',
+            'h',
+            ' ',
+            'a',
+            ' ',
+            'f',
+            'i',
+            'e',
+            'l',
+            'd',
+            ' ',
+            'n',
+            'a',
+            'm',
+            'e',
+            'd',
+            ' ',
+            '`',
+        },
+};
+ElmString16 errIndex = {
+    .header = HEADER_STRING(27),
+    .words16 =
+        {
+            'a',
+            ' ',
+            'L',
+            'O',
+            'N',
+            'G',
+            'E',
+            'R',
+            ' ',
+            'a',
+            'r',
+            'r',
+            'a',
+            'y',
+            '.',
+            ' ',
+            'N',
+            'e',
+            'e',
+            'd',
+            ' ',
+            'i',
+            'n',
+            'd',
+            'e',
+            'x',
+            ' ',
+        },
+};
 
 ElmString16 str_invalid_json = {
     .header = HEADER_STRING(23),
@@ -344,6 +390,122 @@ ElmString16 str_invalid_json = {
         },
 };
 
+#define Json_ok(ptr) eval_elm_core_Result_Ok((void*[]){ptr})
+
+void* Json_expecting(ElmString16* type, void* value) {
+  ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting,type}));
+  return eval_elm_core_Result_Err((void*[]){
+      A2(&g_elm_json_Json_Decode_Failure, s, Json_wrap(value)),
+  });
+}
+
+void* Json_runHelp(Custom* decoder, ElmValue* value);
+
+void* eval_Json_array_get(void* args[]) {
+  Custom* json_array = args[0];
+  ElmInt* i = args[1];
+  return json_array->values[i->value];
+}
+
+Custom* Json_runArrayDecoder(Custom* decoder, Custom* value, bool as_list) {
+  u32 len = custom_params(value);
+  Custom* array = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  for (u32 i = 0; i < len; i++) {
+    Custom* result = CAN_THROW(Json_runHelp(decoder, value->values[i]));
+    if (eval_elm_core_Result_isOk((void*[]){result}) == &False) {
+      return eval_elm_core_Result_Err((void*[]){
+          A2(&g_elm_json_Json_Decode_Index, NEW_ELM_INT(i), result->values[0]),
+      });
+    }
+    array->values[i] = result->values[0];
+  }
+
+  void* elm_value = as_list
+                        ? CAN_THROW(List_create(len, array->values))
+                        : A2(&g_elm_core_Array_initialize,
+                              NEW_ELM_INT(len),
+                              NEW_CLOSURE(1, 2, eval_Json_array_get, (void*[]){array}));
+
+  return Json_ok(elm_value);
+}
+
+void* Json_runHelp(Custom* decoder, ElmValue* value) {
+  switch (decoder->ctor) {
+    case DECODER_BOOL:
+      if (&value->custom == &True || &value->custom == &False) {
+        return value;
+      }
+      return Json_expecting(&str_err_Bool, value);
+
+    case DECODER_INT:
+      if (value->header.tag == Tag_Float) {
+        f64 f = value->elm_float.value;
+        if ((i32)0x80000000 <= f && f <= 0x7fffffff && floor(f) == f) {
+          return Json_ok(NEW_ELM_INT((i32)f));
+        }
+      }
+      return Json_expecting(&str_err_Int, value);
+
+    case DECODER_FLOAT:
+      if (value->header.tag == Tag_Float) {
+        return Json_ok(value);
+      }
+      return Json_expecting(&str_err_Float, value);
+
+    case DECODER_STRING:
+      if (value->header.tag == Tag_String) {
+        return Json_ok(value);
+      }
+      return Json_expecting(&str_err_String, value);
+
+    case DECODER_NULL:
+      if (&value->custom == &Json_Value_null) {
+        return decoder->values[JsonField_value];
+      }
+      return Json_expecting(&str_err_Null, value);
+
+    case DECODER_VALUE:
+      return Json_ok(Json_wrap(value));
+
+    case DECODER_LIST:
+      if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
+        return Json_runArrayDecoder(
+            decoder->values[JsonField_decoder], &value->custom, true);
+      }
+      return Json_expecting(&str_err_List, value);
+
+    case DECODER_ARRAY:
+      if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
+        return Json_runArrayDecoder(
+            decoder->values[JsonField_decoder], &value->custom, false);
+      }
+      return Json_expecting(&str_err_Array, value);
+
+    case DECODER_FIELD:
+      // fields might not be in order!!
+      // pre-parsing would give faster access to each field
+      break;
+    case DECODER_INDEX:
+      // skip bits of the array
+      break;
+    case DECODER_KEY_VALUE:
+      break;
+    case DECODER_MAP:
+      break;
+    case DECODER_AND_THEN:
+      break;
+    case DECODER_ONE_OF:
+      break;
+    case DECODER_FAIL:
+      break;
+    case DECODER_SUCCEED:
+      break;
+    default:
+      break;
+  }
+  return NULL;
+}
+
 static void* eval_runOnString(void* args[]) {
   Custom* decoder = args[0];
   ElmString16* string = args[1];
@@ -351,14 +513,11 @@ static void* eval_runOnString(void* args[]) {
   ElmValue* json = parse_json(string);
   if (json == pGcFull) return pGcFull;
   if (json == NULL) {
-    return eval_elm_core_Result_Err(((void*[]){
-        eval_elm_json_Json_Decode_Failure(((void*[]){
-            &str_invalid_json,
-            Json_wrap(string),
-        })),
-    }));
+    return eval_elm_core_Result_Err((void*[]){
+        A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, Json_wrap(string)),
+    });
   }
-  return runHelp(decoder, json);
+  return Json_runHelp(decoder, json);
 }
 Closure Json_runOnString = {
     .header = HEADER_CLOSURE(0),

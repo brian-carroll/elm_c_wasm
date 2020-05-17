@@ -58,6 +58,28 @@ void* eval_elm_core_Result_Ok(void* args[]) {
 void* eval_elm_core_Result_Err(void* args[]) {
   return ctorCustom(CTOR_Err, 1, args);
 }
+void* eval_elm_core_Result_isOk(void* args[]) {
+  void* x_result = args[0];
+  void* tmp0;
+  u32 tmp1 = ((Custom*)x_result)->ctor;
+  do {
+    if (tmp1 == CTOR_Ok) {
+      tmp0 = &True;
+      break;
+    } else {
+      tmp0 = &False;
+      break;
+    };
+  } while (0);
+  return tmp0;
+}
+Closure g_elm_core_Result_isOk = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_core_Result_isOk,
+};
+
 void* eval_elm_json_Json_Decode_Failure(void* args[]) {
   return ctorCustom(CTOR_Failure, 2, args);
 }
@@ -69,6 +91,11 @@ void* eval_elm_json_Json_Decode_Index(void* args[]) {
 }
 void* eval_elm_json_Json_Decode_OneOf(void* args[]) {
   return ctorCustom(CTOR_OneOf, 1, args);
+}
+
+void* eval_elm_core_Array_initialize(void* args[]) {
+  printf("eval_elm_core_Array_initialize called with len = %p, fn = %p\n", args[0], args[1]);
+  return NULL;
 }
 
 FieldGroup* Wrapper_appFieldGroups[] = {NULL};
