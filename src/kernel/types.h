@@ -179,14 +179,14 @@ ElmChar* ctorElmChar(u32 value);
 
 // STRING
 
-typedef struct {
+typedef struct __attribute__ ((aligned)) {
   Header header;
   u8 bytes[];
 } ElmString;
 ElmString* ctorElmString(size_t n, char* str);
 #define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 
-typedef struct {
+typedef struct __attribute__ ((aligned)) {
   Header header;
   u16 words16[];
 } ElmString16;
