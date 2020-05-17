@@ -393,7 +393,7 @@ ElmString16 str_invalid_json = {
 #define Json_ok(ptr) eval_elm_core_Result_Ok((void*[]){ptr})
 
 void* Json_expecting(ElmString16* type, void* value) {
-  ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting,type}));
+  ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting, type}));
   return eval_elm_core_Result_Err((void*[]){
       A2(&g_elm_json_Json_Decode_Failure, s, Json_wrap(value)),
   });

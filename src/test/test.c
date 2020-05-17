@@ -28,16 +28,6 @@ int assertions_made = 0;
 //
 // ---------------------------------------------------------
 
-enum {
-  CTOR_Nothing,
-  CTOR_Just,
-  CTOR_Ok,
-  CTOR_Err,
-  CTOR_Failure,
-  CTOR_Field,
-  CTOR_Index,
-  CTOR_OneOf,
-};
 void* eval_elm_core_Maybe_Just(void* args[]) {
   return ctorCustom(CTOR_Just, 1, args);
 }
@@ -92,9 +82,30 @@ void* eval_elm_json_Json_Decode_Index(void* args[]) {
 void* eval_elm_json_Json_Decode_OneOf(void* args[]) {
   return ctorCustom(CTOR_OneOf, 1, args);
 }
+Closure g_elm_json_Json_Decode_Failure = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = &eval_elm_json_Json_Decode_Failure,
+};
+Closure g_elm_json_Json_Decode_Field = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = &eval_elm_json_Json_Decode_Field,
+};
+Closure g_elm_json_Json_Decode_Index = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = &eval_elm_json_Json_Decode_Index,
+};
+Closure g_elm_json_Json_Decode_OneOf = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = &eval_elm_json_Json_Decode_OneOf,
+};
 
 void* eval_elm_core_Array_initialize(void* args[]) {
-  printf("eval_elm_core_Array_initialize called with len = %p, fn = %p\n", args[0], args[1]);
+  printf(
+      "eval_elm_core_Array_initialize called with len = %p, fn = %p\n", args[0], args[1]);
   return NULL;
 }
 

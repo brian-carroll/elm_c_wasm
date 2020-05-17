@@ -317,8 +317,6 @@ void* test_Json_parse_object() {
 void json_parser_test() {
   if (verbose) {
     printf("\n");
-    printf("------------------------------------\n");
-    printf("\n");
     printf("Json parser\n");
     printf("------------\n");
   }

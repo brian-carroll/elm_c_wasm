@@ -116,7 +116,7 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
 	@echo Building tests as native binary...
-	@gcc $(CFLAGS) $(SOURCES) -o $@ -lm
+	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
 	@echo Building tests as WebAssembly module...
