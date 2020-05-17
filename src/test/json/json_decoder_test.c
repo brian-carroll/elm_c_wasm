@@ -3,52 +3,90 @@
 #include "../../kernel/kernel.h"
 #include "./../test.h"
 
-ElmString16 str_invalid_json;
+ElmValue* parse_json(ElmString16* json);
+void* Json_wrap(void*);
 
-void* test_Json_decode_invalidJson() {
-  Custom* decoder = &Json_decodeBool;
-  ElmString16* json = create_string("");
-  Custom* result = A2(&Json_runOnString, decoder, json);
-  Custom* failure = result->values[0];
-  ElmString16* msg = failure->values[0];
+//=================================================================================================
+// Test helpers
 
-  mu_expect_equal(
-      "should return an `Err _`, given an empty string", result->ctor, CTOR_Err);
+char test_decode_buf[1024];
 
-  mu_expect_equal("should return an `Err (Failure _ _)`, given an empty string",
-      failure->ctor,
-      CTOR_Failure);
-
-  expect_equal("should return the expected error message, given an empty JSON string",
-      msg,
-      create_string("This is not valid JSON!"));
-
+void* test_decode_ok(Custom* decoder, char* json_c_str, void* expected) {
+  sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
+  expect_equal(test_decode_buf,
+      A2(&Json_runOnString, decoder, create_string(json_c_str)),
+      NEW_CUSTOM(CTOR_Ok, 1, (void*[]){expected}));
   return NULL;
 }
 
-void* test_Json_decodeBool() {
-  Custom* decoder = &Json_decodeBool;
+void* test_decode_err(Custom* decoder, char* json_c_str, Custom* decode_error) {
+  sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
+  expect_equal(test_decode_buf,
+      A2(&Json_runOnString, decoder, create_string(json_c_str)),
+      NEW_CUSTOM(CTOR_Err, 1, ((void*[]){decode_error})));
+  return NULL;
+}
 
-  expect_equal("should correctly decode 'true'",
-      A2(&Json_runOnString, decoder, create_string("true")),
-      NEW_CUSTOM(CTOR_Ok, 1, (void*[]){&True}));
-
-  expect_equal("should correctly decode 'false'",
-      A2(&Json_runOnString, decoder, create_string("false")),
-      NEW_CUSTOM(CTOR_Ok, 1, (void*[]){&False}));
-
-  expect_equal("should fail with the expected message for 'null'",
-      A2(&Json_runOnString, decoder, create_string("null")),
+void* test_decode_errFailure(Custom* decoder, char* json_c_str, char* msg_c_str) {
+  ElmString16* json = create_string(json_c_str);
+  sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
+  expect_equal(test_decode_buf,
+      A2(&Json_runOnString, decoder, json),
       NEW_CUSTOM(CTOR_Err,
           1,
           ((void*[]){
               NEW_CUSTOM(CTOR_Failure,
                   2,
                   ((void*[]){
-                      create_string("Expecting a BOOL"),
-                      &Json_Value_null,
+                      create_string(msg_c_str),
+                      parse_json(json),
                   })),
           })));
+  return NULL;
+}
+
+Custom* errField(char* field, Custom* error) {
+  return NEW_CUSTOM(CTOR_Field, 2, ((void*[]){create_string(field), error}));
+}
+Custom* errIndex(u32 idx, Custom* error) {
+  return NEW_CUSTOM(CTOR_Index, 2, ((void*[]){NEW_ELM_INT(idx), error}));
+}
+Custom* errOneOf(Cons* errors) {
+  return NEW_CUSTOM(CTOR_OneOf, 1, (void*){errors});
+}
+Custom* errFailure(char* msg_c_str, char* json_c_str) {
+  return NEW_CUSTOM(CTOR_Failure,
+      2,
+      ((void*[]){
+          create_string(msg_c_str),
+          parse_json(create_string(json_c_str)),
+      }));
+}
+Custom* err(Custom* error) {
+  return NEW_CUSTOM(CTOR_Err, 1, (void*){error});
+}
+
+//=================================================================================================
+
+void* test_Json_decode_invalidJson() {
+  char* json = "invalid JSON !";
+  test_decode_err(&Json_decodeBool,
+      json,
+      NEW_CUSTOM(CTOR_Failure,
+          2,
+          ((void*[]){
+              create_string("This is not valid JSON!"),
+              Json_wrap(create_string(json)),
+          })));
+
+  return NULL;
+}
+
+void* test_Json_decodeBool() {
+  test_decode_ok(&Json_decodeBool, "true", &True);
+  test_decode_ok(&Json_decodeBool, "false", &False);
+
+  test_decode_errFailure(&Json_decodeBool, "null", "Expecting a BOOL");
 
   return NULL;
 }

@@ -326,7 +326,7 @@ ElmString16 str_err_Field = {
             '`',
         },
 };
-ElmString16 errIndex = {
+ElmString16 str_err_Index = {
     .header = HEADER_STRING(27),
     .words16 =
         {

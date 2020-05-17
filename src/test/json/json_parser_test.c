@@ -3,6 +3,9 @@
 #include "../../kernel/kernel.h"
 #include "./../test.h"
 
+//-----------------------------------------
+// Test helpers
+
 #define PARSE_TEST_MSG_LEN 1024
 char parse_test_msg[PARSE_TEST_MSG_LEN];
 
@@ -47,6 +50,8 @@ char* parse_test(void* (*parse_func)(u16** cursor, u16* end),
 
   return NULL;
 }
+
+//-----------------------------------------
 
 void* parse_bool(u16** cursor, u16* end);
 void* test_Json_parse_bool() {
