@@ -91,6 +91,17 @@ void* test_Json_decodeBool() {
   return NULL;
 }
 
+void* test_Json_decodeInt() {
+  test_decode_ok(&Json_decodeInt, "123", NEW_ELM_INT(123));
+  test_decode_ok(&Json_decodeInt, "-123", NEW_ELM_INT(-123));
+
+  test_decode_errFailure(&Json_decodeInt, "null", "Expecting an INT");
+  test_decode_errFailure(&Json_decodeInt, "9876543210", "Expecting an INT");
+  test_decode_errFailure(&Json_decodeInt, "3.14", "Expecting an INT");
+
+  return NULL;
+}
+
 void json_decoder_test() {
   if (verbose) {
     printf("\n");
@@ -100,4 +111,5 @@ void json_decoder_test() {
 
   describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
   describe("test_Json_decodeBool", test_Json_decodeBool);
+  describe("test_Json_decodeInt", test_Json_decodeInt);
 }
