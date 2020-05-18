@@ -239,6 +239,42 @@ void* test_Json_decodeKeyValuePairs() {
   return NULL;
 }
 
+void* test_Json_map() {
+  // Custom* decoder = A1(&Json_map, );
+  mu_assert("TODO", 0);
+  return NULL;
+}
+
+void* test_Json_andThen() {
+  // Custom* decoder = A1(&Json_andThen, );
+  mu_assert("TODO", 0);
+  return NULL;
+}
+
+void* test_Json_oneOf() {
+  // Custom* decoder = A1(&Json_andThen, );
+  mu_assert("TODO", 0);
+  return NULL;
+}
+
+void* test_Json_fail() {
+  char* msg = "it failed";
+  Custom* decoder = A1(&Json_fail, create_string(msg));
+  test_decode_errFailure(decoder, "42", msg);
+
+  return NULL;
+}
+
+void* test_Json_succeed() {
+  ElmInt* msg = NEW_ELM_INT(42);
+  Custom* decoder = A1(&Json_succeed, msg);
+
+  test_decode_ok(decoder, "true", msg);
+  test_decode_ok(decoder, "[1,2,3]", msg);
+
+  return NULL;
+}
+
 void json_decoder_test() {
   if (verbose) {
     printf("\n");
@@ -257,4 +293,9 @@ void json_decoder_test() {
   describe("test_Json_decodeField", test_Json_decodeField);
   describe("test_Json_decodeIndex", test_Json_decodeIndex);
   describe("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs);
+  describe("test_Json_map", test_Json_map);
+  describe("test_Json_andThen", test_Json_andThen);
+  describe("test_Json_oneOf", test_Json_oneOf);
+  describe("test_Json_fail", test_Json_fail);
+  describe("test_Json_succeed", test_Json_succeed);
 }

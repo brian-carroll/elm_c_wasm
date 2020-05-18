@@ -1,5 +1,6 @@
 #include "json.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -555,18 +556,53 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return TAIL_RESULT_OK(keyValuePairs);
     }
 
-    case DECODER_MAP:
-      break;
-    case DECODER_AND_THEN:
-      break;
-    case DECODER_ONE_OF:
-      break;
-    case DECODER_FAIL:
-      break;
-    case DECODER_SUCCEED:
-      break;
+    case DECODER_MAP: {
+      Closure* answer = decoder->values[JsonField_func];
+      Custom* decoders = decoder->values[JsonField_decoders];
+      u32 n_decoders = custom_params(decoders);
+      for (size_t i = 0; i < n_decoders; i++) {
+        Custom* result = Json_runHelp(decoders->values[i], value);
+        if (RESULT_IS_OK(result) == &False) {
+          return result;
+        }
+        answer = A1(answer, result->values[0]);
+      }
+      return TAIL_RESULT_OK(answer);
+    }
+
+    case DECODER_AND_THEN: {
+      Custom* result = Json_runHelp(decoder->values[JsonField_decoder], value);
+      return RESULT_IS_OK(result) == &False
+                 ? result
+                 : Json_runHelp(
+                       A1(decoder->values[JsonField_callback], result->values[0]), value);
+    }
+
+    case DECODER_ONE_OF: {
+      Cons* errors = &Nil;
+      for (Cons* temp = decoder->values[JsonField_decoders]; temp != &Nil;
+           temp = temp->tail) {
+        Custom* result = Json_runHelp(temp->head, value);
+        if (RESULT_IS_OK(result) == &False) {
+          return result;
+        }
+        errors = NEW_CONS(result->values[0], errors);
+      }
+      return TAIL_RESULT_ERR(
+          A1(&g_elm_json_Json_Decode_OneOf, A1(&g_elm_core_List_reverse, errors)));
+    }
+
+    case DECODER_FAIL: {
+      return TAIL_RESULT_ERR(
+          A2(&g_elm_json_Json_Decode_Failure, decoder->values[JsonField_msg], wrap(value)));
+    }
+
+    case DECODER_SUCCEED: {
+      return TAIL_RESULT_OK(decoder->values[JsonField_msg]);
+    }
+
     default:
-      break;
+      assert(0);
   }
   return NULL;
 }
