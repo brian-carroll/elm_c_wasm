@@ -492,7 +492,8 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       ElmString16* field = decoder->values[JsonField_field];
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_OBJECT) {
         Custom* object = &value->custom;
-        for (size_t i = 0; i < custom_params(object); i += 2) {
+        u32 n_params = custom_params(object);
+        for (size_t i = 0; i < n_params; i += 2) {
           if (A2(&Utils_equal, object->values[i], field) == &True) {
             Custom* result =
                 Json_runHelp(decoder->values[JsonField_decoder], object->values[i + 1]);
@@ -534,8 +535,26 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
                        A2(&g_elm_json_Json_Decode_Index, index, result->values[0]));
     }
 
-    case DECODER_KEY_VALUE:
-      break;
+    case DECODER_KEY_VALUE: {
+      if (value->header.tag != Tag_Custom || value->custom.ctor != JSON_VALUE_OBJECT) {
+        return Json_expecting(&str_err_Object, value);
+      }
+      Custom* object = &value->custom;
+      u32 n_params = custom_params(object);
+      Cons* keyValuePairs = &Nil;
+      for (i32 i = n_params - 2; i >= 0; i -= 2) {
+        ElmString16* key = object->values[i];
+        Custom* result =
+            Json_runHelp(decoder->values[JsonField_decoder], object->values[i + 1]);
+        if (RESULT_IS_OK(result) == &False) {
+          return TAIL_RESULT_ERR(
+              A2(&g_elm_json_Json_Decode_Field, key, result->values[0]));
+        }
+        keyValuePairs = NEW_CONS(NEW_TUPLE2(key, result->values[0]), keyValuePairs);
+      }
+      return TAIL_RESULT_OK(keyValuePairs);
+    }
+
     case DECODER_MAP:
       break;
     case DECODER_AND_THEN:

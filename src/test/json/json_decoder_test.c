@@ -207,12 +207,34 @@ void* test_Json_decodeIndex() {
 
   test_decode_errFailure(decoder, "null", "Expecting an ARRAY");
 
-  test_decode_errFailure(
-      decoder, "[123,456]", "Expecting a LONGER array. Need index 2 but only see 2 entries");
+  test_decode_errFailure(decoder,
+      "[123,456]",
+      "Expecting a LONGER array. Need index 2 but only see 2 entries");
 
   test_decode_err(decoder,
       "[{},\"hello\",null,123]",
       err(errIndex(idx, errFailure("Expecting an INT", &Json_Value_null))));
+
+  return NULL;
+}
+
+void* test_Json_decodeKeyValuePairs() {
+  Custom* decoder = A1(&Json_decodeKeyValuePairs, &Json_decodeInt);
+
+  test_decode_ok(decoder,
+      "{ \"a\": 1, \"b\": 2, \"c\": 3 }",
+      List_create(3,
+          ((void*[]){
+              NEW_TUPLE2(create_string("a"), NEW_ELM_INT(1)),
+              NEW_TUPLE2(create_string("b"), NEW_ELM_INT(2)),
+              NEW_TUPLE2(create_string("c"), NEW_ELM_INT(3)),
+          })));
+
+  test_decode_errFailure(decoder, "null", "Expecting an OBJECT");
+
+  test_decode_err(decoder,
+      "{ \"a\": 1, \"b\": null, \"c\": 3 }",
+      err(errField("b", errFailure("Expecting an INT", &Json_Value_null))));
 
   return NULL;
 }
@@ -234,4 +256,5 @@ void json_decoder_test() {
   describe("test_Json_decodeArray", test_Json_decodeArray);
   describe("test_Json_decodeField", test_Json_decodeField);
   describe("test_Json_decodeIndex", test_Json_decodeIndex);
+  describe("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs);
 }
