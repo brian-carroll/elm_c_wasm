@@ -1,7 +1,7 @@
 #ifndef ELM_JSON_H
 #define ELM_JSON_H
 
-#include "./types.h"
+#include "types.h"
 
 // Pick offsets so we can easily read lower digits in either decimal or hex
 #define JSON_CTOR_OFFSET 0x2000 * 10000

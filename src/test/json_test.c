@@ -1,4 +1,4 @@
-#include "./test.h"
+#include "test.h"
 
 void json_parser_test();
 void json_decoder_test();

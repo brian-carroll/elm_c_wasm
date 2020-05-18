@@ -1,5 +1,5 @@
 #include "../kernel/kernel.h"
-#include "./test.h"
+#include "test.h"
 
 ElmInt one = {.header = HEADER_INT, .value = 1};
 ElmInt two = {.header = HEADER_INT, .value = 2};

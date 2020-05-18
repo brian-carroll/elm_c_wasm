@@ -1,4 +1,4 @@
-#include "./gc-internals.h"
+#include "gc-internals.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -6,12 +6,12 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "./types.h"
+#include "types.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 
-#include "./debug.h"
+#include "debug.h"
 #else
 #define log_error(...)
 #endif

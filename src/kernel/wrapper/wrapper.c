@@ -11,7 +11,7 @@
 #include "../json.h"
 #include "../types.h"
 #include "../utils.h"
-#include "./wrapper.h"
+#include "wrapper.h"
 
 extern GcState gc_state;
 

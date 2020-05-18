@@ -1,13 +1,13 @@
-#include "./debug.h"
+#include "debug.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "./gc-internals.h"
-#include "./string.h"
-#include "./types.h"
+#include "gc-internals.h"
+#include "string.h"
+#include "types.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else

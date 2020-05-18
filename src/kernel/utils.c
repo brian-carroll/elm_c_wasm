@@ -1,18 +1,18 @@
-#include "./utils.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <string.h>
 
-#include "./elm.h"
-#include "./gc.h"
-#include "./list.h"
-#include "./string.h"
-#include "./types.h"
+#include "elm.h"
+#include "gc.h"
+#include "list.h"
+#include "string.h"
+#include "types.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 
-#include "./debug.h"
+#include "debug.h"
 extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #else
 #define log_error(...)

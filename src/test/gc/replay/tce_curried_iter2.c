@@ -1,4 +1,7 @@
+#include "../../gc_test.h"
+#include "../../test.h"
 #include "../replay_test.h"
+
 
 static void* tce_mock_curried(void* args[], void** gc_tce_data) {
   static i32 throw_after = 3;

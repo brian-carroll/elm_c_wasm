@@ -63,7 +63,7 @@
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 
-#include "./debug.h"
+#include "debug.h"
 #else
 #define log_error(...)
 #endif

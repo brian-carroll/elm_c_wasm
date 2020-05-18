@@ -1,4 +1,10 @@
-#include "./replay_test.h"
+#include "replay_test.h"
+
+#include <stdio.h>
+
+#include "../../kernel/gc-internals.h"
+#include "../../kernel/kernel.h"
+#include "../test.h"
 
 char* test_replay_finished();
 char* test_replay_saturated();

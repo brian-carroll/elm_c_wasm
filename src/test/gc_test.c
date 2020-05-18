@@ -4,14 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/basics.h"
-#include "../kernel/debug.h"
 #include "../kernel/gc-internals.h"
-#include "../kernel/types.h"
-#include "../kernel/utils.h"
-#include "./gc/replay_test.h"
-#include "./gc/stackmap_mark_test.h"
-#include "./test.h"
+#include "../kernel/kernel.h"
+#include "gc/replay_test.h"
+#include "gc/stackmap_mark_test.h"
+#include "test.h"
 
 extern GcState gc_state;
 
@@ -727,11 +724,13 @@ char* test_heap_layout() {
     assertions_made++;
     if (!bitmap_ok || !offsets_ok) {
       tests_failed++;
-      printf("FAIL: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
+      printf(
+          "FAIL: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
       printf("bitmap %f %%\n", percent_bitmap);
       printf("offsets %f %%\n", percent_offsets);
     } else if (verbose) {
-      printf("PASS: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
+      printf(
+          "PASS: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
     }
   }
 

@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "../kernel/kernel.h"
-#include "./test.h"
+#include "test.h"
 
 size_t code_units(ElmString16* s);
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);

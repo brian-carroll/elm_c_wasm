@@ -1,7 +1,8 @@
 #include <stddef.h>
 
 #include "../../kernel/kernel.h"
-#include "./../test.h"
+#include "../../kernel/json.h"
+#include "../test.h"
 
 //-----------------------------------------
 // Test helpers

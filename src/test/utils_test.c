@@ -3,10 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/basics.h"
-#include "../kernel/types.h"
-#include "./gc_test.h"
-#include "./test.h"
+#include "../kernel/kernel.h"
+#include "test.h"
 
 char* test_records() {
   if (verbose) {
@@ -593,12 +591,9 @@ char* utils_test() {
     printf("Utils\n");
     printf("-----\n");
   }
-  gc_test_reset();
   mu_run_test(test_records);
   mu_run_test(test_apply);
-  gc_test_reset();
   mu_run_test(test_eq);
-  gc_test_reset();
   mu_run_test(test_compare);
 
   return NULL;

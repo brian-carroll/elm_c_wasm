@@ -3,7 +3,7 @@
 #ifndef ELM_H
 #define ELM_H
 
-#include "./types.h"
+#include "types.h"
 
 Custom g_elm_core_Maybe_Nothing;
 Closure g_elm_core_Maybe_Just;

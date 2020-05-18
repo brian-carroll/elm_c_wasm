@@ -1,8 +1,8 @@
 #ifndef ELM_KERNEL_LIST
 #define ELM_KERNEL_LIST
 
-#include "./basics.h"
-#include "./types.h"
+#include "basics.h"
+#include "types.h"
 
 void* List_create(size_t len, void* values[]);
 void* eval_List_append(void* args[]);

@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "../kernel/kernel.h"
-#include "./test.h"
+#include "test.h"
 
 int ftest(ElmFloat* actual, f64 expected) {
   return fabs(actual->value - expected) / expected < 0.001;

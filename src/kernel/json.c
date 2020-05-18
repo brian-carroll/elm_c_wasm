@@ -1,17 +1,17 @@
-#include "./json.h"
+#include "json.h"
 
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "./debug.h"
-#include "./elm.h"
-#include "./json-elm.h"
-#include "./list.h"
-#include "./string.h"
-#include "./types.h"
-#include "./utils.h"
-#include "./wrapper/wrapper.h"
+#include "debug.h"
+#include "elm.h"
+#include "json-elm.h"
+#include "list.h"
+#include "string.h"
+#include "types.h"
+#include "utils.h"
+#include "wrapper/wrapper.h"
 
 // Don't need A1,A2 macros for tail calls, or calls that don't allocate
 #define TAIL_RESULT_OK(ptr) eval_elm_core_Result_Ok((void*[]){ptr})
@@ -31,7 +31,7 @@ enum JsonFields {
 
 void* parse_json(ElmString16* json);  // json-parse.c
 
-void* Json_wrap(void* ptr) {
+void* wrap(void* ptr) {
   return ptr;
 }
 
@@ -402,7 +402,7 @@ ElmString16 str_invalid_json = {
 
 void* Json_expecting(ElmString16* type, void* value) {
   ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting, type}));
-  return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, Json_wrap(value)));
+  return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, wrap(value)));
 }
 
 void* Json_runHelp(Custom* decoder, ElmValue* value);
@@ -470,7 +470,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return Json_expecting(&str_err_Null, value);
 
     case DECODER_VALUE:
-      return TAIL_RESULT_OK(Json_wrap(value));
+      return TAIL_RESULT_OK(wrap(value));
 
     case DECODER_LIST:
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
@@ -535,7 +535,7 @@ static void* eval_runOnString(void* args[]) {
   if (json == pGcFull) return pGcFull;
   if (json == NULL) {
     return TAIL_RESULT_ERR(
-        A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, Json_wrap(string)));
+        A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, wrap(string)));
   }
   return Json_runHelp(decoder, json);
 }
@@ -572,7 +572,7 @@ class JsRef() {
 
 var _Json_encode = F2(function(indentLevel, value)
 
-function _Json_wrap(value) {
+function _wrap(value) {
   const jsRef = new JsRef(value);
   return jsRef;
 }
@@ -589,5 +589,5 @@ function _Json_emptyObject() { return {}; }
 var _Json_addField = F3(function(key, value, object)
 
 function _Json_addEntry(func)
-var _Json_encodeNull = _Json_wrap(null);
+var _Json_encodeNull = _wrap(null);
 */

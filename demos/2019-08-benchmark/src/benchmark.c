@@ -4,12 +4,8 @@
 #define EMSCRIPTEN_KEEPALIVE
 #endif
 // #include <stdio.h>
-#include "../../../src/kernel/basics.h"
-#include "../../../src/kernel/debug.h"
+#include "../../../src/kernel/kernel.h"
 #include "../../../src/kernel/gc-internals.h"
-#include "../../../src/kernel/gc.h"
-#include "../../../src/kernel/types.h"
-#include "../../../src/kernel/utils.h"
 
 extern GcState gc_state;
 

@@ -1,3 +1,5 @@
+#include "../../gc_test.h"
+#include "../../test.h"
 #include "../replay_test.h"
 
 static void* tce_mock_curried(void* args[], void** gc_tce_data) {
@@ -84,8 +86,8 @@ char* test_replay_tce_curried_iter1() {
   gc_test_reset();
 
   // RUN
-  void* partial = Utils_apply(&mock_tce_sat, 1, (void* []){&arg_init_count});
-  void* result1 = Utils_apply(partial, 1, (void* []){&arg_max_count});
+  void* partial = Utils_apply(&mock_tce_sat, 1, (void*[]){&arg_init_count});
+  void* result1 = Utils_apply(partial, 1, (void*[]){&arg_max_count});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
@@ -120,8 +122,8 @@ char* test_replay_tce_curried_iter1() {
   // GC + REPLAY
   GC_collect_full();
   GC_prep_replay();
-  partial = Utils_apply(&mock_tce_sat, 1, (void* []){&arg_init_count});
-  Utils_apply(partial, 1, (void* []){&arg_max_count});
+  partial = Utils_apply(&mock_tce_sat, 1, (void*[]){&arg_init_count});
+  Utils_apply(partial, 1, (void*[]){&arg_max_count});
 
   mark(&gc_state, gc_state.heap.start);  // make it easier to understand print_heap
 

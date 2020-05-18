@@ -1,4 +1,4 @@
-#include "./test.h"
+#include "test.h"
 
 #include <getopt.h>
 #include <stdbool.h>
@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include "../kernel/kernel.h"
-#include "./gc_test.h"
+#include "gc_test.h"
 
 char* types_test();
 char* utils_test();
