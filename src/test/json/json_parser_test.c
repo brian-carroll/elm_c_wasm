@@ -1,6 +1,6 @@
 #include <stddef.h>
 
-#include "../../kernel/kernel.h"
+#include "../../kernel/core/core.h"
 #include "../../kernel/json/json.h"
 #include "../test.h"
 

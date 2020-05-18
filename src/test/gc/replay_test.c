@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "../../kernel/core/gc-internals.h"
-#include "../../kernel/kernel.h"
+#include "../../kernel/core/core.h"
 #include "../test.h"
 
 char* test_replay_finished();

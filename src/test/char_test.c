@@ -1,4 +1,4 @@
-#include "../kernel/kernel.h"
+#include "../kernel/core/core.h"
 #include "test.h"
 
 /*

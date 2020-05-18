@@ -7,7 +7,7 @@
 #endif
 
 #include "../../../kernel/core/gc-internals.h"
-#include "../../../kernel/kernel.h"
+#include "../../../kernel/core/core.h"
 
 /* ---------------------------------------------------------
 

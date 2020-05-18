@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "../../kernel/core/gc-internals.h"
-#include "../../kernel/kernel.h"
+#include "../../kernel/core/core.h"
 #include "../gc_test.h"
 #include "../test.h"
 

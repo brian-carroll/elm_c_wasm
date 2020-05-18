@@ -2,7 +2,7 @@
 #define REPLAY_TEST_H
 
 #include "../../kernel/core/gc-internals.h"
-#include "../../kernel/kernel.h"
+#include "../../kernel/core/core.h"
 
 char* replay_scenario_tests();
 Closure mock_func;

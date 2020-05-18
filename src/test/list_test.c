@@ -1,4 +1,4 @@
-#include "../kernel/kernel.h"
+#include "../kernel/core/core.h"
 #include "test.h"
 
 ElmInt one = {.header = HEADER_INT, .value = 1};

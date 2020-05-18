@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/kernel.h"
+#include "../kernel/core/core.h"
 #include "test.h"
 
 size_t code_units(ElmString16* s);

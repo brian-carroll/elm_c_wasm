@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/kernel.h"
+#include "../kernel/core/core.h"
 #include "test.h"
 
 int ftest(ElmFloat* actual, f64 expected) {

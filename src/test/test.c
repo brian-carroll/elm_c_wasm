@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../kernel/kernel.h"
+#include "../kernel/core/core.h"
 #include "gc_test.h"
 
 char* types_test();
