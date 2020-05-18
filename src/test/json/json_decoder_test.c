@@ -19,11 +19,13 @@ void* test_decode_ok(Custom* decoder, char* json_c_str, void* expected) {
   return NULL;
 }
 
-void* test_decode_err(Custom* decoder, char* json_c_str, Custom* decode_error) {
+void* test_decode_err(Custom* decoder, char* json_c_str, Custom* expected_err) {
   sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
-  expect_equal(test_decode_buf,
-      A2(&Json_runOnString, decoder, create_string(json_c_str)),
-      decode_error);
+  void* actual_err = A2(&Json_runOnString, decoder, create_string(json_c_str));
+  // print_heap();
+  // Debug_pretty("actual", actual_err);
+  // Debug_pretty("expected", expected_err);
+  expect_equal(test_decode_buf, actual_err, expected_err);
   return NULL;
 }
 
@@ -168,6 +170,23 @@ void* test_Json_decodeArray() {
   return NULL;
 }
 
+void* test_Json_decodeField() {
+  ElmString16* field = create_string("myField");
+  Custom* decoder = A2(&Json_decodeField, field, &Json_decodeInt);
+
+  test_decode_ok(
+      decoder, "{ \"a\": null, \"myField\": 123, \"b\": null }", NEW_ELM_INT(123));
+
+  test_decode_errFailure(
+      decoder, "null", "Expecting an OBJECT with a field named `myField`");
+
+  test_decode_err(decoder,
+      "{\"myField\":null}",
+      err(errField("myField", errFailure("Expecting an INT", &Json_Value_null))));
+
+  return NULL;
+}
+
 void json_decoder_test() {
   if (verbose) {
     printf("\n");
@@ -183,4 +202,5 @@ void json_decoder_test() {
   describe("test_Json_decodeValue", test_Json_decodeValue);
   describe("test_Json_decodeList", test_Json_decodeList);
   describe("test_Json_decodeArray", test_Json_decodeArray);
+  describe("test_Json_decodeField", test_Json_decodeField);
 }

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "./debug.h"
 #include "./list.h"
 #include "./string.h"
 #include "./types.h"
@@ -88,7 +89,8 @@ Closure Json_decodeArray = {
 
 static void* eval_Json_decodeNull(void* args[]) {
   void* value = args[0];
-  return NEW_CUSTOM(DECODER_NULL, 3, ((void*[]){&Json_Value_null, &Json_Value_null, value}));
+  return NEW_CUSTOM(
+      DECODER_NULL, 3, ((void*[]){&Json_Value_null, &Json_Value_null, value}));
 }
 Closure Json_decodeNull = {
     .header = HEADER_CLOSURE(0),
@@ -290,6 +292,7 @@ ElmString16 str_err_Array = {
     .header = HEADER_STRING(8), .words16 = {'a', 'n', ' ', 'A', 'R', 'R', 'A', 'Y'}};
 ElmString16 str_err_Object = {
     .header = HEADER_STRING(9), .words16 = {'a', 'n', ' ', 'O', 'B', 'J', 'E', 'C', 'T'}};
+ElmString16 str_err_backtick = {.header = HEADER_STRING(1), .words16 = {'`'}};
 ElmString16 str_err_Field = {
     .header = HEADER_STRING(30),
     .words16 =
@@ -481,10 +484,26 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       }
       return Json_expecting(&str_err_Array, value);
 
-    case DECODER_FIELD:
-      // fields might not be in order!!
-      // pre-parsing would give faster access to each field
-      break;
+    case DECODER_FIELD: {
+      ElmString16* field = decoder->values[JsonField_field];
+      if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_OBJECT) {
+        Custom* object = &value->custom;
+        for (size_t i = 0; i < custom_params(object); i += 2) {
+          if (A2(&Utils_equal, object->values[i], field) == &True) {
+            Custom* result =
+                Json_runHelp(decoder->values[JsonField_decoder], object->values[i + 1]);
+            return (eval_elm_core_Result_isOk((void*[]){result}) == &True)
+                       ? result
+                       : eval_elm_core_Result_Err((void*[]){A2(
+                             &g_elm_json_Json_Decode_Field, field, result->values[0])});
+          }
+        }
+      }
+      ElmString16* msg = A2(
+          &String_append, &str_err_Field, A2(&String_append, field, &str_err_backtick));
+      return Json_expecting(msg, value);
+    }
+
     case DECODER_INDEX:
       // skip bits of the array
       break;
