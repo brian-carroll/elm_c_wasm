@@ -6,7 +6,7 @@
 
 #include "../core/core.h"
 #include "../wrapper/wrapper.h"
-#include "json-elm.h"
+#include "elm.h"
 
 // Don't need A1,A2 macros for tail calls, or calls that don't allocate
 #define TAIL_RESULT_OK(ptr) eval_elm_core_Result_Ok((void*[]){ptr})
@@ -24,7 +24,7 @@ enum JsonFields {
   /*h*/ JsonField_callback,
 };
 
-void* parse_json(ElmString16* json);  // json-parse.c
+void* parse_json(ElmString16* json);  // parse.c
 
 void* wrap(void* ptr) {
   return ptr;
