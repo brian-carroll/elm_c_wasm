@@ -63,15 +63,4 @@ Closure Json_map8;
 Closure Json_run;
 Closure Json_runOnString;
 
-void* eval_elm_core_Result_Ok(void* args[]);
-void* eval_elm_core_Result_Err(void* args[]);
-void* eval_elm_core_Result_isOk(void* args[]);
-
-Closure g_elm_core_Array_initialize;
-
-Closure g_elm_json_Json_Decode_Failure;
-Closure g_elm_json_Json_Decode_Field;
-Closure g_elm_json_Json_Decode_Index;
-Closure g_elm_json_Json_Decode_OneOf;
-
 #endif

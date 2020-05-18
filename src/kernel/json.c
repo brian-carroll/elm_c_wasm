@@ -5,11 +5,18 @@
 #include <stdio.h>
 
 #include "./debug.h"
+#include "./elm.h"
+#include "./json-elm.h"
 #include "./list.h"
 #include "./string.h"
 #include "./types.h"
 #include "./utils.h"
 #include "./wrapper/wrapper.h"
+
+// Don't need A1,A2 macros for tail calls, or calls that don't allocate
+#define TAIL_RESULT_OK(ptr) eval_elm_core_Result_Ok((void*[]){ptr})
+#define TAIL_RESULT_ERR(ptr) eval_elm_core_Result_Err((void*[]){ptr})
+#define RESULT_IS_OK(ptr) eval_elm_core_Result_isOk((void*[]){ptr})  // doesn't allocate
 
 enum JsonFields {
   /*a*/ JsonField_msg,
@@ -393,13 +400,9 @@ ElmString16 str_invalid_json = {
         },
 };
 
-#define Json_ok(ptr) eval_elm_core_Result_Ok((void*[]){ptr})
-
 void* Json_expecting(ElmString16* type, void* value) {
   ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting, type}));
-  return eval_elm_core_Result_Err((void*[]){
-      A2(&g_elm_json_Json_Decode_Failure, s, Json_wrap(value)),
-  });
+  return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, Json_wrap(value)));
 }
 
 void* Json_runHelp(Custom* decoder, ElmValue* value);
@@ -415,10 +418,9 @@ Custom* Json_runArrayDecoder(Custom* decoder, Custom* value, bool as_list) {
   Custom* array = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
   for (u32 i = 0; i < len; i++) {
     Custom* result = CAN_THROW(Json_runHelp(decoder, value->values[i]));
-    if (eval_elm_core_Result_isOk((void*[]){result}) == &False) {
-      return eval_elm_core_Result_Err((void*[]){
-          A2(&g_elm_json_Json_Decode_Index, NEW_ELM_INT(i), result->values[0]),
-      });
+    if (RESULT_IS_OK(result) == &False) {
+      return TAIL_RESULT_ERR(
+          A2(&g_elm_json_Json_Decode_Index, NEW_ELM_INT(i), result->values[0]));
     }
     array->values[i] = result->values[0];
   }
@@ -429,14 +431,14 @@ Custom* Json_runArrayDecoder(Custom* decoder, Custom* value, bool as_list) {
                               NEW_ELM_INT(len),
                               NEW_CLOSURE(1, 2, eval_Json_array_get, (void*[]){array}));
 
-  return Json_ok(elm_value);
+  return TAIL_RESULT_OK(elm_value);
 }
 
 void* Json_runHelp(Custom* decoder, ElmValue* value) {
   switch (decoder->ctor) {
     case DECODER_BOOL:
       if (&value->custom == &True || &value->custom == &False) {
-        return Json_ok(value);
+        return TAIL_RESULT_OK(value);
       }
       return Json_expecting(&str_err_Bool, value);
 
@@ -444,20 +446,20 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       if (value->header.tag == Tag_Float) {
         f64 f = value->elm_float.value;
         if ((i32)0x80000000 <= f && f <= 0x7fffffff && floor(f) == f) {
-          return Json_ok(NEW_ELM_INT((i32)f));
+          return TAIL_RESULT_OK(NEW_ELM_INT((i32)f));
         }
       }
       return Json_expecting(&str_err_Int, value);
 
     case DECODER_FLOAT:
       if (value->header.tag == Tag_Float) {
-        return Json_ok(value);
+        return TAIL_RESULT_OK(value);
       }
       return Json_expecting(&str_err_Float, value);
 
     case DECODER_STRING:
       if (value->header.tag == Tag_String) {
-        return Json_ok(value);
+        return TAIL_RESULT_OK(value);
       }
       return Json_expecting(&str_err_String, value);
 
@@ -468,7 +470,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return Json_expecting(&str_err_Null, value);
 
     case DECODER_VALUE:
-      return Json_ok(Json_wrap(value));
+      return TAIL_RESULT_OK(Json_wrap(value));
 
     case DECODER_LIST:
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
@@ -492,10 +494,10 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
           if (A2(&Utils_equal, object->values[i], field) == &True) {
             Custom* result =
                 Json_runHelp(decoder->values[JsonField_decoder], object->values[i + 1]);
-            return (eval_elm_core_Result_isOk((void*[]){result}) == &True)
+            return RESULT_IS_OK(result) == &True
                        ? result
-                       : eval_elm_core_Result_Err((void*[]){A2(
-                             &g_elm_json_Json_Decode_Field, field, result->values[0])});
+                       : TAIL_RESULT_ERR(
+                             A2(&g_elm_json_Json_Decode_Field, field, result->values[0]));
           }
         }
       }
@@ -532,9 +534,8 @@ static void* eval_runOnString(void* args[]) {
   ElmValue* json = parse_json(string);
   if (json == pGcFull) return pGcFull;
   if (json == NULL) {
-    return eval_elm_core_Result_Err((void*[]){
-        A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, Json_wrap(string)),
-    });
+    return TAIL_RESULT_ERR(
+        A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, Json_wrap(string)));
   }
   return Json_runHelp(decoder, json);
 }

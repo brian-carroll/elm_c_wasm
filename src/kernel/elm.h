@@ -8,4 +8,10 @@
 Custom g_elm_core_Maybe_Nothing;
 Closure g_elm_core_Maybe_Just;
 
+Closure g_elm_core_Array_initialize;
+
+void* eval_elm_core_Result_Ok(void* args[]);
+void* eval_elm_core_Result_Err(void* args[]);
+void* eval_elm_core_Result_isOk(void* args[]);
+
 #endif
