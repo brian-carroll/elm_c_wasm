@@ -3,7 +3,7 @@
 #ifndef JSON_ELM_H
 #define JSON_ELM_H
 
-#include "types.h"
+#include "../core/types.h"
 
 Closure g_elm_json_Json_Decode_Failure;
 Closure g_elm_json_Json_Decode_Field;

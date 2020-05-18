@@ -1,7 +1,7 @@
 #ifndef REPLAY_TEST_H
 #define REPLAY_TEST_H
 
-#include "../../kernel/gc-internals.h"
+#include "../../kernel/core/gc-internals.h"
 #include "../../kernel/kernel.h"
 
 char* replay_scenario_tests();

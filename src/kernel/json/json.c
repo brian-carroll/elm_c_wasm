@@ -4,14 +4,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "debug.h"
-#include "elm.h"
+#include "../core/core.h"
+#include "../wrapper/wrapper.h"
 #include "json-elm.h"
-#include "list.h"
-#include "string.h"
-#include "types.h"
-#include "utils.h"
-#include "wrapper/wrapper.h"
 
 // Don't need A1,A2 macros for tail calls, or calls that don't allocate
 #define TAIL_RESULT_OK(ptr) eval_elm_core_Result_Ok((void*[]){ptr})

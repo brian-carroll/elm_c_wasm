@@ -6,7 +6,7 @@
 #include <stdio.h>
 #endif
 
-#include "../../../kernel/gc-internals.h"
+#include "../../../kernel/core/gc-internals.h"
 #include "../../../kernel/kernel.h"
 
 /* ---------------------------------------------------------

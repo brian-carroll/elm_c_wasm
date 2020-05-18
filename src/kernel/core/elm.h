@@ -1,5 +1,3 @@
-// Declarations of values defined in Elm code
-// that are referenced from C code
 #ifndef ELM_H
 #define ELM_H
 

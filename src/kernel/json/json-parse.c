@@ -3,9 +3,8 @@
 
 #include <stdio.h>
 
-#include "gc.h"
+#include "../core/core.h"
 #include "json.h"
-#include "string.h"
 
 Custom Json_Value_null = {.header = HEADER_CUSTOM(0), .ctor = JSON_VALUE_NULL};
 

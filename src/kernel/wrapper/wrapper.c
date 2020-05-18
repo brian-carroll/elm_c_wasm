@@ -5,12 +5,9 @@
 #define EMSCRIPTEN_KEEPALIVE
 #include <stdio.h>
 #endif
-#include "../debug.h"
-#include "../gc-internals.h"
-#include "../gc.h"
-#include "../json.h"
-#include "../types.h"
-#include "../utils.h"
+#include "../core/core.h"
+#include "../core/gc-internals.h"
+#include "../json/json.h"
 #include "wrapper.h"
 
 extern GcState gc_state;

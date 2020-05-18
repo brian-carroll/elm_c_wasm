@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../kernel/gc-internals.h"
+#include "../../kernel/core/gc-internals.h"
 #include "../../kernel/kernel.h"
 #include "../gc_test.h"
 #include "../test.h"

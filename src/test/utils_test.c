@@ -1,9 +1,8 @@
-#include "../kernel/utils.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/kernel.h"
+#include "../kernel/core/core.h"
 #include "test.h"
 
 char* test_records() {
@@ -97,7 +96,7 @@ char* test_records() {
   ElmInt* updated_thing = NEW_ELM_INT(111);
   ElmFloat* updated_stuff = NEW_ELM_FLOAT(3.14);
   Record* r3 = Utils_update(
-      r2, 2, (u32[]){things, stuff}, (void* []){updated_thing, updated_stuff});
+      r2, 2, (u32[]){things, stuff}, (void*[]){updated_thing, updated_stuff});
 
   if (verbose) {
     printf(

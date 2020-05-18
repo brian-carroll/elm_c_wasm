@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "../../kernel/gc-internals.h"
+#include "../../kernel/core/gc-internals.h"
 #include "../../kernel/kernel.h"
 #include "../test.h"
 

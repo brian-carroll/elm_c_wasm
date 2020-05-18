@@ -1,7 +1,7 @@
 #include <stddef.h>
 
 #include "../../kernel/kernel.h"
-#include "../../kernel/json.h"
+#include "../../kernel/json/json.h"
 #include "../test.h"
 
 //-----------------------------------------
