@@ -33,18 +33,21 @@ void* test_decode_err(Custom* decoder, char* json_c_str, Custom* expected_err) {
 void* test_decode_errFailure(Custom* decoder, char* json_c_str, char* msg_c_str) {
   ElmString16* json = create_string(json_c_str);
   sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
-  expect_equal(test_decode_buf,
-      A2(&Json_runOnString, decoder, json),
-      NEW_CUSTOM(CTOR_Err,
-          1,
-          ((void*[]){
-              NEW_CUSTOM(CTOR_Failure,
-                  2,
-                  ((void*[]){
-                      create_string(msg_c_str),
-                      parse_json(json),
-                  })),
-          })));
+  void* actual_err = A2(&Json_runOnString, decoder, json);
+  void* expected_err = NEW_CUSTOM(CTOR_Err,
+      1,
+      ((void*[]){
+          NEW_CUSTOM(CTOR_Failure,
+              2,
+              ((void*[]){
+                  create_string(msg_c_str),
+                  parse_json(json),
+              })),
+      }));
+  // print_heap();
+  // Debug_pretty("actual", actual_err);
+  // Debug_pretty("expected", expected_err);
+  expect_equal(test_decode_buf, actual_err, expected_err);
   return NULL;
 }
 
@@ -172,7 +175,11 @@ void* test_Json_decodeArray() {
 }
 
 void* test_Json_decodeField() {
-  ElmString16* field = create_string("myField");
+  char* fld = "myField";
+  if (verbose) {
+    printf("field = \"%s\"\n", fld);
+  }
+  ElmString16* field = create_string(fld);
   Custom* decoder = A2(&Json_decodeField, field, &Json_decodeInt);
 
   test_decode_ok(
@@ -183,7 +190,29 @@ void* test_Json_decodeField() {
 
   test_decode_err(decoder,
       "{\"myField\":null}",
-      err(errField("myField", errFailure("Expecting an INT", &Json_Value_null))));
+      err(errField(fld, errFailure("Expecting an INT", &Json_Value_null))));
+
+  return NULL;
+}
+
+void* test_Json_decodeIndex() {
+  const i32 idx = 2;
+  if (verbose) {
+    printf("index = %d\n", idx);
+  }
+  ElmInt* index = NEW_ELM_INT(idx);
+  Custom* decoder = A2(&Json_decodeIndex, index, &Json_decodeInt);
+
+  test_decode_ok(decoder, "[null,\"hello\",123,{}]", NEW_ELM_INT(123));
+
+  test_decode_errFailure(decoder, "null", "Expecting an ARRAY");
+
+  test_decode_errFailure(
+      decoder, "[123,456]", "Expecting a LONGER array. Need index 2 but only see 2 entries");
+
+  test_decode_err(decoder,
+      "[{},\"hello\",null,123]",
+      err(errIndex(idx, errFailure("Expecting an INT", &Json_Value_null))));
 
   return NULL;
 }
@@ -204,4 +233,5 @@ void json_decoder_test() {
   describe("test_Json_decodeList", test_Json_decodeList);
   describe("test_Json_decodeArray", test_Json_decodeArray);
   describe("test_Json_decodeField", test_Json_decodeField);
+  describe("test_Json_decodeIndex", test_Json_decodeIndex);
 }

@@ -364,7 +364,14 @@ ElmString16 str_err_Index = {
             ' ',
         },
 };
-
+ElmString16 str_err_Index_but_only_see = {
+    .header = HEADER_STRING(14),
+    .words16 = {' ', 'b', 'u', 't', ' ', 'o', 'n', 'l', 'y', ' ', 's', 'e', 'e', ' '},
+};
+ElmString16 str_err_Index_entries = {
+    .header = HEADER_STRING(8),
+    .words16 = {' ', 'e', 'n', 't', 'r', 'i', 'e', 's'},
+};
 ElmString16 str_invalid_json = {
     .header = HEADER_STRING(23),
     .words16 =
@@ -501,9 +508,32 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return Json_expecting(msg, value);
     }
 
-    case DECODER_INDEX:
-      // skip bits of the array
-      break;
+    case DECODER_INDEX: {
+      ElmInt* index = decoder->values[JsonField_index];
+      if (value->header.tag != Tag_Custom || value->custom.ctor != JSON_VALUE_ARRAY) {
+        return Json_expecting(&str_err_Array, value);
+      }
+      u32 len = custom_params(&value->custom);
+      if (index->value >= len) {
+        ElmString16* msg = A2(&String_append,
+            &str_err_Index,
+            A2(&String_append,
+                A1(&String_fromNumber, index),
+                A2(&String_append,
+                    &str_err_Index_but_only_see,
+                    A2(&String_append,
+                        A1(&String_fromNumber, NEW_ELM_INT(len)),
+                        &str_err_Index_entries))));
+        return Json_expecting(msg, value);
+      }
+      Custom* result = Json_runHelp(
+          decoder->values[JsonField_decoder], value->custom.values[index->value]);
+      return RESULT_IS_OK(result) == &True
+                 ? result
+                 : TAIL_RESULT_ERR(
+                       A2(&g_elm_json_Json_Decode_Index, index, result->values[0]));
+    }
+
     case DECODER_KEY_VALUE:
       break;
     case DECODER_MAP:
