@@ -3,8 +3,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "types.h"
 
@@ -112,7 +112,6 @@ void set_heap_layout(GcHeap* heap, size_t* new_break_ptr) {
   size_t bitmap_words = GC_DIV_ROUND_UP(bitmap_bytes, bytes_per_word);
   size_t offset_words = GC_DIV_ROUND_UP(offset_bytes, bytes_per_word);
 
-
   // printf("bytes_per_word %zu\n", bytes_per_word);
   // printf("heap_bytes %zu\n", heap_bytes);
   // printf("bitmap_bytes_per_block %zu\n", bitmap_bytes_per_block);
@@ -121,8 +120,9 @@ void set_heap_layout(GcHeap* heap, size_t* new_break_ptr) {
   // printf("heap_blocks %zu\n", heap_blocks);
   // printf("bitmap_bytes %zu\n", bitmap_bytes);
   // printf("offset_bytes %zu\n", offset_bytes);
-  // printf("bitmap_words %zu (%0.2f)\n", bitmap_words, (100.0 * bitmap_words) / (1.0 * heap_words));
-  // printf("offset_words %zu (%0.2f)\n", offset_words, (100.0 * offset_words) / (1.0 * heap_words));
+  // printf("bitmap_words %zu (%0.2f)\n", bitmap_words, (100.0 * bitmap_words) / (1.0 *
+  // heap_words)); printf("offset_words %zu (%0.2f)\n", offset_words, (100.0 *
+  // offset_words) / (1.0 * heap_words));
 
   heap->bitmap = new_break_ptr - bitmap_words;
   heap->offsets = heap->bitmap - offset_words;

@@ -33,7 +33,7 @@ char* test_replay_saturated() {
   gc_test_reset();
 
   // RUN
-  void* result1 = Utils_apply(&mock_func_saturated, 1, (void* []){&Unit});
+  void* result1 = Utils_apply(&mock_func_saturated, 1, (void*[]){&Unit});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
@@ -64,7 +64,7 @@ char* test_replay_saturated() {
   GC_collect_full();
   GC_prep_replay();
 
-  Utils_apply(&mock_func_saturated, 1, (void* []){&Unit});
+  Utils_apply(&mock_func_saturated, 1, (void*[]){&Unit});
 
   // HEAP AFTER GC
   void* heap_after_spec[] = {

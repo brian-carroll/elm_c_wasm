@@ -6,8 +6,8 @@
 #include <stdio.h>
 #endif
 
-#include "../../../kernel/core/gc-internals.h"
 #include "../../../kernel/core/core.h"
+#include "../../../kernel/core/gc-internals.h"
 
 /* ---------------------------------------------------------
 

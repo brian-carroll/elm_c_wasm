@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../kernel/core/gc-internals.h"
 #include "../../kernel/core/core.h"
+#include "../../kernel/core/gc-internals.h"
 #include "../gc_test.h"
 #include "../test.h"
 
@@ -271,7 +271,7 @@ HeapSpecLine* populate_heap_from_spec(HeapSpecLine* line, HeapSpec* spec) {
           if (line->tag == Tag_GcException) return line;
           isTailcall = line->tag == Tag_GcStackTailCall;
           if (isTailcall) {
-            Closure* c = NEW_CLOSURE(2, 2, &eval_List_append, ((void* []){&Nil, &Nil}));
+            Closure* c = NEW_CLOSURE(2, 2, &eval_List_append, ((void*[]){&Nil, &Nil}));
             line->addr = GC_stack_tailcall(c, push);
           } else {
             line->addr = GC_stack_pop(last_alloc, push);

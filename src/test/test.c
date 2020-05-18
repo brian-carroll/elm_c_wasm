@@ -107,7 +107,7 @@ void* eval_elm_core_Array_initialize(void* args[]) {
   ElmInt* len = args[0];
   Closure* fn = args[1];
   Custom* mock_array = NEW_CUSTOM(CTOR_MockElmArray, len->value, NULL);
-  for (size_t i=0; i< len->value; i++) {
+  for (size_t i = 0; i < len->value; i++) {
     mock_array->values[i] = A1(fn, NEW_ELM_INT(i));
   }
   return mock_array;

@@ -156,7 +156,7 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   return r;
 }
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]) {
+    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
   Closure* c = CAN_THROW(GC_malloc(sizeof(Closure) + n_values * sizeof(void*)));
   c->header = HEADER_CLOSURE(n_values);
   c->n_values = n_values;

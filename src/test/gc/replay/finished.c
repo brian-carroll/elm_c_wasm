@@ -46,7 +46,7 @@ char* test_replay_finished() {
   gc_test_reset();
 
   // RUN
-  Utils_apply(&mock_func_outer, 1, (void* []){&Unit});
+  Utils_apply(&mock_func_outer, 1, (void*[]){&Unit});
   void* h = gc_state.heap.start;
 
   // HEAP BEFORE GC
@@ -99,7 +99,7 @@ char* test_replay_finished() {
       (void*)gc_state.stack_map,
       (void*)gc_state.heap.start);
 
-  Utils_apply(&mock_func_outer, 1, (void* []){&Unit});
+  Utils_apply(&mock_func_outer, 1, (void*[]){&Unit});
 
   // HEAP AFTER GC & REPLAY
   void* heap_after_spec[] = {

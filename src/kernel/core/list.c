@@ -23,7 +23,6 @@ void* List_create(size_t len, void* values[]) {
   return head;
 }
 
-
 // cons
 
 static void* eval_List_cons(void* args[]) {

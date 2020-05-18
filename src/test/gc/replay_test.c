@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-#include "../../kernel/core/gc-internals.h"
 #include "../../kernel/core/core.h"
+#include "../../kernel/core/gc-internals.h"
 #include "../test.h"
 
 char* test_replay_finished();

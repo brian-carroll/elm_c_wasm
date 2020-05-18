@@ -15,8 +15,8 @@ void* GC_stack_pop(ElmValue* result, void* push);
 void* GC_stack_tailcall(Closure* c, void* push);
 
 void* GC_tce_iteration(size_t n_args);
-void* GC_tce_eval(void* (*tce_eval)(void* [], void**),
-    void* (*eval)(void* []),
+void* GC_tce_eval(void* (*tce_eval)(void*[], void**),
+    void* (*eval)(void*[]),
     u32 n_args,
     void* args[]);
 void GC_prep_replay();

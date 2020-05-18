@@ -49,8 +49,8 @@ char* test_replay_curried() {
   gc_test_reset();
 
   // RUN
-  void* curried = Utils_apply(&mock_func_curried, 1, (void* []){&Unit});
-  void* result1 = Utils_apply(curried, 1, (void* []){&Unit});
+  void* curried = Utils_apply(&mock_func_curried, 1, (void*[]){&Unit});
+  void* result1 = Utils_apply(curried, 1, (void*[]){&Unit});
   mu_assert("Throws exception", result1 == pGcFull);
 
   void* h = gc_state.heap.start;
@@ -83,8 +83,8 @@ char* test_replay_curried() {
   GC_collect_full();
   GC_prep_replay();
 
-  Utils_apply(&mock_func_curried, 1, (void* []){&Unit});
-  Utils_apply(curried, 1, (void* []){&Unit});
+  Utils_apply(&mock_func_curried, 1, (void*[]){&Unit});
+  Utils_apply(curried, 1, (void*[]){&Unit});
 
   // HEAP AFTER GC
   void* heap_after_spec[] = {

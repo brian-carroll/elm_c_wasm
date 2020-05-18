@@ -128,7 +128,7 @@ int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
       GC_prep_replay();
       continue;
     }
-    result = Utils_apply(&count_no_tce, 1, (void* []){remaining});
+    result = Utils_apply(&count_no_tce, 1, (void*[]){remaining});
     if (result->header.tag != Tag_GcException) break;
     // printf("export_count_no_tce: GC point 2, call=%d, gc=%d\n",
     //     export_count_no_tce_call_id,
@@ -152,7 +152,7 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
     //   printf("oopsie");
     //   return -1;
     // }
-    ElmInt* result = Utils_apply(&Basics_add, 2, (void* []){boxA, boxB});
+    ElmInt* result = Utils_apply(&Basics_add, 2, (void*[]){boxA, boxB});
     if (boxA == pGcFull || boxB == pGcFull || result == pGcFull) {
       // printf("export_add: GC\n");
       GC_collect_full();

@@ -179,14 +179,14 @@ ElmChar* ctorElmChar(u32 value);
 
 // STRING
 
-typedef struct __attribute__ ((aligned)) {
+typedef struct __attribute__((aligned)) {
   Header header;
   u8 bytes[];
 } ElmString;
 ElmString* ctorElmString(size_t n, char* str);
 #define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 
-typedef struct __attribute__ ((aligned)) {
+typedef struct __attribute__((aligned)) {
   Header header;
   u16 words16[];
 } ElmString16;
@@ -240,7 +240,7 @@ typedef struct {
   Header header;
   u16 n_values;  // current number of applied args
   u16 max_values;
-  void* (*evaluator)(void* []);  // pointer to a function that takes an array of pointers
+  void* (*evaluator)(void*[]);  // pointer to a function that takes an array of pointers
                                  // and returns a pointer
   void* values[];
 } Closure;
@@ -248,7 +248,7 @@ typedef struct {
 #define NEVER_EVALUATE 0xffff
 
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]);
+    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]);
 #define NEW_CLOSURE(n, m, e, v) CAN_THROW(ctorClosure(n, m, e, v))
 
 // GARBAGE COLLECTOR TYPES
