@@ -294,7 +294,7 @@ void* test_Json_map() {
       char field[2];
       field[0] = 'a' + j;
       field[1] = 0;
-      args[j + 1] = A2(&Json_decodeField, create_string(field) , &Json_decodeInt);
+      args[j + 1] = A2(&Json_decodeField, create_string(field), &Json_decodeInt);
     }
     void* decoder = Utils_apply(mapFn, n_args + 1, args);
 
@@ -308,9 +308,49 @@ void* test_Json_map() {
   return NULL;
 }
 
+void* eval_selectField(void* args[]) {
+  ElmString16* name = args[0];
+  return A2(&Json_decodeField, name, &Json_decodeInt);
+}
+Closure selectField = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 1,
+    .evaluator = &eval_selectField,
+};
+
 void* test_Json_andThen() {
-  // Custom* decoder = A1(&Json_andThen, );
-  mu_assert("TODO", 0);
+  /*
+    decoder : Decoder Int
+    decoder =
+      field "dataField" string
+        |> andThen selectField
+
+    selectField : String -> Decoder Int
+    selectField name =
+        field name int
+
+    decodeString decoder """{ "dataField": "foo", "foo": 123 }""" == Ok 123
+    decodeString decoder """{ "dataField": "bar", "bar": 456 }""" == Ok 456
+  */
+  Custom* decoder = A2(&Json_andThen,
+      &selectField,
+      A2(&Json_decodeField, create_string("dataField"), &Json_decodeString));
+
+  test_decode_ok(decoder, "{ \"dataField\": \"foo\", \"foo\": 123 }", NEW_ELM_INT(123));
+
+  test_decode_ok(decoder, "{ \"dataField\": \"bar\", \"bar\": 456 }", NEW_ELM_INT(456));
+
+  test_decode_errFailure(
+      decoder, "null", "Expecting an OBJECT with a field named `dataField`");
+
+  test_decode_err(decoder,
+      "{ \"dataField\": null }",
+      err(errField("dataField", errFailure("Expecting a STRING", &Json_Value_null))));
+
+  test_decode_err(decoder,
+      "{ \"dataField\": \"foo\", \"foo\": null }",
+      err(errField("foo", errFailure("Expecting an INT", &Json_Value_null))));
+
   return NULL;
 }
 
@@ -346,20 +386,20 @@ void json_decoder_test() {
     printf("-----------------\n");
   }
 
-  describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
-  describe("test_Json_decodeBool", test_Json_decodeBool);
-  describe("test_Json_decodeInt", test_Json_decodeInt);
-  describe("test_Json_decodeFloat", test_Json_decodeFloat);
-  describe("test_Json_decodeString", test_Json_decodeString);
-  describe("test_Json_decodeValue", test_Json_decodeValue);
-  describe("test_Json_decodeList", test_Json_decodeList);
-  describe("test_Json_decodeArray", test_Json_decodeArray);
-  describe("test_Json_decodeField", test_Json_decodeField);
-  describe("test_Json_decodeIndex", test_Json_decodeIndex);
-  describe("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs);
-  describe("test_Json_map", test_Json_map);
+  // describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
+  // describe("test_Json_decodeBool", test_Json_decodeBool);
+  // describe("test_Json_decodeInt", test_Json_decodeInt);
+  // describe("test_Json_decodeFloat", test_Json_decodeFloat);
+  // describe("test_Json_decodeString", test_Json_decodeString);
+  // describe("test_Json_decodeValue", test_Json_decodeValue);
+  // describe("test_Json_decodeList", test_Json_decodeList);
+  // describe("test_Json_decodeArray", test_Json_decodeArray);
+  // describe("test_Json_decodeField", test_Json_decodeField);
+  // describe("test_Json_decodeIndex", test_Json_decodeIndex);
+  // describe("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs);
+  // describe("test_Json_map", test_Json_map);
   describe("test_Json_andThen", test_Json_andThen);
-  describe("test_Json_oneOf", test_Json_oneOf);
-  describe("test_Json_fail", test_Json_fail);
-  describe("test_Json_succeed", test_Json_succeed);
+  // describe("test_Json_oneOf", test_Json_oneOf);
+  // describe("test_Json_fail", test_Json_fail);
+  // describe("test_Json_succeed", test_Json_succeed);
 }
