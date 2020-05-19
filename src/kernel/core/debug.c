@@ -37,6 +37,10 @@ static void print_indent(int indent) {
 
 static void Debug_prettyHelp(int indent, void* p);
 
+#ifndef __EMSCRIPTEN__
+extern char etext, edata, end; // memory regions, defined by linker (Linux)
+#endif
+
 void pretty_print_child(int indent, void* p) {
   printf(FORMAT_PTR, p);
   for (int i = 0; i < indent; i++) {
@@ -50,6 +54,14 @@ static void Debug_prettyHelp(int indent, void* p) {
 
   int deeper = indent + 2;
   int deeper2 = indent + 4;
+
+#ifndef __EMSCRIPTEN__
+  if ((size_t)p < (size_t)&etext) {
+    // avoid dereferencing (segfault)
+    printf("(unboxed integer) %zd\n", (size_t)p);
+    return;
+  }
+#endif
 
   if (p == &True) {
     printf("True\n");

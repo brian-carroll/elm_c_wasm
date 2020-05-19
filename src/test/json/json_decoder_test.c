@@ -239,9 +239,72 @@ void* test_Json_decodeKeyValuePairs() {
   return NULL;
 }
 
+ElmInt mapArgs = {
+    .header = HEADER_INT,
+    .value = 0,
+};
+void* eval_testMapper(void* args[]) {
+  ElmInt* nArgs = args[0];
+  i32 total = 0;
+  for (i32 i = 0; i < nArgs->value; i++) {
+    ElmInt* arg = args[i + 1];
+    total += arg->value;
+  }
+  return NEW_ELM_INT(total);
+}
+Closure testMapper = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 1,  // need to mutate this!
+    .n_values = 1,
+    .evaluator = &eval_testMapper,
+    .values = {&mapArgs},
+};
+
 void* test_Json_map() {
-  // Custom* decoder = A1(&Json_map, );
-  mu_assert("TODO", 0);
+  Closure* mapFns[] = {
+      &Json_map1,
+      &Json_map2,
+      &Json_map3,
+      &Json_map4,
+      &Json_map5,
+      &Json_map6,
+      &Json_map7,
+      &Json_map8,
+  };
+
+  i32 expect = 0;
+  char json[1024];
+  json[0] = '{';
+  size_t json_index = 1;
+
+  for (i32 i = 0; i <= 7; i++) {
+    Closure* mapFn = mapFns[i];
+    u32 n_args = i + 1;
+
+    json_index += sprintf(&json[json_index], "\"%c\":%d", 'a' + i, i + 1);
+    json[json_index] = '}';
+    json[json_index + 1] = 0;
+
+    testMapper.max_values = 1 + n_args;
+    mapArgs.value = n_args;
+
+    void* args[9];
+    args[0] = &testMapper;
+    for (size_t j = 0; j < n_args; j++) {
+      char field[2];
+      field[0] = 'a' + j;
+      field[1] = 0;
+      args[j + 1] = A2(&Json_decodeField, create_string(field) , &Json_decodeInt);
+    }
+    void* decoder = Utils_apply(mapFn, n_args + 1, args);
+
+    expect += n_args;
+    test_decode_ok(decoder, json, NEW_ELM_INT(expect));
+
+    json[json_index] = ',';
+    json_index++;
+  }
+
   return NULL;
 }
 
@@ -261,6 +324,7 @@ void* test_Json_fail() {
   char* msg = "it failed";
   Custom* decoder = A1(&Json_fail, create_string(msg));
   test_decode_errFailure(decoder, "42", msg);
+  test_decode_errFailure(decoder, "[1,2,3]", msg);
 
   return NULL;
 }
