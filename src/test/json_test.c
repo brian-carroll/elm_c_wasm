@@ -9,10 +9,10 @@ char* json_test() {
     printf("####################################################\n");
     printf("\n");
     printf("Json\n");
-    printf("------\n");
+    printf("====\n");
   }
 
-  // json_parser_test();
+  json_parser_test();
   json_decoder_test();
 
   return NULL;

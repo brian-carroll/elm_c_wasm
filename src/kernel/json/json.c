@@ -468,7 +468,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_NULL:
       if (&value->custom == &Json_Value_null) {
-        return decoder->values[JsonField_value];
+        return TAIL_RESULT_OK(decoder->values[JsonField_value]);
       }
       return Json_expecting(&str_err_Null, value);
 
@@ -580,10 +580,10 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_ONE_OF: {
       Cons* errors = &Nil;
-      for (Cons* temp = decoder->values[JsonField_decoders]; temp != &Nil;
-           temp = temp->tail) {
+      Cons* temp = decoder->values[JsonField_decoders];
+      for (; temp != &Nil; temp = temp->tail) {
         Custom* result = Json_runHelp(temp->head, value);
-        if (RESULT_IS_OK(result) == &False) {
+        if (RESULT_IS_OK(result) == &True) {
           return result;
         }
         errors = NEW_CONS(result->values[0], errors);
@@ -593,8 +593,8 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
     }
 
     case DECODER_FAIL: {
-      return TAIL_RESULT_ERR(
-          A2(&g_elm_json_Json_Decode_Failure, decoder->values[JsonField_msg], wrap(value)));
+      return TAIL_RESULT_ERR(A2(
+          &g_elm_json_Json_Decode_Failure, decoder->values[JsonField_msg], wrap(value)));
     }
 
     case DECODER_SUCCEED: {

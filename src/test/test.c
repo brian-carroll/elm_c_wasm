@@ -28,6 +28,20 @@ int assertions_made = 0;
 //
 // ---------------------------------------------------------
 
+void* eval_List_reverse(void* args[]) {
+  Cons* list = args[0];
+  Cons* result = &Nil;
+  for (; list != &Nil; list = list->tail) {
+    result = NEW_CONS(list->head, result);
+  }
+  return result;
+}
+Closure g_elm_core_List_reverse = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 1,
+    .evaluator = &eval_List_reverse,
+};
+
 void* eval_elm_core_Maybe_Just(void* args[]) {
   return ctorCustom(CTOR_Just, 1, args);
 }
@@ -99,7 +113,7 @@ Closure g_elm_json_Json_Decode_Index = {
 };
 Closure g_elm_json_Json_Decode_OneOf = {
     .header = HEADER_CLOSURE(0),
-    .max_values = 2,
+    .max_values = 1,
     .evaluator = &eval_elm_json_Json_Decode_OneOf,
 };
 

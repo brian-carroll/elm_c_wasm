@@ -58,7 +58,7 @@ Custom* errIndex(u32 idx, Custom* error) {
   return NEW_CUSTOM(CTOR_Index, 2, ((void*[]){NEW_ELM_INT(idx), error}));
 }
 Custom* errOneOf(Cons* errors) {
-  return NEW_CUSTOM(CTOR_OneOf, 1, (void*){errors});
+  return NEW_CUSTOM(CTOR_OneOf, 1, (void*[]){errors});
 }
 Custom* errFailure(char* msg_c_str, void* json_value) {
   return NEW_CUSTOM(CTOR_Failure,
@@ -121,6 +121,14 @@ void* test_Json_decodeFloat() {
 void* test_Json_decodeString() {
   test_decode_ok(&Json_decodeString, "\"hello\"", create_string("hello"));
   test_decode_errFailure(&Json_decodeString, "null", "Expecting a STRING");
+  return NULL;
+}
+
+void* test_Json_decodeNull() {
+  ElmInt* num = NEW_ELM_INT(42);
+  Custom* decoder = A1(&Json_decodeNull, num);
+  test_decode_ok(decoder, "null", num);
+  test_decode_errFailure(decoder, "123", "Expecting null");
   return NULL;
 }
 
@@ -355,8 +363,35 @@ void* test_Json_andThen() {
 }
 
 void* test_Json_oneOf() {
-  // Custom* decoder = A1(&Json_andThen, );
-  mu_assert("TODO", 0);
+  /*
+    decoder : Decoder Int
+    decoder =
+      oneOf [ int, null 0 ]
+  */
+  if (verbose) {
+    printf("oneOf [ int, null 0 ]\n");
+  }
+
+  Custom* decoder = A1(&Json_oneOf,
+      List_create(2,
+          ((void*[]){
+              &Json_decodeInt,
+              A1(&Json_decodeNull, NEW_ELM_INT(0)),
+          })));
+
+  test_decode_ok(decoder, "123", NEW_ELM_INT(123));
+  test_decode_ok(decoder, "null", NEW_ELM_INT(0));
+
+  Custom* empty_array = NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL);
+
+  test_decode_err(decoder,
+      "[]",
+      err(errOneOf(List_create(2,
+          ((void*[]){
+              errFailure("Expecting an INT", empty_array),
+              errFailure("Expecting null", empty_array),
+          })))));
+
   return NULL;
 }
 
@@ -382,24 +417,25 @@ void* test_Json_succeed() {
 void json_decoder_test() {
   if (verbose) {
     printf("\n");
-    printf("Json.decodeString\n");
-    printf("-----------------\n");
+    printf("Json.Decode.decodeString\n");
+    printf("------------------------\n");
   }
 
-  // describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
-  // describe("test_Json_decodeBool", test_Json_decodeBool);
-  // describe("test_Json_decodeInt", test_Json_decodeInt);
-  // describe("test_Json_decodeFloat", test_Json_decodeFloat);
-  // describe("test_Json_decodeString", test_Json_decodeString);
-  // describe("test_Json_decodeValue", test_Json_decodeValue);
-  // describe("test_Json_decodeList", test_Json_decodeList);
-  // describe("test_Json_decodeArray", test_Json_decodeArray);
-  // describe("test_Json_decodeField", test_Json_decodeField);
-  // describe("test_Json_decodeIndex", test_Json_decodeIndex);
-  // describe("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs);
-  // describe("test_Json_map", test_Json_map);
+  describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
+  describe("test_Json_decodeBool", test_Json_decodeBool);
+  describe("test_Json_decodeInt", test_Json_decodeInt);
+  describe("test_Json_decodeFloat", test_Json_decodeFloat);
+  describe("test_Json_decodeString", test_Json_decodeString);
+  describe("test_Json_decodeNull", test_Json_decodeNull);
+  describe("test_Json_decodeValue", test_Json_decodeValue);
+  describe("test_Json_decodeList", test_Json_decodeList);
+  describe("test_Json_decodeArray", test_Json_decodeArray);
+  describe("test_Json_decodeField", test_Json_decodeField);
+  describe("test_Json_decodeIndex", test_Json_decodeIndex);
+  describe("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs);
+  describe("test_Json_map", test_Json_map);
   describe("test_Json_andThen", test_Json_andThen);
-  // describe("test_Json_oneOf", test_Json_oneOf);
-  // describe("test_Json_fail", test_Json_fail);
-  // describe("test_Json_succeed", test_Json_succeed);
+  describe("test_Json_oneOf", test_Json_oneOf);
+  describe("test_Json_fail", test_Json_fail);
+  describe("test_Json_succeed", test_Json_succeed);
 }
