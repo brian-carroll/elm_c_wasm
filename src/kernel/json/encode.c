@@ -105,11 +105,10 @@ void* copy_ascii(char* src, u16** dest, u16** end) {
 
   for (; *from; to++, from++) {
     if (to >= *end) {
-      printf("GC_malloc\n");
       if (GC_malloc(alloc_chunk_bytes) == pGcFull) {
         return pGcFull;
       } else {
-        *end += alloc_chunk_bytes/2;
+        *end += alloc_chunk_bytes / 2;
       }
     }
     *to = *from;
@@ -119,8 +118,66 @@ void* copy_ascii(char* src, u16** dest, u16** end) {
   return GC_NOT_FULL;
 }
 
-void* encode_string(ElmString16* src, u16** dest, u16** end) {
-  //
+void* encode_string(ElmString16* src, u16** dest, u16** to_end) {
+  u16* from = src->words16;
+  u16* to = *dest;
+
+  size_t len = code_units(src);
+  u16* from_end = from + len;
+
+  *to++ = '"';
+
+  for (; from < from_end; to++, from++) {
+    if (to + 5 >= *to_end) {
+      if (GC_malloc(alloc_chunk_bytes) == pGcFull) {
+        return pGcFull;
+      } else {
+        *to_end += alloc_chunk_bytes / 2;
+      }
+    }
+    u16 c = *from;
+    if (c == '"' || c == '\\') {
+      *to++ = '\\';
+      *to = c;
+    } else if (c > 0x1f) {
+      *to = c;
+    } else {
+      *to++ = '\\';
+      switch (c) {
+        case '\b':
+          *to = 'b';
+          break;
+        case '\f':
+          *to = 'f';
+          break;
+        case '\n':
+          *to = 'n';
+          break;
+        case '\r':
+          *to = 'r';
+          break;
+        case '\t':
+          *to = 't';
+          break;
+        default:
+          *to++ = 'u';
+          *to++ = '0';
+          *to++ = '0';
+          *to++ = (c & 0x10) ? '1' : '0';
+          c = c & 0xf;
+          if (c >= 10) {
+            *to = 'a' + c - 10;
+          } else {
+            *to = '0' + c;
+          }
+          break;
+      }
+    }
+  }
+
+  *to++ = '"';
+
+  *dest = to;
   return GC_NOT_FULL;
 }
 
