@@ -97,7 +97,11 @@ Closure Json_addEntry = {
 size_t alloc_chunk_bytes;
 #define GC_NOT_FULL NULL;
 
-void write_indent(u32 n, u16** cursor, u16** end) {}
+void* grow_encoded_string(u16** end) {
+  CAN_THROW(GC_malloc(alloc_chunk_bytes));
+  *end += alloc_chunk_bytes / 2;
+  return GC_NOT_FULL;
+}
 
 void* copy_ascii(char* src, u16** dest, u16** end) {
   char* from = src;
@@ -105,11 +109,7 @@ void* copy_ascii(char* src, u16** dest, u16** end) {
 
   for (; *from; to++, from++) {
     if (to >= *end) {
-      if (GC_malloc(alloc_chunk_bytes) == pGcFull) {
-        return pGcFull;
-      } else {
-        *end += alloc_chunk_bytes / 2;
-      }
+      CAN_THROW(grow_encoded_string(end));
     }
     *to = *from;
   }
@@ -129,11 +129,7 @@ void* encode_string(ElmString16* src, u16** dest, u16** to_end) {
 
   for (; from < from_end; to++, from++) {
     if (to + 5 >= *to_end) {
-      if (GC_malloc(alloc_chunk_bytes) == pGcFull) {
-        return pGcFull;
-      } else {
-        *to_end += alloc_chunk_bytes / 2;
-      }
+      CAN_THROW(grow_encoded_string(to_end));
     }
     u16 c = *from;
     if (c == '"' || c == '\\') {
@@ -183,14 +179,52 @@ void* encode_string(ElmString16* src, u16** dest, u16** to_end) {
 
 void* encode(u32 indent, u32 indent_current, void* p, u16** cursor, u16** end);
 
-void* encode_array(u32 indent, u32 indent_current, Custom* array, u16** to, u16** end) {
-  /*
-    <indent>[\n
-    <indent_next><encode>,\n
-    <indent>]
+void* write_indent(u32 indent_current, u16** dest, u16** end) {
+  if (indent_current) {
+    u16* to = *dest;
+    while (to + indent_current >= *end) {
+      CAN_THROW(grow_encoded_string(end));
+    }
+    for (size_t i = 0; i < indent_current; i++) {
+      *to++ = ' ';
+    }
+    *dest = to;
+  }
+  return GC_NOT_FULL;
+}
 
-    be careful of trailing comma
-  */
+void* write_char(u16** to, u16** end, u16 c) {
+  if (to >= end) {
+    CAN_THROW(grow_encoded_string(end));
+  }
+  **to = c;
+  (*to)++;
+  return GC_NOT_FULL;
+}
+
+void* encode_array(u32 indent, u32 indent_current, Custom* array, u16** to, u16** end) {
+  u32 indent_next = indent_current + indent;
+
+  CAN_THROW(write_char(to, end, '['));
+  if (indent) {
+    CAN_THROW(write_char(to, end, '\n'));
+  }
+
+  u32 len = custom_params(array);
+  for (size_t i = 0; i < len; i++) {
+    CAN_THROW(write_indent(indent_next, to, end));
+    CAN_THROW(encode(indent, indent_next, array->values[i], to, end));
+    if (i < len - 1) {
+      CAN_THROW(write_char(to, end, ','));
+    }
+    if (indent) {
+      CAN_THROW(write_char(to, end, '\n'));
+    }
+  }
+
+  CAN_THROW(write_indent(indent_current, to, end));
+  CAN_THROW(write_char(to, end, ']'));
+
   return GC_NOT_FULL;
 }
 
@@ -202,24 +236,25 @@ void* encode_object(u32 indent, u32 indent_current, Custom* object, u16** to, u1
 void* encode(u32 indent, u32 indent_current, void* p, u16** cursor, u16** end) {
   ElmValue* v = p;
   Tag tag = v->header.tag;
+
   if (p == &Json_Value_null) {
-    return copy_ascii("null", cursor, end);
+    return CAN_THROW(copy_ascii("null", cursor, end));
   } else if (p == &True) {
-    return copy_ascii("true", cursor, end);
+    return CAN_THROW(copy_ascii("true", cursor, end));
   } else if (p == &False) {
-    return copy_ascii("false", cursor, end);
+    return CAN_THROW(copy_ascii("false", cursor, end));
   } else if (tag == Tag_Float) {
     char buf[32];
     sprintf(buf, "%g", v->elm_float.value);
-    return copy_ascii(buf, cursor, end);
+    return CAN_THROW(copy_ascii(buf, cursor, end));
   } else if (tag == Tag_String) {
-    return encode_string(&v->elm_string16, cursor, end);
+    return CAN_THROW(encode_string(&v->elm_string16, cursor, end));
   } else if (tag == Tag_Custom) {
     u32 ctor = v->custom.ctor;
     if (ctor == JSON_VALUE_ARRAY) {
-      return encode_array(indent, indent_current, p, cursor, end);
+      return CAN_THROW(encode_array(indent, indent_current, p, cursor, end));
     } else if (ctor == JSON_VALUE_OBJECT) {
-      return encode_object(indent, indent_current, p, cursor, end);
+      return CAN_THROW(encode_object(indent, indent_current, p, cursor, end));
     }
   }
   return GC_NOT_FULL;
@@ -235,7 +270,7 @@ void* eval_Json_encode(void* args[]) {
   u16* cursor = str->words16;
   u16* end = cursor + len;
 
-  void* gc_full = encode(indentLevel->value, 0, value, &cursor, &end);
+  void* gc_full = CAN_THROW(encode(indentLevel->value, 0, value, &cursor, &end));
 
   // normalise the string length, chopping off any over-allocated space
   size_t truncated_str_end_addr = ((size_t)cursor + SIZE_UNIT - 1) & (-SIZE_UNIT);

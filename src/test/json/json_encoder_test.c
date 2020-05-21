@@ -61,14 +61,70 @@ void* test_Json_encodeString() {
   return NULL;
 }
 
+void* test_Json_stringify_array() {
+  char* expected;
+  char buf[512];
+
+  Custom* array123 = NEW_CUSTOM(JSON_VALUE_ARRAY,
+      3,
+      ((void*[]){
+          NEW_ELM_FLOAT(1),
+          NEW_ELM_FLOAT(2),
+          NEW_ELM_FLOAT(3),
+      }));
+
+  expect_equal("encode 0 [1,2,3] == \"[1,2,3]\"",
+      A2(&Json_encode, &int0, WRAP(array123)),
+      create_string("[1,2,3]"));
+
+  expected =
+      "[\n"
+      "  1,\n"
+      "  2,\n"
+      "  3\n"
+      "]";
+  sprintf(buf, "encode 2 [1,2,3] = \n%s", expected);
+  expect_equal(buf,
+      A2(&Json_encode, NEW_ELM_INT(2), WRAP(array123)),
+      create_string(expected));
+
+  expected =
+      "[\n"
+      "  [\n"
+      "    1,\n"
+      "    2,\n"
+      "    3\n"
+      "  ],\n"
+      "  [\n"
+      "    1,\n"
+      "    2,\n"
+      "    3\n"
+      "  ]\n"
+      "]";
+  sprintf(buf, "encode 2 [[1,2,3]] = \n%s", expected);
+  expect_equal(buf,
+      A2(&Json_encode,
+          NEW_ELM_INT(2),
+          WRAP(NEW_CUSTOM(JSON_VALUE_ARRAY,
+              2,
+              ((void*[]){
+                  array123,
+                  array123,
+              })))),
+      create_string(expected));
+
+  return NULL;
+}
+
 void json_encoder_test() {
   if (verbose) {
     printf("\n");
     printf("Json.Encode\n");
     printf("-----------\n");
   }
-  describe("test_Json_encodeBool", test_Json_encodeBool);
-  describe("test_Json_encodeNull", test_Json_encodeNull);
-  describe("test_Json_encodeNumber", test_Json_encodeNumber);
-  describe("test_Json_encodeString", test_Json_encodeString);
+  // describe("test_Json_encodeBool", test_Json_encodeBool);
+  // describe("test_Json_encodeNull", test_Json_encodeNull);
+  // describe("test_Json_encodeNumber", test_Json_encodeNumber);
+  // describe("test_Json_encodeString", test_Json_encodeString);
+  describe("test_Json_stringify_array", test_Json_stringify_array);
 }
