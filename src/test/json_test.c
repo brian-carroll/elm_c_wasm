@@ -2,6 +2,7 @@
 
 void json_parser_test();
 void json_decoder_test();
+void json_encoder_test();
 
 char* json_test() {
   if (verbose) {
@@ -12,8 +13,9 @@ char* json_test() {
     printf("====\n");
   }
 
-  json_parser_test();
-  json_decoder_test();
+  // json_parser_test();
+  // json_decoder_test();
+  json_encoder_test();
 
   return NULL;
 }

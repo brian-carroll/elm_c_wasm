@@ -27,12 +27,14 @@ enum ctor_decoder {
 };
 
 enum ctor_value {
-  JSON_VALUE_JSREF = 0,
-  JSON_VALUE_NULL = JSON_CTOR_OFFSET,
+  JSON_VALUE_WRAP = JSON_CTOR_OFFSET,
+  JSON_VALUE_NULL,
   JSON_VALUE_OBJECT,
   JSON_VALUE_ARRAY,
 };
 Custom Json_Value_null;
+
+// Decode
 
 Closure Json_succeed;
 Closure Json_fail;
@@ -62,5 +64,16 @@ Closure Json_map8;
 
 Closure Json_run;
 Closure Json_runOnString;
+
+// Encode
+
+Closure Json_wrap;
+Closure Json_unwrap;
+Closure Json_emptyArray;
+Closure Json_emptyObject;
+Closure Json_addField;
+Closure Json_addEntry;
+#define Json_encodeNull Json_Value_null
+Closure Json_encode;
 
 #endif

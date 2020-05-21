@@ -14,6 +14,10 @@
 #define TAIL_RESULT_ERR(ptr) eval_elm_core_Result_Err((void*[]){ptr})
 #define RESULT_IS_OK(ptr) eval_elm_core_Result_isOk((void*[]){ptr})  // doesn't allocate
 
+#define WRAP(ptr) A1(&Json_wrap, ptr)
+
+void* parse_json(ElmString16* json);  // parse.c
+
 enum JsonFields {
   /*a*/ JsonField_msg,
   /*b*/ JsonField_decoder,
@@ -24,12 +28,6 @@ enum JsonFields {
   /*g*/ JsonField_decoders,
   /*h*/ JsonField_callback,
 };
-
-void* parse_json(ElmString16* json);  // parse.c
-
-void* wrap(void* ptr) {
-  return ptr;
-}
 
 static void* eval_Json_succeed(void* args[]) {
   return NEW_CUSTOM(DECODER_SUCCEED, 1, args);
@@ -405,7 +403,7 @@ ElmString16 str_invalid_json = {
 
 void* Json_expecting(ElmString16* type, void* value) {
   ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting, type}));
-  return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, wrap(value)));
+  return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, WRAP(value)));
 }
 
 void* Json_runHelp(Custom* decoder, ElmValue* value);
@@ -473,7 +471,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return Json_expecting(&str_err_Null, value);
 
     case DECODER_VALUE:
-      return TAIL_RESULT_OK(wrap(value));
+      return TAIL_RESULT_OK(WRAP(value));
 
     case DECODER_LIST:
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
@@ -594,7 +592,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_FAIL: {
       return TAIL_RESULT_ERR(A2(
-          &g_elm_json_Json_Decode_Failure, decoder->values[JsonField_msg], wrap(value)));
+          &g_elm_json_Json_Decode_Failure, decoder->values[JsonField_msg], WRAP(value)));
     }
 
     case DECODER_SUCCEED: {
@@ -615,7 +613,7 @@ static void* eval_runOnString(void* args[]) {
   if (json == pGcFull) return pGcFull;
   if (json == NULL) {
     return TAIL_RESULT_ERR(
-        A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, wrap(string)));
+        A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, WRAP(string)));
   }
   return Json_runHelp(decoder, json);
 }

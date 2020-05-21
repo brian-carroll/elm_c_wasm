@@ -1,11 +1,9 @@
-#include <stddef.h>
-
 #include "../../kernel/core/core.h"
 #include "../../kernel/json/json.h"
 #include "../test.h"
 
 ElmValue* parse_json(ElmString16* json);
-void* wrap(void*);
+#define WRAP(ptr) A1(&Json_wrap, ptr)
 
 //=================================================================================================
 // Test helpers
@@ -82,7 +80,7 @@ void* test_Json_decode_invalidJson() {
           2,
           ((void*[]){
               create_string("This is not valid JSON!"),
-              wrap(create_string(json)),
+              WRAP(create_string(json)),
           }))));
 
   return NULL;
@@ -135,7 +133,7 @@ void* test_Json_decodeNull() {
 void* test_Json_decodeValue() {
   test_decode_ok(&Json_decodeValue,
       "[1,2,3]",
-      wrap(NEW_CUSTOM(JSON_VALUE_ARRAY,
+      WRAP(NEW_CUSTOM(JSON_VALUE_ARRAY,
           3,
           ((void*[]){
               NEW_ELM_FLOAT(1),

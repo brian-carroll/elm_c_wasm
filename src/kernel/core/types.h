@@ -276,6 +276,7 @@ typedef union {
   ElmFloat elm_float;
   ElmChar elm_char;
   ElmString elm_string;
+  ElmString16 elm_string16;
   Cons cons;
   Tuple2 tuple2;
   Tuple3 tuple3;
