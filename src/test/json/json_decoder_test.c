@@ -159,7 +159,7 @@ void* test_Json_decodeList() {
 
   test_decode_err(decoder,
       "[null]",
-      err(errIndex(0, errFailure("Expecting an INT", &Json_Value_null))));
+      err(errIndex(0, errFailure("Expecting an INT", &Json_encodeNull))));
 
   return NULL;
 }
@@ -175,7 +175,7 @@ void* test_Json_decodeArray() {
 
   test_decode_err(decoder,
       "[null]",
-      err(errIndex(0, errFailure("Expecting an INT", &Json_Value_null))));
+      err(errIndex(0, errFailure("Expecting an INT", &Json_encodeNull))));
 
   return NULL;
 }
@@ -196,7 +196,7 @@ void* test_Json_decodeField() {
 
   test_decode_err(decoder,
       "{\"myField\":null}",
-      err(errField(fld, errFailure("Expecting an INT", &Json_Value_null))));
+      err(errField(fld, errFailure("Expecting an INT", &Json_encodeNull))));
 
   return NULL;
 }
@@ -219,7 +219,7 @@ void* test_Json_decodeIndex() {
 
   test_decode_err(decoder,
       "[{},\"hello\",null,123]",
-      err(errIndex(idx, errFailure("Expecting an INT", &Json_Value_null))));
+      err(errIndex(idx, errFailure("Expecting an INT", &Json_encodeNull))));
 
   return NULL;
 }
@@ -240,7 +240,7 @@ void* test_Json_decodeKeyValuePairs() {
 
   test_decode_err(decoder,
       "{ \"a\": 1, \"b\": null, \"c\": 3 }",
-      err(errField("b", errFailure("Expecting an INT", &Json_Value_null))));
+      err(errField("b", errFailure("Expecting an INT", &Json_encodeNull))));
 
   return NULL;
 }
@@ -351,11 +351,11 @@ void* test_Json_andThen() {
 
   test_decode_err(decoder,
       "{ \"dataField\": null }",
-      err(errField("dataField", errFailure("Expecting a STRING", &Json_Value_null))));
+      err(errField("dataField", errFailure("Expecting a STRING", &Json_encodeNull))));
 
   test_decode_err(decoder,
       "{ \"dataField\": \"foo\", \"foo\": null }",
-      err(errField("foo", errFailure("Expecting an INT", &Json_Value_null))));
+      err(errField("foo", errFailure("Expecting an INT", &Json_encodeNull))));
 
   return NULL;
 }

@@ -6,8 +6,6 @@
 #include "../core/core.h"
 #include "json.h"
 
-Custom Json_Value_null = {.header = HEADER_CUSTOM(0), .ctor = JSON_VALUE_NULL};
-
 void skip_whitespace(u16** cursor, u16* end) {
   u16* ptr = *cursor;
   for (; ptr < end; ptr++) {
@@ -47,7 +45,7 @@ void* parse_null(u16** cursor, u16* end) {
 
   if (len >= 4 && bytes64[0] == BYTES_NULL) {
     *cursor += 4;
-    return &Json_Value_null;
+    return &Json_encodeNull;
   } else {
     return NULL;
   }

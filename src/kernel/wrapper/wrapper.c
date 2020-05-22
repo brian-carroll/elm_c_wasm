@@ -49,7 +49,7 @@ size_t EMSCRIPTEN_KEEPALIVE getFalse() {
   return (size_t)&False;
 }
 size_t EMSCRIPTEN_KEEPALIVE getJsNull() {
-  return (size_t)&Json_Value_null;
+  return (size_t)&Json_encodeNull;
 }
 
 size_t EMSCRIPTEN_KEEPALIVE getMaxWriteAddr() {

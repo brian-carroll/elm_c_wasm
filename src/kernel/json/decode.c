@@ -66,7 +66,7 @@ Custom Json_decodeString = {
 
 static void* eval_Json_decodeList(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(DECODER_LIST, 2, ((void*[]){&Json_Value_null, decoder}));
+  return NEW_CUSTOM(DECODER_LIST, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
 Closure Json_decodeList = {
     .header = HEADER_CLOSURE(0),
@@ -76,7 +76,7 @@ Closure Json_decodeList = {
 
 static void* eval_Json_decodeArray(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(DECODER_ARRAY, 2, ((void*[]){&Json_Value_null, decoder}));
+  return NEW_CUSTOM(DECODER_ARRAY, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
 Closure Json_decodeArray = {
     .header = HEADER_CLOSURE(0),
@@ -87,7 +87,7 @@ Closure Json_decodeArray = {
 static void* eval_Json_decodeNull(void* args[]) {
   void* value = args[0];
   return NEW_CUSTOM(
-      DECODER_NULL, 3, ((void*[]){&Json_Value_null, &Json_Value_null, value}));
+      DECODER_NULL, 3, ((void*[]){&Json_encodeNull, &Json_encodeNull, value}));
 }
 Closure Json_decodeNull = {
     .header = HEADER_CLOSURE(0),
@@ -101,9 +101,9 @@ static void* eval_Json_decodeField(void* args[]) {
   return NEW_CUSTOM(DECODER_FIELD,
       4,
       ((void*[]){
-          /*a*/ &Json_Value_null,
+          /*a*/ &Json_encodeNull,
           /*b*/ decoder,
-          /*c*/ &Json_Value_null,
+          /*c*/ &Json_encodeNull,
           /*d*/ field,
       }));
 }
@@ -119,10 +119,10 @@ static void* eval_Json_decodeIndex(void* args[]) {
   return NEW_CUSTOM(DECODER_INDEX,
       5,
       ((void*[]){
-          /*a*/ &Json_Value_null,
+          /*a*/ &Json_encodeNull,
           /*b*/ decoder,
-          /*c*/ &Json_Value_null,
-          /*d*/ &Json_Value_null,
+          /*c*/ &Json_encodeNull,
+          /*d*/ &Json_encodeNull,
           /*e*/ index,
       }));
 }
@@ -134,7 +134,7 @@ Closure Json_decodeIndex = {
 
 static void* eval_Json_decodeKeyValuePairs(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(DECODER_KEY_VALUE, 2, ((void*[]){&Json_Value_null, decoder}));
+  return NEW_CUSTOM(DECODER_KEY_VALUE, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
 Closure Json_decodeKeyValuePairs = {
     .header = HEADER_CLOSURE(0),
@@ -148,13 +148,13 @@ static void* eval_Json_andThen(void* args[]) {
   return NEW_CUSTOM(DECODER_AND_THEN,
       8,
       ((void*[]){
-          /*a*/ &Json_Value_null,
+          /*a*/ &Json_encodeNull,
           /*b*/ decoder,
-          /*c*/ &Json_Value_null,
-          /*d*/ &Json_Value_null,
-          /*e*/ &Json_Value_null,
-          /*f*/ &Json_Value_null,
-          /*g*/ &Json_Value_null,
+          /*c*/ &Json_encodeNull,
+          /*d*/ &Json_encodeNull,
+          /*e*/ &Json_encodeNull,
+          /*f*/ &Json_encodeNull,
+          /*g*/ &Json_encodeNull,
           /*h*/ callback,
       }));
 }
@@ -169,12 +169,12 @@ static void* eval_Json_oneOf(void* args[]) {
   return NEW_CUSTOM(DECODER_ONE_OF,
       7,
       ((void*[]){
-          /*a*/ &Json_Value_null,
-          /*b*/ &Json_Value_null,
-          /*c*/ &Json_Value_null,
-          /*d*/ &Json_Value_null,
-          /*e*/ &Json_Value_null,
-          /*f*/ &Json_Value_null,
+          /*a*/ &Json_encodeNull,
+          /*b*/ &Json_encodeNull,
+          /*c*/ &Json_encodeNull,
+          /*d*/ &Json_encodeNull,
+          /*e*/ &Json_encodeNull,
+          /*f*/ &Json_encodeNull,
           /*g*/ decoders,
       }));
 }
@@ -197,11 +197,11 @@ static void* eval_Json_mapMany(void* args[]) {
   return NEW_CUSTOM(DECODER_MAP,
       7,
       ((void*[]){
-          /*a*/ &Json_Value_null,
-          /*b*/ &Json_Value_null,
-          /*c*/ &Json_Value_null,
-          /*d*/ &Json_Value_null,
-          /*e*/ &Json_Value_null,
+          /*a*/ &Json_encodeNull,
+          /*b*/ &Json_encodeNull,
+          /*c*/ &Json_encodeNull,
+          /*d*/ &Json_encodeNull,
+          /*e*/ &Json_encodeNull,
           /*f*/ f,
           /*g*/ decoders,
       }));
@@ -461,7 +461,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return Json_expecting(&str_err_String, value);
 
     case DECODER_NULL:
-      if (&value->custom == &Json_Value_null) {
+      if (&value->custom == &Json_encodeNull) {
         return TAIL_RESULT_OK(decoder->values[JsonField_value]);
       }
       return Json_expecting(&str_err_Null, value);

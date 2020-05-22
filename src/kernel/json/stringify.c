@@ -174,7 +174,7 @@ void* stringify(u32 indent, u32 indent_current, void* p, u16** cursor, u16** end
   ElmValue* v = p;
   Tag tag = v->header.tag;
 
-  if (p == &Json_Value_null) {
+  if (p == &Json_encodeNull) {
     return CAN_THROW(copy_ascii("null", cursor, end));
   } else if (p == &True) {
     return CAN_THROW(copy_ascii("true", cursor, end));

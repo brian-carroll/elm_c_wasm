@@ -67,7 +67,7 @@ void* test_Json_parse_bool() {
 
 void* parse_null(u16** cursor, u16* end);
 void* test_Json_parse_null() {
-  parse_test(&parse_null, create_string("null"), &Json_Value_null, 4);
+  parse_test(&parse_null, create_string("null"), &Json_encodeNull, 4);
   parse_test(&parse_null, create_string("nule"), NULL, 0);
   parse_test(&parse_null, create_string("n"), NULL, 0);
   parse_test(&parse_null, create_string(""), NULL, 0);
@@ -200,7 +200,7 @@ void* test_Json_parse_array() {
 
   parse_test(&parse_array,
       create_string("[\r\n\tnull\r\n ] "),
-      NEW_CUSTOM(JSON_VALUE_ARRAY, 1, (void*[]){&Json_Value_null}),
+      NEW_CUSTOM(JSON_VALUE_ARRAY, 1, (void*[]){&Json_encodeNull}),
       12);
 
   parse_test(&parse_array,

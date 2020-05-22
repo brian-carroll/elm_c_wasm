@@ -32,7 +32,6 @@ enum ctor_value {
   JSON_VALUE_OBJECT,
   JSON_VALUE_ARRAY,
 };
-Custom Json_Value_null;
 
 // Decode
 
@@ -67,13 +66,13 @@ Closure Json_runOnString;
 
 // Encode
 
+Custom Json_encodeNull;
 Closure Json_wrap;
 Closure Json_unwrap;
 Closure Json_emptyArray;
 Closure Json_emptyObject;
 Closure Json_addField;
 Closure Json_addEntry;
-#define Json_encodeNull Json_Value_null
 Closure Json_encode;
 
 #endif

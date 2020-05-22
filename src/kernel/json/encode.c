@@ -4,6 +4,11 @@
 #include "json-internal.h"
 #include "json.h"
 
+Custom Json_encodeNull = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = JSON_VALUE_NULL,
+};
+
 void* eval_Json_wrap(void* args[]) {
   ElmValue* v = args[0];
   if (v->header.tag == Tag_Int) {
