@@ -1,6 +1,7 @@
 #include "../../kernel/core/core.h"
-#include "../../kernel/json/json.h"
+#include "../../kernel/json/json-elm.h"
 #include "../../kernel/json/json-internal.h"
+#include "../../kernel/json/json.h"
 #include "../test.h"
 
 ElmInt int0 = {
@@ -173,6 +174,9 @@ void* test_Json_stringify_object() {
   return NULL;
 }
 
+/*
+ * Encode.list
+ */
 void* eval_elm_json_Json_Encode_list(void* args[]) {
   void* x_func = args[0];
   void* x_entries = args[1];
@@ -189,6 +193,87 @@ Closure g_elm_json_Json_Encode_list = {
     .evaluator = &eval_elm_json_Json_Encode_list,
 };
 
+void* test_Json_Encode_list() {
+  void* c_array[] = {
+      &True,
+      &False,
+  };
+  Cons* list_bool = List_create(2, c_array);
+  Custom* json_array = NEW_CUSTOM(JSON_VALUE_ARRAY, 2, c_array);
+
+  expect_equal("Encode.list Encode.bool [True,False] == JsonValueArray True False",
+      A2(&g_elm_json_Json_Encode_list, &g_elm_json_Json_Encode_bool, list_bool),
+      WRAP(json_array));
+
+  expect_equal("encode 0 (list bool [True,False]) == \"[true,false]\"",
+      A2(&Json_encode, &int0, A2(&g_elm_json_Json_Encode_list, &Json_wrap, list_bool)),
+      create_string("[true,false]"));
+
+  return NULL;
+}
+
+/*
+ * Encode.object
+ */
+void* eval_elm_json_Json_Encode_object_lambda1(void* args[]) {
+  void* x__v0 = args[0];
+  void* x_obj = args[1];
+  void* x_k = Utils_destruct_index(x__v0, 0);
+  void* x_v = Utils_destruct_index(x__v0, 1);
+  return A3(&Json_addField, x_k, x_v, x_obj);
+}
+void* eval_elm_json_Json_Encode_object(void* args[]) {
+  void* x_pairs = args[0];
+  Closure* tmp0 = NEW_CLOSURE(0, 2, &eval_elm_json_Json_Encode_object_lambda1, NULL);
+  return A1(&Json_wrap,
+      A3(&g_elm_core_List_foldl, tmp0, A1(&Json_emptyObject, &Unit), x_pairs));
+}
+Closure g_elm_json_Json_Encode_object = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_elm_json_Json_Encode_object,
+};
+
+void* test_Json_encode_object() {
+  ElmString16* name = create_string("name");
+  ElmString16* brian = create_string("Brian");
+  ElmString16* age = create_string("age");
+  ElmInt int42 = {
+      .header = HEADER_INT,
+      .value = 42,
+  };
+  ElmFloat float42 = {
+      .header = HEADER_FLOAT,
+      .value = 42.0,
+  };
+
+  Cons* elm_pairs = List_create(2,
+      ((void*[]){
+          NEW_TUPLE2(name, A1(&g_elm_json_Json_Encode_string, brian)),
+          NEW_TUPLE2(age, A1(&g_elm_json_Json_Encode_int, &int42)),
+      }));
+
+  Custom* json_object =
+      NEW_CUSTOM(JSON_VALUE_OBJECT, 4, ((void*[]){name, brian, age, &float42}));
+
+  void* encodedObject = A1(&g_elm_json_Json_Encode_object, elm_pairs);
+
+  expect_equal(
+      "object [(\"name\", string \"Brian\"), (\"age\", int 42)]"
+      " == JsonValueObject \"name\" \"Brian\" \"age\" 42.0",
+      encodedObject,
+      WRAP(json_object));
+
+  expect_equal(
+      "encode 0 (object [(\"name\", string \"Brian\"), (\"age\", int 42)])"
+      " == \"\"\"{\"name\":\"Brian\",\"age\":42}\"\"\"",
+      A2(&Json_encode, &int0, encodedObject),
+      create_string("{\"name\":\"Brian\",\"age\":42}"));
+
+  return NULL;
+}
+
 void json_encoder_test() {
   if (verbose) {
     printf("\n");
@@ -201,6 +286,6 @@ void json_encoder_test() {
   describe("test_Json_encode_string", test_Json_encode_string);
   describe("test_Json_stringify_array", test_Json_stringify_array);
   describe("test_Json_stringify_object", test_Json_stringify_object);
-  // describe("test_Json_Encode_list", test_Json_Encode_list);
-  // describe("test_Json_encode_object", test_Json_encode_object);
+  describe("test_Json_Encode_list", test_Json_Encode_list);
+  describe("test_Json_encode_object", test_Json_encode_object);
 }

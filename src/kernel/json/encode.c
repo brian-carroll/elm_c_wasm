@@ -1,6 +1,8 @@
+#include <stdio.h>
+
 #include "../core/core.h"
-#include "json.h"
 #include "json-internal.h"
+#include "json.h"
 
 void* eval_Json_wrap(void* args[]) {
   ElmValue* v = args[0];
@@ -61,6 +63,7 @@ void* eval_Json_addField(void* args[]) {
 
   Custom* new_object = CAN_THROW(GC_malloc(new_size * SIZE_UNIT));
   GC_memcpy(new_object, old_object, old_size * SIZE_UNIT);
+  new_object->header.size = new_size;
   new_object->values[old_params] = key;
   new_object->values[old_params + 1] = value;
 
@@ -83,6 +86,7 @@ void* eval_Json_addEntry(void* args[]) {
 
   Custom* new_array = CAN_THROW(GC_malloc(new_size * SIZE_UNIT));
   GC_memcpy(new_array, old_array, old_size * SIZE_UNIT);
+  new_array->header.size = new_size;
   new_array->values[old_params] = A1(&Json_unwrap, A1(func, entry));
 
   return new_array;

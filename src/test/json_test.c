@@ -13,8 +13,8 @@ char* json_test() {
     printf("====\n");
   }
 
-  // json_parser_test();
-  // json_decoder_test();
+  json_parser_test();
+  json_decoder_test();
   json_encoder_test();
 
   return NULL;
