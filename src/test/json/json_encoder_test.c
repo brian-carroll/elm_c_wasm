@@ -9,7 +9,7 @@ ElmInt int0 = {
     .value = 0,
 };
 
-void* test_Json_encodeBool() {
+void* test_Json_stringify_boolean() {
   expect_equal("should encode True to 'true'",
       A2(&Json_encode, &int0, &True),
       create_string("true"));
@@ -19,14 +19,14 @@ void* test_Json_encodeBool() {
   return NULL;
 }
 
-void* test_Json_encodeNull() {
+void* test_Json_stringify_null() {
   expect_equal("should encode null to 'null'",
       A2(&Json_encode, &int0, WRAP(&Json_Value_null)),
       create_string("null"));
   return NULL;
 }
 
-void* test_Json_encodeNumber() {
+void* test_Json_stringify_number() {
   expect_equal("should encode 3.14 to '3.14'",
       A2(&Json_encode, &int0, WRAP(NEW_ELM_FLOAT(3.14))),
       create_string("3.14"));
@@ -41,7 +41,7 @@ void* test_Json_encodeNumber() {
   return NULL;
 }
 
-void* test_Json_encodeString() {
+void* test_Json_stringify_string() {
   expect_equal("should encode 'hello' to '\"hello\"'",
       A2(&Json_encode, &int0, WRAP(create_string("hello"))),
       create_string("\"hello\""));
@@ -84,9 +84,8 @@ void* test_Json_stringify_array() {
       "  3\n"
       "]";
   sprintf(buf, "encode 2 [1,2,3] = \n%s", expected);
-  expect_equal(buf,
-      A2(&Json_encode, NEW_ELM_INT(2), WRAP(array123)),
-      create_string(expected));
+  expect_equal(
+      buf, A2(&Json_encode, NEW_ELM_INT(2), WRAP(array123)), create_string(expected));
 
   expected =
       "[\n"
@@ -116,15 +115,93 @@ void* test_Json_stringify_array() {
   return NULL;
 }
 
+void* test_Json_stringify_object() {
+  char* expected;
+  char buf[512];
+
+  Custom* exampleObj = NEW_CUSTOM(JSON_VALUE_OBJECT,
+      6,
+      ((void*[]){
+          create_string("a"),
+          NEW_ELM_FLOAT(1),
+          create_string("b"),
+          NEW_ELM_FLOAT(2),
+          create_string("c"),
+          NEW_ELM_FLOAT(3),
+      }));
+
+  expect_equal("encode 0 {a:1,b:2,c:3} == \"{\"a\":1,\"b\":2,\"c\":3}\"",
+      A2(&Json_encode, &int0, WRAP(exampleObj)),
+      create_string("{\"a\":1,\"b\":2,\"c\":3}"));
+
+  expected =
+      "{\n"
+      "  \"a\": 1,\n"
+      "  \"b\": 2,\n"
+      "  \"c\": 3\n"
+      "}";
+  sprintf(buf, "encode 2 {a:1,b:2,c:3} = \n%s", expected);
+  expect_equal(
+      buf, A2(&Json_encode, NEW_ELM_INT(2), WRAP(exampleObj)), create_string(expected));
+
+  expected =
+      "{\n"
+      "  \"x\": {\n"
+      "    \"a\": 1,\n"
+      "    \"b\": 2,\n"
+      "    \"c\": 3\n"
+      "  },\n"
+      "  \"y\": {\n"
+      "    \"a\": 1,\n"
+      "    \"b\": 2,\n"
+      "    \"c\": 3\n"
+      "  }\n"
+      "}";
+  sprintf(buf, "encode 2 {x:{a:1,b:2,c:3},y:{a:1,b:2,c:3}} = \n%s", expected);
+  expect_equal(buf,
+      A2(&Json_encode,
+          NEW_ELM_INT(2),
+          WRAP(NEW_CUSTOM(JSON_VALUE_OBJECT,
+              4,
+              ((void*[]){
+                  create_string("x"),
+                  exampleObj,
+                  create_string("y"),
+                  exampleObj,
+              })))),
+      create_string(expected));
+
+  return NULL;
+}
+
+void* eval_elm_json_Json_Encode_list(void* args[]) {
+  void* x_func = args[0];
+  void* x_entries = args[1];
+  return A1(&Json_wrap,
+      A3(&g_elm_core_List_foldl,
+          A1(&Json_addEntry, x_func),
+          A1(&Json_emptyArray, &Unit),
+          x_entries));
+}
+Closure g_elm_json_Json_Encode_list = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x2,
+    .evaluator = &eval_elm_json_Json_Encode_list,
+};
+
 void json_encoder_test() {
   if (verbose) {
     printf("\n");
     printf("Json.Encode\n");
     printf("-----------\n");
   }
-  // describe("test_Json_encodeBool", test_Json_encodeBool);
-  // describe("test_Json_encodeNull", test_Json_encodeNull);
-  // describe("test_Json_encodeNumber", test_Json_encodeNumber);
-  // describe("test_Json_encodeString", test_Json_encodeString);
-  describe("test_Json_stringify_array", test_Json_stringify_array);
+  // describe("test_Json_stringify_boolean", test_Json_stringify_boolean);
+  // describe("test_Json_stringify_null", test_Json_stringify_null);
+  // describe("test_Json_stringify_number", test_Json_stringify_number);
+  // describe("test_Json_stringify_string", test_Json_stringify_string);
+  // describe("test_Json_stringify_array", test_Json_stringify_array);
+  describe("test_Json_stringify_object", test_Json_stringify_object);
+  // test_Json_Encode_list
+  // test_Json_Encode_object
 }

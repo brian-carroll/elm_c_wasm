@@ -229,7 +229,35 @@ void* encode_array(u32 indent, u32 indent_current, Custom* array, u16** to, u16*
 }
 
 void* encode_object(u32 indent, u32 indent_current, Custom* object, u16** to, u16** end) {
-  //
+  u32 indent_next = indent_current + indent;
+
+  CAN_THROW(write_char(to, end, '{'));
+  if (indent) {
+    CAN_THROW(write_char(to, end, '\n'));
+  }
+
+  u32 len = custom_params(object);
+  for (size_t i = 0; i < len; i += 2) {
+    ElmString16* field = object->values[i];
+    void* value = object->values[i + 1];
+    CAN_THROW(write_indent(indent_next, to, end));
+    CAN_THROW(encode(indent, indent_next, field, to, end));
+    CAN_THROW(write_char(to, end, ':'));
+    if (indent) {
+      CAN_THROW(write_char(to, end, ' '));
+    }
+    CAN_THROW(encode(indent, indent_next, value, to, end));
+    if (i < len - 2) {
+      CAN_THROW(write_char(to, end, ','));
+    }
+    if (indent) {
+      CAN_THROW(write_char(to, end, '\n'));
+    }
+  }
+
+  CAN_THROW(write_indent(indent_current, to, end));
+  CAN_THROW(write_char(to, end, '}'));
+
   return GC_NOT_FULL;
 }
 
