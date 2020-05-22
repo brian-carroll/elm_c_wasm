@@ -1,15 +1,14 @@
 #include "../../kernel/core/core.h"
 #include "../../kernel/json/json.h"
+#include "../../kernel/json/json-internal.h"
 #include "../test.h"
-
-#define WRAP(ptr) A1(&Json_wrap, ptr)
 
 ElmInt int0 = {
     .header = HEADER_INT,
     .value = 0,
 };
 
-void* test_Json_stringify_boolean() {
+void* test_Json_encode_boolean() {
   expect_equal("should encode True to 'true'",
       A2(&Json_encode, &int0, &True),
       create_string("true"));
@@ -19,14 +18,14 @@ void* test_Json_stringify_boolean() {
   return NULL;
 }
 
-void* test_Json_stringify_null() {
+void* test_Json_encode_null() {
   expect_equal("should encode null to 'null'",
       A2(&Json_encode, &int0, WRAP(&Json_Value_null)),
       create_string("null"));
   return NULL;
 }
 
-void* test_Json_stringify_number() {
+void* test_Json_encode_number() {
   expect_equal("should encode 3.14 to '3.14'",
       A2(&Json_encode, &int0, WRAP(NEW_ELM_FLOAT(3.14))),
       create_string("3.14"));
@@ -41,7 +40,7 @@ void* test_Json_stringify_number() {
   return NULL;
 }
 
-void* test_Json_stringify_string() {
+void* test_Json_encode_string() {
   expect_equal("should encode 'hello' to '\"hello\"'",
       A2(&Json_encode, &int0, WRAP(create_string("hello"))),
       create_string("\"hello\""));
@@ -196,12 +195,12 @@ void json_encoder_test() {
     printf("Json.Encode\n");
     printf("-----------\n");
   }
-  // describe("test_Json_stringify_boolean", test_Json_stringify_boolean);
-  // describe("test_Json_stringify_null", test_Json_stringify_null);
-  // describe("test_Json_stringify_number", test_Json_stringify_number);
-  // describe("test_Json_stringify_string", test_Json_stringify_string);
-  // describe("test_Json_stringify_array", test_Json_stringify_array);
+  describe("test_Json_encode_boolean", test_Json_encode_boolean);
+  describe("test_Json_encode_null", test_Json_encode_null);
+  describe("test_Json_encode_number", test_Json_encode_number);
+  describe("test_Json_encode_string", test_Json_encode_string);
+  describe("test_Json_stringify_array", test_Json_stringify_array);
   describe("test_Json_stringify_object", test_Json_stringify_object);
-  // test_Json_Encode_list
-  // test_Json_Encode_object
+  // describe("test_Json_Encode_list", test_Json_Encode_list);
+  // describe("test_Json_encode_object", test_Json_encode_object);
 }

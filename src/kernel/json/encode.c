@@ -1,7 +1,6 @@
-#include <stdio.h>
-
 #include "../core/core.h"
 #include "json.h"
+#include "json-internal.h"
 
 void* eval_Json_wrap(void* args[]) {
   ElmValue* v = args[0];
@@ -94,211 +93,17 @@ Closure Json_addEntry = {
     .evaluator = &eval_Json_addEntry,
 };
 
-size_t alloc_chunk_bytes;
-#define GC_NOT_FULL NULL;
-
-void* grow_encoded_string(u16** end) {
-  CAN_THROW(GC_malloc(alloc_chunk_bytes));
-  *end += alloc_chunk_bytes / 2;
-  return GC_NOT_FULL;
-}
-
-void* copy_ascii(char* src, u16** dest, u16** end) {
-  char* from = src;
-  u16* to = *dest;
-
-  for (; *from; to++, from++) {
-    if (to >= *end) {
-      CAN_THROW(grow_encoded_string(end));
-    }
-    *to = *from;
-  }
-
-  *dest = to;
-  return GC_NOT_FULL;
-}
-
-void* encode_string(ElmString16* src, u16** dest, u16** to_end) {
-  u16* from = src->words16;
-  u16* to = *dest;
-
-  size_t len = code_units(src);
-  u16* from_end = from + len;
-
-  *to++ = '"';
-
-  for (; from < from_end; to++, from++) {
-    if (to + 5 >= *to_end) {
-      CAN_THROW(grow_encoded_string(to_end));
-    }
-    u16 c = *from;
-    if (c == '"' || c == '\\') {
-      *to++ = '\\';
-      *to = c;
-    } else if (c > 0x1f) {
-      *to = c;
-    } else {
-      *to++ = '\\';
-      switch (c) {
-        case '\b':
-          *to = 'b';
-          break;
-        case '\f':
-          *to = 'f';
-          break;
-        case '\n':
-          *to = 'n';
-          break;
-        case '\r':
-          *to = 'r';
-          break;
-        case '\t':
-          *to = 't';
-          break;
-        default:
-          *to++ = 'u';
-          *to++ = '0';
-          *to++ = '0';
-          *to++ = (c & 0x10) ? '1' : '0';
-          c = c & 0xf;
-          if (c >= 10) {
-            *to = 'a' + c - 10;
-          } else {
-            *to = '0' + c;
-          }
-          break;
-      }
-    }
-  }
-
-  *to++ = '"';
-
-  *dest = to;
-  return GC_NOT_FULL;
-}
-
-void* encode(u32 indent, u32 indent_current, void* p, u16** cursor, u16** end);
-
-void* write_indent(u32 indent_current, u16** dest, u16** end) {
-  if (indent_current) {
-    u16* to = *dest;
-    while (to + indent_current >= *end) {
-      CAN_THROW(grow_encoded_string(end));
-    }
-    for (size_t i = 0; i < indent_current; i++) {
-      *to++ = ' ';
-    }
-    *dest = to;
-  }
-  return GC_NOT_FULL;
-}
-
-void* write_char(u16** to, u16** end, u16 c) {
-  if (to >= end) {
-    CAN_THROW(grow_encoded_string(end));
-  }
-  **to = c;
-  (*to)++;
-  return GC_NOT_FULL;
-}
-
-void* encode_array(u32 indent, u32 indent_current, Custom* array, u16** to, u16** end) {
-  u32 indent_next = indent_current + indent;
-
-  CAN_THROW(write_char(to, end, '['));
-  if (indent) {
-    CAN_THROW(write_char(to, end, '\n'));
-  }
-
-  u32 len = custom_params(array);
-  for (size_t i = 0; i < len; i++) {
-    CAN_THROW(write_indent(indent_next, to, end));
-    CAN_THROW(encode(indent, indent_next, array->values[i], to, end));
-    if (i < len - 1) {
-      CAN_THROW(write_char(to, end, ','));
-    }
-    if (indent) {
-      CAN_THROW(write_char(to, end, '\n'));
-    }
-  }
-
-  CAN_THROW(write_indent(indent_current, to, end));
-  CAN_THROW(write_char(to, end, ']'));
-
-  return GC_NOT_FULL;
-}
-
-void* encode_object(u32 indent, u32 indent_current, Custom* object, u16** to, u16** end) {
-  u32 indent_next = indent_current + indent;
-
-  CAN_THROW(write_char(to, end, '{'));
-  if (indent) {
-    CAN_THROW(write_char(to, end, '\n'));
-  }
-
-  u32 len = custom_params(object);
-  for (size_t i = 0; i < len; i += 2) {
-    ElmString16* field = object->values[i];
-    void* value = object->values[i + 1];
-    CAN_THROW(write_indent(indent_next, to, end));
-    CAN_THROW(encode(indent, indent_next, field, to, end));
-    CAN_THROW(write_char(to, end, ':'));
-    if (indent) {
-      CAN_THROW(write_char(to, end, ' '));
-    }
-    CAN_THROW(encode(indent, indent_next, value, to, end));
-    if (i < len - 2) {
-      CAN_THROW(write_char(to, end, ','));
-    }
-    if (indent) {
-      CAN_THROW(write_char(to, end, '\n'));
-    }
-  }
-
-  CAN_THROW(write_indent(indent_current, to, end));
-  CAN_THROW(write_char(to, end, '}'));
-
-  return GC_NOT_FULL;
-}
-
-void* encode(u32 indent, u32 indent_current, void* p, u16** cursor, u16** end) {
-  ElmValue* v = p;
-  Tag tag = v->header.tag;
-
-  if (p == &Json_Value_null) {
-    return CAN_THROW(copy_ascii("null", cursor, end));
-  } else if (p == &True) {
-    return CAN_THROW(copy_ascii("true", cursor, end));
-  } else if (p == &False) {
-    return CAN_THROW(copy_ascii("false", cursor, end));
-  } else if (tag == Tag_Float) {
-    char buf[32];
-    sprintf(buf, "%g", v->elm_float.value);
-    return CAN_THROW(copy_ascii(buf, cursor, end));
-  } else if (tag == Tag_String) {
-    return CAN_THROW(encode_string(&v->elm_string16, cursor, end));
-  } else if (tag == Tag_Custom) {
-    u32 ctor = v->custom.ctor;
-    if (ctor == JSON_VALUE_ARRAY) {
-      return CAN_THROW(encode_array(indent, indent_current, p, cursor, end));
-    } else if (ctor == JSON_VALUE_OBJECT) {
-      return CAN_THROW(encode_object(indent, indent_current, p, cursor, end));
-    }
-  }
-  return GC_NOT_FULL;
-}
-
 void* eval_Json_encode(void* args[]) {
   ElmInt* indentLevel = args[0];
   void* value = args[1];
 
-  alloc_chunk_bytes = 64;
-  size_t len = alloc_chunk_bytes / 2;
+  stringify_alloc_chunk = 64;
+  size_t len = stringify_alloc_chunk / 2;
   ElmString16* str = NEW_ELM_STRING16(len);
   u16* cursor = str->words16;
   u16* end = cursor + len;
 
-  void* gc_full = CAN_THROW(encode(indentLevel->value, 0, value, &cursor, &end));
+  void* gc_full = CAN_THROW(stringify(indentLevel->value, 0, value, &cursor, &end));
 
   // normalise the string length, chopping off any over-allocated space
   size_t truncated_str_end_addr = ((size_t)cursor + SIZE_UNIT - 1) & (-SIZE_UNIT);

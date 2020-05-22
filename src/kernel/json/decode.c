@@ -1,5 +1,3 @@
-#include "json.h"
-
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
@@ -7,16 +5,14 @@
 
 #include "../core/core.h"
 #include "../wrapper/wrapper.h"
-#include "elm.h"
+#include "json-elm.h"
+#include "json-internal.h"
+#include "json.h"
 
 // Don't need A1,A2 macros for tail calls, or calls that don't allocate
 #define TAIL_RESULT_OK(ptr) eval_elm_core_Result_Ok((void*[]){ptr})
 #define TAIL_RESULT_ERR(ptr) eval_elm_core_Result_Err((void*[]){ptr})
 #define RESULT_IS_OK(ptr) eval_elm_core_Result_isOk((void*[]){ptr})  // doesn't allocate
-
-#define WRAP(ptr) A1(&Json_wrap, ptr)
-
-void* parse_json(ElmString16* json);  // parse.c
 
 enum JsonFields {
   /*a*/ JsonField_msg,
