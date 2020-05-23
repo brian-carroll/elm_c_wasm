@@ -63,10 +63,10 @@ void* parse_number(u16** cursor, u16* end) {
   char digits[32];
   size_t d = 0;
   for (size_t i = 0; i < max; i++) {
-    char c = (char)chars[i];
+    u16 c = chars[i];
     if ((c >= '0' && c <= '9') || c == '-' || c == '+' || c == 'e' || c == 'E' ||
         c == '.') {
-      digits[d++] = c;
+      digits[d++] = (char)c;
     } else {
       break;
     }
