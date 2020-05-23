@@ -620,15 +620,12 @@ Closure Json_runOnString = {
 };
 
 static void* eval_run(void* args[]) {
-  size_t jsIndex = (size_t)args[0];
-  return Wrapper_callJsSync(jsIndex, 2, &args[1]);
+  return Wrapper_callJsSync(Json_run_eval_index, 2, args);
 }
 Closure Json_run = {
     .header = HEADER_CLOSURE(0),
-    .n_values = 1,
-    .max_values = 3,
+    .max_values = 2,
     .evaluator = &eval_run,
-    .values = {NULL},
 };
 
 /*

@@ -61,6 +61,7 @@ Closure Json_map6;
 Closure Json_map7;
 Closure Json_map8;
 
+size_t Json_run_eval_index;
 Closure Json_run;
 Closure Json_runOnString;
 

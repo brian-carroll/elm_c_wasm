@@ -6,6 +6,7 @@
 // ---------------------------------------------------------
 
 #include "../kernel/core/core.h"
+#include "../kernel/json/json.h"
 #include "test.h"
 
 void* eval_List_reverse(void* args[]) {
@@ -174,6 +175,8 @@ char* Debug_fields[] = {};
 char* Debug_jsValues[] = {};
 int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
+
+size_t Json_run_eval_index = 123;
 
 // imported from JS
 size_t evalWasmThunkInJs(size_t addr) {
