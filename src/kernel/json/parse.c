@@ -1,7 +1,7 @@
 // Parse JSON values from a UTF-16 string
 // https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
-#include <stdio.h>
+#include <stdio.h> // sscanf
 
 #include "../core/core.h"
 #include "json.h"

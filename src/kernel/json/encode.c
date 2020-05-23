@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "../core/core.h"
 #include "json-internal.h"
 #include "json.h"

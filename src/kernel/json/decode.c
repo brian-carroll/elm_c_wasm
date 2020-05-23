@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #include "../core/core.h"
 #include "../wrapper/wrapper.h"

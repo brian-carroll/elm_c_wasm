@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdio.h> // sprintf
 
 #include "../core/core.h"
 #include "json.h"
