@@ -52,6 +52,10 @@ www-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
 www-debug: www
 	@:
 
+www-release: CFLAGS = -Wall -Oz
+www-release: www
+	@:
+
 gc-size:
 	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/www/gc.js
 	/bin/ls -lh $(DIST)/www/gc.wasm
