@@ -604,8 +604,7 @@ static void* eval_runOnString(void* args[]) {
   Custom* decoder = args[0];
   ElmString16* string = args[1];
 
-  ElmValue* json = parse_json(string);
-  if (json == pGcFull) return pGcFull;
+  ElmValue* json = CAN_THROW(parse_json(string));
   if (json == NULL) {
     return TAIL_RESULT_ERR(
         A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, WRAP(string)));

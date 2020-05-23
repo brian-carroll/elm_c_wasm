@@ -100,8 +100,7 @@ void* parse_string(u16** cursor, u16* end) {
 
     if (to >= str_end) {
       // Grow output string as needed, taking advantage of GC 'bump allocation'
-      void* more_space = GC_malloc(alloc_chunk_bytes);
-      if (more_space == pGcFull) return pGcFull;
+      CAN_THROW(GC_malloc(alloc_chunk_bytes));
       str->header.size += alloc_chunk_bytes / SIZE_UNIT;
       str_end += alloc_chunk_bytes / 2;
       if (alloc_chunk_bytes < 1024) alloc_chunk_bytes *= 2;
@@ -196,8 +195,7 @@ void* parse_array(u16** cursor, u16* end) {
   size_t len = 0;
   for (;;) {
     // parse value
-    void* value = parse_recurse(&c, end);
-    if (value == pGcFull) return pGcFull;
+    void* value = CAN_THROW(parse_recurse(&c, end));
     if (c >= end || value == NULL) return NULL;
 
     // store value
@@ -249,8 +247,7 @@ void* parse_object(u16** cursor, u16* end) {
   size_t n_pairs = 0;
   for (;;) {
     // field
-    ElmString16* field = parse_string(&c, end);
-    if (field == pGcFull) return pGcFull;
+    ElmString16* field = CAN_THROW(parse_string(&c, end));
     if (c >= end || field == NULL) return NULL;
 
     // colon
@@ -262,8 +259,7 @@ void* parse_object(u16** cursor, u16* end) {
     if (c >= end) return NULL;
 
     // value
-    void* value = parse_recurse(&c, end);
-    if (value == pGcFull) return pGcFull;
+    void* value = CAN_THROW(parse_recurse(&c, end));
     if (c >= end || value == NULL) return NULL;
 
     // store pair
@@ -306,16 +302,16 @@ void* parse_recurse(u16** cursor, u16* end) {
       return parse_bool(cursor, end);
 
     case '"':
-      return parse_string(cursor, end);
+      return CAN_THROW(parse_string(cursor, end));
 
     case '[':
-      return parse_array(cursor, end);
+      return CAN_THROW(parse_array(cursor, end));
 
     case '{':
-      return parse_object(cursor, end);
+      return CAN_THROW(parse_object(cursor, end));
 
     default:
-      return parse_number(cursor, end);
+      return CAN_THROW(parse_number(cursor, end));
   }
 }
 
