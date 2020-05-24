@@ -1,7 +1,7 @@
 // Parse JSON values from a UTF-16 string
 // https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
-#include <stdio.h> // sscanf
+#include <stdio.h>  // sscanf
 
 #include "../core/core.h"
 #include "json.h"
@@ -22,8 +22,8 @@ void* parse_bool(u16** cursor, u16* end) {
   u16* chars = *cursor;
   u64* bytes64 = (u64*)chars;
 
-  const u16 chars_true[4] = {'t','r','u','e'};
-  const u16 chars_fals[4] = {'f','a','l','s'};
+  const u16 chars_true[4] = {'t', 'r', 'u', 'e'};
+  const u16 chars_fals[4] = {'f', 'a', 'l', 's'};
   const u64 fast_compare_true = *(u64*)chars_true;
   const u64 fast_compare_false = *(u64*)chars_fals;
 
@@ -43,7 +43,7 @@ void* parse_null(u16** cursor, u16* end) {
   u16* chars = *cursor;
   u64* bytes64 = (u64*)chars;
 
-  const u16 chars_null[4] = {'n','u','l','l'};
+  const u16 chars_null[4] = {'n', 'u', 'l', 'l'};
   const u64 fast_compare_null = *(u64*)chars_null;
 
   if (len >= 4 && bytes64[0] == fast_compare_null) {
@@ -71,7 +71,7 @@ void* parse_number(u16** cursor, u16* end) {
       break;
     }
   }
-  if (!d) return NULL;
+  if (d == 0) return NULL;
   digits[d] = '\0';
 
   f64 f;
@@ -92,7 +92,7 @@ void* parse_string(u16** cursor, u16* end) {
 
   size_t alloc_chunk_bytes = 4 * SIZE_UNIT;  // Grow the output string in chunks this big
   ElmString16* str = NEW_ELM_STRING16(alloc_chunk_bytes / 2);
-  u16* str_end = &str->words16[alloc_chunk_bytes / 2];
+  u16* str_end = (u16*)GC_malloc(0);
 
   for (to = str->words16;; to++, from++) {
     if (from >= end) return NULL;
@@ -102,7 +102,7 @@ void* parse_string(u16** cursor, u16* end) {
       // Grow output string as needed, taking advantage of GC 'bump allocation'
       CAN_THROW(GC_malloc(alloc_chunk_bytes));
       str->header.size += alloc_chunk_bytes / SIZE_UNIT;
-      str_end += alloc_chunk_bytes / 2;
+      str_end = (u16*)GC_malloc(0);
       if (alloc_chunk_bytes < 1024) alloc_chunk_bytes *= 2;
     }
 

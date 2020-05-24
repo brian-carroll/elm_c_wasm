@@ -1,14 +1,15 @@
-#include <stdio.h> // sprintf
+#include <stdio.h>  // sprintf
 
 #include "../core/core.h"
-#include "json.h"
 #include "json-internal.h"
+#include "json.h"
 
 #define GC_NOT_FULL NULL;
 
 static void* grow(u16** end) {
   CAN_THROW(GC_malloc(stringify_alloc_chunk));
-  *end += stringify_alloc_chunk / 2;
+  *end = (u16*)GC_malloc(0);
+  if (stringify_alloc_chunk < 1024) stringify_alloc_chunk *= 2;
   return GC_NOT_FULL;
 }
 
@@ -111,7 +112,8 @@ static void* write_char(u16** to, u16** end, u16 c) {
   return GC_NOT_FULL;
 }
 
-static void* stringify_array(u32 indent, u32 indent_current, Custom* array, u16** to, u16** end) {
+static void* stringify_array(
+    u32 indent, u32 indent_current, Custom* array, u16** to, u16** end) {
   u32 indent_next = indent_current + indent;
 
   CAN_THROW(write_char(to, end, '['));
@@ -137,7 +139,8 @@ static void* stringify_array(u32 indent, u32 indent_current, Custom* array, u16*
   return GC_NOT_FULL;
 }
 
-static void* stringify_object(u32 indent, u32 indent_current, Custom* object, u16** to, u16** end) {
+static void* stringify_object(
+    u32 indent, u32 indent_current, Custom* object, u16** to, u16** end) {
   u32 indent_next = indent_current + indent;
 
   CAN_THROW(write_char(to, end, '{'));
