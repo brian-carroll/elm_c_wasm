@@ -264,27 +264,39 @@ Closure String_slice = {
 };
 
 bool is_whitespace(u16 c) {
-  // https://www.compart.com/en/unicode/category/Zs
-  bool is_unicode_space_separator =
-      (c == 0x0020 || c == 0x00A0 || c == 0x1680 || c == 0x2000 || c == 0x2001 ||
-          c == 0x2002 || c == 0x2003 || c == 0x2004 || c == 0x2005 || c == 0x2006 ||
-          c == 0x2007 || c == 0x2008 || c == 0x2009 || c == 0x200A || c == 0x202F ||
-          c == 0x205F || c == 0x3000);
-
-  // https://tc39.es/ecma262/#prod-WhiteSpace
-  // Two of these are already covered but this way is more explicit, and it'll get
-  // optimised
-  bool is_ecma_white_space = (c == 0x0009 || c == 0x000B || c == 0x000C || c == 0x0020 ||
-                              c == 0x00A0 || c == 0xFEFF || is_unicode_space_separator);
-
-  // https://tc39.es/ecma262/#prod-LineTerminator
-  bool is_ecma_line_terminator =
-      (c == 0x000A || c == 0x000D || c == 0x2028 || c == 0x2029);
-
   // https://tc39.es/ecma262/#sec-string.prototype.trim
-  bool shouldTrim = (is_ecma_white_space || is_ecma_line_terminator);
+  // https://tc39.es/ecma262/#prod-WhiteSpace
+  // https://www.compart.com/en/unicode/category/Zs
+  // https://tc39.es/ecma262/#prod-LineTerminator
 
-  return shouldTrim;
+  // Naive implementation would do 25 comparisons for non-whitespace
+  u8 upper = c >> 8;
+  if (upper == 0x00) {
+    if (c > 0x20) {
+      // 223 chars: 3 comparisons
+      return c == 0xA0;
+    } else {
+      // Check in order of (guessed) frequency
+      return c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\v' || c == '\f';
+    }
+  } else if (upper == 0x20) {
+    if (c > 0x205F) {
+      // 160 non-whitespace: 3 comparisons
+      return false;
+    } else if (c > 0x2029) {
+      // 52 non-whitespace: 6 comparisons
+      // 2 whitespace: 4-6 comparisons
+      return c == 0x202F || c == 0x205F;
+    } else {
+      // 35 non-whitespace: 7 comparisons
+      // 13 whitespace: 5-7 comparisons
+      return c <= 0x200A || c == 0x2028 || c == 0x2029;
+    }
+  } else {
+    // 65021 non-whitespace: 5 comparisons
+    // 3 whitespace: 3-5 comparisons
+    return c == 0x1680 || c == 0x3000 || c == 0xFEFF;
+  }
 }
 
 /**
@@ -526,7 +538,7 @@ static void* eval_String_toInt(void* args[]) {
   size_t len = code_units(str);
   u16 code0 = str->words16[0];
   i32 total = 0;
-  size_t start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
+  size_t start = (code0 == '+' || code0 == '-');
 
   size_t i;
   for (i = start; i < len; ++i) {

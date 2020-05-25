@@ -9,6 +9,7 @@
 size_t code_units(ElmString16* s);
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);
 ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len);
+bool is_whitespace(u16 c);
 
 // ---------------------------------------------------------
 //
@@ -173,6 +174,62 @@ void* test_find_forward() {
   result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
   mu_expect_equal("should find multiple chars at end (retry)", result, 15);
 
+  return NULL;
+}
+
+u16 all_whitespace_chars[] = {
+    // https://www.compart.com/en/unicode/category/Zs
+    0x0020,
+    0x00A0,
+    0x1680,
+    0x2000,
+    0x2001,
+    0x2002,
+    0x2003,
+    0x2004,
+    0x2005,
+    0x2006,
+    0x2007,
+    0x2008,
+    0x2009,
+    0x200A,
+    0x202F,
+    0x205F,
+    0x3000,
+
+    // https://tc39.es/ecma262/#prod-WhiteSpace
+    0x0009,
+    0x000B,
+    0x000C,
+    0x0020,
+    0x00A0,
+    0xFEFF,
+
+    // https://tc39.es/ecma262/#prod-LineTerminator
+    0x000A,
+    0x000D,
+    0x2028,
+    0x2029,
+};
+const size_t n_whitespace_chars = sizeof(all_whitespace_chars) / sizeof(u16);
+void* test_is_whitespace() {
+  u32 incorrect_results = 0;
+  for (u32 code = 0; code <= 0xffff; code++) {
+    u16 c = (u16)code;
+    bool actual = is_whitespace(c);
+    bool expected = false;
+    for (size_t i = 0; i < n_whitespace_chars; i++) {
+      if (all_whitespace_chars[i] == c) {
+        expected = true;
+        break;
+      }
+    }
+    if (actual != expected) {
+      incorrect_results++;
+      printf("FAIL: is_whitespace(0x%x) should be %x\n", c, expected);
+    }
+  }
+  mu_assert("is_whitespace should be correct for all code units", incorrect_results == 0);
   return NULL;
 }
 
@@ -345,10 +402,13 @@ void* test_String_trim() {
       "a",
       A1(&String_trim, create_string(" \n a \t \r\n")));
 
-  expect_string(
-      "trim \" \\n \\t \\r\\n\"", "", A1(&String_trim, create_string(" \n \t \r\n")));
-
   expect_string("trim \"\"", "", A1(&String_trim, create_string("")));
+
+  ElmString16* allWhitespaceChars = NEW_ELM_STRING16(n_whitespace_chars);
+  for (size_t i = 0; i < n_whitespace_chars; i++) {
+    allWhitespaceChars->words16[i] = all_whitespace_chars[i];
+  }
+  expect_string("trim allWhitespaceChars", "", A1(&String_trim, allWhitespaceChars));
 
   return NULL;
 }
@@ -543,6 +603,7 @@ char* string_test() {
   mu_run_test(test_code_units);
   mu_run_test(test_find_reverse);
   mu_run_test(test_find_forward);
+  mu_run_test(test_is_whitespace);
 
   describe("test_String_uncons", &test_String_uncons);
   describe("test_String_append", &test_String_append);
