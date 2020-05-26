@@ -58,20 +58,24 @@ function compactWasm() {
   wasmHeap = wasmHeap.filter(val => val.mark);
 }
 
+function getValueFromJs(): number {
+  const value = Math.random();
+  return storeJsRef(value);
+}
+
 // --------------------------------------------------
 // Actual JS heap implementation
 // --------------------------------------------------
 
 interface JsHeapEntry {
   id: number;
-  value: number | {};
+  value: any;
   mark: boolean;
 }
 const unusedJsHeapSlot = {};
 const jsHeap: JsHeapEntry[] = [];
 
-function getValueFromJs(): number {
-  const value = Math.random();
+function storeJsRef(value: any): number {
   let id = jsHeap.findIndex(entry => entry.value === unusedJsHeapSlot);
   if (id === -1) {
     id = jsHeap.length;
