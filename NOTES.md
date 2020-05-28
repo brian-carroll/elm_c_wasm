@@ -1,14 +1,3 @@
-# Code organisation
-
-json and core are separate packages, maybe split them up
-
-
-# Bad code gen for case:
-
-eval_elm_core_Dict_removeHelpPrepEQGT
-
-
-
 # Status 29 Apr 2020
 
 ## SPA example bugs
@@ -79,26 +68,10 @@ Random list of considerations:
 
 ### Garbage collection of JS references
 
-Will require JS references in the GC
-Need to keep them in a JS array but how do we GC that array?
-Could keep a linked list of all the JS refs.
-Do a first stage of marking where the list itself is not included.
-Then traverse the list, finding dead JsRefs. Kill them in JS as you go using an imported JS function.
-If the JsRef is live, then also mark the corresponding Cons as live.
-Jump over the dead cells.
-
-What structure to use on the JS side?
-- Don't really want an array that's full of holes.
-- Ooh, what about keeping a matching linked list in JS?
-- Use an array, but replace it with a "compacted" one every GC cycle!
-  - While marking in Wasm, also call a JS "mark" function that pushes the ref onto a new JsRef array
-  - After marking, call a "compact" function in JS
-    - This needs to keep stuff we didn't bother getting to in this (minor) GC cycle
-    - Probably want to reverse the JS list and concat it to the untouched stuff
-    - Need a 2nd pass over the Wasm list to update the JS indices to the new (reversed + concat'ed) array indices
-      - We have now learned the number of untouched JS refs, and the number of moved ones.
-
-OK cross-language GC is actually not the end of the world but it's definitely more complexity
+- Use mark-sweep, non-moving
+  - It simplifies the Wasm side if we don't have to change IDs
+  - JS side is pretty simple
+  - Wasm side is pretty simple too actually. Just import markJs(id) and sweepJs()
 
 ### Json.Value in C
 

@@ -22,6 +22,7 @@
 
   const WASM_HEAP_SIZE = 100;
   let wasmHeap: WasmHeapValue[] = [];
+  let oldGenTop = 0;
 
   function runWasmApp() {
     for (let addr = wasmHeap.length; addr < WASM_HEAP_SIZE; addr++) {
@@ -43,8 +44,9 @@
       }
     }
   }
-  function markWasm() {
-    wasmHeap.forEach(val => {
+  function markWasm(ignoreBelow: number) {
+    for (let addr = ignoreBelow; addr < wasmHeap.length; addr++) {
+      const val = wasmHeap[addr];
       if (Math.random() < 0.4) {
         val.mark = true;
         if (val.tag === 'JsRef') {
@@ -53,10 +55,25 @@
       } else {
         val.mark = false;
       }
-    });
+    }
+    // console.log(`markWasm from ${ignoreBelow} to ${wasmHeap.length}`, wasmHeap)
   }
-  function compactWasm() {
-    wasmHeap = wasmHeap.filter(val => val.mark);
+  function compactWasm(ignoreBelow: number) {
+    const oldGen = wasmHeap.slice(0, ignoreBelow);
+    const newGen = wasmHeap.slice(ignoreBelow);
+    wasmHeap = oldGen.concat(newGen.filter(val => val.mark));
+    wasmHeap.forEach(val => val.mark = false)
+  }
+  function gcMajor() {
+    markWasm(0);
+    compactWasm(0);
+    sweepJs(true);
+    oldGenTop = wasmHeap.length;
+  }
+  function gcMinor() {
+    markWasm(oldGenTop);
+    compactWasm(oldGenTop);
+    sweepJs(false);
   }
 
   function getValueFromJs(): number {
@@ -72,6 +89,7 @@
     id: number;
     value: any;
     mark: boolean;
+    isOldGen: boolean;
   }
   const unusedJsHeapSlot = {};
   const jsHeap: JsHeapEntry[] = [];
@@ -80,7 +98,7 @@
     let id = jsHeap.findIndex(entry => entry.value === unusedJsHeapSlot);
     if (id === -1) {
       id = jsHeap.length;
-      jsHeap.push({ id, mark: false, value });
+      jsHeap.push({ id, mark: false, isOldGen: false, value });
     } else {
       jsHeap[id].value = value;
     }
@@ -89,18 +107,24 @@
   function markJs(id: number) {
     jsHeap[id].mark = true;
   }
-  function sweepJs() {
+  function sweepJs(isFullGc: boolean) {
     let lastMarked = 0;
-    jsHeap.forEach((val, index) => {
-      if (!val.mark) {
-        jsHeap[index].value = unusedJsHeapSlot;
+    jsHeap.forEach((slot, index) => {
+      const keepAlive = slot.mark || (!isFullGc && slot.isOldGen);
+      if (!keepAlive) {
+        slot.value = unusedJsHeapSlot;
+        slot.isOldGen = false;
       } else {
         lastMarked = index;
+        if (isFullGc) {
+          slot.isOldGen = true;
+        }
       }
-      val.mark = false;
+      slot.mark = false;
     });
     jsHeap.splice(lastMarked + 1, jsHeap.length);
   }
+
 
   // --------------------------------------------------
   // Run the simulation
@@ -108,10 +132,16 @@
 
   for (let cycle = 0; cycle < 10; cycle++) {
     runWasmApp();
-    console.log('run', { /*wasmHeap,*/ jsHeap });
-    markWasm();
-    sweepJs();
-    compactWasm();
-    console.log('GC', { /*wasmHeap,*/ jsHeap });
+    console.log('run', { oldGenTop, heapSize: wasmHeap.length /*, jsHeap */ });
+    gcMajor();
+    console.log('GC Major', { oldGenTop, heapSize: wasmHeap.length, jsHeap /*, wasmHeap */ });
+    runWasmApp();
+    console.log('run', { oldGenTop, heapSize: wasmHeap.length /*, jsHeap */ });
+    gcMinor();
+    console.log('GC Minor', { oldGenTop, heapSize: wasmHeap.length, jsHeap /*, wasmHeap */ });
+    runWasmApp();
+    console.log('run', { oldGenTop, heapSize: wasmHeap.length /*, jsHeap */ });
+    gcMinor();
+    console.log('GC Minor', { oldGenTop, heapSize: wasmHeap.length, jsHeap /*, wasmHeap */ });
   }
 })();
