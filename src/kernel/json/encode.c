@@ -12,7 +12,8 @@ void* eval_Json_wrap(void* args[]) {
   if (v->header.tag == Tag_Int) {
     v = NEW_ELM_FLOAT(v->elm_int.value);
   }
-  return v;
+  Custom* wrapped = NEW_CUSTOM(KERNEL_CTOR_OFFSET, 1, (void*[]){v});
+  return wrapped;
 }
 Closure Json_wrap = {
     .header = HEADER_CLOSURE(0),
@@ -21,7 +22,8 @@ Closure Json_wrap = {
 };
 
 void* eval_Json_unwrap(void* args[]) {
-  return args[0];
+  Custom* x = args[0];
+  return x->values[0];
 }
 Closure Json_unwrap = {
     .header = HEADER_CLOSURE(0),
@@ -57,7 +59,7 @@ Closure Json_emptyObject = {
 
 void* eval_Json_addField(void* args[]) {
   ElmString16* key = args[0];
-  void* value = args[1];
+  Custom* wrappedValue = args[1];
   Custom* old_object = args[2];
 
   u32 old_params = custom_params(old_object);
@@ -68,7 +70,7 @@ void* eval_Json_addField(void* args[]) {
   GC_memcpy(new_object, old_object, old_size * SIZE_UNIT);
   new_object->header.size = new_size;
   new_object->values[old_params] = key;
-  new_object->values[old_params + 1] = value;
+  new_object->values[old_params + 1] = wrappedValue->values[0];
 
   return new_object;
 }
@@ -90,7 +92,9 @@ void* eval_Json_addEntry(void* args[]) {
   Custom* new_array = CAN_THROW(GC_malloc(new_size * SIZE_UNIT));
   GC_memcpy(new_array, old_array, old_size * SIZE_UNIT);
   new_array->header.size = new_size;
-  new_array->values[old_params] = A1(&Json_unwrap, A1(func, entry));
+
+  Custom* wrappedEntry = A1(func, entry);
+  new_array->values[old_params] = wrappedEntry->values[0];
 
   return new_array;
 }
@@ -102,7 +106,8 @@ Closure Json_addEntry = {
 
 void* eval_Json_encode(void* args[]) {
   ElmInt* indentLevel = args[0];
-  void* value = args[1];
+  Custom* wrapped = args[1];
+  void* value = wrapped->values[0];
 
   stringify_alloc_chunk = 64;
   size_t len = stringify_alloc_chunk / 2;

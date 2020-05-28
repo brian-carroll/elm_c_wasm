@@ -11,10 +11,10 @@ ElmInt int0 = {
 
 void* test_Json_encode_boolean() {
   expect_equal("should encode True to 'true'",
-      A2(&Json_encode, &int0, &True),
+      A2(&Json_encode, &int0, WRAP(&True)),
       create_string("true"));
   expect_equal("should encode False to 'false'",
-      A2(&Json_encode, &int0, &False),
+      A2(&Json_encode, &int0, WRAP(&False)),
       create_string("false"));
   return NULL;
 }
@@ -201,12 +201,15 @@ void* test_Json_Encode_list() {
   Cons* list_bool = List_create(2, c_array);
   Custom* json_array = NEW_CUSTOM(JSON_VALUE_ARRAY, 2, c_array);
 
+  Custom* encoded =
+      A2(&g_elm_json_Json_Encode_list, &g_elm_json_Json_Encode_bool, list_bool);
+
   expect_equal("Encode.list Encode.bool [True,False] == JsonValueArray True False",
-      A2(&g_elm_json_Json_Encode_list, &g_elm_json_Json_Encode_bool, list_bool),
+      encoded,
       WRAP(json_array));
 
   expect_equal("encode 0 (list bool [True,False]) == \"[true,false]\"",
-      A2(&Json_encode, &int0, A2(&g_elm_json_Json_Encode_list, &Json_wrap, list_bool)),
+      A2(&Json_encode, &int0, encoded),
       create_string("[true,false]"));
 
   return NULL;
@@ -255,7 +258,7 @@ void* test_Json_encode_object() {
       }));
 
   Custom* json_object =
-      NEW_CUSTOM(JSON_VALUE_OBJECT, 4, ((void*[]){name, brian, age, &float42}));
+      WRAP(NEW_CUSTOM(JSON_VALUE_OBJECT, 4, ((void*[]){name, brian, age, &float42})));
 
   void* encodedObject = A1(&g_elm_json_Json_Encode_object, elm_pairs);
 
@@ -263,7 +266,7 @@ void* test_Json_encode_object() {
       "object [(\"name\", string \"Brian\"), (\"age\", int 42)]"
       " == JsonValueObject \"name\" \"Brian\" \"age\" 42.0",
       encodedObject,
-      WRAP(json_object));
+      json_object);
 
   expect_equal(
       "encode 0 (object [(\"name\", string \"Brian\"), (\"age\", int 42)])"

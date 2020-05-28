@@ -39,7 +39,7 @@ void* test_decode_errFailure(Custom* decoder, char* json_c_str, char* msg_c_str)
               2,
               ((void*[]){
                   create_string(msg_c_str),
-                  parse_json(json),
+                  WRAP(parse_json(json)),
               })),
       }));
   // print_heap();
@@ -63,7 +63,7 @@ Custom* errFailure(char* msg_c_str, void* json_value) {
       2,
       ((void*[]){
           create_string(msg_c_str),
-          json_value,
+          WRAP(json_value),
       }));
 }
 Custom* err(Custom* error) {
