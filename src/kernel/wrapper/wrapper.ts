@@ -107,7 +107,14 @@ function wrapWasmElmApp(
     fieldGroups: NameToInt & IntToNames;
   }
 
-  const CTOR_KERNEL_ARRAY = 0xffffffff;
+  const KERNEL_CTOR_OFFSET = 1024 * 1000;
+  const JSON_CTOR_OFFSET = 0x2000 * 10000;
+  enum JsonValue {
+    WRAP = JSON_CTOR_OFFSET,
+    NULL = JSON_CTOR_OFFSET + 1,
+    OBJECT = JSON_CTOR_OFFSET + 2,
+    ARRAY = JSON_CTOR_OFFSET + 3
+  }
 
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
@@ -140,7 +147,6 @@ function wrapWasmElmApp(
   const SIZE_MASK = 0x0fffffff;
   const SIZE_SHIFT = 0;
   const NEVER_EVALUATE = 0xffff;
-  const KERNEL_CTOR_OFFSET = 1024 * 1000;
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
@@ -238,12 +244,23 @@ function wrapWasmElmApp(
         if (elmConst !== undefined) return elmConst;
         const wasmCtor = mem32[index + 1];
 
-        if (wasmCtor === CTOR_KERNEL_ARRAY) {
-          const kernelArray: any[] = [];
+        if (wasmCtor == JsonValue.ARRAY) {
+          const jsonArray: any[] = [];
           mem32.slice(index + 2, index + size).forEach(childAddr => {
-            kernelArray.push(readWasmValue(childAddr));
+            jsonArray.push(readWasmValue(childAddr));
           });
-          return kernelArray;
+          return jsonArray;
+        }
+
+        if (wasmCtor == JsonValue.OBJECT) {
+          const jsonObj: Record<string, any> = {};
+          const pointers = mem32.slice(index + 2, index + size);
+          for (let i = 0; i < pointers.length; i += 2) {
+            const key = readWasmValue(pointers[i]);
+            const val = readWasmValue(pointers[i + 1]);
+            jsonObj[key] = val;
+          }
+          return jsonObj;
         }
 
         const jsCtor: number | string =
@@ -421,12 +438,13 @@ function wrapWasmElmApp(
         return writeFromBuilder(nextIndex, builder, tag);
       }
       case 'kernelArray': {
+        const tag = Tag.Custom;
         const builder: WasmBuilder = {
-          body: [CTOR_KERNEL_ARRAY],
+          body: [JsonValue.ARRAY],
           jsChildren: value,
           bodyWriter: null
         };
-        return writeFromBuilder(nextIndex, builder, Tag.Custom);
+        return writeFromBuilder(nextIndex, builder, tag);
       }
     }
   }

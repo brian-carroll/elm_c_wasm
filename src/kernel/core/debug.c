@@ -55,6 +55,10 @@ static void Debug_prettyHelp(int indent, void* p) {
   int deeper = indent + 2;
   int deeper2 = indent + 4;
 
+  if ((size_t)p > (size_t)gc_state.heap.system_end) {
+    printf("(out of bounds) %p\n", p);
+    return;
+  }
 #ifndef __EMSCRIPTEN__
   if ((size_t)p < (size_t)&etext) {
     // avoid dereferencing (segfault)
