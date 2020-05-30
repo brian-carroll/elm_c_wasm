@@ -44,6 +44,27 @@ Currently the app's `Model` is stored in JS but the `update` function is in Wasm
 The other issue is dealing with unserialisable JavaScript objects. For example, click events are not serialisable because they contain cyclical references. It's all to do with how the Json library is implemented. I have something that works _most_ of the time! But again, it crosses the JS/Wasm boundary too often. That means it's slow, and when I get errors, they're hard to debug. I'm working on a cleaner solution.
 
 
+## Asynchronous initialisation
+
+WebAssembly modules are normally compiled [asynchronously](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/instantiateStreaming) once loaded into the browser. We have to wait until the compilation is finished before we can call `Elm.Main.init`.
+
+I created a new function `Elm.onReady` to help with this. You just put your app's normal setup code in a callback, and `Elm.onReady` will execute it at the right time.
+
+For my WebAssembly version of the TodoMVC example, it looks like this:
+```html
+  <script type="text/javascript">
+    Elm.onReady(function () {
+      var storedState = localStorage.getItem('elm-todo-save');
+      var startingState = storedState ? JSON.parse(storedState) : null;
+      var app = Elm.Main.init({ flags: startingState });
+      app.ports.setStorage.subscribe(function (state) {
+        localStorage.setItem('elm-todo-save', JSON.stringify(state));
+      });
+    });
+  </script>
+```
+
+
 ## String encoding
 
 - Original post mentions UTF-8
