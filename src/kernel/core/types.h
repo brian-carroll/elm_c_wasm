@@ -179,6 +179,9 @@ ElmChar* ctorElmChar(u32 value);
 
 // STRING
 
+// Make sure constant strings are properly aligned on 64-bit target.
+// Otherwise C compiler can truncate the zero padding at the end,
+// putting other data there. Messes up length calculation, etc.
 typedef struct __attribute__((aligned)) {
   Header header;
   u8 bytes[];

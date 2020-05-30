@@ -12,9 +12,9 @@ Closure List_append;
 Closure List_map2;
 
 // toArray & fromArray
-// Only needed because some core Elm code contains leaked details of the JS
-// implementation! e.g. String.join and String.split Direct C translations are not useful,
-// so just use identity function
+// Needed because core Elm code leaks details of the JS implementation
+// e.g. String.join and String.split use JS built-ins that need arrays
+// In C, we might as well just operate on Elm data.
 #define List_toArray Basics_identity
 #define List_fromArray Basics_identity
 

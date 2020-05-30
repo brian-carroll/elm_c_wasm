@@ -37,8 +37,8 @@ static void print_indent(int indent) {
 
 static void Debug_prettyHelp(int indent, void* p);
 
-#ifndef __EMSCRIPTEN__
-extern char etext, edata, end; // memory regions, defined by linker (Linux)
+#if !defined(__EMSCRIPTEN__) && defined(__linux__)
+extern char etext, edata, end;  // memory regions, defined by linker
 #endif
 
 void pretty_print_child(int indent, void* p) {
@@ -55,13 +55,17 @@ static void Debug_prettyHelp(int indent, void* p) {
   int deeper = indent + 2;
   int deeper2 = indent + 4;
 
+  // Avoid dereferencing addresses that are too high to be valid
   if ((size_t)p > (size_t)gc_state.heap.system_end) {
     printf("(out of bounds) %p\n", p);
     return;
   }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && defined(__linux__)
+  // Avoid dereferencing addresses that are too low to be valid
+  // (e.g. unboxed integers used in some kernel code)
+  // Not needed in Wasm since addresses down to zero don't segfault
+  // It's OS-specific. Implement for Mac or Windows someday if needed.
   if ((size_t)p < (size_t)&etext) {
-    // avoid dereferencing (segfault)
     printf("(unboxed integer) %zd\n", (size_t)p);
     return;
   }
@@ -76,7 +80,7 @@ static void Debug_prettyHelp(int indent, void* p) {
     return;
   }
   if (p == &Unit) {
-    printf("Unit\n");
+    printf("()\n");
     return;
   }
 

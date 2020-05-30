@@ -1,6 +1,8 @@
 #ifndef ELM_H
 #define ELM_H
 
+// Values defined in core library .elm files, referenced in kernel code
+
 #include "types.h"
 
 Custom g_elm_core_Maybe_Nothing;
