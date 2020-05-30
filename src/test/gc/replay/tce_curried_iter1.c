@@ -1,3 +1,5 @@
+#include "../../gc_test.h"
+#include "../../test.h"
 #include "../replay_test.h"
 
 static void* tce_mock_curried(void* args[], void** gc_tce_data) {
@@ -152,7 +154,7 @@ char* test_replay_tce_curried_iter1() {
       },
       &(ElmInt){.header = HEADER_INT, .value = 1},
       &(ElmInt){.header = HEADER_INT, .value = 2},
-      &(ElmInt){.header = HEADER_INT, .value = 3}, // proves execution resumed
+      &(ElmInt){.header = HEADER_INT, .value = 3},  // proves execution resumed
       &full_spec2,
       &(GcStackMap){
           .header = HEADER_GC_STACK_TC,

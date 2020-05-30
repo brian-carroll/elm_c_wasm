@@ -305,3 +305,15 @@ Closure Basics_log = {
     .evaluator = &eval_log,
     .max_values = 1,
 };
+
+/**
+ * identity
+ */
+static void* eval_identity(void* args[]) {
+  return args[0];
+}
+Closure Basics_identity = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_identity,
+    .max_values = 1,
+};

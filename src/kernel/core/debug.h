@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-#include "./types.h"
+#include "types.h"
 #ifndef ELM_KERNEL_DEBUG
 #define ELM_KERNEL_DEBUG
 

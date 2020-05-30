@@ -1,7 +1,7 @@
-#include "../kernel/types.h"
+#include "../kernel/core/types.h"
 #include <string.h>
 #include <unistd.h>
-#include "./test.h"
+#include "test.h"
 
 char* test_wasm_types() {
   if (verbose) {

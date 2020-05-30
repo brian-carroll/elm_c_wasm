@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../../kernel/types.h"
+#include "../../kernel/core/types.h"
 
 FieldGroup fg2 = {.header = HEADER_FIELDGROUP(2), .size = 2, .fields = {485, 870}};
 FieldGroup fg5 = {

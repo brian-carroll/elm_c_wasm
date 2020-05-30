@@ -4,12 +4,8 @@
 #define EMSCRIPTEN_KEEPALIVE
 #endif
 // #include <stdio.h>
-#include "../../../src/kernel/basics.h"
-#include "../../../src/kernel/debug.h"
-#include "../../../src/kernel/gc-internals.h"
-#include "../../../src/kernel/gc.h"
-#include "../../../src/kernel/types.h"
-#include "../../../src/kernel/utils.h"
+#include "../../../src/kernel/kernel.h"
+#include "../../../src/kernel/core/gc-internals.h"
 
 extern GcState gc_state;
 
@@ -132,7 +128,7 @@ int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
       GC_prep_replay();
       continue;
     }
-    result = Utils_apply(&count_no_tce, 1, (void* []){remaining});
+    result = Utils_apply(&count_no_tce, 1, (void*[]){remaining});
     if (result->header.tag != Tag_GcException) break;
     // printf("export_count_no_tce: GC point 2, call=%d, gc=%d\n",
     //     export_count_no_tce_call_id,
@@ -156,7 +152,7 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
     //   printf("oopsie");
     //   return -1;
     // }
-    ElmInt* result = Utils_apply(&Basics_add, 2, (void* []){boxA, boxB});
+    ElmInt* result = Utils_apply(&Basics_add, 2, (void*[]){boxA, boxB});
     if (boxA == pGcFull || boxB == pGcFull || result == pGcFull) {
       // printf("export_add: GC\n");
       GC_collect_full();

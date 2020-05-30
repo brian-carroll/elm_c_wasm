@@ -1,3 +1,5 @@
+#include "../../gc_test.h"
+#include "../../test.h"
 #include "../replay_test.h"
 
 void* eval_mock_func_inner(void* args[]) {

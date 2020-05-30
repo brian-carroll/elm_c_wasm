@@ -39,4 +39,6 @@ Closure Basics_modBy;
 Closure Basics_remainderBy;
 Closure Basics_log;
 
+Closure Basics_identity;
+
 #endif

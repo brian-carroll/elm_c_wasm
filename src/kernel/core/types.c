@@ -138,8 +138,10 @@ Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
   Custom* c = CAN_THROW(GC_malloc(sizeof(Custom) + n_children * sizeof(void*)));
   c->header = HEADER_CUSTOM(n_children);
   c->ctor = ctor;
-  for (size_t i = 0; i < n_children; ++i) {
-    c->values[i] = children[i];
+  if (children != NULL) {
+    for (size_t i = 0; i < n_children; ++i) {
+      c->values[i] = children[i];
+    }
   }
   return c;
 }
@@ -154,7 +156,7 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   return r;
 }
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void* []), void* values[]) {
+    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
   Closure* c = CAN_THROW(GC_malloc(sizeof(Closure) + n_values * sizeof(void*)));
   c->header = HEADER_CLOSURE(n_values);
   c->n_values = n_values;

@@ -1,16 +1,16 @@
-#include "./gc-internals.h"
+#include "gc-internals.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <assert.h>
 
-#include "./types.h"
+#include "types.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 
-#include "./debug.h"
+#include "debug.h"
 #else
 #define log_error(...)
 #endif
@@ -88,13 +88,7 @@ size_t child_count(ElmValue* v) {
 
    ==================================================== */
 
-int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
-  int has_error = brk(new_break_ptr);
-  if (has_error) {
-    log_error("Failed to get heap memory. Error code %d\n", errno);
-    return errno;
-  }
-
+void set_heap_layout(GcHeap* heap, size_t* new_break_ptr) {
   size_t heap_words = new_break_ptr - heap->start;
 
   // This calculation is in bytes, not words, to prevent
@@ -121,7 +115,15 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
   heap->offsets = heap->bitmap - offset_words;
   heap->end = heap->offsets;
   heap->system_end = new_break_ptr;
+}
 
+int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
+  int has_error = brk(new_break_ptr);
+  if (has_error) {
+    log_error("Failed to get heap memory. Error code %d\n", errno);
+    return errno;
+  }
+  set_heap_layout(heap, new_break_ptr);
   return 0;
 }
 

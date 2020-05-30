@@ -3,11 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../kernel/debug.h"
-#include "../../kernel/gc-internals.h"
-#include "../../kernel/gc.h"
-#include "../../kernel/list.h"
-#include "../../kernel/types.h"
+#include "../../kernel/core/core.h"
+#include "../../kernel/core/gc-internals.h"
 #include "../gc_test.h"
 #include "../test.h"
 

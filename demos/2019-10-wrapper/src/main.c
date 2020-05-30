@@ -435,22 +435,22 @@ void* eval_author_project_Main_view(void* args[1]) {
   return A2(&elm_html_Html_div,
       &Nil,
       List_create(2,
-          (void* []){
+          (void*[]){
               A2(&elm_html_Html_h1,
                   &Nil,
                   List_create(1,
-                      (void* []){
+                      (void*[]){
                           A1(&elm_html_Html_text, str),
                       })),
               isZero
                   ? A2(&elm_html_Html_button,
                         List_create(1,
-                            (void* []){
+                            (void*[]){
                                 A1(&elm_html_Html_Events_onClick,
                                     A1(&author_project_Main_SetCounter, &literal_int_5)),
                             }),
                         List_create(1,
-                            (void* []){
+                            (void*[]){
                                 A1(&elm_html_Html_text, &literal_string_StartCountdown),
                             }))
                   : A2(&elm_html_Html_br, &Nil, &Nil),
@@ -491,7 +491,7 @@ void* init_author_project_Main_main() {
   return A1(&wasm_WasmWrapper_element,
       ctorRecord(&fg_init_subscriptions_update_view,
           4,
-          (void* []){
+          (void*[]){
               &author_project_Main_init,
               &author_project_Main_subscriptions,
               &author_project_Main_update,

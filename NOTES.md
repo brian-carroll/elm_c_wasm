@@ -1,4 +1,9 @@
-Bad code gen for case:
+# Code organisation
+
+json and core are separate packages, maybe split them up
+
+
+# Bad code gen for case:
 
 eval_elm_core_Dict_removeHelpPrepEQGT
 

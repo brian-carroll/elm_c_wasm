@@ -5,12 +5,10 @@
 #define EMSCRIPTEN_KEEPALIVE
 #include <stdio.h>
 #endif
-#include "../debug.h"
-#include "../gc-internals.h"
-#include "../gc.h"
-#include "../types.h"
-#include "../utils.h"
-#include "./wrapper.h"
+#include "../core/core.h"
+#include "../core/gc-internals.h"
+#include "../json/json.h"
+#include "wrapper.h"
 
 extern GcState gc_state;
 
@@ -50,12 +48,8 @@ size_t EMSCRIPTEN_KEEPALIVE getTrue() {
 size_t EMSCRIPTEN_KEEPALIVE getFalse() {
   return (size_t)&False;
 }
-Custom JsNull = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = 0,
-};
 size_t EMSCRIPTEN_KEEPALIVE getJsNull() {
-  return (size_t)&JsNull;
+  return (size_t)&Json_encodeNull;
 }
 
 size_t EMSCRIPTEN_KEEPALIVE getMaxWriteAddr() {

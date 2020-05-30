@@ -1,3 +1,5 @@
+#include "../../gc_test.h"
+#include "../../test.h"
 #include "../replay_test.h"
 
 static void* tce_mock_curried(void* args[], void** gc_tce_data) {
@@ -136,7 +138,8 @@ char* test_replay_tce_curried_iter2() {
 
   mark(&gc_state, gc_state.heap.start);  // make it easier to understand print_heap
 
-  void* tc1 = push + sizeof(GcStackMap) + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*));
+  void* tc1 =
+      push + sizeof(GcStackMap) + sizeof(ElmInt) + (sizeof(Closure) + 2 * sizeof(void*));
   void* final_return_val = tc1 + sizeof(GcStackMap) + 2 * sizeof(ElmInt);
 
   full_spec2.values[0] = final_return_val;

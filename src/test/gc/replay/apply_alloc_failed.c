@@ -1,3 +1,5 @@
+#include "../../gc_test.h"
+#include "../../test.h"
 #include "../replay_test.h"
 
 char* test_replay_apply_alloc_failed() {

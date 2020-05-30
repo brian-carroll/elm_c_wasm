@@ -1,13 +1,13 @@
-#include "./debug.h"
+#include "debug.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "./gc-internals.h"
-#include "./string.h"
-#include "./types.h"
+#include "gc-internals.h"
+#include "string.h"
+#include "types.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -37,6 +37,10 @@ static void print_indent(int indent) {
 
 static void Debug_prettyHelp(int indent, void* p);
 
+#if !defined(__EMSCRIPTEN__) && defined(__linux__)
+extern char etext, edata, end;  // memory regions, defined by linker
+#endif
+
 void pretty_print_child(int indent, void* p) {
   printf(FORMAT_PTR, p);
   for (int i = 0; i < indent; i++) {
@@ -51,6 +55,22 @@ static void Debug_prettyHelp(int indent, void* p) {
   int deeper = indent + 2;
   int deeper2 = indent + 4;
 
+  // Avoid dereferencing addresses that are too high to be valid
+  if ((size_t)p > (size_t)gc_state.heap.system_end) {
+    printf("(out of bounds) %p\n", p);
+    return;
+  }
+#if !defined(__EMSCRIPTEN__) && defined(__linux__)
+  // Avoid dereferencing addresses that are too low to be valid
+  // (e.g. unboxed integers used in some kernel code)
+  // Not needed in Wasm since addresses down to zero don't segfault
+  // It's OS-specific. Implement for Mac or Windows someday if needed.
+  if ((size_t)p < (size_t)&etext) {
+    printf("(unboxed integer) %zd\n", (size_t)p);
+    return;
+  }
+#endif
+
   if (p == &True) {
     printf("True\n");
     return;
@@ -60,7 +80,7 @@ static void Debug_prettyHelp(int indent, void* p) {
     return;
   }
   if (p == &Unit) {
-    printf("Unit\n");
+    printf("()\n");
     return;
   }
 
@@ -213,7 +233,7 @@ void Debug_pretty(const char* label, void* p) {
   for (int i = 0; i < FORMAT_PTR_LEN; i++) {
     printf("-");
   }
-  printf("  %s\n", label);
+  printf("  %s (%p)\n", label, p);
   pretty_print_child(2, p);
 }
 

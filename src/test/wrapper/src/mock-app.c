@@ -5,13 +5,9 @@
 #define EMSCRIPTEN_KEEPALIVE
 #include <stdio.h>
 #endif
-#include "../../../kernel/basics.h"
-#include "../../../kernel/debug.h"
-#include "../../../kernel/gc-internals.h"
-#include "../../../kernel/gc.h"
-#include "../../../kernel/types.h"
-#include "../../../kernel/utils.h"
-#include "../../../kernel/wrapper.h"
+
+#include "../../../kernel/core/core.h"
+#include "../../../kernel/core/gc-internals.h"
 
 /* ---------------------------------------------------------
 

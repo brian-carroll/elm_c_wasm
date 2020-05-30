@@ -1,5 +1,5 @@
-#include "../kernel/kernel.h"
-#include "./test.h"
+#include "../kernel/core/core.h"
+#include "test.h"
 
 /*
 https://en.wikipedia.org/wiki/UTF-16#Examples

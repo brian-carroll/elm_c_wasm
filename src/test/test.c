@@ -1,4 +1,4 @@
-#include "./test.h"
+#include "test.h"
 
 #include <getopt.h>
 #include <stdbool.h>
@@ -6,8 +6,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../kernel/kernel.h"
-#include "./gc_test.h"
+#include "../kernel/core/core.h"
+#include "gc_test.h"
 
 char* types_test();
 char* utils_test();
@@ -15,55 +15,12 @@ char* basics_test();
 char* string_test();
 char* char_test();
 char* list_test();
+char* json_test();
 
 int verbose = false;
 int tests_run = 0;
 int tests_failed = 0;
 int assertions_made = 0;
-
-// ---------------------------------------------------------
-//
-//  "Compiler-generated" values
-//
-// ---------------------------------------------------------
-
-enum {
-  CTOR_Nothing,
-  CTOR_Just,
-};
-void* eval_elm_core_Maybe_Just(void* args[]) {
-  return ctorCustom(CTOR_Just, 1, args);
-}
-Closure g_elm_core_Maybe_Just = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0x1,
-    .evaluator = &eval_elm_core_Maybe_Just,
-};
-Custom g_elm_core_Maybe_Nothing = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = CTOR_Nothing,
-};
-
-FieldGroup* Wrapper_appFieldGroups[] = {NULL};
-void** Wrapper_mainsArray[] = {NULL};
-
-char Debug_evaluator_name_buf[1024];
-char* Debug_evaluator_name(void* p) {
-  sprintf(Debug_evaluator_name_buf, "%p", p);
-  return Debug_evaluator_name_buf;
-}
-char* Debug_ctors[] = {};
-char* Debug_fields[] = {};
-char* Debug_jsValues[] = {};
-int Debug_ctors_size = 0;
-int Debug_fields_size = 0;
-int Debug_jsValues_size = 0;
-
-size_t evalWasmThunkInJs(size_t addr) {
-  void* result = Utils_apply((Closure*)addr, 0, NULL);
-  return (size_t)result;
-}
 
 // ---------------------------------------------------------
 //
@@ -97,10 +54,10 @@ void* expect_equal(char* expect_description, void* left, void* right) {
     if (!verbose) {
       printf("\n%s\n", test_description);
     }
-    printf("FAIL: %s\n", expect_description);
-    printf("Left: %p\n", left);
-    printf("Right: %p\n", right);
     print_heap_range(test_heap_ptr, GC_malloc(0));
+    printf("FAIL: %s\n", expect_description);
+    Debug_pretty("Left", left);
+    Debug_pretty("Right", right);
     printf("\n");
     tests_failed++;
   } else if (verbose) {
@@ -108,6 +65,16 @@ void* expect_equal(char* expect_description, void* left, void* right) {
   }
   assertions_made++;
   return NULL;
+}
+
+ElmString16* create_string(char* c_string) {
+  size_t c_len = (size_t)strlen(c_string);
+  size_t bytes_utf16 = c_len * 2;
+  ElmString16* s = NEW_ELM_STRING(bytes_utf16, NULL);
+  for (size_t i = 0; i < c_len; i++) {
+    s->words16[i] = (u16)c_string[i];
+  }
+  return s;
 }
 
 // Debug function, with pre-allocated memory for strings
@@ -142,8 +109,14 @@ char* hex_ptr(void* ptr) {
   return hex(&ptr, sizeof(void*));
 }
 
-char* test_all(
-    bool types, bool utils, bool basics, bool string, bool chr, bool list, bool gc) {
+char* test_all(bool types,
+    bool utils,
+    bool basics,
+    bool string,
+    bool chr,
+    bool list,
+    bool json,
+    bool gc) {
   if (verbose) {
     printf("Selected tests: ");
     if (types) printf("types ");
@@ -152,6 +125,7 @@ char* test_all(
     if (string) printf("string ");
     if (chr) printf("char ");
     if (list) printf("list ");
+    if (json) printf("json ");
     if (gc) printf("gc ");
     printf("\n\n");
   }
@@ -161,6 +135,7 @@ char* test_all(
   if (string) mu_run_test(string_test);
   if (chr) mu_run_test(char_test);
   if (list) mu_run_test(list_test);
+  if (json) mu_run_test(json_test);
   if (gc) mu_run_test(gc_test);
 
   return NULL;
@@ -178,6 +153,7 @@ int main(int argc, char** argv) {
       {"string", optional_argument, NULL, 's'},
       {"char", optional_argument, NULL, 'c'},
       {"list", optional_argument, NULL, 'l'},
+      {"json", optional_argument, NULL, 'j'},
       {"gc", optional_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
   };
@@ -189,6 +165,7 @@ int main(int argc, char** argv) {
   bool chr = false;
   bool utils = false;
   bool list = false;
+  bool json = false;
   bool gc = false;
 
 // Running in a Windows CMD shell
@@ -199,7 +176,7 @@ int main(int argc, char** argv) {
   verbose = true;
 #endif
 
-  char options[] = "vatubsclg";
+  char options[] = "vatubscljg";
 
   int opt;
   while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
@@ -214,6 +191,7 @@ int main(int argc, char** argv) {
         string = true;
         chr = true;
         list = true;
+        json = true;
         gc = true;
         break;
       case 't':
@@ -234,6 +212,9 @@ int main(int argc, char** argv) {
       case 'l':
         list = !optarg;
         break;
+      case 'j':
+        json = !optarg;
+        break;
       case 'g':
         gc = !optarg;
         break;
@@ -243,7 +224,17 @@ int main(int argc, char** argv) {
     }
   }
 
-  test_all(types, utils, basics, string, chr, list, gc);
+#ifdef __EMSCRIPTEN__
+  printf("\n");
+  printf("WebAssembly Tests\n");
+  printf("=================\n");
+#else
+  printf("\n");
+  printf("Native Binary Tests\n");
+  printf("===================\n");
+#endif
+
+  test_all(types, utils, basics, string, chr, list, json, gc);
   int exit_code;
 
   if (tests_failed) {
@@ -255,6 +246,7 @@ int main(int argc, char** argv) {
   }
   printf("Tests run: %d\n", tests_run);
   printf("Assertions made: %d\n", assertions_made);
+  printf("\n");
 
   exit(exit_code);
 }

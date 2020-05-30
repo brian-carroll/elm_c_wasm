@@ -1,12 +1,9 @@
-#include "../kernel/utils.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/basics.h"
-#include "../kernel/types.h"
-#include "./gc_test.h"
-#include "./test.h"
+#include "../kernel/core/core.h"
+#include "test.h"
 
 char* test_records() {
   if (verbose) {
@@ -99,7 +96,7 @@ char* test_records() {
   ElmInt* updated_thing = NEW_ELM_INT(111);
   ElmFloat* updated_stuff = NEW_ELM_FLOAT(3.14);
   Record* r3 = Utils_update(
-      r2, 2, (u32[]){things, stuff}, (void* []){updated_thing, updated_stuff});
+      r2, 2, (u32[]){things, stuff}, (void*[]){updated_thing, updated_stuff});
 
   if (verbose) {
     printf(
@@ -593,12 +590,9 @@ char* utils_test() {
     printf("Utils\n");
     printf("-----\n");
   }
-  gc_test_reset();
   mu_run_test(test_records);
   mu_run_test(test_apply);
-  gc_test_reset();
   mu_run_test(test_eq);
-  gc_test_reset();
   mu_run_test(test_compare);
 
   return NULL;

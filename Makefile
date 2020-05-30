@@ -1,4 +1,4 @@
-CFLAGS=-Wall -O1
+CFLAGS=-Wall
 
 ROOT := .
 SRC := $(ROOT)/src
@@ -21,7 +21,7 @@ DATA_INC := $(DATA_TSV:.tsv=.inc)
 .PHONY: all check check-bin check-node debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
-all: check
+all: $(DIST)/bin/test
 	@:
 
 check: check-bin check-node
@@ -35,7 +35,7 @@ check-node: $(TEST)/test-runner.js $(DIST)/www/test.html
 	@echo "\n\nRunning tests with Node.js WebAssembly"
 	node $< --all
 
-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
+debug: CFLAGS = -Wall -ggdb -DDEBUG -DDEBUG_LOG
 debug: $(DIST)/bin/test
 	@:
 
@@ -50,6 +50,10 @@ www: $(DIST)/www/test.html
 
 www-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
 www-debug: www
+	@:
+
+www-release: CFLAGS = -Wall -Oz
+www-release: www
 	@:
 
 gc-size:
@@ -108,22 +112,20 @@ gh-pages: www codegen todo
 # https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
 
 
-# need to first find the tsv, then replace names with .tsv.inc, then make these the deps
-$(SRC)/test/gc/stackmap_test.c: $(DATA_INC)
-	@:
-
 # ../src/test/gc/stackmap_data/full_completion.tsv.inc: ../src/test/gc/stackmap_data/full_completion.tsv
 $(SRC)/%.inc : $(SRC)/%.tsv
 	@cd $$(dirname $@) ; xxd -i $$(basename $<) $$(basename $@)
 
 # Binary & Wasm
 
-$(DIST)/bin/test: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
-	gcc $(CFLAGS) -ggdb $(SOURCES) -o $@ -lm
+$(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
+	@echo Building tests as native binary...
+	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
 
-$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(SRC)/test/gc/stackmap_test.c
+$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
+	@echo Building tests as WebAssembly module...
 	@mkdir -p $(DIST)/www
-	emcc $(CFLAGS) $(SOURCES) -o $@
+	@emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'

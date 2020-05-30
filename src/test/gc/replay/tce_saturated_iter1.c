@@ -1,3 +1,5 @@
+#include "../../gc_test.h"
+#include "../../test.h"
 #include "../replay_test.h"
 
 static void* tce_mock_sat(void* args[], void** gc_tce_data) {

@@ -1,5 +1,22 @@
+#ifndef TEST_H
+#define TEST_H
+
 #define __USE_MINGW_ANSI_STDIO 1
 #include <stdio.h>
+
+#include "../kernel/core/types.h"
+
+enum {
+  CTOR_Nothing,
+  CTOR_Just,
+  CTOR_Ok,
+  CTOR_Err,
+  CTOR_Failure,
+  CTOR_Field,
+  CTOR_Index,
+  CTOR_OneOf,
+  CTOR_MockElmArray,
+};
 
 // ---------------------------------------------------------
 //
@@ -50,3 +67,6 @@ extern void* test_heap_ptr;
 
 void describe(char* description, void* (*test)());
 void* expect_equal(char* expect_description, void* left, void* right);
+ElmString16* create_string(char* c_string);
+
+#endif

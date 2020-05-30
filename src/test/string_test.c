@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../kernel/kernel.h"
-#include "./test.h"
+#include "../kernel/core/core.h"
+#include "test.h"
 
 size_t code_units(ElmString16* s);
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);
@@ -15,16 +15,6 @@ ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len);
 //          STRING TESTING UTILITIES
 //
 // ---------------------------------------------------------
-
-ElmString16* create_string(char* c_string) {
-  size_t c_len = (size_t)strlen(c_string);
-  size_t bytes_utf16 = c_len * 2;
-  ElmString16* s = NEW_ELM_STRING(bytes_utf16, NULL);
-  for (size_t i = 0; i < c_len; i++) {
-    s->words16[i] = (u16)c_string[i];
-  }
-  return s;
-}
 
 void print_elm_string(ElmString16* str) {
   size_t len = code_units(str);
@@ -229,7 +219,7 @@ void* test_String_split() {
   expect_equal("split \"/\" \"home/steve/Desktop\" == [\"home\",\"steve\",\"Desktop\"]",
       A2(&String_split, create_string("/"), create_string("home/steve/Desktop")),
       List_create(3,
-          (void* []){
+          (void*[]){
               create_string("home"),
               create_string("steve"),
               create_string("Desktop"),
@@ -247,7 +237,7 @@ void* test_String_split() {
   expect_equal("split \"\" \"ab\" == [\"a\",\"b\"]  # split on empty string",
       A2(&String_split, empty, ab),
       List_create(2,
-          (void* []){
+          (void*[]){
               create_string("a"),
               create_string("b"),
           }));
@@ -255,7 +245,7 @@ void* test_String_split() {
   expect_equal("split \"ab\" \"ab\" == [\"\",\"\"]",
       A2(&String_split, ab, ab),
       List_create(2,
-          (void* []){
+          (void*[]){
               empty,
               empty,
           }));
@@ -274,7 +264,7 @@ void* test_String_join() {
       A2(&String_join,
           slash,
           List_create(3,
-              (void* []){
+              (void*[]){
                   create_string("home"),
                   create_string("steve"),
                   create_string("Desktop"),
@@ -324,7 +314,7 @@ void* test_String_indexes() {
   expect_equal("indexes \"/\" \"home/steve/Desktop\" == [4,10]",
       A2(&String_indexes, create_string("/"), create_string("home/steve/Desktop")),
       List_create(2,
-          (void* []){
+          (void*[]){
               NEW_ELM_INT(4),
               NEW_ELM_INT(10),
           }));
