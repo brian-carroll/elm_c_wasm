@@ -1,3 +1,157 @@
+# Replacing Json.js
+
+References from other JS code
+
+| Function        | Usages                           | Comment                  |
+| --------------- | -------------------------------- | ------------------------ |
+| Json_decodePrim | File.js                          | unserialisable JsRef     |
+| Json_expecting  | File.js                          | write Err to Wasm        |
+| ----            | ----                             | ----                     |
+| Json_equality   | VirtualDom.js                    | diff event decoders      |
+| Json_runHelp    | VirtualDom.js, Browser.js        | event handler callback   |
+| Json_map(2)     | VirtualDom.js, Browser.server.js | map msg of event handler |
+| Json_succeed    | VirtualDom.js                    | map msg of event handler |
+| Json_unwrap     | VirtualDom.js                    | apply DOM node props     |
+| ----            | ----                             | ----                     |
+| Json_run        | Platform.js, Browser.server.js   | flags                    |
+| Json_wrap       | Platform.js,                     | flags, send??            |
+|                 | Debugger.js, Browser.server.js   | flags                    |
+
+So there are just a few situations
+
+- App init flags
+- File/Bytes decoder
+- DOM events
+  - equality on message handler decoders
+  - map msg of event handlers
+  - decoding events
+
+The first two are straightforward enough
+
+## DOM events
+
+`_VirtualDom_on` is a constructor in the Custom type for Facts
+
+```js
+var _VirtualDom_on = F2(function (key, handler) {
+  return {
+    $: 'a__1_EVENT',
+    __key: key,
+    __value: handler
+  };
+});
+```
+
+The Json decoder is in the `handler` field:
+
+```elm
+on : String -> Handler msg -> Attribute msg
+
+type Handler msg
+  = Normal (Json.Decoder msg)
+  | MayStopPropagation (Json.Decoder (msg, Bool))
+  | MayPreventDefault (Json.Decoder (msg, Bool))
+  | Custom (Json.Decoder { message : msg, stopPropagation : Bool, preventDefault : Bool })
+```
+
+All variants of `Handler` have one argument - the decoder.
+When run, it returns a message + (DOM options used in the VirtualDom callback)
+
+So what we want is to decode the Event without doing a bonkers amount of JS/Wasm back-and-forth
+What's the minimum imaginable?
+
+## Decoding unserialisable things
+
+- The easy part: string, number, boolean and null just get sent through the JS/Wasm wrapper
+
+- Objects
+
+  - What we care about is the `field` decoder
+  - `keyValuePairs` doesn't work on unserialisable data in standard Elm, so just write it to Wasm as JSON_VALUE_OBJECT
+  - 2 params: `field` and `decoder`
+  - The JS side needs the field string and some way of referencing the decoder
+  - Obviously it also needs to know the `ctor` of the decoder to match on it
+
+- Arrays
+
+  - could be self-referential and the decoder could skip the self-referential index...
+  - We care about the `index` decoder here. Takes and index and a decoder
+
+- run
+  - never send the decoder across the border
+  - Just call a few imported functions to do basic ops on JS values
+    - get_field
+    - get_index
+    - get_json_string or get_value?
+
+```js
+function get_field(jsRefId, fieldStringAddr) {
+  const obj = jsHeap[jsRefId].value;
+  if (typeof obj !== 'object' || obj === null) return -1;
+  const field = readWasmValue(fieldStringAddr);
+  const value = obj[field];
+  return storeJsRef(value);
+}
+
+function get_index(jsRefId, index) {
+  const array = jsHeap[jsRefId].value;
+  if (!Array.isArray(array)) return -1;
+  const value = array[index];
+  return storeJsRef(value);
+}
+
+// which is quicker? Serialise it to bytes, or to JSON and back?
+function get_json_string(jsRefId) {
+  const value = jsHeap[jsRefId].value;
+  let jsonStringAddr;
+  try {
+    jsonStringAddr = writeWasmValue(JSON.stringify(value));
+  }
+  catch (e) {
+    return -1;
+  }
+  return jsonStringAddr;
+}
+
+function get_value() {
+
+}
+function writeJsonValue(value) {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return writeWasmValue(value);
+  } else {
+    return writeWasmValue(value);
+  }
+}
+```
+
+Assume we have inifinite memory and there are no GC issues
+
+## the hard part
+
+- The border crossings are a direct consequence of trying to avoid long-lived refs between JS and Wasm
+- To get rid of them we absolutely have to have a mechanism for JS-to-Wasm refs
+
+## JS to Wasm refs
+
+- Need a Wasm value representing an inbound ref from JS
+- A GC root has some list or tree underneath it of all inbound refs
+- Also some persistent ID
+
+### what's the inverse of the Wasm-to-JS refs?
+
+Wasm-to-JS
+
+- a Wasm value containing a fixed number ID for the JS value
+- a way to look up that ID on the JS side
+- an array on the JS side that gets told by Wasm what's alive or dead
+
+JS-to-Wasm
+
+- a JS value containing a fixed number ID for the Wasm value `new WasmRef(addr)`
+- a way to look up that ID on the Wasm side
+- an array on the Wasm side that gets told by JS what's alive or dead
+
 # Status 29 Apr 2020
 
 ## SPA example bugs
