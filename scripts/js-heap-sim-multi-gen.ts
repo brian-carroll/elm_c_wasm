@@ -86,7 +86,6 @@
   // --------------------------------------------------
 
   interface JsHeapEntry {
-    id: number;
     value: any;
     mark: boolean;
     isOldGen: boolean;
@@ -98,7 +97,7 @@
     let id = jsHeap.findIndex(entry => entry.value === unusedJsHeapSlot);
     if (id === -1) {
       id = jsHeap.length;
-      jsHeap.push({ id, mark: false, isOldGen: false, value });
+      jsHeap.push({ mark: false, isOldGen: false, value });
     } else {
       jsHeap[id].value = value;
     }
