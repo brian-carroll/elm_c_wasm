@@ -449,6 +449,63 @@ function wrapWasmElmApp(
     }
   }
 
+  function writeJsonValue(nextIndex: number, value: any): WriteResult {
+    switch (typeof value) {
+      case 'boolean':
+        return {
+          addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
+          nextIndex
+        };
+      case 'number':
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.Float, value),
+          Tag.Float
+        );
+      case 'string':
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.String, value),
+          Tag.String
+        );
+      case 'object': {
+        if (value === null) {
+          return { addr: wasmConstAddrs.JsNull, nextIndex };
+        }
+        const body: number[] = [];
+        if (Array.isArray(value)) {
+          body.push(JsonValue.ARRAY);
+          value.forEach(elem => {
+            const result = writeJsonValue(nextIndex, elem);
+            nextIndex = result.nextIndex;
+            body.push(result.addr);
+          });
+        } else {
+          body.push(JsonValue.OBJECT);
+          Object.keys(value).forEach(key => {
+            const keyResult = writeJsonValue(nextIndex, key);
+            nextIndex = keyResult.nextIndex;
+            body.push(keyResult.addr);
+            const valueResult = writeJsonValue(nextIndex, value[key]);
+            nextIndex = valueResult.nextIndex;
+            body.push(valueResult.addr);
+          });
+        }
+        const builder: WasmBuilder = {
+          body,
+          jsChildren: [],
+          bodyWriter: null
+        };
+        return writeFromBuilder(nextIndex, builder, Tag.Custom);
+      }
+      default:
+        // undefined, function, symbol, bigint
+        // All are invalid JSON but elm/json lib can process non-JSON JS objects!!
+        // TODO: put it in the JS heap so we can pass it into Wasm and back out
+        return { addr: wasmConstAddrs.Unit, nextIndex }; //  fail for all Json.Decoders
+    }
+  }
+
   // Info needed to build any Elm Wasm value
   // The shape is always the same, which helps JS engines to optimise
   type WasmBuilder =
