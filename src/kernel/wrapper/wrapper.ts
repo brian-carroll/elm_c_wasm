@@ -175,7 +175,7 @@ function wrapWasmElmApp(
     Record = 0x8,
     FieldGroup = 0x9,
     Closure = 0xa,
-    GcException = 0xb,
+    JsRef = 0xb,
     GcStackEmpty = 0xc,
     GcStackPush = 0xd,
     GcStackPop = 0xe,
@@ -437,6 +437,22 @@ function wrapWasmElmApp(
         const builder: WasmBuilder = wasmBuilder(tag, value);
         return writeFromBuilder(nextIndex, builder, tag);
       }
+      case 'jsonWrap': {
+        const unwrapped = value.a;
+        const unwrappedResult = writeJsonValue(
+          nextIndex,
+          unwrapped,
+          JsShape.MAYBE_CYCLIC
+        );
+        nextIndex = unwrappedResult.nextIndex;
+        const tag = Tag.Custom;
+        const builder: WasmBuilder = {
+          body: [JsonValue.WRAP, unwrappedResult.addr],
+          jsChildren: [],
+          bodyWriter: null
+        };
+        return writeFromBuilder(nextIndex, builder, tag);
+      }
       case 'kernelArray': {
         const tag = Tag.Custom;
         const builder: WasmBuilder = {
@@ -446,63 +462,6 @@ function wrapWasmElmApp(
         };
         return writeFromBuilder(nextIndex, builder, tag);
       }
-    }
-  }
-
-  function writeJsonValue(nextIndex: number, value: any): WriteResult {
-    switch (typeof value) {
-      case 'boolean':
-        return {
-          addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
-          nextIndex
-        };
-      case 'number':
-        return writeFromBuilder(
-          nextIndex,
-          wasmBuilder(Tag.Float, value),
-          Tag.Float
-        );
-      case 'string':
-        return writeFromBuilder(
-          nextIndex,
-          wasmBuilder(Tag.String, value),
-          Tag.String
-        );
-      case 'object': {
-        if (value === null) {
-          return { addr: wasmConstAddrs.JsNull, nextIndex };
-        }
-        const body: number[] = [];
-        if (Array.isArray(value)) {
-          body.push(JsonValue.ARRAY);
-          value.forEach(elem => {
-            const result = writeJsonValue(nextIndex, elem);
-            nextIndex = result.nextIndex;
-            body.push(result.addr);
-          });
-        } else {
-          body.push(JsonValue.OBJECT);
-          Object.keys(value).forEach(key => {
-            const keyResult = writeJsonValue(nextIndex, key);
-            nextIndex = keyResult.nextIndex;
-            body.push(keyResult.addr);
-            const valueResult = writeJsonValue(nextIndex, value[key]);
-            nextIndex = valueResult.nextIndex;
-            body.push(valueResult.addr);
-          });
-        }
-        const builder: WasmBuilder = {
-          body,
-          jsChildren: [],
-          bodyWriter: null
-        };
-        return writeFromBuilder(nextIndex, builder, Tag.Custom);
-      }
-      default:
-        // undefined, function, symbol, bigint
-        // All are invalid JSON but elm/json lib can process non-JSON JS objects!!
-        // TODO: put it in the JS heap so we can pass it into Wasm and back out
-        return { addr: wasmConstAddrs.Unit, nextIndex }; //  fail for all Json.Decoders
     }
   }
 
@@ -528,6 +487,9 @@ function wrapWasmElmApp(
     | {
         kind: 'constAddr';
         value: number;
+      }
+    | {
+        kind: 'jsonWrap';
       }
     | {
         kind: 'kernelArray';
@@ -588,6 +550,8 @@ function wrapWasmElmApp(
             return { kind: 'tag', value: Tag.Tuple2 };
           case '#3':
             return { kind: 'tag', value: Tag.Tuple3 };
+          case JsonValue.WRAP:
+            return { kind: 'jsonWrap' };
           default:
             return { kind: 'tag', value: Tag.Custom };
         }
@@ -725,6 +689,13 @@ function wrapWasmElmApp(
           };
         }
       }
+      case Tag.JsRef: {
+        return {
+          body: [storeJsRef(value)],
+          jsChildren: [],
+          bodyWriter: null
+        };
+    }
     }
     console.error(value);
     throw new Error(`Can't write to WebAssembly for tag "${Tag[tag]}"`);
@@ -776,6 +747,134 @@ function wrapWasmElmApp(
 
   function encodeHeader(tag: Tag, size: number): number {
     return (tag << TAG_SHIFT) | (size << SIZE_SHIFT);
+  }
+
+  /* --------------------------------------------------
+
+          WRITE CYCLIC JS VALUES TO WASM
+
+  -------------------------------------------------- */
+
+  enum JsShape {
+    MAYBE_CYCLIC,
+    NOT_CYCLIC
+  }
+
+  interface JsHeapEntry {
+    value: any;
+    isMarked: boolean;
+    isOldGen: boolean;
+  }
+
+  const unusedJsHeapSlot = {};
+  const jsHeap: JsHeapEntry[] = [];
+
+  function storeJsRef(value: any): number {
+    let id = jsHeap.findIndex(entry => entry.value === unusedJsHeapSlot);
+    if (id === -1) {
+      id = jsHeap.length;
+      jsHeap.push({ isMarked: false, isOldGen: false, value });
+    } else {
+      jsHeap[id].value = value;
+    }
+    return id;
+  }
+
+  function markJs(id: number) {
+    jsHeap[id].isMarked = true;
+  }
+
+  function sweepJs(isFullGc: boolean) {
+    let lastMarked = 0;
+    jsHeap.forEach((slot, index) => {
+      const keepAlive = slot.isMarked || (!isFullGc && slot.isOldGen);
+      if (!keepAlive) {
+        slot.value = unusedJsHeapSlot;
+        slot.isOldGen = false;
+      } else {
+        lastMarked = index;
+        if (isFullGc) {
+          slot.isOldGen = true;
+        }
+      }
+      slot.isMarked = false;
+    });
+    jsHeap.splice(lastMarked + 1, jsHeap.length);
+  }
+
+  function writeJsonValue(
+    nextIndex: number,
+    value: any,
+    jsShape: JsShape
+  ): WriteResult {
+    switch (typeof value) {
+      case 'boolean':
+        return {
+          addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
+          nextIndex
+        };
+      case 'number':
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.Float, value),
+          Tag.Float
+        );
+      case 'string':
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.String, value),
+          Tag.String
+        );
+      case 'object': {
+        if (value === null) {
+          return { addr: wasmConstAddrs.JsNull, nextIndex };
+        }
+        if (jsShape === JsShape.MAYBE_CYCLIC) {
+          return writeFromBuilder(
+            nextIndex,
+            wasmBuilder(Tag.JsRef, value),
+            Tag.JsRef
+          );
+        }
+        const body: number[] = [];
+        if (Array.isArray(value)) {
+          body.push(JsonValue.ARRAY);
+          value.forEach(elem => {
+            const result = writeJsonValue(nextIndex, elem, JsShape.NOT_CYCLIC);
+            nextIndex = result.nextIndex;
+            body.push(result.addr);
+          });
+        } else {
+          body.push(JsonValue.OBJECT);
+          Object.keys(value).forEach(key => {
+            const keyResult = writeJsonValue(nextIndex, key, jsShape);
+            nextIndex = keyResult.nextIndex;
+            body.push(keyResult.addr);
+            const valueResult = writeJsonValue(
+              nextIndex,
+              value[key],
+              JsShape.NOT_CYCLIC
+            );
+            nextIndex = valueResult.nextIndex;
+            body.push(valueResult.addr);
+          });
+        }
+        const builder: WasmBuilder = {
+          body,
+          jsChildren: [],
+          bodyWriter: null
+        };
+        return writeFromBuilder(nextIndex, builder, Tag.Custom);
+      }
+      default:
+        // typeof is 'undefined', 'function', 'symbol', or 'bigint'
+        // Preserve the value so it can be passed in one port and out another
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.JsRef, value),
+          Tag.JsRef
+        );
+    }
   }
 
   /* --------------------------------------------------

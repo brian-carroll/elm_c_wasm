@@ -5,6 +5,7 @@
 
 #include "../core/types.h"
 
+Closure g_elm_json_Json_errorToString;
 Closure g_elm_json_Json_Decode_Failure;
 Closure g_elm_json_Json_Decode_Field;
 Closure g_elm_json_Json_Decode_Index;

@@ -180,7 +180,7 @@ Cons Nil = {.header = HEADER_LIST, .head = NULL, .tail = NULL};
 Custom Unit = {.header = HEADER_CUSTOM(0), .ctor = 0};
 Custom True = {.header = HEADER_CUSTOM(0), .ctor = 1};
 Custom False = {.header = HEADER_CUSTOM(0), .ctor = 0};
-GcException GcFull = {.header = HEADER_GC_EXCEPTION};
+Custom GcFull = {.header = HEADER_CUSTOM(0), .ctor = 0};
 
 void* pNil = &Nil;
 void* pUnit = &Unit;

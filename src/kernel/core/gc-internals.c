@@ -69,7 +69,7 @@ size_t child_count(ElmValue* v) {
     case Tag_Closure:
       return v->closure.n_values;
 
-    case Tag_GcException:
+    case Tag_JsRef:
     case Tag_GcStackEmpty:
       return 0;
 

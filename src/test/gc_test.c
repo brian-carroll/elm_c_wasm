@@ -596,7 +596,7 @@ char* gc_replay_test() {
   ElmValue* result = gc_replay_test_catch();
 
   mu_assert("Expect GC exception when 'fib' called with insufficient heap space",
-      result->header.tag == Tag_GcException);
+      result == pGcFull);
 
   GC_collect_full();
   GC_prep_replay();

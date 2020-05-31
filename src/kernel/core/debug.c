@@ -207,8 +207,8 @@ static void Debug_prettyHelp(int indent, void* p) {
       }
       break;
     }
-    case Tag_GcException:
-      printf("GC marker (Exception)\n");
+    case Tag_JsRef:
+      printf("External JS object %d\n", v->js_ref.index);
       break;
     case Tag_GcStackEmpty:
       printf("GC marker (Stack Empty)\n");
@@ -312,8 +312,8 @@ void print_value(void* p) {
       }
       break;
     }
-    case Tag_GcException:
-      printf("GcException");
+    case Tag_JsRef:
+      printf("JsRef %d", v->js_ref.index);
       break;
     case Tag_GcStackPush:
       printf(

@@ -30,7 +30,7 @@ typedef enum {
   Tag_Record,           // 8
   Tag_FieldGroup,       // 9
   Tag_Closure,          // a
-  Tag_GcException,      // b
+  Tag_JsRef,            // b
   Tag_GcStackEmpty,     // c
   Tag_GcStackPush,      // d
   Tag_GcStackPop,       // e
@@ -91,9 +91,9 @@ typedef struct {
   (Header) {                                                                      \
     .tag = Tag_Closure, .size = (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT \
   }
+#define HEADER_JS_REF \
+  (Header) { .tag = Tag_JsRef, .size = sizeof(JsRef) / SIZE_UNIT }
 
-#define HEADER_GC_EXCEPTION \
-  (Header) { .tag = Tag_GcException, .size = sizeof(GcException) / SIZE_UNIT }
 #define HEADER_GC_STACK_EMPTY \
   (Header) { .tag = Tag_GcStackEmpty, .size = sizeof(GcStackMap) / SIZE_UNIT }
 #define HEADER_GC_STACK_PUSH \
@@ -254,12 +254,13 @@ Closure* ctorClosure(
     u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]);
 #define NEW_CLOSURE(n, m, e, v) CAN_THROW(ctorClosure(n, m, e, v))
 
-// GARBAGE COLLECTOR TYPES
-
-// A value used to implement an exception when GC is full
+// Reference to a JS object
 typedef struct {
   Header header;
-} GcException;
+  u32 index;
+} JsRef;
+
+// GARBAGE COLLECTOR TYPES
 
 // Doubly-linked list for tracking stack pointers
 // GC makes assumptions about order of these fields (child_count and its usages)
@@ -287,13 +288,13 @@ typedef union {
   Record record;
   FieldGroup fieldgroup;
   Closure closure;
-  GcException gc_exception;
+  JsRef js_ref;
   GcStackMap gc_stackmap;
 } ElmValue;
 
 // STATIC CONSTANTS
 
-GcException GcFull;
+Custom GcFull;
 void* pGcFull;
 
 Cons Nil;

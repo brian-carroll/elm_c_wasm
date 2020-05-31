@@ -24,9 +24,19 @@ extern int verbose;
 #define MAX_ERROR_LEN (8 * 1024)
 #define MAX_SINGLE_ERR_LEN 256
 
+
+typedef enum {
+  Spec_Float,
+  Spec_GcException,
+  Spec_GcStackEmpty,
+  Spec_GcStackPush,
+  Spec_GcStackPop,
+  Spec_GcStackTailCall,
+} SpecTag;
+
 typedef struct {
   int idx;
-  Tag tag;
+  SpecTag tag;
   int depth;
   int backlink;
   bool mark;
@@ -77,17 +87,17 @@ void parse_heap_spec_line(u8* line, HeapSpec* spec, int line_idx) {
   //     printf("row idx %d: read %d columns\n", idx, cols);
 
   if (!strcmp(tag, "empty")) {
-    line_spec->tag = Tag_GcStackEmpty;
+    line_spec->tag = Spec_GcStackEmpty;
   } else if (!strcmp(tag, "push")) {
-    line_spec->tag = Tag_GcStackPush;
+    line_spec->tag = Spec_GcStackPush;
   } else if (!strcmp(tag, "pop")) {
-    line_spec->tag = Tag_GcStackPop;
+    line_spec->tag = Spec_GcStackPop;
   } else if (!strcmp(tag, "allocate")) {
-    line_spec->tag = Tag_Float;
+    line_spec->tag = Spec_Float;
   } else if (!strcmp(tag, "tailcall")) {
-    line_spec->tag = Tag_GcStackTailCall;
+    line_spec->tag = Spec_GcStackTailCall;
   } else if (!strcmp(tag, "exception")) {
-    line_spec->tag = Tag_GcException;
+    line_spec->tag = Spec_GcException; // come up with some other marker/enum
   } else {
     sprintf(err, "Unknown type tag '%s'\n", tag);
     append_error(spec, err);
@@ -147,18 +157,8 @@ bool addr_is_marked(void* p) {
 
 void validate_heap_item(HeapSpec* spec, int idx) {
   HeapSpecLine* line = &spec->lines[idx];
-  char* tag_names[16] = {
-      "Int            ",
+  char* tag_names[] = {
       "Float          ",
-      "Char           ",
-      "String         ",
-      "Nil            ",
-      "Cons           ",
-      "Tuple2         ",
-      "Tuple3         ",
-      "Custom         ",
-      "Record         ",
-      "Closure        ",
       "GcException    ",
       "GcStackEmpty   ",
       "GcStackPush    ",
@@ -187,9 +187,9 @@ void validate_heap_item(HeapSpec* spec, int idx) {
     }
 
     switch (line->tag) {
-      case Tag_GcStackPush:
-      case Tag_GcStackPop:
-      case Tag_GcStackTailCall: {
+      case Spec_GcStackPush:
+      case Spec_GcStackPop:
+      case Spec_GcStackTailCall: {
         GcStackMap* stackmap = (GcStackMap*)line->addr;
         format_addr(stackmap->older, link);
         if (line->backlink) {
@@ -256,20 +256,20 @@ HeapSpecLine* populate_heap_from_spec(HeapSpecLine* line, HeapSpec* spec) {
 
   while (line <= last_line) {
     switch (line->tag) {
-      case Tag_GcStackEmpty: {
+      case Spec_GcStackEmpty: {
         line->addr = gc_state.stack_map;
         line++;
         break;
       }
-      case Tag_GcStackPush: {
+      case Spec_GcStackPush: {
         bool isTailcall;
         push = GC_stack_push();
         line->addr = push;
         line++;
         do {
           line = populate_heap_from_spec(line, spec);
-          if (line->tag == Tag_GcException) return line;
-          isTailcall = line->tag == Tag_GcStackTailCall;
+          if (line->tag == Spec_GcException) return line;
+          isTailcall = line->tag == Spec_GcStackTailCall;
           if (isTailcall) {
             Closure* c = NEW_CLOSURE(2, 2, &eval_List_append, ((void*[]){&Nil, &Nil}));
             line->addr = GC_stack_tailcall(c, push);
@@ -280,19 +280,19 @@ HeapSpecLine* populate_heap_from_spec(HeapSpecLine* line, HeapSpec* spec) {
         } while (isTailcall);
         break;
       }
-      case Tag_GcStackPop:
+      case Spec_GcStackPop:
         return line;
 
-      case Tag_GcStackTailCall:
+      case Spec_GcStackTailCall:
         return line;
 
-      case Tag_Float: {
+      case Spec_Float: {
         line->addr = ctorElmFloat(123.456);
         last_alloc = line->addr;
         line++;
         break;
       }
-      case Tag_GcException:
+      case Spec_GcException:
         return line;
       default: {
         sprintf(err, "Can't populate heap with unhandled tag 0x%x", line->tag);
