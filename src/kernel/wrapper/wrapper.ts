@@ -695,7 +695,7 @@ function wrapWasmElmApp(
           jsChildren: [],
           bodyWriter: null
         };
-    }
+      }
     }
     console.error(value);
     throw new Error(`Can't write to WebAssembly for tag "${Tag[tag]}"`);
@@ -780,11 +780,11 @@ function wrapWasmElmApp(
     return id;
   }
 
-  function markJs(id: number) {
+  function markJsRef(id: number) {
     jsHeap[id].isMarked = true;
   }
 
-  function sweepJs(isFullGc: boolean) {
+  function sweepJsRefs(isFullGc: boolean) {
     let lastMarked = 0;
     jsHeap.forEach((slot, index) => {
       const keepAlive = slot.isMarked || (!isFullGc && slot.isOldGen);
@@ -800,6 +800,36 @@ function wrapWasmElmApp(
       slot.isMarked = false;
     });
     jsHeap.splice(lastMarked + 1, jsHeap.length);
+  }
+
+  function getJsRefArrayIndex(jsRefId: number, index: number): number {
+    const array = jsHeap[jsRefId].value;
+    if (!Array.isArray(array) || index >= array.length) return 0;
+    const value = array[index];
+    return handleWasmWrite(nextIndex =>
+      writeJsonValue(nextIndex, value, JsShape.MAYBE_CYCLIC)
+    );
+  }
+
+  function getJsRefObjectField(
+    jsRefId: number,
+    fieldStringAddr: number
+  ): number {
+    const obj = jsHeap[jsRefId].value;
+    if (typeof obj !== 'object' || obj === null) return 0;
+    const field = readWasmValue(fieldStringAddr);
+    if (!(field in obj)) return 0;
+    const value = obj[field];
+    return handleWasmWrite(nextIndex =>
+      writeJsonValue(nextIndex, value, JsShape.MAYBE_CYCLIC)
+    );
+  }
+
+  function getJsRefValue(jsRefId: number): number {
+    const value = jsHeap[jsRefId].value;
+    return handleWasmWrite(nextIndex =>
+      writeJsonValue(nextIndex, value, JsShape.NOT_CYCLIC)
+    );
   }
 
   function writeJsonValue(
@@ -877,6 +907,19 @@ function wrapWasmElmApp(
     }
   }
 
+  function call(evaluator: number, args: any[]) {
+    function thunk() {}
+    thunk.evaluator = evaluator;
+    thunk.freeVars = args;
+    thunk.max_values = args.length;
+
+    const closureAddr = handleWasmWrite(nextIndex =>
+      writeWasmValue(nextIndex, thunk)
+    );
+    const resultAddr = wasmExports._evalClosure(closureAddr);
+    return readWasmValue(resultAddr);
+  }
+
   /* --------------------------------------------------
 
                     EXPORTS
@@ -892,9 +935,18 @@ function wrapWasmElmApp(
 
   return {
     mains,
-    // functions for testing
     readWasmValue,
     writeWasmValue: (value: any) =>
-      handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value))
+      handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value)),
+    writeJsonValue: (value: any) =>
+      handleWasmWrite(nextIndex =>
+        writeJsonValue(nextIndex, value, JsShape.MAYBE_CYCLIC)
+      ),
+    call,
+    getJsRefArrayIndex,
+    getJsRefObjectField,
+    getJsRefValue,
+    markJsRef,
+    sweepJsRefs
   };
 }

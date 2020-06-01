@@ -1,6 +1,12 @@
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#else
+#define EMSCRIPTEN_KEEPALIVE
+#include <stdio.h>
+#endif
 
 #include "../core/core.h"
 #include "../wrapper/wrapper.h"
@@ -469,60 +475,84 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return TAIL_RESULT_OK(WRAP(value));
 
     case DECODER_LIST:
+      if (value->header.tag == Tag_JsRef) {
+        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+      }
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
         return Json_runArrayDecoder(
             decoder->values[JsonField_decoder], &value->custom, true);
       }
       return Json_expecting(&str_err_List, value);
 
-    case DECODER_ARRAY:
+    case DECODER_ARRAY: {
+      if (value->header.tag == Tag_JsRef) {
+        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+      }
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
         return Json_runArrayDecoder(
             decoder->values[JsonField_decoder], &value->custom, false);
       }
       return Json_expecting(&str_err_Array, value);
+    }
 
     case DECODER_FIELD: {
       ElmString16* field = decoder->values[JsonField_field];
+      void* field_value = NULL;
+
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_OBJECT) {
         Custom* object = &value->custom;
         u32 n_params = custom_params(object);
         for (size_t i = 0; i < n_params; i += 2) {
           if (A2(&Utils_equal, object->values[i], field) == &True) {
-            Custom* result =
-                Json_runHelp(decoder->values[JsonField_decoder], object->values[i + 1]);
-            return RESULT_IS_OK(result) == &True
-                       ? result
-                       : TAIL_RESULT_ERR(
-                             A2(&g_elm_json_Json_Decode_Field, field, result->values[0]));
+            field_value = object->values[i + 1];
+            break;
           }
         }
+      } else if (value->header.tag == Tag_JsRef) {
+        field_value = (void*)getJsRefObjectField(value->js_ref.index, (size_t)field);
       }
-      ElmString16* msg = A2(
-          &String_append, &str_err_Field, A2(&String_append, field, &str_err_backtick));
-      return Json_expecting(msg, value);
+
+      if (field_value != NULL) {
+        Custom* result = Json_runHelp(decoder->values[JsonField_decoder], field_value);
+        return RESULT_IS_OK(result) == &True
+                   ? result
+                   : TAIL_RESULT_ERR(
+                         A2(&g_elm_json_Json_Decode_Field, field, result->values[0]));
+      } else {
+        ElmString16* msg = A2(
+            &String_append, &str_err_Field, A2(&String_append, field, &str_err_backtick));
+        return Json_expecting(msg, value);
+      }
     }
 
     case DECODER_INDEX: {
       ElmInt* index = decoder->values[JsonField_index];
-      if (value->header.tag != Tag_Custom || value->custom.ctor != JSON_VALUE_ARRAY) {
+      void* index_value = NULL;
+
+      if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
+        u32 len = custom_params(&value->custom);
+        if (index->value >= len) {
+          ElmString16* msg = A2(&String_append,
+              &str_err_Index,
+              A2(&String_append,
+                  A1(&String_fromNumber, index),
+                  A2(&String_append,
+                      &str_err_Index_but_only_see,
+                      A2(&String_append,
+                          A1(&String_fromNumber, NEW_ELM_INT(len)),
+                          &str_err_Index_entries))));
+          return Json_expecting(msg, value);
+        }
+        index_value = value->custom.values[index->value];
+      } else if (value->header.tag == Tag_JsRef) {
+        index_value = (void*)getJsRefArrayIndex(value->js_ref.index, index->value);
+      }
+
+      if (index_value == NULL) {
         return Json_expecting(&str_err_Array, value);
       }
-      u32 len = custom_params(&value->custom);
-      if (index->value >= len) {
-        ElmString16* msg = A2(&String_append,
-            &str_err_Index,
-            A2(&String_append,
-                A1(&String_fromNumber, index),
-                A2(&String_append,
-                    &str_err_Index_but_only_see,
-                    A2(&String_append,
-                        A1(&String_fromNumber, NEW_ELM_INT(len)),
-                        &str_err_Index_entries))));
-        return Json_expecting(msg, value);
-      }
-      Custom* result = Json_runHelp(
-          decoder->values[JsonField_decoder], value->custom.values[index->value]);
+
+      Custom* result = Json_runHelp(decoder->values[JsonField_decoder], index_value);
       return RESULT_IS_OK(result) == &True
                  ? result
                  : TAIL_RESULT_ERR(
@@ -530,6 +560,9 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
     }
 
     case DECODER_KEY_VALUE: {
+      if (value->header.tag == Tag_JsRef) {
+        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+      }
       if (value->header.tag != Tag_Custom || value->custom.ctor != JSON_VALUE_OBJECT) {
         return Json_expecting(&str_err_Object, value);
       }
@@ -617,46 +650,19 @@ Closure Json_runOnString = {
     .evaluator = &eval_runOnString,
 };
 
-static void* eval_run(void* args[]) {
-  return Wrapper_callJsSync(Json_run_eval_index, 2, args);
+static void* eval_Json_run(void* args[]) {
+  Custom* decoder = args[0];
+  Custom* wrapped = args[1];
+  void* unwrapped = wrapped->values[0];
+  return Json_runHelp(decoder, unwrapped);
 }
 Closure Json_run = {
     .header = HEADER_CLOSURE(0),
     .max_values = 2,
-    .evaluator = &eval_run,
+    .evaluator = &eval_Json_run,
 };
 
-/*
-
-const jsRefStore = [];
-
-class JsRef() {
-  constructor(jsValue) {
-    this.$ = KERNEL_CTOR_OFFSET;
-    this.a = jsValue;
-    this.index = jsRefStore.push(this) - 1;
-  }
+size_t EMSCRIPTEN_KEEPALIVE get_eval_Json_run() {
+  void* ptr = &eval_Json_run;
+  return (size_t)ptr;
 }
-
-
-var _Json_encode = F2(function(indentLevel, value)
-
-function _wrap(value) {
-  const jsRef = new JsRef(value);
-  return jsRef;
-}
-function _Json_unwrap(value) {
-  if (!(value instanceof JsRef)) {
-    console.warn('unwrapping non-JsRef', value);
-  }
-  return value.a;
-}
-
-function _Json_emptyArray() { return []; }
-function _Json_emptyObject() { return {}; }
-
-var _Json_addField = F3(function(key, value, object)
-
-function _Json_addEntry(func)
-var _Json_encodeNull = _wrap(null);
-*/
