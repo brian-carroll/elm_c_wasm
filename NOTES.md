@@ -84,45 +84,6 @@ What's the minimum imaginable?
     - get_index
     - get_json_string or get_value?
 
-```js
-function get_field(jsRefId, fieldStringAddr) {
-  const obj = jsHeap[jsRefId].value;
-  if (typeof obj !== 'object' || obj === null) return -1;
-  const field = readWasmValue(fieldStringAddr);
-  const value = obj[field];
-  return storeJsRef(value);
-}
-
-function get_index(jsRefId, index) {
-  const array = jsHeap[jsRefId].value;
-  if (!Array.isArray(array)) return -1;
-  const value = array[index];
-  return storeJsRef(value);
-}
-
-// which is quicker? Serialise it to bytes, or to JSON and back?
-function get_json_string(jsRefId) {
-  const value = jsHeap[jsRefId].value;
-  let jsonStringAddr;
-  try {
-    jsonStringAddr = writeWasmValue(JSON.stringify(value));
-  }
-  catch (e) {
-    return -1;
-  }
-  return jsonStringAddr;
-}
-
-function get_value() {
-
-}
-function writeJsonValue(value) {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return writeWasmValue(value);
-  } else {
-    return writeWasmValue(value);
-  }
-}
 ```
 
 Assume we have inifinite memory and there are no GC issues
