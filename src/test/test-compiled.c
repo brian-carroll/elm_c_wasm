@@ -5,6 +5,7 @@
 //
 // ---------------------------------------------------------
 
+#include <stddef.h>
 #include "../kernel/core/core.h"
 #include "../kernel/json/json.h"
 #include "test.h"
@@ -182,4 +183,14 @@ size_t Json_run_eval_index = 123;
 size_t evalWasmThunkInJs(size_t addr) {
   void* result = Utils_apply((Closure*)addr, 0, NULL);
   return (size_t)result;
+}
+
+ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
+  return 0;
+}
+ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
+  return 0;
+}
+ptrdiff_t getJsRefValue(u32 jsRefId) {
+  return 0;
 }
