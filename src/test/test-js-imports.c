@@ -1,9 +1,18 @@
 #ifdef __EMSCRIPTEN__
-
+/*
+  Not much to do here. All the functions are implemented in JS.
+  Just declare any test-only imports
+*/
 #include "../kernel/core/types.h"
 extern size_t writeJsTestValue(u32 id);
 
 #else
+
+/*
+  Non-Wasm target => JS imports don't exist
+  Need equivalent C implementations instead
+  C-only version makes it easier to use C debug tools
+*/
 
 #include <assert.h>
 #include <stddef.h>
