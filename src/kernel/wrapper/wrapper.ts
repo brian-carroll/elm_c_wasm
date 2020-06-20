@@ -803,7 +803,8 @@ function wrapWasmElmApp(
 
   function getJsRefArrayIndex(jsRefId: number, index: number): number {
     const array = jsHeap[jsRefId].value;
-    if (!Array.isArray(array) || index >= array.length) return 0;
+    if (!Array.isArray(array)) return 0;
+    if (index >= array.length) return -(array.length + 1);
     const value = array[index];
     return handleWasmWrite(nextIndex =>
       writeJsonValue(nextIndex, value, JsShape.MAYBE_CYCLIC)

@@ -93,11 +93,9 @@ static ptrdiff_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
 
 ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
   Custom* array = jsHeap[jsRefId].value;
+  if (array->header.tag != Tag_Custom || array->ctor != JSON_VALUE_ARRAY) return 0;
   u32 len = custom_params(array);
-  if (array->header.tag != Tag_Custom || array->ctor != JSON_VALUE_ARRAY ||
-      index >= len) {
-    return 0;
-  }
+  if (index >= len) return -(len + 1);
   ElmValue* value = array->values[index];
   return writeJsonValue(value, MAYBE_CYCLIC);
 }

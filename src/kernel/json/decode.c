@@ -528,24 +528,36 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
     case DECODER_INDEX: {
       ElmInt* index = decoder->values[JsonField_index];
       void* index_value = NULL;
+      bool too_short = false;
+      u32 len;
 
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
-        u32 len = custom_params(&value->custom);
-        if (index->value >= len) {
-          ElmString16* msg = A2(&String_append,
-              &str_err_Index,
-              A2(&String_append,
-                  A1(&String_fromNumber, index),
-                  A2(&String_append,
-                      &str_err_Index_but_only_see,
-                      A2(&String_append,
-                          A1(&String_fromNumber, NEW_ELM_INT(len)),
-                          &str_err_Index_entries))));
-          return Json_expecting(msg, value);
+        len = custom_params(&value->custom);
+        too_short = index->value >= len;
+        if (!too_short) {
+          index_value = value->custom.values[index->value];
         }
-        index_value = value->custom.values[index->value];
       } else if (value->header.tag == Tag_JsRef) {
-        index_value = (void*)getJsRefArrayIndex(value->js_ref.index, index->value);
+        ptrdiff_t from_js = getJsRefArrayIndex(value->js_ref.index, index->value);
+        if (from_js < 0) {
+          too_short = true;
+          len = -from_js - 1;
+        } else {
+          index_value = (void*)from_js;
+        }
+      }
+
+      if (too_short) {
+        ElmString16* msg = A2(&String_append,
+            &str_err_Index,
+            A2(&String_append,
+                A1(&String_fromNumber, index),
+                A2(&String_append,
+                    &str_err_Index_but_only_see,
+                    A2(&String_append,
+                        A1(&String_fromNumber, NEW_ELM_INT(len)),
+                        &str_err_Index_entries))));
+        return Json_expecting(msg, value);
       }
 
       if (index_value == NULL) {
