@@ -1,9 +1,16 @@
-#ifndef DISABLE_FAKE_JS_IMPORTS
+#ifdef __EMSCRIPTEN__
+
+#include "../kernel/core/types.h"
+extern size_t writeJsTestValue(u32 id);
+
+#else
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "../kernel/core/core.h"
+#include "../kernel/json/json-internal.h"
 #include "../kernel/json/json.h"
 #include "test.h"
 
@@ -18,11 +25,11 @@ struct jsHeapEntry {
   bool isOldGen;
 };
 
-int unusedJsHeapSlot;
+static int unusedJsHeapSlot;
 
 #define JS_HEAP_MAX_LENGTH 100
-u32 jsHeapLength = 0;
-struct jsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
+static u32 jsHeapLength = 0;
+static struct jsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
 
 static u32 storeJsRef(void* value) {
   u32 id = 0;
@@ -62,9 +69,10 @@ void sweepJsRefs(bool isFullGc) {
   jsHeapLength = lastMarked + 1;
 }
 
-// entrypoint for JS heap C tests
-ptrdiff_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
-  if (jsShape == MAYBE_CYCLIC && value->header.tag == Tag_Custom) {
+static ptrdiff_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
+  if (value == (void*)&Json_encodeNull || value == pTrue || value == pFalse) {
+    return (ptrdiff_t)value;
+  } else if (value->header.tag == Tag_Custom && jsShape == MAYBE_CYCLIC) {
     JsRef* jsRef = GC_malloc(sizeof(JsRef));
     jsRef->header = HEADER_JS_REF;
     jsRef->index = storeJsRef(value);
@@ -95,7 +103,7 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
   u32 i;
   for (i = 0; i < len; i += 2) {
     ElmString16* field = obj->values[i];
-    if (A2(&Utils_equal, field, (ElmString16*)fieldStringAddr) == &True) {
+    if (Utils_apply(&Utils_equal, 2, (void*[]){field, (void*)fieldStringAddr}) == &True) {
       value = obj->values[i + 1];
       break;
     }
@@ -108,5 +116,66 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
 ptrdiff_t getJsRefValue(u32 jsRefId) {
   return writeJsonValue(jsHeap[jsRefId].value, NOT_CYCLIC);
 }
+
+// ---------------------------------------------------
+// Test values
+// Cyclic values must be outside the GC-managed heap
+// ---------------------------------------------------
+
+static ElmString16 str_a = {
+    .header = HEADER_STRING(1),
+    .words16 = {'a'},
+};
+static ElmString16 str_c = {
+    .header = HEADER_STRING(1),
+    .words16 = {'c'},
+};
+static ElmInt two = {
+    .header = HEADER_INT,
+    .value = 2,
+};
+static Custom object_cyclic = {
+    .header = HEADER_CUSTOM(4),
+    .ctor = JSON_VALUE_OBJECT,
+    .values =
+        {
+            &str_a,
+            &object_cyclic,
+            &str_c,
+            &two,
+        },
+};
+static Custom array_cyclic = {
+    .header = HEADER_CUSTOM(2),
+    .ctor = JSON_VALUE_ARRAY,
+    .values =
+        {
+            &array_cyclic,
+            &two,
+        },
+};
+
+size_t writeJsTestValue(u32 id) {
+  void* value;
+  switch (id) {
+    case TEST_JS_OBJECT_NON_CYCLIC:
+      value = parse_json(create_string("{ a: { b: 1 }, c: 2 }"));
+      break;
+    case TEST_JS_OBJECT_CYCLIC:
+      value = &object_cyclic;
+      break;
+    case TEST_JS_ARRAY_NON_CYCLIC:
+      value = parse_json(create_string("[[1], 2]"));
+      break;
+    case TEST_JS_ARRAY_CYCLIC:
+      value = &array_cyclic;
+      break;
+    default:
+      printf("Unknown JS test value ID %d\n", id);
+      value = &Json_encodeNull;
+      break;
+  }
+  return writeJsonValue(value, MAYBE_CYCLIC);
+};
 
 #endif

@@ -18,6 +18,23 @@ enum {
   CTOR_MockElmArray,
 };
 
+
+// ---------------------------------------------------------
+//
+//             TEST JS IMPORTS & CYCLICAL VALUES
+//
+// ---------------------------------------------------------
+
+enum {
+  TEST_JS_OBJECT_NON_CYCLIC,
+  TEST_JS_OBJECT_CYCLIC,
+  TEST_JS_ARRAY_NON_CYCLIC,
+  TEST_JS_ARRAY_CYCLIC,
+};
+
+size_t writeJsTestValue(u32 id);
+
+
 // ---------------------------------------------------------
 //
 //             LOW-LEVEL TESTING (BYTES, NUMBERS)
