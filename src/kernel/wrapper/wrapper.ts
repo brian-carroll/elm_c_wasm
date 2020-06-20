@@ -756,8 +756,8 @@ function wrapWasmElmApp(
   -------------------------------------------------- */
 
   enum JsShape {
-    MAYBE_CYCLIC,
-    NOT_CYCLIC
+    NOT_CYCLIC,
+    MAYBE_CYCLIC
   }
 
   interface JsHeapEntry {
@@ -770,9 +770,9 @@ function wrapWasmElmApp(
   const jsHeap: JsHeapEntry[] = [];
 
   function storeJsRef(value: any): number {
-    let id = jsHeap.findIndex(entry => entry.value === unusedJsHeapSlot);
-    if (id === -1) {
-      id = jsHeap.length;
+    let id = 0;
+    while (id < jsHeap.length && jsHeap[id].value !== unusedJsHeapSlot) id++;
+    if (id == jsHeap.length) {
       jsHeap.push({ isMarked: false, isOldGen: false, value });
     } else {
       jsHeap[id].value = value;
@@ -780,26 +780,25 @@ function wrapWasmElmApp(
     return id;
   }
 
-  function markJsRef(id: number) {
+  function markJsRef(id: number): void {
     jsHeap[id].isMarked = true;
   }
 
-  function sweepJsRefs(isFullGc: boolean) {
-    let lastMarked = 0;
+  function sweepJsRefs(isFullGc: boolean): void {
+    let lastUsedSlot = 0;
     jsHeap.forEach((slot, index) => {
-      const keepAlive = slot.isMarked || (!isFullGc && slot.isOldGen);
-      if (!keepAlive) {
-        slot.value = unusedJsHeapSlot;
-        slot.isOldGen = false;
-      } else {
-        lastMarked = index;
+      if (slot.isMarked || (!isFullGc && slot.isOldGen)) {
+        lastUsedSlot = index;
         if (isFullGc) {
           slot.isOldGen = true;
         }
+      } else {
+        slot.value = unusedJsHeapSlot;
+        slot.isOldGen = false;
       }
       slot.isMarked = false;
     });
-    jsHeap.splice(lastMarked + 1, jsHeap.length);
+    jsHeap.splice(lastUsedSlot + 1, jsHeap.length);
   }
 
   function getJsRefArrayIndex(jsRefId: number, index: number): number {
