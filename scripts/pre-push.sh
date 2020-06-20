@@ -1,11 +1,2 @@
-#!/bin/bash
-set -e
-
-(make dist/bin/test ; ./dist/bin/test --all) &
-job_bin=$!
-
-(make www ; node ./src/test/test-runner.js --all) &
-job_www=$!
-
-wait $job_bin
-wait $job_www
+# Run native and Wasm tests in parallel
+make --jobs 2 check
