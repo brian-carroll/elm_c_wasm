@@ -12,14 +12,23 @@ ElmValue* parse_json(ElmString16* json);
 
 char test_decode_buf[1024];
 
+i32 latest_jsref_index = -1;
+void* createJsValue(ElmString16* json) {
+  Custom* wrapped = (Custom*)testJsonValueRoundTrip((size_t)json);
+  JsRef* jsRef = wrapped->values[0];
+  if (jsRef->header.tag == Tag_JsRef) {
+    latest_jsref_index = jsRef->index;
+  }
+  return wrapped;
+}
+
 void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* expected) {
   sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
   ElmString16* json = create_string(json_c_str);
 
-  void* actual =
-      runner == &Json_runOnString
-          ? A2(&Json_runOnString, decoder, json)
-          : A2(&Json_run, decoder, (void*)testJsonValueRoundTrip((size_t)json));
+  void* actual = runner == &Json_runOnString
+                     ? A2(&Json_runOnString, decoder, json)
+                     : A2(&Json_run, decoder, createJsValue(json));
 
   expect_equal(test_decode_buf, actual, NEW_CUSTOM(CTOR_Ok, 1, (void*[]){expected}));
 
@@ -31,10 +40,9 @@ void* test_decode_err(
   sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
   ElmString16* json = create_string(json_c_str);
 
-  void* actual_err =
-      runner == &Json_runOnString
-          ? A2(&Json_runOnString, decoder, json)
-          : A2(&Json_run, decoder, (void*)testJsonValueRoundTrip((size_t)json));
+  void* actual_err = runner == &Json_runOnString
+                         ? A2(&Json_runOnString, decoder, json)
+                         : A2(&Json_run, decoder, createJsValue(json));
 
   expect_equal(test_decode_buf, actual_err, expected_err);
 
@@ -46,10 +54,9 @@ void* test_decode_errFailure(
   ElmString16* json = create_string(json_c_str);
   sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
 
-  void* actual_err =
-      runner == &Json_runOnString
-          ? A2(&Json_runOnString, decoder, json)
-          : A2(&Json_run, decoder, (void*)testJsonValueRoundTrip((size_t)json));
+  void* actual_err = runner == &Json_runOnString
+                         ? A2(&Json_runOnString, decoder, json)
+                         : A2(&Json_run, decoder, createJsValue(json));
 
   void* expected_err = NEW_CUSTOM(CTOR_Err,
       1,
@@ -165,7 +172,7 @@ void* test_Json_decodeValue(void* runner) {
                                                          NEW_ELM_FLOAT(2),
                                                          NEW_ELM_FLOAT(3),
                                                      }))
-                                               : ctorJsRef(0);
+                                               : ctorJsRef(latest_jsref_index + 1);
   test_decode_ok(runner, &Json_decodeValue, "[1,2,3]", WRAP(expected));
   return NULL;
 }
@@ -247,10 +254,17 @@ void* test_Json_decodeIndex(void* runner) {
 
   test_decode_errFailure(runner, decoder, "null", "Expecting an ARRAY");
 
-  test_decode_errFailure(runner,
+  void* too_short;
+  if (runner == &Json_runOnString) {
+    too_short = parse_json(create_string("[123,456]"));
+  } else {
+    too_short = ctorJsRef(latest_jsref_index + 1);
+  }
+  test_decode_err(runner,
       decoder,
       "[123,456]",
-      "Expecting a LONGER array. Need index 2 but only see 2 entries");
+      err(errFailure(
+          "Expecting a LONGER array. Need index 2 but only see 2 entries", too_short)));
 
   test_decode_err(runner,
       decoder,
@@ -409,7 +423,7 @@ void* test_Json_oneOf(void* runner) {
       oneOf [ int, null 0 ]
   */
   if (verbose) {
-    printf("oneOf [ int, null 0 ]\n");
+    printf("decoder = oneOf [ int, null 0 ]\n");
   }
 
   Custom* decoder = A1(&Json_oneOf,
@@ -422,7 +436,9 @@ void* test_Json_oneOf(void* runner) {
   test_decode_ok(runner, decoder, "123", NEW_ELM_INT(123));
   test_decode_ok(runner, decoder, "null", NEW_ELM_INT(0));
 
-  Custom* empty_array = NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL);
+  Custom* empty_array = runner == &Json_runOnString
+                            ? NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL)
+                            : ctorJsRef(latest_jsref_index + 1);
 
   test_decode_err(runner,
       decoder,
@@ -440,7 +456,15 @@ void* test_Json_fail(void* runner) {
   char* msg = "it failed";
   Custom* decoder = A1(&Json_fail, create_string(msg));
   test_decode_errFailure(runner, decoder, "42", msg);
-  test_decode_errFailure(runner, decoder, "[1,2,3]", msg);
+
+  if (runner == &Json_runOnString) {
+    test_decode_errFailure(runner, decoder, "[1,2,3]", msg);
+  } else {
+    test_decode_err(runner,
+        decoder,
+        "[1,2,3]",
+        err(errFailure(msg, ctorJsRef(latest_jsref_index + 1))));
+  }
 
   return NULL;
 }
@@ -456,32 +480,32 @@ void* test_Json_succeed(void* runner) {
 }
 
 void json_runner_test(void* runner) {
-  // describe_arg("test_Json_decodeBool", test_Json_decodeBool, runner);
-  // describe_arg("test_Json_decodeInt", test_Json_decodeInt, runner);
-  // describe_arg("test_Json_decodeFloat", test_Json_decodeFloat, runner);
-  // describe_arg("test_Json_decodeString", test_Json_decodeString, runner);
-  // describe_arg("test_Json_decodeNull", test_Json_decodeNull, runner);
+  describe_arg("test_Json_decodeBool", test_Json_decodeBool, runner);
+  describe_arg("test_Json_decodeInt", test_Json_decodeInt, runner);
+  describe_arg("test_Json_decodeFloat", test_Json_decodeFloat, runner);
+  describe_arg("test_Json_decodeString", test_Json_decodeString, runner);
+  describe_arg("test_Json_decodeNull", test_Json_decodeNull, runner);
   describe_arg("test_Json_decodeValue", test_Json_decodeValue, runner);
   describe_arg("test_Json_decodeList", test_Json_decodeList, runner);
-  // describe_arg("test_Json_decodeArray", test_Json_decodeArray, runner);
-  // describe_arg("test_Json_decodeField", test_Json_decodeField, runner);
-  // describe_arg("test_Json_decodeIndex", test_Json_decodeIndex, runner);
-  // describe_arg("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs, runner);
-  // describe_arg("test_Json_map", test_Json_map, runner);
-  // describe_arg("test_Json_andThen", test_Json_andThen, runner);
-  // describe_arg("test_Json_oneOf", test_Json_oneOf, runner);
-  // describe_arg("test_Json_fail", test_Json_fail, runner);
-  // describe_arg("test_Json_succeed", test_Json_succeed, runner);
+  describe_arg("test_Json_decodeArray", test_Json_decodeArray, runner);
+  describe_arg("test_Json_decodeField", test_Json_decodeField, runner);
+  describe_arg("test_Json_decodeIndex", test_Json_decodeIndex, runner);
+  describe_arg("test_Json_decodeKeyValuePairs", test_Json_decodeKeyValuePairs, runner);
+  describe_arg("test_Json_map", test_Json_map, runner);
+  describe_arg("test_Json_andThen", test_Json_andThen, runner);
+  describe_arg("test_Json_oneOf", test_Json_oneOf, runner);
+  describe_arg("test_Json_fail", test_Json_fail, runner);
+  describe_arg("test_Json_succeed", test_Json_succeed, runner);
 }
 
 void json_decoder_test() {
-  // if (verbose) {
-  //   printf("\n");
-  //   printf("Json.Decode.decodeString\n");
-  //   printf("------------------------\n");
-  // }
-  // describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
-  // json_runner_test(&Json_runOnString);
+  if (verbose) {
+    printf("\n");
+    printf("Json.Decode.decodeString\n");
+    printf("------------------------\n");
+  }
+  describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
+  json_runner_test(&Json_runOnString);
 
   if (verbose) {
     printf("\n");

@@ -837,19 +837,6 @@ function wrapWasmElmApp(
     value: any,
     jsShape: JsShape
   ): WriteResult {
-    const result = writeJsonValueHelp(nextIndex, value, jsShape);
-    return writeFromBuilder(
-      result.nextIndex,
-      { body: [JsonValue.WRAP, result.addr], jsChildren: [], bodyWriter: null },
-      Tag.Custom
-    );
-  }
-
-  function writeJsonValueHelp(
-    nextIndex: number,
-    value: any,
-    jsShape: JsShape
-  ): WriteResult {
     switch (typeof value) {
       case 'boolean':
         return {
@@ -872,6 +859,14 @@ function wrapWasmElmApp(
         if (value === null) {
           return { addr: wasmConstAddrs.JsNull, nextIndex };
         }
+        if ('$' in value) {
+          const unwrapped = writeJsonValue(nextIndex, value.a, jsShape);
+          return writeFromBuilder(
+            unwrapped.nextIndex,
+            { body: [JsonValue.WRAP, unwrapped.addr], jsChildren: [], bodyWriter: null },
+            Tag.Custom
+          );
+        }
         if (jsShape === JsShape.MAYBE_CIRCULAR) {
           return writeFromBuilder(
             nextIndex,
@@ -883,7 +878,7 @@ function wrapWasmElmApp(
         if (Array.isArray(value)) {
           body.push(JsonValue.ARRAY);
           value.forEach(elem => {
-            const result = writeJsonValueHelp(
+            const result = writeJsonValue(
               nextIndex,
               elem,
               JsShape.NOT_CIRCULAR
@@ -894,10 +889,10 @@ function wrapWasmElmApp(
         } else {
           body.push(JsonValue.OBJECT);
           Object.keys(value).forEach(key => {
-            const keyResult = writeJsonValueHelp(nextIndex, key, jsShape);
+            const keyResult = writeJsonValue(nextIndex, key, jsShape);
             nextIndex = keyResult.nextIndex;
             body.push(keyResult.addr);
-            const valueResult = writeJsonValueHelp(
+            const valueResult = writeJsonValue(
               nextIndex,
               value[key],
               JsShape.NOT_CIRCULAR
