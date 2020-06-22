@@ -48,6 +48,19 @@ void describe(char* description, void* (*test)()) {
   }
 }
 
+void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
+  tests_run++;
+  test_description = description;
+  test_heap_ptr = GC_malloc(0);
+  if (verbose) {
+    printf("\n%s\n", description);
+  }
+  if (test(arg) == pGcFull) {
+    fprintf(stderr, "Heap overflow in test \"%s\"\n", description);
+    print_heap();
+  }
+}
+
 void* expect_equal(char* expect_description, void* left, void* right) {
   bool ok = A2(&Utils_equal, left, right) == &True;
   if (!ok) {

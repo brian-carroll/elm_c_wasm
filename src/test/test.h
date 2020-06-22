@@ -3,6 +3,7 @@
 
 #define __USE_MINGW_ANSI_STDIO 1
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "../kernel/core/types.h"
 
@@ -21,19 +22,19 @@ enum {
 
 // ---------------------------------------------------------
 //
-//             TEST JS IMPORTS & CYCLICAL VALUES
+//             TEST JS IMPORTS & CIRCULARAL VALUES
 //
 // ---------------------------------------------------------
 
 enum {
-  TEST_JS_OBJECT_NON_CYCLIC,
-  TEST_JS_OBJECT_CYCLIC,
-  TEST_JS_ARRAY_NON_CYCLIC,
-  TEST_JS_ARRAY_CYCLIC,
+  TEST_JS_OBJECT_NON_CIRCULAR,
+  TEST_JS_OBJECT_CIRCULAR,
+  TEST_JS_ARRAY_NON_CIRCULAR,
+  TEST_JS_ARRAY_CIRCULAR,
 };
 
-size_t writeJsTestValue(u32 id);
-
+extern size_t testCircularJsValue(bool isArray);
+extern size_t testJsonValueRoundTrip(size_t jsonStringAddr);
 
 // ---------------------------------------------------------
 //
@@ -83,6 +84,7 @@ extern char* test_description;
 extern void* test_heap_ptr;
 
 void describe(char* description, void* (*test)());
+void describe_arg(char* description, void* (*test)(void* arg), void* arg);
 void* expect_equal(char* expect_description, void* left, void* right);
 ElmString16* create_string(char* c_string);
 

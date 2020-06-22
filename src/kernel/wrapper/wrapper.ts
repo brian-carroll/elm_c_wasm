@@ -442,7 +442,7 @@ function wrapWasmElmApp(
         const unwrappedResult = writeJsonValue(
           nextIndex,
           unwrapped,
-          JsShape.MAYBE_CYCLIC
+          JsShape.MAYBE_CIRCULAR
         );
         nextIndex = unwrappedResult.nextIndex;
         const tag = Tag.Custom;
@@ -751,13 +751,13 @@ function wrapWasmElmApp(
 
   /* --------------------------------------------------
 
-          WRITE CYCLIC JS VALUES TO WASM
+          WRITE CIRCULAR JS VALUES TO WASM
 
   -------------------------------------------------- */
 
   enum JsShape {
-    NOT_CYCLIC,
-    MAYBE_CYCLIC
+    NOT_CIRCULAR,
+    MAYBE_CIRCULAR
   }
 
   interface JsHeapEntry {
@@ -807,7 +807,7 @@ function wrapWasmElmApp(
     if (index >= array.length) return -(array.length + 1);
     const value = array[index];
     return handleWasmWrite(nextIndex =>
-      writeJsonValue(nextIndex, value, JsShape.MAYBE_CYCLIC)
+      writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
     );
   }
 
@@ -821,18 +821,31 @@ function wrapWasmElmApp(
     if (!(field in obj)) return 0;
     const value = obj[field];
     return handleWasmWrite(nextIndex =>
-      writeJsonValue(nextIndex, value, JsShape.MAYBE_CYCLIC)
+      writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
     );
   }
 
   function getJsRefValue(jsRefId: number): number {
     const value = jsHeap[jsRefId].value;
     return handleWasmWrite(nextIndex =>
-      writeJsonValue(nextIndex, value, JsShape.NOT_CYCLIC)
+      writeJsonValue(nextIndex, value, JsShape.NOT_CIRCULAR)
     );
   }
 
   function writeJsonValue(
+    nextIndex: number,
+    value: any,
+    jsShape: JsShape
+  ): WriteResult {
+    const result = writeJsonValueHelp(nextIndex, value, jsShape);
+    return writeFromBuilder(
+      result.nextIndex,
+      { body: [JsonValue.WRAP, result.addr], jsChildren: [], bodyWriter: null },
+      Tag.Custom
+    );
+  }
+
+  function writeJsonValueHelp(
     nextIndex: number,
     value: any,
     jsShape: JsShape
@@ -859,7 +872,7 @@ function wrapWasmElmApp(
         if (value === null) {
           return { addr: wasmConstAddrs.JsNull, nextIndex };
         }
-        if (jsShape === JsShape.MAYBE_CYCLIC) {
+        if (jsShape === JsShape.MAYBE_CIRCULAR) {
           return writeFromBuilder(
             nextIndex,
             wasmBuilder(Tag.JsRef, value),
@@ -870,20 +883,24 @@ function wrapWasmElmApp(
         if (Array.isArray(value)) {
           body.push(JsonValue.ARRAY);
           value.forEach(elem => {
-            const result = writeJsonValue(nextIndex, elem, JsShape.NOT_CYCLIC);
+            const result = writeJsonValueHelp(
+              nextIndex,
+              elem,
+              JsShape.NOT_CIRCULAR
+            );
             nextIndex = result.nextIndex;
             body.push(result.addr);
           });
         } else {
           body.push(JsonValue.OBJECT);
           Object.keys(value).forEach(key => {
-            const keyResult = writeJsonValue(nextIndex, key, jsShape);
+            const keyResult = writeJsonValueHelp(nextIndex, key, jsShape);
             nextIndex = keyResult.nextIndex;
             body.push(keyResult.addr);
-            const valueResult = writeJsonValue(
+            const valueResult = writeJsonValueHelp(
               nextIndex,
               value[key],
-              JsShape.NOT_CYCLIC
+              JsShape.NOT_CIRCULAR
             );
             nextIndex = valueResult.nextIndex;
             body.push(valueResult.addr);
@@ -940,7 +957,7 @@ function wrapWasmElmApp(
       handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value)),
     writeJsonValue: (value: any) =>
       handleWasmWrite(nextIndex =>
-        writeJsonValue(nextIndex, value, JsShape.MAYBE_CYCLIC)
+        writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
       ),
     call,
     getJsRefArrayIndex,

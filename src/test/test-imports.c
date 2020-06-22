@@ -1,12 +1,4 @@
-#ifdef __EMSCRIPTEN__
-/*
-  Not much to do here. All the functions are implemented in JS.
-  Just declare any test-only imports
-*/
-#include "../kernel/core/types.h"
-extern size_t writeJsTestValue(u32 id);
-
-#else
+#ifndef __EMSCRIPTEN__
 
 /*
   Non-Wasm target => JS imports don't exist
@@ -24,8 +16,8 @@ extern size_t writeJsTestValue(u32 id);
 #include "test.h"
 
 enum JsShape {
-  NOT_CYCLIC,
-  MAYBE_CYCLIC,
+  NOT_CIRCULAR,
+  MAYBE_CIRCULAR,
 };
 
 struct jsHeapEntry {
@@ -78,16 +70,16 @@ void sweepJsRefs(bool isFullGc) {
   jsHeapLength = lastMarked + 1;
 }
 
-static ptrdiff_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
+static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
   if (value == (void*)&Json_encodeNull || value == pTrue || value == pFalse) {
-    return (ptrdiff_t)value;
-  } else if (value->header.tag == Tag_Custom && jsShape == MAYBE_CYCLIC) {
+    return (size_t)value;
+  } else if (value->header.tag == Tag_Custom && jsShape == MAYBE_CIRCULAR) {
     JsRef* jsRef = GC_malloc(sizeof(JsRef));
     jsRef->header = HEADER_JS_REF;
     jsRef->index = storeJsRef(value);
-    return (ptrdiff_t)jsRef;
+    return (size_t)jsRef;
   } else {
-    return (ptrdiff_t)Utils_clone(value);
+    return (size_t)Utils_clone(value);
   }
 }
 
@@ -97,7 +89,7 @@ ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
   u32 len = custom_params(array);
   if (index >= len) return -(len + 1);
   ElmValue* value = array->values[index];
-  return writeJsonValue(value, MAYBE_CYCLIC);
+  return writeJsonValue(value, MAYBE_CIRCULAR);
 }
 
 ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
@@ -117,72 +109,60 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
   }
   if (i == len) return 0;
 
-  return writeJsonValue(value, MAYBE_CYCLIC);
+  return writeJsonValue(value, MAYBE_CIRCULAR);
 }
 
 ptrdiff_t getJsRefValue(u32 jsRefId) {
-  return writeJsonValue(jsHeap[jsRefId].value, NOT_CYCLIC);
+  return writeJsonValue(jsHeap[jsRefId].value, NOT_CIRCULAR);
 }
 
 // ---------------------------------------------------
 // Test values
-// Cyclic values must be outside the GC-managed heap
+// Circular values must be outside the GC-managed heap
 // ---------------------------------------------------
 
 static ElmString16 str_a = {
     .header = HEADER_STRING(1),
     .words16 = {'a'},
 };
-static ElmString16 str_c = {
+static ElmString16 str_b = {
     .header = HEADER_STRING(1),
-    .words16 = {'c'},
+    .words16 = {'b'},
 };
 static ElmInt two = {
     .header = HEADER_INT,
     .value = 2,
 };
-static Custom object_cyclic = {
+static Custom object_circular = {
     .header = HEADER_CUSTOM(4),
     .ctor = JSON_VALUE_OBJECT,
     .values =
         {
             &str_a,
-            &object_cyclic,
-            &str_c,
+            &object_circular,
+            &str_b,
             &two,
         },
 };
-static Custom array_cyclic = {
+static Custom array_circular = {
     .header = HEADER_CUSTOM(2),
     .ctor = JSON_VALUE_ARRAY,
     .values =
         {
-            &array_cyclic,
+            &array_circular,
             &two,
         },
 };
 
-size_t writeJsTestValue(u32 id) {
-  void* value;
-  switch (id) {
-    case TEST_JS_OBJECT_NON_CYCLIC:
-      value = parse_json(create_string("{ a: { b: 1 }, c: 2 }"));
-      break;
-    case TEST_JS_OBJECT_CYCLIC:
-      value = &object_cyclic;
-      break;
-    case TEST_JS_ARRAY_NON_CYCLIC:
-      value = parse_json(create_string("[[1], 2]"));
-      break;
-    case TEST_JS_ARRAY_CYCLIC:
-      value = &array_cyclic;
-      break;
-    default:
-      printf("Unknown JS test value ID %d\n", id);
-      value = &Json_encodeNull;
-      break;
-  }
-  return writeJsonValue(value, MAYBE_CYCLIC);
+size_t testCircularJsValue(bool isArray) {
+  void* value = isArray ? &array_circular : &object_circular;
+  return writeJsonValue(value, MAYBE_CIRCULAR);
 };
+
+size_t testJsonValueRoundTrip(size_t jsonStringAddr) {
+  void* value = parse_json((ElmString*)jsonStringAddr);
+  // Pretend it could be circular, to test the code that handles arbitrary JS values.
+  return writeJsonValue(value, MAYBE_CIRCULAR);
+}
 
 #endif
