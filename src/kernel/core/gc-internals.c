@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "types.h"
+#include "../wrapper/wrapper.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
@@ -189,6 +190,10 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 
   bool already_marked = mark_words(heap, v, v->header.size);
   if (already_marked) return;
+
+  if (v->header.tag == Tag_JsRef) {
+    markJsRef(v->js_ref.index);
+  }
 
   size_t n_children = child_count(v);
   size_t* first_child_field = first_word + v->header.size - n_children;

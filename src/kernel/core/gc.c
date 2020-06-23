@@ -59,6 +59,7 @@
 
 #include "gc-internals.h"
 #include "types.h"
+#include "../wrapper/wrapper.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
@@ -711,8 +712,8 @@ void* GC_apply_replay(void** apply_push) {
 
 static void collect(GcState* state, size_t* ignore_below) {
   mark(state, ignore_below);
-
   compact(state, ignore_below);
+  sweepJsRefs(ignore_below == gc_state.heap.start);
 
   bool stack_empty_was_deleted = (size_t*)state->stack_map_empty >= state->next_alloc;
   if (stack_empty_was_deleted) {
