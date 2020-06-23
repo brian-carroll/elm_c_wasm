@@ -71,23 +71,35 @@ void sweepJsRefs(bool isFullGc) {
 }
 
 static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
-  if (value == (void*)&Json_encodeNull || value == pTrue || value == pFalse) {
-    return (size_t)value;
-  } else if (value->header.tag == Tag_Custom && jsShape == MAYBE_CIRCULAR) {
+  if (value->header.tag != Tag_Custom) {
+    return (size_t)Utils_clone(value);
+  }
+  Custom* c = &value->custom;
+  if (c == &Json_encodeNull || c == &True || c == &False) {
+    return (size_t)c;
+  }
+  if (c->ctor == JSON_VALUE_WRAP) {
+    void* unwrapped = (void*)writeJsonValue(c->values[0], jsShape);
+    Custom* wrapped = GC_malloc(sizeof(Custom) + sizeof(void*));
+    wrapped->header = HEADER_CUSTOM(1);
+    wrapped->ctor = JSON_VALUE_WRAP;
+    wrapped->values[0] = unwrapped;
+    return (size_t)wrapped;
+  }
+  if (jsShape == MAYBE_CIRCULAR) {
     JsRef* jsRef = GC_malloc(sizeof(JsRef));
     jsRef->header = HEADER_JS_REF;
     jsRef->index = storeJsRef(value);
     return (size_t)jsRef;
-  } else {
-    return (size_t)Utils_clone(value);
   }
+  return (size_t)Utils_clone(value);
 }
 
 ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
   Custom* array = jsHeap[jsRefId].value;
   if (array->header.tag != Tag_Custom || array->ctor != JSON_VALUE_ARRAY) return 0;
   u32 len = custom_params(array);
-  if (index >= len) return -(len + 1);
+  if (index >= len) return -((ptrdiff_t)len + 1);
   ElmValue* value = array->values[index];
   return writeJsonValue(value, MAYBE_CIRCULAR);
 }
@@ -156,13 +168,14 @@ static Custom array_circular = {
 
 size_t testCircularJsValue(bool isArray) {
   void* value = isArray ? &array_circular : &object_circular;
-  return writeJsonValue(value, MAYBE_CIRCULAR);
+  void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
+  return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
 };
 
 size_t testJsonValueRoundTrip(size_t jsonStringAddr) {
-  void* value = parse_json((ElmString*)jsonStringAddr);
-  // Pretend it could be circular, to test the code that handles arbitrary JS values.
-  return writeJsonValue(value, MAYBE_CIRCULAR);
+  void* value = parse_json((ElmString16*)jsonStringAddr);
+  void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
+  return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
 }
 
 #endif

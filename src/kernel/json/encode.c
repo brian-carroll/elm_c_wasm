@@ -12,7 +12,7 @@ void* eval_Json_wrap(void* args[]) {
   if (v->header.tag == Tag_Int) {
     v = NEW_ELM_FLOAT(v->elm_int.value);
   }
-  Custom* wrapped = NEW_CUSTOM(KERNEL_CTOR_OFFSET, 1, (void*[]){v});
+  Custom* wrapped = NEW_CUSTOM(JSON_VALUE_WRAP, 1, (void*[]){v});
   return wrapped;
 }
 Closure Json_wrap = {

@@ -64,7 +64,7 @@ clean:
 	@echo 'Deleting generated files'
 	@find $(DIST) -type f ! -name '.gitkeep' -exec rm {} \;
 	@rm -f $(DATA_INC)
-	@rm $(KERNEL)/wrapper/wrapper.js
+	@rm -f $(KERNEL)/wrapper/wrapper.js
 
 watch:
 	(while true ; do make build.log; sleep 1; done) | grep -v make
@@ -121,6 +121,7 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
 	@echo Building tests as native binary...
+	@mkdir -p $(DIST)/bin
 	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
