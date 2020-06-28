@@ -7,9 +7,9 @@
 void* List_create(size_t len, void* values[]);
 void* eval_List_append(void* args[]);
 
-Closure List_cons;
-Closure List_append;
-Closure List_map2;
+extern Closure List_cons;
+extern Closure List_append;
+extern Closure List_map2;
 
 // toArray & fromArray
 // Needed because core Elm code leaks details of the JS implementation

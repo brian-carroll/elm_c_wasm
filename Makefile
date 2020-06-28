@@ -126,7 +126,7 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
 	@echo Building tests as WebAssembly module...
 	@mkdir -p $(DIST)/www
-	@emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
+	@emcc $(CFLAGS) -error-limit=0 $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'

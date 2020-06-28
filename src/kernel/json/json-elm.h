@@ -5,10 +5,10 @@
 
 #include "../core/types.h"
 
-Closure g_elm_json_Json_Decode_Failure;
-Closure g_elm_json_Json_Decode_Field;
-Closure g_elm_json_Json_Decode_Index;
-Closure g_elm_json_Json_Decode_OneOf;
+extern Closure g_elm_json_Json_Decode_Failure;
+extern Closure g_elm_json_Json_Decode_Field;
+extern Closure g_elm_json_Json_Decode_Index;
+extern Closure g_elm_json_Json_Decode_OneOf;
 
 #define g_elm_json_Json_Encode_string Json_wrap
 #define g_elm_json_Json_Encode_int Json_wrap

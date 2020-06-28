@@ -3,19 +3,19 @@
 
 #include "types.h"
 
-Closure Utils_equal;
-Closure Utils_notEqual;
-Closure Utils_append;
-Closure Utils_compare;
+extern Closure Utils_equal;
+extern Closure Utils_notEqual;
+extern Closure Utils_append;
+extern Closure Utils_compare;
 
-Closure Utils_lt;
-Closure Utils_le;
-Closure Utils_gt;
-Closure Utils_ge;
+extern Closure Utils_lt;
+extern Closure Utils_le;
+extern Closure Utils_gt;
+extern Closure Utils_ge;
 
-Custom Utils_LT;
-Custom Utils_EQ;
-Custom Utils_GT;
+extern Custom Utils_LT;
+extern Custom Utils_EQ;
+extern Custom Utils_GT;
 
 void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);

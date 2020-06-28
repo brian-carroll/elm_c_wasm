@@ -18,27 +18,27 @@
   , identity, always, (<|), (|>), (<<), (>>), Never, never
 */
 
-Closure Basics_negate;  // is not a kernel function in Elm-JS
+extern Closure Basics_negate;  // is not a kernel function in Elm-JS
 
-Closure Basics_add;
-Closure Basics_sub;
-Closure Basics_mul;
-Closure Basics_fdiv;
-Closure Basics_idiv;
-Closure Basics_pow;
+extern Closure Basics_add;
+extern Closure Basics_sub;
+extern Closure Basics_mul;
+extern Closure Basics_fdiv;
+extern Closure Basics_idiv;
+extern Closure Basics_pow;
 
-Closure Basics_toFloat;
-Closure Basics_floor;
-Closure Basics_ceiling;
+extern Closure Basics_toFloat;
+extern Closure Basics_floor;
+extern Closure Basics_ceiling;
 
-Closure Basics_not;
-Closure Basics_and;
-Closure Basics_or;
+extern Closure Basics_not;
+extern Closure Basics_and;
+extern Closure Basics_or;
 
-Closure Basics_modBy;
-Closure Basics_remainderBy;
-Closure Basics_log;
+extern Closure Basics_modBy;
+extern Closure Basics_remainderBy;
+extern Closure Basics_log;
 
-Closure Basics_identity;
+extern Closure Basics_identity;
 
 #endif
