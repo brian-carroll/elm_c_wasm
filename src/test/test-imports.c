@@ -32,7 +32,7 @@ static int unusedJsHeapSlot;
 static u32 jsHeapLength = 0;
 static struct jsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
 
-static u32 storeJsRef(void* value) {
+static u32 allocateJsRef(void* value) {
   u32 id = 0;
   while (id < jsHeapLength && jsHeap[id].value != &unusedJsHeapSlot)
     id++;
@@ -89,7 +89,7 @@ static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
   if (jsShape == MAYBE_CIRCULAR) {
     JsRef* jsRef = GC_malloc(sizeof(JsRef));
     jsRef->header = HEADER_JS_REF;
-    jsRef->index = storeJsRef(value);
+    jsRef->index = allocateJsRef(value);
     return (size_t)jsRef;
   }
   return (size_t)Utils_clone(value);

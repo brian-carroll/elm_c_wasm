@@ -691,7 +691,7 @@ function wrapWasmElmApp(
       }
       case Tag.JsRef: {
         return {
-          body: [storeJsRef(value)],
+          body: [allocateJsRef(value)],
           jsChildren: [],
           bodyWriter: null
         };
@@ -769,7 +769,7 @@ function wrapWasmElmApp(
   const unusedJsHeapSlot = {};
   const jsHeap: JsHeapEntry[] = [];
 
-  function storeJsRef(value: any): number {
+  function allocateJsRef(value: any): number {
     let id = 0;
     while (id < jsHeap.length && jsHeap[id].value !== unusedJsHeapSlot) id++;
     if (id == jsHeap.length) {
@@ -787,14 +787,16 @@ function wrapWasmElmApp(
   function sweepJsRefs(isFullGc: boolean): void {
     let lastUsedSlot = 0;
     jsHeap.forEach((slot, index) => {
-      if (slot.isMarked || (!isFullGc && slot.isOldGen)) {
+      let shouldKeep = slot.isMarked;
+      if (isFullGc) {
+        slot.isOldGen = shouldKeep;
+      } else if (slot.isOldGen) {
+        shouldKeep = true;
+      }
+      if (shouldKeep) {
         lastUsedSlot = index;
-        if (isFullGc) {
-          slot.isOldGen = true;
-        }
       } else {
         slot.value = unusedJsHeapSlot;
-        slot.isOldGen = false;
       }
       slot.isMarked = false;
     });
@@ -863,7 +865,11 @@ function wrapWasmElmApp(
           const unwrapped = writeJsonValue(nextIndex, value.a, jsShape);
           return writeFromBuilder(
             unwrapped.nextIndex,
-            { body: [JsonValue.WRAP, unwrapped.addr], jsChildren: [], bodyWriter: null },
+            {
+              body: [JsonValue.WRAP, unwrapped.addr],
+              jsChildren: [],
+              bodyWriter: null
+            },
             Tag.Custom
           );
         }
