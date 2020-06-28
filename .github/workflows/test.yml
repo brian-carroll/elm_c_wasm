@@ -15,9 +15,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v5
-      #with:
+      with:
         # Version to install
-        # version: # optional, default is latest
+        version: '1.38.12' # optional, default is latest
         # If true will not download any version of Emscripten. emsdk will still be added to PATH.
         #no-install: # optional
         # If true will not cache any downloads with tc.cacheDir.
