@@ -120,6 +120,7 @@ $(SRC)/%.inc : $(SRC)/%.tsv
 
 $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
 	@echo Building tests as native binary...
+	@mkdir -p $(DIST)/bin
 	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
