@@ -33,8 +33,8 @@ enum {
   TEST_JS_ARRAY_CIRCULAR,
 };
 
-extern size_t testCircularJsValue(bool isArray);
-extern size_t testJsonValueRoundTrip(size_t jsonStringAddr);
+size_t testCircularJsValue(bool isArray);
+size_t testJsonValueRoundTrip(size_t jsonStringAddr);
 
 // ---------------------------------------------------------
 //

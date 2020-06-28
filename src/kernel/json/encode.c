@@ -104,6 +104,8 @@ Closure Json_addEntry = {
     .evaluator = &eval_Json_addEntry,
 };
 
+size_t stringify_alloc_chunk;
+
 void* eval_Json_encode(void* args[]) {
   ElmInt* indentLevel = args[0];
   Custom* wrapped = args[1];
