@@ -26,5 +26,5 @@ jobs:
         #actions-cache-folder: # optional, default is 
         # Update tags before installing a version
         #update-tags: # optional
-    - name: Native tests
-      run: make check
+    - name: Native & Wasm tests
+      run: emcc --version && make check
