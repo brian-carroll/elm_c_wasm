@@ -23,7 +23,7 @@ jobs:
         # If true will not cache any downloads with tc.cacheDir.
         #no-cache: # optional
         # Directory to cache emsdk in. This folder will go under $GITHUB_HOME (I.e. build dir) and be cached using @actions/cahce.
-        #actions-cache-folder: # optional, default is 
+        actions-cache-folder: 'emsdk-cache'
         # Update tags before installing a version
         #update-tags: # optional
     - name: Native & Wasm tests
