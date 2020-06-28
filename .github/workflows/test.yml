@@ -26,5 +26,16 @@ jobs:
         actions-cache-folder: 'emsdk-cache'
         # Update tags before installing a version
         #update-tags: # optional
-    - name: Native & Wasm tests
-      run: emcc --version && make check
+    - name: Build native
+      run: make
+    - name: Test native
+      run: make check-bin
+    - name: Build Wasm
+      run: make www
+    - name: Archive Emscripten test JS
+      uses: actions/upload-artifact@v1
+      with:
+        name: emscripten-test-js
+        path: dist/www/test.js
+    - name: Test Wasm
+      run: make check-node
