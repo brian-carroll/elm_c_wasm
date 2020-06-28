@@ -1,6 +1,7 @@
 #include <assert.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#include <stdio.h>
 #else
 #define EMSCRIPTEN_KEEPALIVE
 #include <stdio.h>
