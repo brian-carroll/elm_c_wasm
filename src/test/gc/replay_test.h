@@ -6,8 +6,8 @@
 
 char* replay_scenario_tests();
 char* assert_heap_values(char* description, void* values[]);
-GcState gc_state;
-u32 TEST_INT_OFFSET;
-size_t GARBAGE;
+extern GcState gc_state;
+extern u32 TEST_INT_OFFSET;
+extern size_t GARBAGE;
 
 #endif

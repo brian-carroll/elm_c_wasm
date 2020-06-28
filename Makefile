@@ -127,7 +127,7 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@echo Building tests as WebAssembly module...
 	@mkdir -p $(DIST)/www
-	@emcc $(CFLAGS) $(SOURCES) -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
+	@emcc $(CFLAGS) $(SOURCES) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
 
 $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
 	@echo Compiling wrapper from TypeScript

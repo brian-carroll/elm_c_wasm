@@ -35,45 +35,45 @@ enum ctor_value {
 
 // Decode
 
-Closure Json_succeed;
-Closure Json_fail;
+extern Closure Json_succeed;
+extern Closure Json_fail;
 
-Custom Json_decodeInt;
-Custom Json_decodeBool;
-Custom Json_decodeFloat;
-Custom Json_decodeValue;
-Custom Json_decodeString;
+extern Custom Json_decodeInt;
+extern Custom Json_decodeBool;
+extern Custom Json_decodeFloat;
+extern Custom Json_decodeValue;
+extern Custom Json_decodeString;
 
-Closure Json_decodeList;
-Closure Json_decodeArray;
-Closure Json_decodeNull;
-Closure Json_decodeField;
-Closure Json_decodeIndex;
-Closure Json_decodeKeyValuePairs;
-Closure Json_andThen;
-Closure Json_oneOf;
-Closure Json_map1;
-Closure Json_map2;
-Closure Json_map3;
-Closure Json_map4;
-Closure Json_map5;
-Closure Json_map6;
-Closure Json_map7;
-Closure Json_map8;
+extern Closure Json_decodeList;
+extern Closure Json_decodeArray;
+extern Closure Json_decodeNull;
+extern Closure Json_decodeField;
+extern Closure Json_decodeIndex;
+extern Closure Json_decodeKeyValuePairs;
+extern Closure Json_andThen;
+extern Closure Json_oneOf;
+extern Closure Json_map1;
+extern Closure Json_map2;
+extern Closure Json_map3;
+extern Closure Json_map4;
+extern Closure Json_map5;
+extern Closure Json_map6;
+extern Closure Json_map7;
+extern Closure Json_map8;
 
 size_t Json_run_eval_index;  // Index of the JS implementation of Json_run (assigned by compiler)
-Closure Json_run;
-Closure Json_runOnString;
+extern Closure Json_run;
+extern Closure Json_runOnString;
 
 // Encode
 
-Custom Json_encodeNull;
-Closure Json_wrap;
-Closure Json_unwrap;
-Closure Json_emptyArray;
-Closure Json_emptyObject;
-Closure Json_addField;
-Closure Json_addEntry;
-Closure Json_encode;
+extern Custom Json_encodeNull;
+extern Closure Json_wrap;
+extern Closure Json_unwrap;
+extern Closure Json_emptyArray;
+extern Closure Json_emptyObject;
+extern Closure Json_addField;
+extern Closure Json_addEntry;
+extern Closure Json_encode;
 
 #endif

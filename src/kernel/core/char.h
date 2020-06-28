@@ -3,6 +3,6 @@
 
 #include "types.h"
 
-Closure Char_toCode;
+extern Closure Char_toCode;
 
 #endif
