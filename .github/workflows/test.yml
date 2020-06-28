@@ -13,8 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-#     - name: Setup Emscripten toolchain
-#       uses: mymindstorm/setup-emsdk@v5
+    - name: Setup Emscripten toolchain
+      uses: mymindstorm/setup-emsdk@v5
       #with:
         # Version to install
         # version: # optional, default is latest
@@ -27,4 +27,4 @@ jobs:
         # Update tags before installing a version
         #update-tags: # optional
     - name: Native tests
-      run: make check-bin
+      run: make check
