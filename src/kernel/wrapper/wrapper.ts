@@ -201,6 +201,12 @@ function wrapWasmElmApp(
     const header = mem32[index];
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
     const size = (header & SIZE_MASK) >>> SIZE_SHIFT;
+    console.log('readWasmValue', {
+      addr: addr.toString(16),
+      header,
+      tag: Tag[tag],
+      size,
+    });
 
     switch (tag) {
       case Tag.Int: {
@@ -217,10 +223,6 @@ function wrapWasmElmApp(
         const words16 = mem16.slice(idx16, idx16 + len16);
         const jsString = textDecoder.decode(words16);
         console.log('readWasmValue', {
-          addr: addr.toString(16),
-          header,
-          tag: Tag[tag],
-          size,
           words16,
           jsString,
         });
