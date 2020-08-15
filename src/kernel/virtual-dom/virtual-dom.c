@@ -285,3 +285,56 @@ Closure VirtualDom_lazy8 = {
     .header = HEADER_CLOSURE(0),
     .max_values = 9,
 };
+
+
+// FACTS
+
+
+void* eval_VirtualDom_on(void* args[]) {
+  return NEW_CUSTOM(FACT_EVENT, 2, args);
+}
+Closure VirtualDom_on = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_on,
+  .max_values = 2,
+};
+
+void* eval_VirtualDom_style(void* args[]) {
+  return NEW_CUSTOM(FACT_STYLE, 2, args);
+}
+Closure VirtualDom_style = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_style,
+  .max_values = 2,
+};
+
+void* eval_VirtualDom_property(void* args[]) {
+  return NEW_CUSTOM(FACT_PROP, 2, args);
+}
+Closure VirtualDom_property = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_property,
+  .max_values = 2,
+};
+
+void* eval_VirtualDom_attribute(void* args[]) {
+  return NEW_CUSTOM(FACT_ATTR, 2, args);
+}
+Closure VirtualDom_attribute = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_attribute,
+  .max_values = 2,
+};
+
+void* eval_VirtualDom_attributeNS(void* args[]) {
+  void* namespace = args[0];
+  void* key = args[1];
+  void* value = args[2];
+  void* rearranged[] = {key, value, namespace};
+  return NEW_CUSTOM(FACT_ATTR_NS, 3, rearranged);
+}
+Closure VirtualDom_attributeNS = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_attributeNS,
+  .max_values = 3,
+};
