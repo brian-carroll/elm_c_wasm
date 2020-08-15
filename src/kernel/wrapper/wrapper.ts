@@ -67,14 +67,6 @@ function wrapWasmElmApp(
   const mem32 = new Uint32Array(wasmBuffer);
   const mem16 = new Uint16Array(wasmBuffer);
 
-  console.log('wrapWasmElmApp', {
-    wasmBuffer,
-    mem32,
-    wasmExports,
-    generatedAppTypes,
-    kernelFuncRecord,
-  })
-
   const wasmConstAddrs = (function () {
     const Unit = wasmExports._getUnit();
     const Nil = wasmExports._getNil();
@@ -209,13 +201,6 @@ function wrapWasmElmApp(
     const header = mem32[index];
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
     const size = (header & SIZE_MASK) >>> SIZE_SHIFT;
-    console.log('readWasmValue', {
-      addr: addr.toString(16),
-      header,
-      tag: Tag[tag],
-      size,
-      mem32
-    });
 
     switch (tag) {
       case Tag.Int: {
@@ -231,10 +216,6 @@ function wrapWasmElmApp(
         if (mem16[idx16 + len16 - 1] === 0) len16--;
         const words16 = mem16.slice(idx16, idx16 + len16);
         const jsString = textDecoder.decode(words16);
-        console.log('readWasmValue', {
-          words16,
-          jsString,
-        });
         return tag === Tag.Char ? _Utils_chr(jsString) : jsString;
       }
       case Tag.List: {

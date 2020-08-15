@@ -13,7 +13,6 @@ Module = {
       fieldGroups: [],
     };
     const kernelFuncRecord = {};
-    console.log('test-emscripten-config.js', Module);
     wasmWrapper = wrapWasmElmApp(wasmBuffer, wasmExports, generatedAppTypes, kernelFuncRecord);
   },
   print: function (text) {

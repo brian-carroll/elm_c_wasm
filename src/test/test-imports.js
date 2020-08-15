@@ -15,11 +15,6 @@ mergeInto(LibraryManager.library, {
 
   testJsonValueRoundTrip: function (jsonStringAddr) {
     const json = wasmWrapper.readWasmValue(jsonStringAddr);
-    console.log('testJsonValueRoundTrip', {
-      jsonStringAddr: jsonStringAddr.toString(16),
-      json,
-    }
-    );
     let parsed;
     try {
       parsed = JSON.parse(json);
