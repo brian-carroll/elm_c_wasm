@@ -1,6 +1,8 @@
 var wasmWrapper;
 Module = {
-  arguments: process.argv.slice(2),
+  arguments: typeof process !== 'undefined'
+    ? process.argv.slice(2)
+    : new URL(window.location).searchParams.get('argv') || '',
   postRun: [],
   preRun: function () {
     const wasmBuffer = Module.buffer;
@@ -53,10 +55,12 @@ Module = {
     );
   }
 };
-process.on('uncaughtException', err => {
-  console.error(err);
-  process.exit(1); //mandatory (as per the Node.js docs)
-});
+if (typeof process !== 'undefined') {
+  process.on('uncaughtException', err => {
+    console.error(err);
+    process.exit(1); //mandatory (as per the Node.js docs)
+  });  
+}
 
 
 function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }

@@ -131,7 +131,7 @@ $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC) $(KERNEL)/wrapper/wrapp
 
 $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
 	@echo Compiling wrapper from TypeScript
-	npx tsc
+	npx tsc -p .
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'
