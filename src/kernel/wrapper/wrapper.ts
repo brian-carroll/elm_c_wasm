@@ -67,6 +67,14 @@ function wrapWasmElmApp(
   const mem32 = new Uint32Array(wasmBuffer);
   const mem16 = new Uint16Array(wasmBuffer);
 
+  console.log('wrapWasmElmApp', {
+    wasmBuffer,
+    mem32,
+    wasmExports,
+    generatedAppTypes,
+    kernelFuncRecord,
+  })
+
   const wasmConstAddrs = (function () {
     const Unit = wasmExports._getUnit();
     const Nil = wasmExports._getNil();
@@ -206,6 +214,7 @@ function wrapWasmElmApp(
       header,
       tag: Tag[tag],
       size,
+      mem32
     });
 
     switch (tag) {

@@ -18,7 +18,6 @@ mergeInto(LibraryManager.library, {
     console.log('testJsonValueRoundTrip', {
       jsonStringAddr: jsonStringAddr.toString(16),
       json,
-      readWasmValue
     }
     );
     let parsed;
