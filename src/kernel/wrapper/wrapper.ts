@@ -770,6 +770,7 @@ function wrapWasmElmApp(
   const jsHeap: JsHeapEntry[] = [];
 
   function allocateJsRef(value: any): number {
+    console.log('allocateJsRef', { value, jsHeap });
     let id = 0;
     while (id < jsHeap.length && jsHeap[id].value !== unusedJsHeapSlot) id++;
     if (id == jsHeap.length) {
