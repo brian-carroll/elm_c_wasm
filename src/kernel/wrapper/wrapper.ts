@@ -216,6 +216,14 @@ function wrapWasmElmApp(
         if (mem16[idx16 + len16 - 1] === 0) len16--;
         const words16 = mem16.slice(idx16, idx16 + len16);
         const jsString = textDecoder.decode(words16);
+        console.log('readWasmValue', {
+          addr: addr.toString(16),
+          header,
+          tag: Tag[tag],
+          size,
+          words16,
+          jsString,
+        });
         return tag === Tag.Char ? _Utils_chr(jsString) : jsString;
       }
       case Tag.List: {
@@ -777,7 +785,6 @@ function wrapWasmElmApp(
     } else {
       jsHeap[id].value = value;
     }
-    console.log('allocateJsRef', { value, jsHeap });
     return id;
   }
 
