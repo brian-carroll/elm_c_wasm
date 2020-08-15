@@ -1627,3 +1627,4 @@ Why do I care? Stack is no faster than heap to access, but heap involves more ma
 
 If I'm doing this, then the stack version of the object needs to be completely stand-alone and independent of the GC header. In other words String length can't be just in GC header, has to be in the String object itself so that it can exist in the stack.
 Or I suppose you could put useless GC headers in the stack.
+ 
