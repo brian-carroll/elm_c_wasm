@@ -5,7 +5,7 @@ Module = {
     : new URL(window.location).searchParams.get('argv') || '',
   postRun: [],
   preRun: function () {
-    const wasmBuffer = Module.buffer;
+    const wasmBuffer = Module.HEAPU8;
     const wasmExports = Module.asm;
     const generatedAppTypes = {
       ctors: ["CTOR_Nothing", "CTOR_Just", "CTOR_Ok", "CTOR_Err", "CTOR_Failure", "CTOR_Field", "CTOR_Index", "CTOR_OneOf"],
