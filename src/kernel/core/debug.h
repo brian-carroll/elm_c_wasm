@@ -21,7 +21,7 @@ extern char* Debug_jsValues[];
 extern int Debug_ctors_size;
 extern int Debug_fields_size;
 extern int Debug_jsValues_size;
-extern char* Debug_evaluator_name(void*);
+char* Debug_evaluator_name(void*);
 
 void Debug_pause();
 

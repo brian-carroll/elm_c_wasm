@@ -177,9 +177,3 @@ int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
 
 size_t Json_run_eval_index = 123;
-
-// imported from JS
-size_t evalWasmThunkInJs(size_t addr) {
-  void* result = Utils_apply((Closure*)addr, 0, NULL);
-  return (size_t)result;
-}

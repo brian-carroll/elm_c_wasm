@@ -31,9 +31,9 @@ check-bin: $(DIST)/bin/test
 	@echo "\n\nRunning tests with binary executable"
 	$(DIST)/bin/test --all
 
-check-node: $(TEST)/test-runner.js $(DIST)/www/test.html
+check-node: $(DIST)/www/test.html
 	@echo "\n\nRunning tests with Node.js WebAssembly"
-	node $< --all
+	node $(DIST)/www/test.js --all
 
 debug: CFLAGS = -Wall -ggdb -DDEBUG -DDEBUG_LOG
 debug: $(DIST)/bin/test
@@ -64,6 +64,7 @@ clean:
 	@echo 'Deleting generated files'
 	@find $(DIST) -type f ! -name '.gitkeep' -exec rm {} \;
 	@rm -f $(DATA_INC)
+	@rm -f $(KERNEL)/wrapper/wrapper.js
 
 watch:
 	(while true ; do make build.log; sleep 1; done) | grep -v make
@@ -123,10 +124,14 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
 	@mkdir -p $(DIST)/bin
 	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
 
-$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC)
+$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@echo Building tests as WebAssembly module...
 	@mkdir -p $(DIST)/www
-	@emcc $(CFLAGS) -ferror-limit=0 $(SOURCES) -s NO_EXIT_RUNTIME=0 -o $@
+	@emcc $(CFLAGS) $(SOURCES) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
+
+$(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
+	@echo Compiling wrapper from TypeScript
+	npx tsc -p .
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'

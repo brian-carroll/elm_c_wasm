@@ -5,14 +5,9 @@
 #include "../../kernel/core/gc-internals.h"
 
 char* replay_scenario_tests();
-extern Closure mock_func;
-void* eval_mock_func(void**);
-extern Closure mock_func_tail;
-void* eval_mock_func_tail(void* args[]);
 char* assert_heap_values(char* description, void* values[]);
-GcState gc_state;
-Tag mock_func_ops[10];
-u32 TEST_INT_OFFSET;
-size_t GARBAGE;
+extern GcState gc_state;
+extern u32 TEST_INT_OFFSET;
+extern size_t GARBAGE;
 
 #endif

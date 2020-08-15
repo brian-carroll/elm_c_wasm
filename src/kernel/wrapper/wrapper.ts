@@ -175,7 +175,7 @@ function wrapWasmElmApp(
     Record = 0x8,
     FieldGroup = 0x9,
     Closure = 0xa,
-    GcException = 0xb,
+    JsRef = 0xb,
     GcStackEmpty = 0xc,
     GcStackPush = 0xd,
     GcStackPop = 0xe,
@@ -437,6 +437,22 @@ function wrapWasmElmApp(
         const builder: WasmBuilder = wasmBuilder(tag, value);
         return writeFromBuilder(nextIndex, builder, tag);
       }
+      case 'jsonWrap': {
+        const unwrapped = value.a;
+        const unwrappedResult = writeJsonValue(
+          nextIndex,
+          unwrapped,
+          JsShape.MAYBE_CIRCULAR
+        );
+        nextIndex = unwrappedResult.nextIndex;
+        const tag = Tag.Custom;
+        const builder: WasmBuilder = {
+          body: [JsonValue.WRAP, unwrappedResult.addr],
+          jsChildren: [],
+          bodyWriter: null
+        };
+        return writeFromBuilder(nextIndex, builder, tag);
+      }
       case 'kernelArray': {
         const tag = Tag.Custom;
         const builder: WasmBuilder = {
@@ -471,6 +487,9 @@ function wrapWasmElmApp(
     | {
         kind: 'constAddr';
         value: number;
+      }
+    | {
+        kind: 'jsonWrap';
       }
     | {
         kind: 'kernelArray';
@@ -531,6 +550,8 @@ function wrapWasmElmApp(
             return { kind: 'tag', value: Tag.Tuple2 };
           case '#3':
             return { kind: 'tag', value: Tag.Tuple3 };
+          case JsonValue.WRAP:
+            return { kind: 'jsonWrap' };
           default:
             return { kind: 'tag', value: Tag.Custom };
         }
@@ -668,6 +689,13 @@ function wrapWasmElmApp(
           };
         }
       }
+      case Tag.JsRef: {
+        return {
+          body: [allocateJsRef(value)],
+          jsChildren: [],
+          bodyWriter: null
+        };
+      }
     }
     console.error(value);
     throw new Error(`Can't write to WebAssembly for tag "${Tag[tag]}"`);
@@ -723,6 +751,195 @@ function wrapWasmElmApp(
 
   /* --------------------------------------------------
 
+          WRITE CIRCULAR JS VALUES TO WASM
+
+  -------------------------------------------------- */
+
+  enum JsShape {
+    NOT_CIRCULAR,
+    MAYBE_CIRCULAR
+  }
+
+  interface JsHeapEntry {
+    value: any;
+    isMarked: boolean;
+    isOldGen: boolean;
+  }
+
+  const unusedJsHeapSlot = {};
+  const jsHeap: JsHeapEntry[] = [];
+
+  function allocateJsRef(value: any): number {
+    let id = 0;
+    while (id < jsHeap.length && jsHeap[id].value !== unusedJsHeapSlot) id++;
+    if (id == jsHeap.length) {
+      jsHeap.push({ isMarked: false, isOldGen: false, value });
+    } else {
+      jsHeap[id].value = value;
+    }
+    return id;
+  }
+
+  function markJsRef(id: number): void {
+    jsHeap[id].isMarked = true;
+  }
+
+  function sweepJsRefs(isFullGc: boolean): void {
+    let lastUsedSlot = 0;
+    jsHeap.forEach((slot, index) => {
+      let shouldKeep = slot.isMarked;
+      if (isFullGc) {
+        slot.isOldGen = shouldKeep;
+      } else if (slot.isOldGen) {
+        shouldKeep = true;
+      }
+      if (shouldKeep) {
+        lastUsedSlot = index;
+      } else {
+        slot.value = unusedJsHeapSlot;
+      }
+      slot.isMarked = false;
+    });
+    jsHeap.splice(lastUsedSlot + 1, jsHeap.length);
+  }
+
+  function getJsRefArrayIndex(jsRefId: number, index: number): number {
+    const array = jsHeap[jsRefId].value;
+    if (!Array.isArray(array)) return 0;
+    if (index >= array.length) return -(array.length + 1);
+    const value = array[index];
+    return handleWasmWrite(nextIndex =>
+      writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
+    );
+  }
+
+  function getJsRefObjectField(
+    jsRefId: number,
+    fieldStringAddr: number
+  ): number {
+    const obj = jsHeap[jsRefId].value;
+    if (typeof obj !== 'object' || obj === null) return 0;
+    const field = readWasmValue(fieldStringAddr);
+    if (!(field in obj)) return 0;
+    const value = obj[field];
+    return handleWasmWrite(nextIndex =>
+      writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
+    );
+  }
+
+  function getJsRefValue(jsRefId: number): number {
+    const value = jsHeap[jsRefId].value;
+    return handleWasmWrite(nextIndex =>
+      writeJsonValue(nextIndex, value, JsShape.NOT_CIRCULAR)
+    );
+  }
+
+  function writeJsonValue(
+    nextIndex: number,
+    value: any,
+    jsShape: JsShape
+  ): WriteResult {
+    switch (typeof value) {
+      case 'boolean':
+        return {
+          addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
+          nextIndex
+        };
+      case 'number':
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.Float, value),
+          Tag.Float
+        );
+      case 'string':
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.String, value),
+          Tag.String
+        );
+      case 'object': {
+        if (value === null) {
+          return { addr: wasmConstAddrs.JsNull, nextIndex };
+        }
+        if ('$' in value) {
+          const unwrapped = writeJsonValue(nextIndex, value.a, jsShape);
+          return writeFromBuilder(
+            unwrapped.nextIndex,
+            {
+              body: [JsonValue.WRAP, unwrapped.addr],
+              jsChildren: [],
+              bodyWriter: null
+            },
+            Tag.Custom
+          );
+        }
+        if (jsShape === JsShape.MAYBE_CIRCULAR) {
+          return writeFromBuilder(
+            nextIndex,
+            wasmBuilder(Tag.JsRef, value),
+            Tag.JsRef
+          );
+        }
+        const body: number[] = [];
+        if (Array.isArray(value)) {
+          body.push(JsonValue.ARRAY);
+          value.forEach(elem => {
+            const result = writeJsonValue(
+              nextIndex,
+              elem,
+              JsShape.NOT_CIRCULAR
+            );
+            nextIndex = result.nextIndex;
+            body.push(result.addr);
+          });
+        } else {
+          body.push(JsonValue.OBJECT);
+          Object.keys(value).forEach(key => {
+            const keyResult = writeJsonValue(nextIndex, key, jsShape);
+            nextIndex = keyResult.nextIndex;
+            body.push(keyResult.addr);
+            const valueResult = writeJsonValue(
+              nextIndex,
+              value[key],
+              JsShape.NOT_CIRCULAR
+            );
+            nextIndex = valueResult.nextIndex;
+            body.push(valueResult.addr);
+          });
+        }
+        const builder: WasmBuilder = {
+          body,
+          jsChildren: [],
+          bodyWriter: null
+        };
+        return writeFromBuilder(nextIndex, builder, Tag.Custom);
+      }
+      default:
+        // typeof is 'undefined', 'function', 'symbol', or 'bigint'
+        // Preserve the value so it can be passed in one port and out another
+        return writeFromBuilder(
+          nextIndex,
+          wasmBuilder(Tag.JsRef, value),
+          Tag.JsRef
+        );
+    }
+  }
+
+  function call(evaluator: number, args: any[]) {
+    function thunk() {}
+    thunk.evaluator = evaluator;
+    thunk.freeVars = args;
+    thunk.max_values = args.length;
+
+    const closureAddr = handleWasmWrite(nextIndex =>
+      writeWasmValue(nextIndex, thunk)
+    );
+    const resultAddr = wasmExports._evalClosure(closureAddr);
+    return readWasmValue(resultAddr);
+  }
+
+  /* --------------------------------------------------
+
                     EXPORTS
 
   -------------------------------------------------- */
@@ -736,9 +953,18 @@ function wrapWasmElmApp(
 
   return {
     mains,
-    // functions for testing
     readWasmValue,
     writeWasmValue: (value: any) =>
-      handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value))
+      handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value)),
+    writeJsonValue: (value: any) =>
+      handleWasmWrite(nextIndex =>
+        writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
+      ),
+    call,
+    getJsRefArrayIndex,
+    getJsRefObjectField,
+    getJsRefValue,
+    markJsRef,
+    sweepJsRefs
   };
 }

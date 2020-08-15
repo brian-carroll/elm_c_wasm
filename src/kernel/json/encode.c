@@ -12,7 +12,7 @@ void* eval_Json_wrap(void* args[]) {
   if (v->header.tag == Tag_Int) {
     v = NEW_ELM_FLOAT(v->elm_int.value);
   }
-  Custom* wrapped = NEW_CUSTOM(KERNEL_CTOR_OFFSET, 1, (void*[]){v});
+  Custom* wrapped = NEW_CUSTOM(JSON_VALUE_WRAP, 1, (void*[]){v});
   return wrapped;
 }
 Closure Json_wrap = {
@@ -103,6 +103,8 @@ Closure Json_addEntry = {
     .max_values = 3,
     .evaluator = &eval_Json_addEntry,
 };
+
+size_t stringify_alloc_chunk;
 
 void* eval_Json_encode(void* args[]) {
   ElmInt* indentLevel = args[0];
