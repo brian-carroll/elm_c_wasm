@@ -27,4 +27,4 @@ jobs:
         # Update tags before installing a version
         #update-tags: # optional
     - name: Native & Wasm tests
-      run: emcc --version && make check
+      run: echo "PATH=$PATH" ; echo "EMSDK=$EMSDK"; ls -l "$EMSDK"; emcc --version && make check
