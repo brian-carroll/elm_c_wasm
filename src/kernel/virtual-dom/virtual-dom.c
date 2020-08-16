@@ -2,6 +2,9 @@
 #include "../json/json.h"
 #include "./virtual-dom-elm.h"
 
+// predeclarations
+static Custom* organizeFacts(Cons* factList);
+
 enum {
   VDOM_TEXT,
   VDOM_NODE,
@@ -83,10 +86,6 @@ typedef struct {
 
 typedef VdomNode VdomKeyedNode;
 
-static Custom* VirtualDom_organizeFacts(Cons* factList) {
-  return NULL;
-}
-
 static void* eval_VirtualDom_nodeNS(void* args[]) {
   ElmString16* namespace = args[0];
   ElmString16* tag = args[1];
@@ -110,7 +109,7 @@ static void* eval_VirtualDom_nodeNS(void* args[]) {
     .descendantsCount = descendantsCount,
     .namespace = namespace,
     .tag = tag,
-    .facts = VirtualDom_organizeFacts(factList),
+    .facts = organizeFacts(factList),
     .kids = kidArray,
   };
   return p;
@@ -156,7 +155,7 @@ static void* eval_VirtualDom_keyedNodeNS(void* args[]) {
     .descendantsCount = descendantsCount,
     .namespace = namespace,
     .tag = tag,
-    .facts = VirtualDom_organizeFacts(factList),
+    .facts = organizeFacts(factList),
     .kids = kidArray,
   };
   return p;
@@ -363,20 +362,27 @@ Closure VirtualDom_attributeNS = {
 
 // XSS ATTACK VECTOR CHECKS
 
+static bool string_match_ascii(size_t expect_len, char* expect, ElmString16* s) {
+  if (code_units(s) < expect_len) {
+    return false;
+  }
+  u16* words16 = s->words16;
+  for (size_t i = 0; i < 5; ++i) {
+    if (words16[i] != expect[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
 ElmString16 str_p = {
   .header = HEADER_STRING(1),
   .words16 = {'p'},
 };
 static void* eval_VirtualDom_noScript(void* args[]) {
   ElmString16* tag = args[0];
-  char str[] = "script";
-  u16* words16 = tag->words16;
-  for (size_t i = 0; i < 5; ++i) {
-    if (words16[i] != str[i]) {
-      return tag;
-    }
-  }
-  return &str_p;
+  return string_match_ascii(5, "script", tag) ? &str_p : tag;
 }
 Closure VirtualDom_noScript = {
   .header = HEADER_CLOSURE(0),
@@ -390,17 +396,8 @@ ElmString16 str_data_ = {
 };
 static void* eval_VirtualDom_noOnOrFormAction(void* args[]) {
   ElmString16* key = args[0];
-  bool on = key->words16[0] == 'o' && key->words16[1] == 'n';
-  if (!on) {
-    char str[] = "formAction";
-    u16* words16 = key->words16;
-    for (size_t i = 0; i < 5; ++i) {
-      if (words16[i] != str[i]) {
-        return key;
-      }
-    }
-  }
-  return A2(&String_append, &str_data_, key);
+  bool bad = string_match_ascii(2, "on", key) || string_match_ascii(10, "formAction", key);
+  return bad ? A2(&String_append, &str_data_, key) : key;
 }
 Closure VirtualDom_noOnOrFormAction = {
   .header = HEADER_CLOSURE(0),
@@ -410,25 +407,8 @@ Closure VirtualDom_noOnOrFormAction = {
 
 static void* eval_VirtualDom_noInnerHtmlOrFormAction(void* args[]) {
   ElmString16* key = args[0];
-  u16 first = key->words16[0];
-  char* str;
-  size_t len;
-  if (first == 'i') {
-    str = "innerHTML";
-    len = 9;
-  } else if (first == 'f') {
-    str = "formAction";
-    len = 10;
-  } else {
-    return key;
-  }
-  u16* words16 = key->words16;
-  for (size_t i = 1; i < len; ++i) {
-    if (words16[i] != str[i]) {
-      return key;
-    }
-  }
-  return A2(&String_append, &str_data_, key);
+  bool bad = string_match_ascii(9, "innerHTML", key) || string_match_ascii(10, "formAction", key);
+  return bad ? A2(&String_append, &str_data_, key) : key;
 }
 Closure VirtualDom_noInnerHtmlOrFormAction = {
   .header = HEADER_CLOSURE(0),
@@ -561,3 +541,72 @@ Closure VirtualDom_mapAttribute = {
   .evaluator = eval_VirtualDom_mapAttribute,
   .max_values = 2,
 };
+
+
+// ORGANIZE FACTS
+
+
+static i32 objectFindIndex(Custom* object, ElmString16* key) {
+  u32 n = custom_params(object);
+  i32 found_index = -1;
+  for (size_t i = 0; i < n; i+=2) {
+    if (A2(&Utils_equal, object->values[i], key) == &True) {
+      found_index = i + 1;
+    }
+  }
+  return found_index;
+}
+
+static Custom* objectAppendPair(Custom* object, ElmString16* key, void* value) {
+  u32 n = custom_params(object);
+  Custom* newObject = Utils_clone(object);
+  CAN_THROW(GC_malloc(2*sizeof(void*)));
+  newObject->header.size += 2;
+  newObject->values[n] = key;
+  newObject->values[n + 1] = value;
+  return newObject;
+}
+
+static Custom* addClass(Custom* object, ElmString16* key, ElmString16* newClass) {
+  i32 classes_index = objectFindIndex(object, key);
+  if (classes_index == -1) {
+    object = objectAppendPair(object, key, newClass);
+  } else {
+    ElmString16* oldClasses = object->values[classes_index];
+    u32 old_len = code_units(oldClasses);
+    u32 new_len = code_units(newClass);
+    u32 concat_len = old_len + 1 + new_len;
+    ElmString16* concat = NEW_ELM_STRING16(concat_len);
+    GC_memcpy(&concat->words16[0], &oldClasses->words16[0], old_len * sizeof(u16));
+    concat->words16[old_len] = ' ';
+    GC_memcpy(&concat->words16[old_len+1], &newClass->words16[0], new_len * sizeof(u16));
+    object->values[classes_index] = concat;
+  }
+  return object;
+}
+
+static Custom* organizeFacts(Cons* factList) {
+  Custom* facts = NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL);
+  for (; factList != &Nil; factList = factList->tail) {
+    VdomFact* entry = factList->head;
+
+    u32 tag = entry->ctor;
+    ElmString16* key = entry->key;
+    Custom* value = entry->value;
+
+    if (tag == FACT_PROP) {
+      void* unwrapped = value->values[0];
+      if (string_match_ascii(9, "className", key)) {
+        addClass(facts, key, unwrapped);
+      } else {
+        i32 found_index = objectFindIndex(facts, key);
+        if (found_index >= 0) {
+          facts->values[found_index] = unwrapped;
+        } else {
+          facts = objectAppendPair(facts, key, unwrapped);
+        }
+      }
+    }
+  }
+  return facts;
+}
