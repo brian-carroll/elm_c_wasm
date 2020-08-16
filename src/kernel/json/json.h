@@ -76,4 +76,7 @@ extern Closure Json_addField;
 extern Closure Json_addEntry;
 extern Closure Json_encode;
 
+// for kernel use
+extern Custom Json_emptyObjVal;
+
 #endif

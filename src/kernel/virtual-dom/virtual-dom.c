@@ -14,6 +14,8 @@ enum {
   VDOM_THUNK,
 };
 
+
+#define NUM_FACT_CTORS 5
 enum {
   FACT_EVENT,
   FACT_STYLE,
@@ -102,6 +104,8 @@ static void* eval_VirtualDom_nodeNS(void* args[]) {
     descendantsCount += kid->descendantsCount + 1;
   }
 
+  Custom* facts = CAN_THROW(organizeFacts(factList));
+
   VdomNode* p = CAN_THROW(GC_malloc(sizeof(VdomNode)));
   *p = (VdomNode){
     .header = HEADER_CUSTOM(4),
@@ -109,7 +113,7 @@ static void* eval_VirtualDom_nodeNS(void* args[]) {
     .descendantsCount = descendantsCount,
     .namespace = namespace,
     .tag = tag,
-    .facts = organizeFacts(factList),
+    .facts = facts,
     .kids = kidArray,
   };
   return p;
@@ -148,6 +152,8 @@ static void* eval_VirtualDom_keyedNodeNS(void* args[]) {
     descendantsCount += kid->descendantsCount + 1;
   }
 
+  Custom* facts = CAN_THROW(organizeFacts(factList));
+
   VdomNode* p = CAN_THROW(GC_malloc(sizeof(VdomNode)));
   *p = (VdomNode){
     .header = HEADER_CUSTOM(4),
@@ -155,7 +161,7 @@ static void* eval_VirtualDom_keyedNodeNS(void* args[]) {
     .descendantsCount = descendantsCount,
     .namespace = namespace,
     .tag = tag,
-    .facts = organizeFacts(factList),
+    .facts = facts,
     .kids = kidArray,
   };
   return p;
@@ -298,20 +304,16 @@ typedef struct {
   ElmString16* namespaces[]; // 0 or 1 element
 } VdomFact;
 
-static VdomFact* ctorFact(u32 ctor, ElmString16* key, void* value, ElmString16* namespace) {
-  size_t has_namespace = namespace != NULL;
-  VdomFact* p = GC_malloc(sizeof(VdomFact) + has_namespace * sizeof(void*));
-  p->header = HEADER_CUSTOM(2 + has_namespace);
+static VdomFact* ctorFact(u32 ctor, ElmString16* key, void* value) {
+  VdomFact* p = GC_malloc(sizeof(VdomFact));
+  p->header = HEADER_CUSTOM(2);
   p->ctor = ctor;
   p->key = key;
   p->value = value;
-  if (has_namespace) {
-    p->namespaces[0] = namespace;
-  }
 }
 
 static void* eval_VirtualDom_on(void* args[]) {
-  return ctorFact(FACT_EVENT, args[0], args[1], NULL);
+  return ctorFact(FACT_EVENT, args[0], args[1]);
 }
 Closure VirtualDom_on = {
   .header = HEADER_CLOSURE(0),
@@ -320,7 +322,7 @@ Closure VirtualDom_on = {
 };
 
 static void* eval_VirtualDom_style(void* args[]) {
-  return ctorFact(FACT_STYLE, args[0], args[1], NULL);
+  return ctorFact(FACT_STYLE, args[0], args[1]);
 }
 Closure VirtualDom_style = {
   .header = HEADER_CLOSURE(0),
@@ -329,7 +331,7 @@ Closure VirtualDom_style = {
 };
 
 static void* eval_VirtualDom_property(void* args[]) {
-  return ctorFact(FACT_PROP, args[0], args[1], NULL);
+  return ctorFact(FACT_PROP, args[0], args[1]);
 }
 Closure VirtualDom_property = {
   .header = HEADER_CLOSURE(0),
@@ -338,7 +340,7 @@ Closure VirtualDom_property = {
 };
 
 static void* eval_VirtualDom_attribute(void* args[]) {
-  return ctorFact(FACT_ATTR, args[0], args[1], NULL);
+  return ctorFact(FACT_ATTR, args[0], args[1]);
 }
 Closure VirtualDom_attribute = {
   .header = HEADER_CLOSURE(0),
@@ -350,7 +352,13 @@ static void* eval_VirtualDom_attributeNS(void* args[]) {
   void* namespace = args[0];
   void* key = args[1];
   void* value = args[2];
-  return ctorFact(FACT_ATTR_NS, key, value, namespace);
+  VdomFact* p = GC_malloc(sizeof(VdomFact) + sizeof(void*));
+  p->header = HEADER_CUSTOM(2);
+  p->ctor = FACT_ATTR_NS;
+  p->key = key;
+  p->value = value;
+  p->namespaces[0] = namespace;
+  return p;
 }
 Closure VirtualDom_attributeNS = {
   .header = HEADER_CLOSURE(0),
@@ -545,6 +553,31 @@ Closure VirtualDom_mapAttribute = {
 
 // ORGANIZE FACTS
 
+/*
+In JS, facts are organized in a one-or-two-level nested dictionary, like this:
+Props are treated differently from other facts.
+var facts = {
+  'prop1': thing,
+  'prop2': stuff,
+  'a__1_EVENT': { click: myHandler },
+  'a__1_STYLE': { color: 'blue' },
+  'a__1_ATTR': {},
+  'a__1_ATTR_NS': {},
+}
+But in this C implementation they're more like a 5-element *tuple* of dictionaries.
+The closest equivalent in JS would be like this:
+var facts = [
+  { prop1: thing, prop2: stuff },
+  { click: handler },
+  { color: 'blue' },
+  {},
+  {},
+];
+We know the fixed index of each sub-dictionary, so we don't need to compare strings.
+This refactoring simplifies the code
+I'm not sure what the reason was for the original design.
+Perhaps it's an optimisation to have fewer dereferences in common cases.
+*/
 
 static i32 objectFindIndex(Custom* object, ElmString16* key) {
   u32 n = custom_params(object);
@@ -567,26 +600,30 @@ static Custom* objectAppendPair(Custom* object, ElmString16* key, void* value) {
   return newObject;
 }
 
-static Custom* addClass(Custom* object, ElmString16* key, ElmString16* newClass) {
-  i32 classes_index = objectFindIndex(object, key);
-  if (classes_index == -1) {
-    object = objectAppendPair(object, key, newClass);
-  } else {
-    ElmString16* oldClasses = object->values[classes_index];
-    u32 old_len = code_units(oldClasses);
-    u32 new_len = code_units(newClass);
-    u32 concat_len = old_len + 1 + new_len;
-    ElmString16* concat = NEW_ELM_STRING16(concat_len);
-    GC_memcpy(&concat->words16[0], &oldClasses->words16[0], old_len * sizeof(u16));
-    concat->words16[old_len] = ' ';
-    GC_memcpy(&concat->words16[old_len+1], &newClass->words16[0], new_len * sizeof(u16));
-    object->values[classes_index] = concat;
-  }
-  return object;
-}
+ElmString16 str_className = {
+  .header = HEADER_STRING(9),
+  .words16 = {'c', 'l', 'a', 's', 's', 'N', 'a', 'm', 'e'},
+};
+ElmString16 str_class = {
+  .header = HEADER_STRING(5),
+  .words16 = {'c', 'l', 'a', 's', 's'},
+};
+ElmString16 str_space = {
+  .header = HEADER_STRING(1),
+  .words16 = {' '},
+};
 
 static Custom* organizeFacts(Cons* factList) {
-  Custom* facts = NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL);
+  Custom* facts[NUM_FACT_CTORS] = {
+    &Json_emptyObjVal,
+    &Json_emptyObjVal,
+    &Json_emptyObjVal,
+    &Json_emptyObjVal,
+    &Json_emptyObjVal,
+  };
+  Cons* propClasses = &Nil;
+  Cons* attrClasses = &Nil;
+
   for (; factList != &Nil; factList = factList->tail) {
     VdomFact* entry = factList->head;
 
@@ -594,19 +631,36 @@ static Custom* organizeFacts(Cons* factList) {
     ElmString16* key = entry->key;
     Custom* value = entry->value;
 
+    Custom* subFacts = facts[tag];
+
     if (tag == FACT_PROP) {
-      void* unwrapped = value->values[0];
+      value = value->values[0]; // inlined Json_unwrap
       if (string_match_ascii(9, "className", key)) {
-        addClass(facts, key, unwrapped);
-      } else {
-        i32 found_index = objectFindIndex(facts, key);
-        if (found_index >= 0) {
-          facts->values[found_index] = unwrapped;
-        } else {
-          facts = objectAppendPair(facts, key, unwrapped);
-        }
+        propClasses = NEW_CONS(value, propClasses);
+        continue;
       }
+    } else if (tag == FACT_ATTR && string_match_ascii(5, "class", key)) {
+        attrClasses = NEW_CONS(value, attrClasses);
+        continue;
+    }
+
+    i32 found_index = objectFindIndex(subFacts, key);
+    if (found_index >= 0) {
+      subFacts->values[found_index] = value;
+    } else {
+      facts[tag] = CAN_THROW(objectAppendPair(subFacts, key, value));
     }
   }
-  return facts;
+
+  if (propClasses != &Nil) {
+    ElmString16* joined = A2(&String_join, &str_space, propClasses);
+    facts[FACT_PROP] = CAN_THROW(objectAppendPair(facts[FACT_PROP], &str_className, joined));
+  }
+
+  if (attrClasses != &Nil) {
+    ElmString16* joined = A2(&String_join, &str_space, attrClasses);
+    facts[FACT_ATTR] = CAN_THROW(objectAppendPair(facts[FACT_ATTR], &str_class, joined));
+  }
+
+  return NEW_CUSTOM(JSON_VALUE_ARRAY, NUM_FACT_CTORS, facts);
 }

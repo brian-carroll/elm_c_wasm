@@ -44,12 +44,12 @@ Closure Json_emptyArray = {
     .evaluator = &eval_Json_emptyArray,
 };
 
-Custom emptyObject = {
+Custom Json_emptyObjVal = {
     .header = HEADER_CUSTOM(0),
     .ctor = JSON_VALUE_OBJECT,
 };
 void* eval_Json_emptyObject(void* args[]) {
-  return &emptyObject;
+  return &Json_emptyObjVal;
 }
 Closure Json_emptyObject = {
     .header = HEADER_CLOSURE(0),
