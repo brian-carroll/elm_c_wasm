@@ -1,4 +1,6 @@
 #include "../core/core.h"
+#include "../json/json.h"
+#include "./virtual-dom-elm.h"
 
 enum {
   VDOM_TEXT,
@@ -289,9 +291,28 @@ Closure VirtualDom_lazy8 = {
 
 // FACTS
 
+typedef struct {
+  Header header;
+  u32 ctor;
+  ElmString16* key;
+  void* value;
+  ElmString16* namespaces[]; // 0 or 1 element
+} VdomFact;
 
-void* eval_VirtualDom_on(void* args[]) {
-  return NEW_CUSTOM(FACT_EVENT, 2, args);
+static VdomFact* ctorFact(u32 ctor, ElmString16* key, void* value, ElmString16* namespace) {
+  size_t has_namespace = namespace != NULL;
+  VdomFact* p = GC_malloc(sizeof(VdomFact) + has_namespace * sizeof(void*));
+  p->header = HEADER_CUSTOM(2 + has_namespace);
+  p->ctor = ctor;
+  p->key = key;
+  p->value = value;
+  if (has_namespace) {
+    p->namespaces[0] = namespace;
+  }
+}
+
+static void* eval_VirtualDom_on(void* args[]) {
+  return ctorFact(FACT_EVENT, args[0], args[1], NULL);
 }
 Closure VirtualDom_on = {
   .header = HEADER_CLOSURE(0),
@@ -299,8 +320,8 @@ Closure VirtualDom_on = {
   .max_values = 2,
 };
 
-void* eval_VirtualDom_style(void* args[]) {
-  return NEW_CUSTOM(FACT_STYLE, 2, args);
+static void* eval_VirtualDom_style(void* args[]) {
+  return ctorFact(FACT_STYLE, args[0], args[1], NULL);
 }
 Closure VirtualDom_style = {
   .header = HEADER_CLOSURE(0),
@@ -308,8 +329,8 @@ Closure VirtualDom_style = {
   .max_values = 2,
 };
 
-void* eval_VirtualDom_property(void* args[]) {
-  return NEW_CUSTOM(FACT_PROP, 2, args);
+static void* eval_VirtualDom_property(void* args[]) {
+  return ctorFact(FACT_PROP, args[0], args[1], NULL);
 }
 Closure VirtualDom_property = {
   .header = HEADER_CLOSURE(0),
@@ -317,8 +338,8 @@ Closure VirtualDom_property = {
   .max_values = 2,
 };
 
-void* eval_VirtualDom_attribute(void* args[]) {
-  return NEW_CUSTOM(FACT_ATTR, 2, args);
+static void* eval_VirtualDom_attribute(void* args[]) {
+  return ctorFact(FACT_ATTR, args[0], args[1], NULL);
 }
 Closure VirtualDom_attribute = {
   .header = HEADER_CLOSURE(0),
@@ -326,12 +347,11 @@ Closure VirtualDom_attribute = {
   .max_values = 2,
 };
 
-void* eval_VirtualDom_attributeNS(void* args[]) {
+static void* eval_VirtualDom_attributeNS(void* args[]) {
   void* namespace = args[0];
   void* key = args[1];
   void* value = args[2];
-  void* rearranged[] = {key, value, namespace};
-  return NEW_CUSTOM(FACT_ATTR_NS, 3, rearranged);
+  return ctorFact(FACT_ATTR_NS, key, value, namespace);
 }
 Closure VirtualDom_attributeNS = {
   .header = HEADER_CLOSURE(0),
@@ -347,7 +367,7 @@ ElmString16 str_p = {
   .header = HEADER_STRING(1),
   .words16 = {'p'},
 };
-void* eval_VirtualDom_noScript(void* args[]) {
+static void* eval_VirtualDom_noScript(void* args[]) {
   ElmString16* tag = args[0];
   char str[] = "script";
   u16* words16 = tag->words16;
@@ -368,7 +388,7 @@ ElmString16 str_data_ = {
   .header = HEADER_STRING(1),
   .words16 = {'d','a','t','a','-'},
 };
-void* eval_VirtualDom_noOnOrFormAction(void* args[]) {
+static void* eval_VirtualDom_noOnOrFormAction(void* args[]) {
   ElmString16* key = args[0];
   bool on = key->words16[0] == 'o' && key->words16[1] == 'n';
   if (!on) {
@@ -388,7 +408,7 @@ Closure VirtualDom_noOnOrFormAction = {
   .max_values = 1,
 };
 
-void* eval_VirtualDom_noInnerHtmlOrFormAction(void* args[]) {
+static void* eval_VirtualDom_noInnerHtmlOrFormAction(void* args[]) {
   ElmString16* key = args[0];
   u16 first = key->words16[0];
   char* str;
@@ -416,7 +436,7 @@ Closure VirtualDom_noInnerHtmlOrFormAction = {
   .max_values = 1,
 };
 
-void* eval_VirtualDom_noJavaScriptUri(void* args[]) {
+static void* eval_VirtualDom_noJavaScriptUri(void* args[]) {
   ElmString16* value = args[0];
   ElmString16* trimmed = A1(&String_trimLeft, value);
   u16* words16 = trimmed->words16;
@@ -439,7 +459,7 @@ Closure VirtualDom_noJavaScriptUri = {
   .max_values = 1,
 };
 
-void* eval_VirtualDom_noJavaScriptOrHtmlUri(void* args[]) {
+static void* eval_VirtualDom_noJavaScriptOrHtmlUri(void* args[]) {
   ElmString16* value = args[0];
   ElmString16* trimmed = A1(&String_trimLeft, value);
   u16* words16 = trimmed->words16;
@@ -474,3 +494,70 @@ Closure VirtualDom_noJavaScriptOrHtmlUri = {
   .max_values = 1,
 };
 
+
+// MAP FACTS
+
+enum {
+  HandlerTagNormal = 0,
+  HandlerTagMayStopPropagation = 1,
+  HandlerTagMayPreventDefault = 2,
+  HandlerTagCustom = 3,
+};
+
+static void* eval_mapEventTuple(void* args[]) {
+  Closure* func = args[0];
+  Tuple2* tuple = args[1];
+  return NEW_TUPLE2(A1(func, tuple->a), tuple->b);
+}
+Closure mapEventTuple = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_mapEventTuple,
+  .max_values = 2,
+};
+
+static void* eval_mapEventRecord(void* args[]) {
+  Closure* func = args[0];
+  Record* r = args[1];
+
+  void* accessArgs[] = {(void*)FIELD_message, r};
+  void* oldMessage = Utils_access_eval(accessArgs);
+  void* newMessage = A1(func, oldMessage);
+
+  u32 updateFields[] = {FIELD_message};
+  void* updateValues[] = {newMessage};
+  return Utils_update(r, 1, updateFields, updateValues);
+}
+Closure mapEventRecord = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_mapEventRecord,
+  .max_values = 2,
+};
+
+static void* mapHandler(Closure* func, Custom* handler) {
+  ElmInt* tagBoxed = A1(&g_elm_virtual_dom_VirtualDom_toHandlerInt, handler);
+  i32 tag = tagBoxed->value;
+  void* oldHandlerBody = handler->values[0];
+  void* newHandlerBody;
+  if (tag == HandlerTagNormal) {
+      newHandlerBody = A2(&Json_map1, func, oldHandlerBody);
+  } else {
+    Closure* mapper = (tag == HandlerTagCustom) ? &mapEventRecord : &mapEventTuple;
+    Custom* jsonFunc = A1(&Json_succeed, func);
+    newHandlerBody = A3(&Json_map2, mapper, jsonFunc, oldHandlerBody);
+  }
+  return NEW_CUSTOM(handler->ctor, 1, (void*[]){newHandlerBody});
+}
+
+static void* eval_VirtualDom_mapAttribute(void* args[]) {
+  Closure* func = args[0];
+  VdomFact* attr = args[1];
+  if (attr->ctor != FACT_EVENT) {
+    return attr;
+  }
+  return A2(&VirtualDom_on, attr->key, mapHandler(func, attr->value));
+}
+Closure VirtualDom_mapAttribute = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_mapAttribute,
+  .max_values = 2,
+};
