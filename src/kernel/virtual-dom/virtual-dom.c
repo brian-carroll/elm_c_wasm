@@ -338,3 +338,139 @@ Closure VirtualDom_attributeNS = {
   .evaluator = eval_VirtualDom_attributeNS,
   .max_values = 3,
 };
+
+
+
+// XSS ATTACK VECTOR CHECKS
+
+ElmString16 str_p = {
+  .header = HEADER_STRING(1),
+  .words16 = {'p'},
+};
+void* eval_VirtualDom_noScript(void* args[]) {
+  ElmString16* tag = args[0];
+  char str[] = "script";
+  u16* words16 = tag->words16;
+  for (size_t i = 0; i < 5; ++i) {
+    if (words16[i] != str[i]) {
+      return tag;
+    }
+  }
+  return &str_p;
+}
+Closure VirtualDom_noScript = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_noScript,
+  .max_values = 1,
+};
+
+ElmString16 str_data_ = {
+  .header = HEADER_STRING(1),
+  .words16 = {'d','a','t','a','-'},
+};
+void* eval_VirtualDom_noOnOrFormAction(void* args[]) {
+  ElmString16* key = args[0];
+  bool on = key->words16[0] == 'o' && key->words16[1] == 'n';
+  if (!on) {
+    char str[] = "formAction";
+    u16* words16 = key->words16;
+    for (size_t i = 0; i < 5; ++i) {
+      if (words16[i] != str[i]) {
+        return key;
+      }
+    }
+  }
+  return A2(&String_append, &str_data_, key);
+}
+Closure VirtualDom_noOnOrFormAction = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_noOnOrFormAction,
+  .max_values = 1,
+};
+
+void* eval_VirtualDom_noInnerHtmlOrFormAction(void* args[]) {
+  ElmString16* key = args[0];
+  u16 first = key->words16[0];
+  char* str;
+  size_t len;
+  if (first == 'i') {
+    str = "innerHTML";
+    len = 9;
+  } else if (first == 'f') {
+    str = "formAction";
+    len = 10;
+  } else {
+    return key;
+  }
+  u16* words16 = key->words16;
+  for (size_t i = 1; i < len; ++i) {
+    if (words16[i] != str[i]) {
+      return key;
+    }
+  }
+  return A2(&String_append, &str_data_, key);
+}
+Closure VirtualDom_noInnerHtmlOrFormAction = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_noInnerHtmlOrFormAction,
+  .max_values = 1,
+};
+
+void* eval_VirtualDom_noJavaScriptUri(void* args[]) {
+  ElmString16* value = args[0];
+  ElmString16* trimmed = A1(&String_trimLeft, value);
+  u16* words16 = trimmed->words16;
+  size_t len = code_units(trimmed);
+  if (len < 11) {
+    return value;
+  }
+  char* lower = "javascript:";
+  char* upper = "JAVASCRIPT:";
+  for (size_t i = 0; i < 11; ++i) {
+    if (words16[i] != lower[i] && words16[i] != upper[i]) {
+      return value;
+    }
+  }
+  return NEW_ELM_STRING16(0);
+}
+Closure VirtualDom_noJavaScriptUri = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_noJavaScriptUri,
+  .max_values = 1,
+};
+
+void* eval_VirtualDom_noJavaScriptOrHtmlUri(void* args[]) {
+  ElmString16* value = args[0];
+  ElmString16* trimmed = A1(&String_trimLeft, value);
+  u16* words16 = trimmed->words16;
+  size_t len = code_units(trimmed);
+
+  if (len < 11) {
+    return value;
+  }
+  char* js_lower = "javascript:";
+  char* js_upper = "JAVASCRIPT:";
+  for (size_t i = 0; i < 11; ++i) {
+    if (words16[i] != js_lower[i] && words16[i] != js_upper[i]) {
+      return value;
+    }
+  }
+
+  if (len < 14) {
+    return value;
+  }
+  char* html_lower = "data:text/html";
+  char* html_upper = "DATA:TEXT/HTML";
+  for (size_t i = 0; i < 14; ++i) {
+    if (words16[i] != html_lower[i] && words16[i] != html_upper[i]) {
+      return value;
+    }
+  }
+  return NEW_ELM_STRING16(0);
+}
+Closure VirtualDom_noJavaScriptOrHtmlUri = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_VirtualDom_noJavaScriptOrHtmlUri,
+  .max_values = 1,
+};
+
