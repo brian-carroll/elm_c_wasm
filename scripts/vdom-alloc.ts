@@ -1,31 +1,29 @@
 enum NodeType {
-  TEXT,
-  NODE,
-  KEYED_NODE,
-  // CUSTOM,
-  TAGGER,
-  THUNK
+  TEXT = 'TEXT',
+  NODE = 'NODE',
+  KEYED_NODE = 'KEYED_NODE',
+  TAGGER = 'TAGGER',
+  THUNK = 'THUNK'
+  // CUSTOM = 'CUSTOM', // unused in elm org libs!
 }
 
 enum FactType {
-  EVENT,
-  STYLE,
-  PROP,
-  ATTR,
-  ATTR_NS
+  EVENT = 'EVENT',
+  STYLE = 'STYLE',
+  PROP = 'PROP',
+  ATTR = 'ATTR',
+  ATTR_NS = 'ATTR_NS'
 }
 
-class NodeIndex {
+class Index {
   constructor(public value: number) {}
 }
 
-class FactIndex {
-  constructor(public value: number) {}
-}
+class NodeIndex extends Index { }
+class FactIndex extends Index { }
+class ElmIndex extends Index { }
 
-class ElmIndex {
-  constructor(public value: number) {}
-}
+type VdomNode = NodeText | NodeNormal | NodeKeyed | NodeTagger | NodeThunk;
 
 interface NodeText {
   type: NodeType.TEXT;
@@ -36,6 +34,7 @@ interface NodeText {
 interface NodeNormal {
   type: NodeType.NODE;
   size: number;
+  tag: ElmIndex;
   namespace: ElmIndex;
   factsBegin: FactIndex;
   factsEnd: FactIndex;
@@ -45,6 +44,7 @@ interface NodeNormal {
 interface NodeKeyed {
   type: NodeType.KEYED_NODE;
   size: number;
+  tag: ElmIndex;
   namespace: ElmIndex;
   factsBegin: FactIndex;
   factsEnd: FactIndex;
@@ -66,8 +66,6 @@ interface NodeThunk {
   thunk: ElmIndex;
   refs: ElmIndex[];
 }
-
-type VdomNode = NodeText | NodeNormal | NodeKeyed | NodeTagger | NodeThunk;
 
 interface FactEvent {
   type: FactType.EVENT;
@@ -101,3 +99,44 @@ interface FactAttrNS {
 }
 
 type VdomFact = FactEvent | FactStyle | FactProp | FactAttr | FactAttrNS;
+
+
+type NodeWord = undefined | NodeType | number | ElmIndex | NodeIndex | FactIndex;
+type FactWord = undefined | FactType | ElmIndex;
+
+
+class VdomArray<T, I extends Index> {
+  private data: T[];
+  public bottom: I;
+
+  constructor(size: I) {
+    this.data = new Array<T>(size.value);
+    size.value--;
+    this.bottom = size;
+  }
+
+  prepend(words: T[]): I {
+    let newBottom = this.bottom.value - words.length;
+    if (newBottom < 0) {
+      console.warn('resizing', this.bottom);
+      const oldData = this.data;
+      const oldLen = oldData.length;
+      this.data = new Array<T>(oldLen * 2);
+      oldData.forEach((word, i) => {
+        this.data[oldLen + i] = word;
+      });
+      newBottom += oldLen;
+    }
+
+    words.forEach((word, i) => {
+      this.data[newBottom + i] = word;
+    });
+
+    this.bottom.value = newBottom;
+    return this.bottom;
+  }
+}
+
+const nodes = new VdomArray<NodeWord, NodeIndex>(new NodeIndex(100));
+const facts = new VdomArray<FactWord, FactIndex>(new FactIndex(100));
+const elmValues = new VdomArray<any, ElmIndex>(new ElmIndex(100));
