@@ -23,11 +23,14 @@
     "url": "https://github.com/brian-carroll/elm_c_wasm/issues"
   },
   "homepage": "https://github.com/brian-carroll/elm_c_wasm#readme",
-  "dependencies": {},
+  "dependencies": {
+    "@types/node": "^14.14.16"
+  },
   "devDependencies": {
     "http-server": "^0.12.1",
     "jasmine": "^3.5.0",
     "jasmine-console-reporter": "^3.1.0",
+    "ts-node": "^9.1.1",
     "typescript": "^3.6.4"
   }
 }

@@ -5,6 +5,6 @@
     "noImplicitAny": true,
     "strictNullChecks": true
   },
-  "files": ["src/kernel/wrapper/wrapper.ts"],
+  // "files": ["src/kernel/wrapper/wrapper.ts"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }
