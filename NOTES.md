@@ -345,10 +345,10 @@ thunk nodes
 | ----------- | ----------------- |
 | type & size | enum & int        |
 | node        | Vdom index        |
-| tagger      | Elm value index   |
+| thunk       | Elm value index   |
 | refs[]      | Elm value indices |
 
-events (`on`) & properties
+events (`on`)
 
 | col         | type            |
 | ----------- | --------------- |
@@ -356,7 +356,7 @@ events (`on`) & properties
 | key         | Elm value index |
 | handler     | Elm value index |
 
-style & attr
+style & attr & properties
 
 | col         | type            |
 | ----------- | --------------- |
@@ -366,11 +366,11 @@ style & attr
 
 attrNS
 
-| col   | type            |
-| ----- | --------------- |
-| key   | Elm value index |
-| value | Elm value index |
-| NS    | Elm value index |
+| col       | type            |
+| --------- | --------------- |
+| key       | Elm value index |
+| value     | Elm value index |
+| namespace | Elm value index |
 
 ### example memory layout
 
