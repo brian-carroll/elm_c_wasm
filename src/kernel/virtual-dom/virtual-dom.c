@@ -25,17 +25,33 @@ enum {
 };
 
 enum {
-  PATCH_REDRAW,
-  PATCH_FACTS,
-  PATCH_TEXT,
-  PATCH_THUNK,
-  PATCH_TAGGER,
-  PATCH_REMOVE_LAST,
-  PATCH_APPEND,
-  PATCH_REMOVE,
-  PATCH_REORDER,
-  PATCH_CUSTOM,
+  PATCH_PUSH_AT,       // 0  nodeStack.push(currentNode.children[n]); currentNode = nodeStack[nodeStack.length-1]; 
+  PATCH_POP_BY,        // 1  nodeStack.splice(-n, nodeStack.length); currentNode = nodeStack[nodeStack.length-1];
+
+                       //    'data' contains
+                       //    --------------------
+  PATCH_REDRAW,        // 2  new vdom tree
+  PATCH_FACTS,         // 3  facts (tuple of dicts)
+  PATCH_TEXT,          // 4  string
+  PATCH_THUNK,         // 5  array of patches
+  PATCH_TAGGER,        // 6  array of new taggers
+  PATCH_REMOVE_LAST,   // 7  two numbers
+  PATCH_APPEND,        // 8  array vdom, number
+  PATCH_REMOVE,        // 9  vdom, number, keyed patch
+  PATCH_REORDER,       // a  array of patches, arrays of vdom
+  PATCH_CUSTOM,        // b  function
+
+  PATCH_KEYED_INSERT,  // c  vdom, integer
+  PATCH_KEYED_REMOVE,  // d  vnode, index, patch
+  PATCH_KEYED_MOVE,    // e  vnode, index, patch
 };
+
+typedef struct {
+  Header header;
+  u8 ctor : 4;
+  u32 index : 28;
+  void* data;
+} VdomPatch;
 
 
 // Make all VirtualDom structs look like Elm Custom type to the GC
@@ -182,15 +198,19 @@ Closure VirtualDom_keyedNode = {
 };
 
 // CUSTOM
-// doesn't seem to actually be used anywhere in elm org packages
-
-typedef struct {
-  VDOM_BASE_FIELDS
-  Cons* facts;
-  void* model;
-  void* render;
-  void* diff;
-} VdomCustom;
+//
+// TODO: This appears in VirtualDom.js but I can't find usages in elm org packages
+// If found, please note here.
+// It's not the function "custom" in Html/Events.elm
+// It's not the constructor called Custom for `type Handler msg` in VirtualDom.elm
+//
+// typedef struct {
+//   VDOM_BASE_FIELDS
+//   Cons* facts;
+//   void* model;
+//   void* render;
+//   void* diff;
+// } VdomCustom;
 
 
 
