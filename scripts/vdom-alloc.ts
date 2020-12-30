@@ -90,7 +90,7 @@ class ElmIndex extends Index {
 }
 
 class Size {
-  size: number;
+  constructor(public size: number) {}
   toString() { return `{size: ${this.size}}` }
 }
 
@@ -190,23 +190,21 @@ const text = (content: string): NodeIndex => {
   const valueIndex = elmValues.prependWords(content);
   const obj: NodeText = {
     type: NodeType.TEXT,
-    size: new Size(),
+    size: new Size(3),
     valueIndex,
   };
-  obj.size.size = Object.keys(obj).length;
   return nodes.prependObject(obj);
 }
 
 const node = (tag: string) => (facts: FactIndex[], children: NodeIndex[]) => {
   const obj: NodeNormal = {
     type: NodeType.NODE,
-    size: new Size(),
+    size: new Size(4 + facts.length + children.length),
     tag: elmValues.prependWords(tag),
     nFacts: facts.length,
     facts,
     children,
   }
-  obj.size.size = Object.keys(obj).length + children.length - 1;
   return nodes.prependObject(obj);
 }
 
@@ -246,6 +244,109 @@ ${facts}
 
 console.log(`
 elmValues
-=====
+=========
 ${elmValues}
 `);
+
+checkMemoryAccessPattern(view);
+
+
+/**
+ * Check the memory access pattern is sequential,
+ * for optimal CPU cache performance
+ */
+function checkMemoryAccessPattern(vdom: NodeIndex) {
+  let prevNode = new NodeIndex(-1);
+  let prevFact = new FactIndex(-1);
+  let prevElm = new ElmIndex(-1);
+
+  console.log('checkMemoryAccessPattern\n');
+
+  visitNode(vdom);
+
+  function visitNode(i: NodeIndex) {
+    assert(i instanceof NodeIndex, `expected NodeIndex, got ${i}`);
+    if (i.index < prevNode.index) {
+      console.log(`Went backwards from ${prevNode} to ${i}`)
+    } else {
+      console.log(i);
+    }
+    prevNode = i;
+
+    const words = nodes.words;
+    let index = i.index;
+    const word = words[index++];
+    assert(word in NodeType);
+    const type = word as NodeType;
+
+    switch (type) {
+      case NodeType.TEXT: {
+        index++;
+        visitElm(words[index] as any)
+        return;
+      }
+      case NodeType.NODE: {
+        const node: NodeNormal = {
+          type,
+          size: words[index++] as any,
+          tag: words[index++] as any,
+          nFacts: words[index++] as any,
+          facts: [],
+          children: [],
+        }
+        for (let f = 0; f < node.nFacts; f++) {
+          const factIndex: FactIndex = words[index++] as any
+          node.facts.push(factIndex)
+          visitFact(factIndex);
+        }
+        while (index < i.index + node.size.size) {
+          const child: NodeIndex = words[index++] as any;
+          if (!(child instanceof NodeIndex)) {
+            debugger;
+          }
+          node.children.push(child);
+          visitNode(child);
+        }
+        return;
+      }
+      default:
+        throw new Error(`Unhandled NodeType.${type}`);
+    }
+  }
+
+  function visitFact(i: FactIndex) {
+    assert(i instanceof FactIndex, `expected FactIndex, got ${i}`);
+    if (i.index < prevFact.index) {
+      console.log(`Went backwards from ${prevFact} to ${i}`)
+    } else {
+      console.log(i);
+    }
+    prevFact = i;
+
+    const words = facts.words;
+    let index = i.index;
+    const word = words[index++];
+    assert(word in FactType);
+    const type = word as FactType;
+
+    switch(type) {
+      case FactType.STYLE: {
+        visitElm(words[index++] as any);
+        visitElm(words[index++] as any);
+        return
+      }
+      default:
+        throw new Error(`Unhandled FactType.${type}`);
+    }
+  }
+
+  function visitElm(i: ElmIndex) {
+    assert(i instanceof ElmIndex, `expected ElmIndex, got ${i}`);
+    if (i.index < prevElm.index) {
+      console.log(`Went backwards from ${prevElm} to ${i}`)
+    } else {
+      console.log(i);
+    }
+    prevElm = i;
+  }
+}

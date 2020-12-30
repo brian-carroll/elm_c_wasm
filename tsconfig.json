@@ -3,7 +3,8 @@
     "lib": ["es2017", "dom"],
     "target": "es2017",
     "noImplicitAny": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "sourceMap": true
   },
   // "files": ["src/kernel/wrapper/wrapper.ts"],
   "exclude": ["node_modules", "**/*.spec.ts"]
