@@ -226,7 +226,7 @@ const node = (tag: string) => (
     tag: elmValues.prependWords(tag),
     nFacts: facts.length,
     children,
-    facts,
+    facts
   };
   return nodes.prependObject(obj);
 };
@@ -240,43 +240,10 @@ const style = (key: string, value: string): FactIndex => {
   const obj: FactStyle = {
     type: FactType.STYLE,
     key: k,
-    value: v,
+    value: v
   };
   return facts.prependObject(obj);
 };
-
-// ------------
-
-const ul = node('ul');
-const li = node('li');
-
-const view = ul(
-  null,
-  new List(
-    li(new List(style('color', 'red')), new List(text('hello'))),
-    new List(li(new List(style('margin', 'auto')), new List(text('world'))))
-  )
-);
-
-console.log(`
-nodes
-=====
-${nodes}
-`);
-
-console.log(`
-facts
-=====
-${facts}
-`);
-
-console.log(`
-elmValues
-=========
-${elmValues}
-`);
-
-checkMemoryAccessPattern(view);
 
 /**
  * Check the memory access pattern is sequential,
@@ -377,3 +344,50 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
     prevElm = i;
   }
 }
+
+// ------------
+
+const ul = node('ul');
+const li = node('li');
+
+const view = ul(
+  null,
+  new List(
+    li(
+      new List(style('color', 'red'), new List(style('padding', '10px'))),
+      new List(text('hello'), new List(text('there')))
+    ),
+    new List(
+      li(
+        new List(style('margin', 'auto'), new List(style('float', 'left'))),
+        new List(text('world'), new List(text('people')))
+      ),
+      new List(
+        li(
+          new List(style('color', 'blue'), new List(style('float', 'right'))),
+          new List(text(`what's`), new List(text('up?')))
+        )
+      )
+    )
+  )
+);
+
+console.log(`
+nodes
+=====
+${nodes}
+`);
+
+console.log(`
+facts
+=====
+${facts}
+`);
+
+console.log(`
+elmValues
+=========
+${elmValues}
+`);
+
+checkMemoryAccessPattern(view);
