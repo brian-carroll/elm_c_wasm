@@ -1,4 +1,4 @@
-import { assert } from "console";
+import { assert } from 'console';
 
 enum NodeType {
   TEXT = 'TEXT',
@@ -37,7 +37,7 @@ class VdomArray<I extends Index, W, O> {
         lines.push(`${i}\t${w}`);
       }
     });
-    return lines.join('\n')
+    return lines.join('\n');
   }
 
   prependWords(...words: W[]): I {
@@ -80,18 +80,30 @@ class Index {
 }
 
 class NodeIndex extends Index {
-  toString() { return `Node ${this.index}\t\t-> ${nodes.words[this.index]}`; }
+  toString() {
+    return `Node ${this.index}\t\t-> ${nodes.words[this.index]}`;
+  }
 }
 class FactIndex extends Index {
-  toString() { return `Fact ${this.index}\t\t-> ${facts.words[this.index]}`; }
+  toString() {
+    return `Fact ${this.index}\t\t-> ${facts.words[this.index]}`;
+  }
 }
 class ElmIndex extends Index {
-  toString() { return `ElmValue ${this.index}\t-> ${elmValues.words[this.index]}`; }
+  toString() {
+    return `ElmValue ${this.index}\t-> ${elmValues.words[this.index]}`;
+  }
 }
 
 class Size {
   constructor(public size: number) {}
-  toString() { return `{size: ${this.size}}` }
+  toString() {
+    return `{size: ${this.size}}`;
+  }
+}
+
+class List<T> {
+  constructor(public head: T, public tail: List<T> | null = null) {}
 }
 
 const nodes = new VdomArray<NodeIndex, NodeWord, VdomNode>(new NodeIndex(100));
@@ -185,38 +197,51 @@ interface FactAttrNS {
 
 type VdomFact = FactEvent | FactStyle | FactProp | FactAttr | FactAttrNS;
 
-
 const text = (content: string): NodeIndex => {
   const valueIndex = elmValues.prependWords(content);
   const obj: NodeText = {
     type: NodeType.TEXT,
     size: new Size(3),
-    valueIndex,
+    valueIndex
   };
   return nodes.prependObject(obj);
-}
+};
 
-const node = (tag: string) => (facts: FactIndex[], children: NodeIndex[]) => {
+const node = (tag: string) => (
+  factList: List<FactIndex> | null,
+  kidList: List<NodeIndex> | null
+) => {
+  const facts: FactIndex[] = [];
+  const children: NodeIndex[] = [];
+  for (; factList != null; factList = factList.tail) {
+    facts.unshift(factList.head);
+  }
+  for (; kidList != null; kidList = kidList.tail) {
+    children.unshift(kidList.head);
+  }
+
   const obj: NodeNormal = {
     type: NodeType.NODE,
     size: new Size(4 + facts.length + children.length),
     tag: elmValues.prependWords(tag),
     nFacts: facts.length,
-    facts,
     children,
-  }
+    facts,
+  };
   return nodes.prependObject(obj);
-}
-
+};
 
 // ------------
 
 const style = (key: string, value: string): FactIndex => {
+  // NOTE: allocating in reverse order to arg evaluation
+  const v = elmValues.prependWords(value);
+  const k = elmValues.prependWords(key);
   const obj: FactStyle = {
     type: FactType.STYLE,
-    key: elmValues.prependWords(key),
-    value: elmValues.prependWords(value),
-  }
+    key: k,
+    value: v,
+  };
   return facts.prependObject(obj);
 };
 
@@ -225,10 +250,13 @@ const style = (key: string, value: string): FactIndex => {
 const ul = node('ul');
 const li = node('li');
 
-const view = ul([], [
-  li([style("color", "red")], [text('hello')]),
-  li([style("margin", "auto")], [text('world')]),
-]);
+const view = ul(
+  null,
+  new List(
+    li(new List(style('color', 'red')), new List(text('hello'))),
+    new List(li(new List(style('margin', 'auto')), new List(text('world'))))
+  )
+);
 
 console.log(`
 nodes
@@ -250,7 +278,6 @@ ${elmValues}
 
 checkMemoryAccessPattern(view);
 
-
 /**
  * Check the memory access pattern is sequential,
  * for optimal CPU cache performance
@@ -267,7 +294,7 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
   function visitNode(i: NodeIndex) {
     assert(i instanceof NodeIndex, `expected NodeIndex, got ${i}`);
     if (i.index < prevNode.index) {
-      console.log(`Went backwards from ${prevNode} to ${i}`)
+      console.log(`Went backwards from ${prevNode} to ${i}`);
     } else {
       console.log(i);
     }
@@ -282,7 +309,7 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
     switch (type) {
       case NodeType.TEXT: {
         index++;
-        visitElm(words[index] as any)
+        visitElm(words[index] as any);
         return;
       }
       case NodeType.NODE: {
@@ -292,20 +319,20 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
           tag: words[index++] as any,
           nFacts: words[index++] as any,
           facts: [],
-          children: [],
-        }
-        for (let f = 0; f < node.nFacts; f++) {
-          const factIndex: FactIndex = words[index++] as any
-          node.facts.push(factIndex)
-          visitFact(factIndex);
-        }
-        while (index < i.index + node.size.size) {
+          children: []
+        };
+        const nChildren = node.size.size - 4 - node.nFacts;
+        for (let c = 0; c < nChildren; c++) {
           const child: NodeIndex = words[index++] as any;
-          if (!(child instanceof NodeIndex)) {
-            debugger;
-          }
+          if (!(child instanceof NodeIndex)) debugger;
           node.children.push(child);
           visitNode(child);
+        }
+        for (let f = 0; f < node.nFacts; f++) {
+          const factIndex: FactIndex = words[index++] as any;
+          if (!(factIndex instanceof FactIndex)) debugger;
+          node.facts.push(factIndex);
+          visitFact(factIndex);
         }
         return;
       }
@@ -317,7 +344,7 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
   function visitFact(i: FactIndex) {
     assert(i instanceof FactIndex, `expected FactIndex, got ${i}`);
     if (i.index < prevFact.index) {
-      console.log(`Went backwards from ${prevFact} to ${i}`)
+      console.log(`Went backwards from ${prevFact} to ${i}`);
     } else {
       console.log(i);
     }
@@ -329,11 +356,11 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
     assert(word in FactType);
     const type = word as FactType;
 
-    switch(type) {
+    switch (type) {
       case FactType.STYLE: {
         visitElm(words[index++] as any);
         visitElm(words[index++] as any);
-        return
+        return;
       }
       default:
         throw new Error(`Unhandled FactType.${type}`);
@@ -343,7 +370,7 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
   function visitElm(i: ElmIndex) {
     assert(i instanceof ElmIndex, `expected ElmIndex, got ${i}`);
     if (i.index < prevElm.index) {
-      console.log(`Went backwards from ${prevElm} to ${i}`)
+      console.log(`Went backwards from ${prevElm} to ${i}`);
     } else {
       console.log(i);
     }
