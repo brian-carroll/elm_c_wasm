@@ -98,13 +98,14 @@ class ElmIndex extends Index {
 class Size {
   constructor(public size: number) {}
   toString() {
-    return `{size: ${this.size}}`;
+    return `Size ${this.size}`;
   }
 }
 
-class List<T> {
-  constructor(public head: T, public tail: List<T> | null = null) {}
+class Cons<T> {
+  constructor(public head: T, public tail: List<T> = null) {}
 }
+type List<T> = Cons<T> | null;
 
 const nodes = new VdomArray<NodeIndex, NodeWord, VdomNode>(new NodeIndex(100));
 const facts = new VdomArray<FactIndex, FactWord, VdomFact>(new FactIndex(100));
@@ -208,8 +209,8 @@ const text = (content: string): NodeIndex => {
 };
 
 const node = (tag: string) => (
-  factList: List<FactIndex> | null,
-  kidList: List<NodeIndex> | null
+  factList: List<FactIndex>,
+  kidList: List<NodeIndex>
 ) => {
   const facts: FactIndex[] = [];
   const children: NodeIndex[] = [];
@@ -245,27 +246,39 @@ const style = (key: string, value: string): FactIndex => {
   return facts.prependObject(obj);
 };
 
-/**
- * Check the memory access pattern is sequential,
- * for optimal CPU cache performance
- */
 function checkMemoryAccessPattern(vdom: NodeIndex) {
-  let prevNode = new NodeIndex(-1);
-  let prevFact = new FactIndex(-1);
-  let prevElm = new ElmIndex(-1);
-
-  console.log('checkMemoryAccessPattern\n');
+  const nodeSeq: NodeIndex[] = [];
+  const factSeq: FactIndex[] = [];
+  const elmSeq: ElmIndex[] = [];
 
   visitNode(vdom);
 
+  console.log(`
+Memory access patterns
+
+For the most common Elm coding pattern, Vdom values will
+end up being arranged in memory in tree traversal order.
+That should give us the fastest diff on modern hardware,
+where memory access is the bottleneck.
+
+3 arrays in Vdom structure-of-arrays:
+
+${nodeSeq.join('\n')}
+
+${factSeq.join('\n')}
+
+${elmSeq.join('\n')}
+  `);
+
   function visitNode(i: NodeIndex) {
     assert(i instanceof NodeIndex, `expected NodeIndex, got ${i}`);
-    if (i.index < prevNode.index) {
+    const prevNode = nodeSeq[nodeSeq.length-1];
+    if (prevNode && i.index < prevNode.index) {
       console.log(`Went backwards from ${prevNode} to ${i}`);
     } else {
       console.log(i);
     }
-    prevNode = i;
+    nodeSeq.push(i);
 
     const words = nodes.words;
     let index = i.index;
@@ -310,12 +323,13 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
 
   function visitFact(i: FactIndex) {
     assert(i instanceof FactIndex, `expected FactIndex, got ${i}`);
-    if (i.index < prevFact.index) {
+    const prevFact = factSeq[factSeq.length-1];
+    if (prevFact && i.index < prevFact.index) {
       console.log(`Went backwards from ${prevFact} to ${i}`);
     } else {
       console.log(i);
     }
-    prevFact = i;
+    factSeq.push(i);
 
     const words = facts.words;
     let index = i.index;
@@ -336,12 +350,13 @@ function checkMemoryAccessPattern(vdom: NodeIndex) {
 
   function visitElm(i: ElmIndex) {
     assert(i instanceof ElmIndex, `expected ElmIndex, got ${i}`);
-    if (i.index < prevElm.index) {
+    const prevElm = elmSeq[elmSeq.length-1];
+    if (prevElm && i.index < prevElm.index) {
       console.log(`Went backwards from ${prevElm} to ${i}`);
     } else {
       console.log(i);
     }
-    prevElm = i;
+    elmSeq.push(i);
   }
 }
 
@@ -352,20 +367,20 @@ const li = node('li');
 
 const view = ul(
   null,
-  new List(
+  new Cons(
     li(
-      new List(style('color', 'red'), new List(style('padding', '10px'))),
-      new List(text('hello'), new List(text('there')))
+      new Cons(style('color', 'red'), new Cons(style('padding', '10px'))),
+      new Cons(text('hello'), new Cons(text('there')))
     ),
-    new List(
+    new Cons(
       li(
-        new List(style('margin', 'auto'), new List(style('float', 'left'))),
-        new List(text('world'), new List(text('people')))
+        new Cons(style('margin', 'auto'), new Cons(style('float', 'left'))),
+        new Cons(text('world'), new Cons(text('people')))
       ),
-      new List(
+      new Cons(
         li(
-          new List(style('color', 'blue'), new List(style('float', 'right'))),
-          new List(text(`what's`), new List(text('up?')))
+          new Cons(style('color', 'blue'), new Cons(style('float', 'right'))),
+          new Cons(text(`what's`), new Cons(text('up?')))
         )
       )
     )
