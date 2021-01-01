@@ -517,6 +517,24 @@ When someone gives us a Closure for event handling, we need to trace it for Vdom
 > Also it's hard to get away with using indices instead of pointers, since we have to pass Vdom to lists at least.
 
 
+# Memory management with regions
+
+![Diagrams of Virtual DOM heap with allocation "buckets"](./docs/images/vdom-heap-regions.png)
+
+- At start of `view` we can allocate 4 buckets:
+  - Nodes, Facts, patches, Elm
+- The Elm bucket is for Lists and Strings and JSON values that get allocated during view creation (not constants)
+- 3 different allocator functions
+  - The Node and Fact allocators are accessed from the Vdom library only.
+  - They pass some ID to a common allocator saying who they are.
+- Elm core lib allocator gets switched out for this new one during `view`
+
+## Top level memory manager
+- when main heap runs out of room, we have two choices
+  - if there's some free buckets at the bottom of vdom, take them now and request more memory later
+  - get more memory and move the whole vdom area up
+
+
 ==============================
 
 
@@ -772,7 +790,7 @@ Import one particular JS function and call it synchronously
 - converts decoder thunks and whatnot
 - Writes the result back
 - So it's a synchronous thunk evaluator. Just readWasmValue and write back the result.
-```js
+​```js
 var wasmWrapper;
 const imports = {
   evaluateInJs: addr => wasmWrapper.writeWasmValue(
