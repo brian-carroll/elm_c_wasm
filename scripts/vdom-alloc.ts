@@ -1,20 +1,17 @@
 import { assert } from 'console';
 
-enum NodeType {
-  TEXT = 'TEXT',
+enum VdomCtor {
   NODE = 'NODE',
+  NODE_TEXT = 'NODE_TEXT',
   KEYED_NODE = 'KEYED_NODE',
-  TAGGER = 'TAGGER',
-  THUNK = 'THUNK'
-  // CUSTOM = 'CUSTOM', // unused in elm org libs!
-}
-
-enum FactType {
-  EVENT = 'EVENT',
-  STYLE = 'STYLE',
-  PROP = 'PROP',
-  ATTR = 'ATTR',
-  ATTR_NS = 'ATTR_NS'
+  NODE_TAGGER = 'NODE_TAGGER',
+  NODE_THUNK = 'NODE_THUNK',
+  // NODE_CUSTOM = 'NODE_CUSTOM', // unused in elm org libs!
+  FACT_EVENT = 'FACT_EVENT',
+  FACT_STYLE = 'FACT_STYLE',
+  FACT_PROP = 'FACT_PROP',
+  FACT_ATTR = 'FACT_ATTR',
+  FACT_ATTR_NS = 'FACT_ATTR_NS'
 }
 
 class VdomArray<I extends Index, W, O> {
@@ -111,19 +108,19 @@ const nodes = new VdomArray<NodeIndex, NodeWord, VdomNode>(new NodeIndex(100));
 const facts = new VdomArray<FactIndex, FactWord, VdomFact>(new FactIndex(100));
 const elmValues = new VdomArray<ElmIndex, any, any>(new ElmIndex(100));
 
-type NodeWord = NodeType | number | ElmIndex | NodeIndex | FactIndex;
-type FactWord = FactType | ElmIndex;
+type NodeWord = VdomCtor | number | ElmIndex | NodeIndex | FactIndex;
+type FactWord = VdomCtor | ElmIndex;
 
 // 3 non-index values
 interface NodeText {
-  type: NodeType.TEXT;
+  type: VdomCtor.NODE_TEXT;
   size: Size;
   valueIndex: ElmIndex;
 }
 
 // 3 non-index values
 interface NodeNormal {
-  type: NodeType.NODE;
+  type: VdomCtor.NODE;
   size: Size;
   nFacts: number;
   tag: ElmIndex;
@@ -137,7 +134,7 @@ interface NodeNS extends NodeNormal {
 
 // 3 non-index values
 interface NodeKeyed {
-  type: NodeType.KEYED_NODE;
+  type: VdomCtor.KEYED_NODE;
   size: Size;
   nFacts: number;
   tag: ElmIndex;
@@ -153,7 +150,7 @@ interface NodeKeyedNS extends NodeKeyed {
 
 // 2 non-index values
 interface NodeTagger {
-  type: NodeType.TAGGER;
+  type: VdomCtor.NODE_TAGGER;
   size: Size;
   tagger: ElmIndex;
   nodeIndex: NodeIndex;
@@ -161,7 +158,7 @@ interface NodeTagger {
 
 // 2 non-index values
 interface NodeThunk {
-  type: NodeType.THUNK;
+  type: VdomCtor.NODE_THUNK;
   size: Size;
   nodeIndex: NodeIndex;
   thunk: ElmIndex;
@@ -172,35 +169,35 @@ type VdomNode = NodeText | NodeNormal | NodeKeyed | NodeTagger | NodeThunk;
 
 // 1 non-index value
 interface FactEvent {
-  type: FactType.EVENT;
+  type: VdomCtor.FACT_EVENT;
   key: ElmIndex;
   handler: ElmIndex;
 }
 
 // 1 non-index value
 interface FactStyle {
-  type: FactType.STYLE;
+  type: VdomCtor.FACT_STYLE;
   key: ElmIndex;
   value: ElmIndex;
 }
 
 // 1 non-index value
 interface FactProp {
-  type: FactType.PROP;
+  type: VdomCtor.FACT_PROP;
   key: ElmIndex;
   value: ElmIndex;
 }
 
 // 1 non-index value
 interface FactAttr {
-  type: FactType.ATTR;
+  type: VdomCtor.FACT_ATTR;
   key: ElmIndex;
   value: ElmIndex;
 }
 
 // 1 non-index value
 interface FactAttrNS {
-  type: FactType.ATTR_NS;
+  type: VdomCtor.FACT_ATTR_NS;
   key: ElmIndex;
   value: ElmIndex;
   namespace: ElmIndex;
@@ -211,7 +208,7 @@ type VdomFact = FactEvent | FactStyle | FactProp | FactAttr | FactAttrNS;
 const text = (content: string): NodeIndex => {
   const valueIndex = elmValues.prependWords(content);
   const obj: NodeText = {
-    type: NodeType.TEXT,
+    type: VdomCtor.NODE_TEXT,
     size: new Size(3),
     valueIndex
   };
@@ -232,7 +229,7 @@ const node = (tag: string) => (
   }
 
   const obj: NodeNormal = {
-    type: NodeType.NODE,
+    type: VdomCtor.NODE,
     size: new Size(4 + facts.length + children.length),
     tag: elmValues.prependWords(tag),
     nFacts: facts.length,
@@ -249,7 +246,7 @@ const style = (key: string, value: string): FactIndex => {
   const v = elmValues.prependWords(value);
   const k = elmValues.prependWords(key);
   const obj: FactStyle = {
-    type: FactType.STYLE,
+    type: VdomCtor.FACT_STYLE,
     key: k,
     value: v
   };
@@ -293,16 +290,16 @@ ${elmSeq.join('\n')}
     const words = nodes.words;
     let index = i.index;
     const word = words[index++];
-    assert(word in NodeType);
-    const type = word as NodeType;
+    assert(word in VdomCtor);
+    const type = word as VdomCtor;
 
     switch (type) {
-      case NodeType.TEXT: {
+      case VdomCtor.NODE_TEXT: {
         index++;
         visitElm(words[index] as any);
         return;
       }
-      case NodeType.NODE: {
+      case VdomCtor.NODE: {
         const node: NodeNormal = {
           type,
           size: words[index++] as any,
@@ -344,11 +341,11 @@ ${elmSeq.join('\n')}
     const words = facts.words;
     let index = i.index;
     const word = words[index++];
-    assert(word in FactType);
-    const type = word as FactType;
+    assert(word in VdomCtor);
+    const type = word as VdomCtor;
 
     switch (type) {
-      case FactType.STYLE: {
+      case VdomCtor.FACT_STYLE: {
         visitElm(words[index++] as any);
         visitElm(words[index++] as any);
         return;
