@@ -114,17 +114,19 @@ const elmValues = new VdomArray<ElmIndex, any, any>(new ElmIndex(100));
 type NodeWord = NodeType | number | ElmIndex | NodeIndex | FactIndex;
 type FactWord = FactType | ElmIndex;
 
+// 3 non-index values
 interface NodeText {
   type: NodeType.TEXT;
   size: Size;
   valueIndex: ElmIndex;
 }
 
+// 3 non-index values
 interface NodeNormal {
   type: NodeType.NODE;
   size: Size;
-  tag: ElmIndex;
   nFacts: number;
+  tag: ElmIndex;
   facts: FactIndex[];
   children: NodeIndex[];
 }
@@ -133,12 +135,13 @@ interface NodeNS extends NodeNormal {
   namespace: ElmIndex;
 }
 
+// 3 non-index values
 interface NodeKeyed {
   type: NodeType.KEYED_NODE;
   size: Size;
+  nFacts: number;
   tag: ElmIndex;
   namespace: ElmIndex;
-  nFacts: number;
   facts: FactIndex[];
   keysBegin: ElmIndex;
   children: NodeIndex[];
@@ -148,6 +151,7 @@ interface NodeKeyedNS extends NodeKeyed {
   namespace: ElmIndex;
 }
 
+// 2 non-index values
 interface NodeTagger {
   type: NodeType.TAGGER;
   size: Size;
@@ -155,6 +159,7 @@ interface NodeTagger {
   nodeIndex: NodeIndex;
 }
 
+// 2 non-index values
 interface NodeThunk {
   type: NodeType.THUNK;
   size: Size;
@@ -165,30 +170,35 @@ interface NodeThunk {
 
 type VdomNode = NodeText | NodeNormal | NodeKeyed | NodeTagger | NodeThunk;
 
+// 1 non-index value
 interface FactEvent {
   type: FactType.EVENT;
   key: ElmIndex;
   handler: ElmIndex;
 }
 
+// 1 non-index value
 interface FactStyle {
   type: FactType.STYLE;
   key: ElmIndex;
   value: ElmIndex;
 }
 
+// 1 non-index value
 interface FactProp {
   type: FactType.PROP;
   key: ElmIndex;
   value: ElmIndex;
 }
 
+// 1 non-index value
 interface FactAttr {
   type: FactType.ATTR;
   key: ElmIndex;
   value: ElmIndex;
 }
 
+// 1 non-index value
 interface FactAttrNS {
   type: FactType.ATTR_NS;
   key: ElmIndex;

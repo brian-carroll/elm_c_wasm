@@ -502,19 +502,23 @@ typedef struct {
 } Vdom;
 ```
 
+## Non-TEA crazy edge cases
+App devs can do stupid things that nonetheless have to work in the language semantics.
+
+### Creating Vdom nodes from the update function
+In case someone calls `div` from `update`, we have to make sure that the Vdom functions are using the main heap allocator during that time.
+Need to structure it to be swappable.
+Vdom constructors need to have an extra `if` even for normal use, which is unfortunate.
+
+### Passing Vdom nodes into update via event handlers
+When someone gives us a Closure for event handling, we need to trace it for Vdom nodes and copy them to the main heap if we see them.
+
+> This made me give up on strictly keeping all Vdom values in the Vdom arena. Either we allow them in the heap or we have some other place. But we then have to compact that area during main heap compaction anyway...
+> Also it's hard to get away with using indices instead of pointers, since we have to pass Vdom to lists at least.
+
+
 ==============================
 
-# What to do next to get motivated?
-
-- make programs work
-- to do that, I need
-  - better debuggability
-    - to do that, I need fewer border crossings
-    - to do that, I need the JS heap stuff, and there's not that much left (famous last words!)
-  - a smaller example program that I build up
-  - a Time module, based on Float or smaller Int
-    - Float is a lot easier to migrate to! Type help.
-    - Hurdle: kernel JS
 
 # Generate Wasm encoder for Msg
 
