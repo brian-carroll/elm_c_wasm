@@ -1,0 +1,42 @@
+<html>
+  <head>
+    <style>
+      body {
+        background-color: black;
+        color: gold;
+      }
+      .view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        margin: 20px;
+        font-size: 40px;
+      }
+      .view button {
+        padding: 10px;
+        margin: 20px;
+        font-size: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="elm-container">
+      <div id="main"></div>
+    </div>
+    <script src="dist/elm.js"></script>
+    <script>
+      function go() {
+        Elm.Main.init({
+          node: document.querySelector('#main')
+        });
+      }
+      if (Elm.onReady) {
+        Elm.onReady(go);  // Wait for Wasm async compilation
+      } else {
+        go();
+      }
+    </script>
+  </body>
+</html>
