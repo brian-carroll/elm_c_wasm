@@ -9,6 +9,16 @@ import Json.Decode as JD
 import Result exposing (Result(..))
 
 
+
+{-
+   stuff to test
+       - ports
+       - Cmd (done via HTTP)
+       - Json (more complicated structures, passed in from JS)
+       - Task
+-}
+
+
 type alias Model =
     { text : String }
 
