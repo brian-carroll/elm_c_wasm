@@ -238,15 +238,13 @@ function wasmDecodeTuple3(aDecoder, bDecoder, cDecoder) {
   };
 }
 
-// Fast list.map, using "tail recursion modulo cons" and tail call elimination
 function wasmDecodeList(itemDecoder) {
   return function (listAddr8) {
-    const nilAddr = wasmExports.getNil();
-    const tmp = _List_Cons(null, _List_Nil);
+    const nilAddr8 = wasmExports.getNil();
+    const tmp = _List_Cons(undefined, _List_Nil);
     let end = tmp;
 
-    while (true) {
-      if (listAddr8 === nilAddr) break;
+    while (listAddr8 !== nilAddr8) {
       const listIndex32 = listAddr8 >> 2;
       const headAddr8 = _Utils_mem32[listIndex32 + 1];
       const tailAddr8 = _Utils_mem32[listIndex32 + 2];
