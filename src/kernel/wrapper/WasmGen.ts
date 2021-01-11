@@ -13,7 +13,7 @@ import {
   WasmDecoder,
   _Wasm_encodeChar,
   ElmCurriedFunction,
-  _Wasm_decodeFloat,
+  _Wasm_decodeFloat
 } from './Wasm';
 
 /*
@@ -33,18 +33,23 @@ declare function __Utils_chr(s: string): String;
 /*
  * Wasm not written yet
  */
-export declare var _Wasm_detectCustomType: (addr: number) => (addr: number) => object;
-export declare var _Wasm_detectRecordType: (addr: number) => (addr: number) => object;
+export declare var _Wasm_detectCustomType: (
+  addr: number
+) => (addr: number) => object;
+export declare var _Wasm_detectRecordType: (
+  addr: number
+) => (addr: number) => object;
 
 /*
  * `Maybe` not written yet
  */
-declare var _Wasm_decode$elm$core$Maybe$Maybe: (inner: WasmDecoder) => WasmDecoder;
+declare var _Wasm_decode$elm$core$Maybe$Maybe: (
+  inner: WasmDecoder
+) => WasmDecoder;
 
 /*
  * `Parser` not written yet
  */
-
 
 /*
  * Http not written yet
@@ -52,10 +57,13 @@ declare var _Wasm_decode$elm$core$Maybe$Maybe: (inner: WasmDecoder) => WasmDecod
 declare function _Wasm_decode$elm$core$Task$MyCmd(addr: number): any;
 declare function _Wasm_decode$elm$http$Http$MySub(addr: number): any;
 declare function _Wasm_decode$elm$http$Http$Body(addr: number): any;
-declare function _Wasm_decode$elm$http$Http$Expect(typeVarDecoder: Function, addr: number): any;
+declare function _Wasm_decode$elm$http$Http$Expect(
+  typeVarDecoder: Function,
+  addr: number
+): any;
 declare function _Wasm_decode$elm$http$Http$Header(addr: number): any;
 
-export function _Wasm_decodePlatformLeaf(addr8: number) {
+export var _Wasm_decodePlatformLeaf = function (addr8: number): object {
   const index32 = addr8 >> 2;
   const effectTypeEnum = _Wasm_mem32[index32 + 2];
   const valueAddr = _Wasm_mem32[index32 + 3];
@@ -75,14 +83,16 @@ export function _Wasm_decodePlatformLeaf(addr8: number) {
     default:
       throw new Error('Corrupt WebAssembly memory at 0x' + addr8.toString(16));
   }
-}
+};
 
 function _Wasm_decode$elm$http$Http$MyCmd(addr8) {
   const index32 = addr8 >> 2;
   const ctor = _Wasm_mem32[index32 + 1];
   switch (ctor) {
     case 0:
-      return $elm$http$Http$Cancel(_Wasm_decodeString(_Wasm_mem32[index32 + 2]));
+      return $elm$http$Http$Cancel(
+        _Wasm_decodeString(_Wasm_mem32[index32 + 2])
+      );
     case 1:
       return $elm$http$Http$Request(
         _Wasm_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_method_timeout_tracker_url(
@@ -103,22 +113,23 @@ function _Wasm_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_met
   return {
     allowCookiesFromOtherDomains: _Wasm_decodeBool(_Wasm_mem32[index32 + 3]),
     body: _Wasm_decode$elm$http$Http$Body(_Wasm_mem32[index32 + 4]),
-    expect: _Wasm_decode$elm$http$Http$Expect(_Wasm_decodeAny, _Wasm_mem32[index32 + 5]),
-    headers: _Wasm_decodeList(_Wasm_decode$elm$http$Http$Header)( _Wasm_mem32[index32 + 6]),
+    expect: _Wasm_decode$elm$http$Http$Expect(
+      _Wasm_decodeAny,
+      _Wasm_mem32[index32 + 5]
+    ),
+    headers: _Wasm_decodeList(_Wasm_decode$elm$http$Http$Header)(
+      _Wasm_mem32[index32 + 6]
+    ),
     method: _Wasm_decodeString(_Wasm_mem32[index32 + 7]),
-    timeout: _Wasm_decode$elm$core$Maybe$Maybe(
-      _Wasm_decodeFloat)(
+    timeout: _Wasm_decode$elm$core$Maybe$Maybe(_Wasm_decodeFloat)(
       _Wasm_mem32[index32 + 8]
     ),
-    tracker: _Wasm_decode$elm$core$Maybe$Maybe(
-      _Wasm_decodeString)(
+    tracker: _Wasm_decode$elm$core$Maybe$Maybe(_Wasm_decodeString)(
       _Wasm_mem32[index32 + 9]
     ),
     url: _Wasm_decodeString(_Wasm_mem32[index32 + 10])
   };
 }
-
-
 
 // isAsciiCode : Int -> Int -> String -> Bool
 var _Parser_isAsciiCode = F3(function (code, offset, string) {
@@ -140,7 +151,7 @@ var _Parser_isSubChar = F3(function (predicate, offset, string) {
     : -1;
 });
 
-function _Wasm_callJsKernel(kernelFnIndex, argsAddr) {
+export function _Wasm_callJsKernel(kernelFnIndex: number, argsAddr: number) {
   const argsIndex32 = argsAddr >> 2;
   switch (kernelFnIndex) {
     case 0:

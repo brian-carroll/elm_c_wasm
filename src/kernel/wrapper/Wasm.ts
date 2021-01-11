@@ -1,4 +1,8 @@
-import {_Wasm_decodePlatformLeaf, _Wasm_detectCustomType, _Wasm_detectRecordType} from './WasmGen';
+import {
+  _Wasm_decodePlatformLeaf,
+  _Wasm_detectCustomType,
+  _Wasm_detectRecordType
+} from './WasmGen';
 
 interface Cons {
   $: '::' | 1;
@@ -10,12 +14,23 @@ type List = Cons | typeof _List_Nil;
 export type WasmDecoder = (addr: number) => any;
 export type WasmEncoder = (jsValue: any) => number;
 
-export interface ElmCurriedFunction {
-  (...args: any[]): any;
-  a?: number;
-  f?: Function;
-}
+export type ElmCurriedFunction =
+  | Function
+  | {
+      (...args: any[]): any;
+      a: number;
+      f: Function;
+    };
+
 declare function F2(fun: Function): ElmCurriedFunction;
+declare function F3(fun: Function): ElmCurriedFunction;
+declare function F4(fun: Function): ElmCurriedFunction;
+declare function F5(fun: Function): ElmCurriedFunction;
+declare function F6(fun: Function): ElmCurriedFunction;
+declare function F7(fun: Function): ElmCurriedFunction;
+declare function F8(fun: Function): ElmCurriedFunction;
+declare function F9(fun: Function): ElmCurriedFunction;
+
 declare function A2(fun: ElmCurriedFunction, a: any, b: any): any;
 declare var __Scheduler_send: ElmCurriedFunction;
 declare var _Platform_sendToSelf: ElmCurriedFunction;
@@ -27,7 +42,6 @@ declare function _Utils_Tuple2(a: any, b: any): object;
 declare function _Utils_Tuple3(a: any, b: any, c: any): object;
 declare function _List_Cons(a: any, b: List): Cons;
 declare function _List_toArray(list: List): any[];
-
 
 interface ElmWasmExports {
   getMains: () => number;
@@ -71,9 +85,11 @@ declare function _Wasm_decodePlatformNode(addr8: number): any;
 declare function _Wasm_decodePlatformMap(addr8: number): any;
 export declare var _Wasm_decodeBool: (addr8: number) => boolean;
 export declare var _Wasm_decodeFieldGroup: (addr8: number) => number[];
-export declare var _Wasm_decodeClosure: (argDecoders: Function[], resultEnc: Function) => (addr8: number) => boolean;
+
 declare var _Wasm_decodeJsRef: (addr8: number) => any;
 export declare var _Wasm_encodeChar: (chr: String) => number;
+export declare var _Wasm_encodeAny: (val: any) => number;
+export declare var _Wasm_encodeClosure: (f: Function) => number;
 
 const TAG_MASK = 0xf0000000;
 const TAG_SHIFT = 28;
@@ -88,13 +104,12 @@ export var _Wasm_mem32: Uint32Array;
 export var _Wasm_mem16: Uint16Array;
 const _Wasm_heapOverflow = new Error('Wasm heap overflow');
 
-
 export function _Wasm_decodePlatformEffects(addr8: number): any {
   const index32 = addr8 >> 2;
   const ctor = _Wasm_mem32[index32 + 1];
   switch (ctor) {
     // case 0:
-      // return _Wasm_decodePlatformSelf(addr8); // JS->JS only
+    // return _Wasm_decodePlatformSelf(addr8); // JS->JS only
     case 1:
       return _Wasm_decodePlatformLeaf(addr8);
     case 2:
@@ -106,12 +121,12 @@ export function _Wasm_decodePlatformEffects(addr8: number): any {
   }
 }
 
-export function _Wasm_decodeAny(addr8: number) {
-  const _Wasm_decoder = _Wasm_decodeDetectType(addr8);
+export function _Wasm_decodeAny(addr8: number): any {
+  const _Wasm_decoder: WasmDecoder = _Wasm_decodeDetectType(addr8);
   return _Wasm_decoder(addr8);
 }
 
-function _Wasm_decodeDetectType(addr8: number) {
+function _Wasm_decodeDetectType(addr8: number): WasmDecoder {
   const index32 = addr8 >> 2;
   const header = _Wasm_mem32[index32];
   const tag = (header & TAG_MASK) >> TAG_SHIFT;
@@ -146,8 +161,18 @@ function _Wasm_decodeDetectType(addr8: number) {
       return _Wasm_detectRecordType(addr8); // generated for all app Record types
     case 9:
       return _Wasm_decodeFieldGroup;
-    case 10:
-      return _Wasm_decodeClosure;
+    case 10: {
+      const arityWord = _Wasm_mem32[index32 + 1];
+      const n_values = arityWord & 0xffffffff;
+      const max_values = arityWord >> 16;
+      const arity = max_values - n_values;
+
+      const argEncoders: WasmEncoder[] = Array.from(
+        { length: arity }, // free vars are always 'any'; no need to specify
+        _ => _Wasm_encodeAny
+      );
+      return _Wasm_decodeClosure(argEncoders, _Wasm_decodeAny);
+    }
     case 11:
       return _Wasm_decodeJsRef;
     default:
@@ -180,7 +205,10 @@ export function _Wasm_decodeString(addr8: number) {
   return textDecoder.decode(words16);
 }
 
-export function _Wasm_decodeTuple2(aDecoder: WasmDecoder, bDecoder: WasmDecoder) {
+export function _Wasm_decodeTuple2(
+  aDecoder: WasmDecoder,
+  bDecoder: WasmDecoder
+) {
   return function (addr8: number) {
     const index32 = addr8 >> 2;
     const a = aDecoder(_Wasm_mem32[index32 + 1]);
@@ -189,7 +217,11 @@ export function _Wasm_decodeTuple2(aDecoder: WasmDecoder, bDecoder: WasmDecoder)
   };
 }
 
-export function _Wasm_decodeTuple3(aDecoder: WasmDecoder, bDecoder: WasmDecoder, cDecoder: WasmDecoder) {
+export function _Wasm_decodeTuple3(
+  aDecoder: WasmDecoder,
+  bDecoder: WasmDecoder,
+  cDecoder: WasmDecoder
+) {
   return function (addr8: number) {
     const index32 = addr8 >> 2;
     const a = aDecoder(_Wasm_mem32[index32 + 1]);
@@ -219,6 +251,58 @@ export function _Wasm_decodeList(itemDecoder: WasmDecoder) {
   };
 }
 
+export function _Wasm_decodeClosure(
+  argEncoders: WasmEncoder[],
+  resultDecoder: WasmDecoder
+) {
+  const identity = (f: Function) => f;
+  const functionWrappers = [identity, identity, F2, F3, F4, F5, F6, F7, F8, F9];
+
+  return function (addr8: number): ElmCurriedFunction {
+    const index32 = addr8 >> 2;
+    const arityWord = _Wasm_mem32[index32 + 1];
+    const evalFnPointer = _Wasm_mem32[index32 + 2];
+
+    const n_values = arityWord & 0xffffffff;
+    const max_values = arityWord >> 16;
+    const arity = max_values - n_values;
+
+    const freeVars = [];
+    for (let i = 0; i < n_values; i++) {
+      freeVars.push(_Wasm_decodeAny(_Wasm_mem32[index32 + 3 + i]));
+    }
+
+    const FN = functionWrappers[arity];
+    return FN(function wasmCallback() {
+      const totalArgs = freeVars.length + arguments.length;
+      if (totalArgs !== max_values) {
+        throw new Error(
+          `Trying to call a Wasm Closure with ${totalArgs} arguments instead of ${max_values}!`
+        );
+      }
+
+      const closureWords: number[] = [
+        _Wasm_Header(Tag.Closure, 3 + max_values),
+        (max_values << 16) | max_values,
+        evalFnPointer
+      ];
+      freeVars.forEach(fv => {
+        // TODO: better API for _Wasm_encode
+        closureWords.push(_Wasm_encode(_Wasm_encodeAny, fv));
+      });
+      for (let i = 0; i < arguments.length; i++) {
+        // TODO: better API for _Wasm_encode
+        const encoder = argEncoders[i];
+        closureWords.push(_Wasm_encode(encoder, arguments[i]));
+      }
+
+      const closureAddr = _Wasm_write32(closureWords);
+      const resultAddr = _Wasm_exports.evalClosure(closureAddr);
+      return resultDecoder(resultAddr);
+    });
+  };
+}
+
 function _Wasm_write32(words: number[]): number {
   const addr8 = _Wasm_writeIndex32 >> 2;
   const nextIndex = _Wasm_writeIndex32 + words.length;
@@ -231,7 +315,11 @@ function _Wasm_write32(words: number[]): number {
   return addr8;
 }
 
-export function _Wasm_encode(encoder: (val: any) => number, jsValue: any): number {
+// TODO: better API for this, don't want to call for every descendant of jsValue
+export function _Wasm_encode(
+  encoder: (val: any) => number,
+  jsValue: any
+): number {
   for (let attempts = 0; attempts < 2; attempts++) {
     try {
       const startAddr = _Wasm_exports.getWriteAddr();
