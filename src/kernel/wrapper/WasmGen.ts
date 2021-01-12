@@ -3,17 +3,17 @@ import {
   _Wasm_mem16,
   _Wasm_decodeAny,
   _Wasm_decodeInt,
-  _Wasm_encodeBool,
-  _Wasm_encodeInt,
-  _Wasm_encode,
-  _Wasm_decodeString,
+  _Wasm_decodeFloat,
   _Wasm_decodeBool,
+  _Wasm_decodeString,
+  _Wasm_encodeChar,
   _Wasm_decodeList,
   _Wasm_decodeClosure,
+  _Wasm_handleWrite,
+  _Wasm_encodeBool,
+  _Wasm_encodeInt,
   WasmDecoder,
-  _Wasm_encodeChar,
-  ElmCurriedFunction,
-  _Wasm_decodeFloat
+  ElmCurriedFunction
 } from './Wasm';
 
 /*
@@ -156,28 +156,32 @@ export function _Wasm_callJsKernel(kernelFnIndex: number, argsAddr: number) {
   switch (kernelFnIndex) {
     case 0:
       // isAsciiCode : Int -> Int -> String -> Bool
-      return _Wasm_encode(
-        _Wasm_encodeBool,
-        _Parser_isAsciiCode(
-          _Wasm_decodeInt(_Wasm_mem32[argsIndex32]),
-          _Wasm_decodeInt(_Wasm_mem32[argsIndex32 + 1]),
-          _Wasm_decodeString(_Wasm_mem32[argsIndex32 + 2])
-        )
-      );
+      return _Wasm_handleWrite(function (state) {
+        return _Wasm_encodeBool(
+          state,
+          _Parser_isAsciiCode(
+            _Wasm_decodeInt(_Wasm_mem32[argsIndex32]),
+            _Wasm_decodeInt(_Wasm_mem32[argsIndex32 + 1]),
+            _Wasm_decodeString(_Wasm_mem32[argsIndex32 + 2])
+          )
+        );
+      });
 
     case 1:
       // isSubChar : (Char -> Bool) -> Int -> String -> Int
-      return _Wasm_encode(
-        _Wasm_encodeInt,
-        _Parser_isSubChar(
-          _Wasm_decodeClosure(
-            [_Wasm_encodeChar],
-            _Wasm_decodeBool
-          )(_Wasm_mem32[argsIndex32]),
-          _Wasm_decodeInt(_Wasm_mem32[argsIndex32 + 1]),
-          _Wasm_decodeString(_Wasm_mem32[argsIndex32 + 2])
-        )
-      );
+      return _Wasm_handleWrite(function (state) {
+        return _Wasm_encodeInt(
+          state,
+          _Parser_isSubChar(
+            _Wasm_decodeClosure(
+              [_Wasm_encodeChar],
+              _Wasm_decodeBool
+            )(_Wasm_mem32[argsIndex32]),
+            _Wasm_decodeInt(_Wasm_mem32[argsIndex32 + 1]),
+            _Wasm_decodeString(_Wasm_mem32[argsIndex32 + 2])
+          )
+        );
+      });
 
     default:
       throw new Error('Unknown JS kernel function ' + kernelFnIndex);
