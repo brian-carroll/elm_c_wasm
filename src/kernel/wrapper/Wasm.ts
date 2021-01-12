@@ -11,13 +11,13 @@ interface Cons {
 }
 declare var _List_Nil: { $: '[]' | 0; b?: undefined };
 type List = Cons | typeof _List_Nil;
-interface WasmEncoderState {
+interface EncoderState {
   index: number;
   maxIndex: number;
 }
 
-export type WasmWriter = (state: WasmEncoderState) => number;
-export type WasmEncoder = (state: WasmEncoderState, jsValue: any) => number;
+export type WasmWriter = (state: EncoderState) => number;
+export type WasmEncoder = (state: EncoderState, jsValue: any) => number;
 export type WasmDecoder = (addr: number) => any;
 
 export type ElmCurriedFunction =
@@ -85,11 +85,13 @@ declare function _Wasm_decodePlatformNode(addr8: number): any;
 declare function _Wasm_decodePlatformMap(addr8: number): any;
 export declare var _Wasm_decodeBool: (addr8: number) => boolean;
 export declare var _Wasm_decodeFieldGroup: (addr8: number) => number[];
-
 declare var _Wasm_decodeJsRef: (addr8: number) => any;
-export declare var _Wasm_encodeChar: (state: WasmEncoderState, chr: String) => number;
-export declare var _Wasm_encodeAny: (state: WasmEncoderState, val: any) => number;
-export declare var _Wasm_encodeClosure: (state: WasmEncoderState, f: Function) => number;
+
+export declare var _Wasm_encodeAny: (state: EncoderState, val: any) => number;
+export declare var _Wasm_encodeClosure: (
+  state: EncoderState,
+  f: Function
+) => number;
 
 const TAG_MASK = 0xf0000000;
 const TAG_SHIFT = 28;
@@ -278,7 +280,7 @@ export function _Wasm_decodeClosure(
         );
       }
 
-      const closureAddr = _Wasm_handleWrite((state: WasmEncoderState) => {
+      const closureAddr = _Wasm_handleWrite((state: EncoderState) => {
         const closureWords: number[] = [
           _Wasm_Header(Tag.Closure, 3 + max_values),
           (max_values << 16) | max_values,
@@ -300,7 +302,7 @@ export function _Wasm_decodeClosure(
   };
 }
 
-function _Wasm_write32(state: WasmEncoderState, words: number[]): number {
+function _Wasm_write32(state: EncoderState, words: number[]): number {
   const addr8 = state.index >> 2;
   const nextIndex = state.index + words.length;
   if (nextIndex > state.maxIndex) {
@@ -315,9 +317,9 @@ function _Wasm_write32(state: WasmEncoderState, words: number[]): number {
 export function _Wasm_handleWrite(writer: WasmWriter): number {
   for (let attempts = 0; attempts < 2; attempts++) {
     try {
-      const state: WasmEncoderState = {
+      const state: EncoderState = {
         index: _Wasm_exports.getWriteAddr() >> 2,
-        maxIndex: _Wasm_exports.getMaxWriteAddr() >> 1,
+        maxIndex: _Wasm_exports.getMaxWriteAddr() >> 1
       };
       const addr8 = writer(state);
       _Wasm_exports.finishWritingAt(state.index << 2);
@@ -338,27 +340,117 @@ export function _Wasm_Header(tag: Tag, size: number): number {
   return (tag << TAG_SHIFT) | (size << SIZE_SHIFT);
 }
 
-export function _Wasm_encodeBool(_state: WasmEncoderState, jsValue: boolean): number {
+export function _Wasm_encodeBool(
+  _state: EncoderState,
+  jsValue: boolean
+): number {
   return jsValue ? _Wasm_exports.getTrue() : _Wasm_exports.getFalse();
 }
 
-export function _Wasm_encodeInt(state: WasmEncoderState, jsValue: number): number {
+export function _Wasm_encodeInt(state: EncoderState, jsValue: number): number {
   return _Wasm_write32(state, [_Wasm_Header(Tag.Int, 2), jsValue]);
 }
 
-export function _Wasm_encodeList(state: WasmEncoderState, itemEncoder: WasmEncoder) {
-  return function (list: List): number {
+export function _Wasm_encodeFloat(
+  state: EncoderState,
+  jsValue: number
+): number {
+  const size = 4;
+  if (state.index + size >= state.maxIndex) {
+    throw _Wasm_heapOverflow; // not using _Wasm_write32
+  }
+  const addr8 = state.index >> 2;
+  _Wasm_mem32[state.index++] = _Wasm_Header(Tag.Float, size);
+  _Wasm_mem32[state.index++] = 0;
+  _Wasm_exports.writeF64(state.index, jsValue);
+  state.index += 2;
+  return addr8;
+}
+
+export function _Wasm_encodeChar(state: EncoderState, s: String): number {
+  return _Wasm_encodeStringHelp(state, Tag.Char, s.valueOf());
+}
+
+export function _Wasm_encodeString(state: EncoderState, s: string): number {
+  return _Wasm_encodeStringHelp(state, Tag.String, s);
+}
+
+function _Wasm_encodeStringHelp(
+  state: EncoderState,
+  tag: Tag,
+  s: string
+): number {
+  const size = 1 + ((s.length + 1) >> 1); // round up to even length
+  if (state.index + size >= state.maxIndex) {
+    throw _Wasm_heapOverflow; // not using _Wasm_write32
+  }
+  const addr8 = state.index >> 2;
+
+  _Wasm_mem32[state.index++] = _Wasm_Header(tag, size);
+
+  const offset16 = state.index << 1;
+  let i = 0;
+  for (; i < s.length; i++) {
+    _Wasm_mem16[offset16 + i] = s.charCodeAt(i);
+  }
+  if (i % 2) {
+    _Wasm_mem16[offset16 + i] = 0; // padding for odd length
+  }
+  state.index += size - 1;
+
+  return addr8;
+}
+
+export function _Wasm_encodeList(itemEncoder: WasmEncoder) {
+  return function (state: EncoderState, list: List): number {
     const array = _List_toArray(list);
-    let head = _Wasm_exports.getNil();
-    // encode each value in the list
     for (let i = array.length - 1; i >= 0; i--) {
       array[i] = itemEncoder(state, array[i]);
     }
-    // encode the Cons cells, all together in memory
-    const header = _Wasm_Header(Tag.List, 3);
-    for (let i = array.length - 1; i >= 0; i--) {
-      head = _Wasm_write32(state, [header, array[i], head]);
+
+    // Write all Cons cells in one block. Less overflow checking & good for cache.
+    const listSize = 3 * array.length;
+    if (state.index + listSize >= state.maxIndex) {
+      throw _Wasm_heapOverflow; // not using _Wasm_write32 below
     }
+    const header = _Wasm_Header(Tag.List, 3);
+    let index = state.index;
+    let head = _Wasm_exports.getNil();
+    for (let i = array.length - 1; i >= 0; i--) {
+      const next = index >> 2;
+      _Wasm_mem32[index++] = header;
+      _Wasm_mem32[index++] = array[i];
+      _Wasm_mem32[index++] = head;
+      head = next;
+    }
+    state.index = index;
     return head;
+  };
+}
+
+export function _Wasm_encodeTuple2(
+  aEncoder: WasmEncoder,
+  bEncoder: WasmEncoder
+) {
+  return function (state: EncoderState, tuple: { a: any; b: any }): number {
+    const a = aEncoder(state, tuple.a);
+    const b = bEncoder(state, tuple.b);
+    return _Wasm_write32(state, [Tag.Tuple2, a, b]);
+  };
+}
+
+export function _Wasm_encodeTuple3(
+  aEncoder: WasmEncoder,
+  bEncoder: WasmEncoder,
+  cEncoder: WasmEncoder
+) {
+  return function (
+    state: EncoderState,
+    tuple: { a: any; b: any; c: any }
+  ): number {
+    const a = aEncoder(state, tuple.a);
+    const b = bEncoder(state, tuple.b);
+    const c = cEncoder(state, tuple.c);
+    return _Wasm_write32(state, [Tag.Tuple2, a, b, c]);
   };
 }
