@@ -1,17 +1,17 @@
 import {
-  _Wasm_mem32,
-  _Wasm_mem16,
+  _Wasm_mem_i32,
+  _Wasm_mem_u16,
   _Wasm_decodeAny,
   _Wasm_decodeInt,
   _Wasm_decodeFloat,
   _Wasm_decodeBool,
   _Wasm_decodeString,
-  _Wasm_encodeChar,
   _Wasm_decodeList,
   _Wasm_decodeClosure,
   _Wasm_handleWrite,
   _Wasm_encodeBool,
   _Wasm_encodeInt,
+  _Wasm_encodeChar,
   WasmDecoder,
   ElmCurriedFunction
 } from './Wasm';
@@ -65,8 +65,8 @@ declare function _Wasm_decode$elm$http$Http$Header(addr: number): any;
 
 export var _Wasm_decodePlatformLeaf = function (addr8: number): object {
   const index32 = addr8 >> 2;
-  const effectTypeEnum = _Wasm_mem32[index32 + 2];
-  const valueAddr = _Wasm_mem32[index32 + 3];
+  const effectTypeEnum = _Wasm_mem_i32[index32 + 2];
+  const valueAddr = _Wasm_mem_i32[index32 + 3];
   switch (effectTypeEnum) {
     case 0:
       return $elm$core$Task$command(
@@ -87,16 +87,16 @@ export var _Wasm_decodePlatformLeaf = function (addr8: number): object {
 
 function _Wasm_decode$elm$http$Http$MyCmd(addr8) {
   const index32 = addr8 >> 2;
-  const ctor = _Wasm_mem32[index32 + 1];
+  const ctor = _Wasm_mem_i32[index32 + 1];
   switch (ctor) {
     case 0:
       return $elm$http$Http$Cancel(
-        _Wasm_decodeString(_Wasm_mem32[index32 + 2])
+        _Wasm_decodeString(_Wasm_mem_i32[index32 + 2])
       );
     case 1:
       return $elm$http$Http$Request(
         _Wasm_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_method_timeout_tracker_url(
-          _Wasm_mem32[index32 + 2]
+          _Wasm_mem_i32[index32 + 2]
         )
       );
     default:
@@ -111,23 +111,23 @@ function _Wasm_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_met
 ) {
   const index32 = addr8 >> 2;
   return {
-    allowCookiesFromOtherDomains: _Wasm_decodeBool(_Wasm_mem32[index32 + 3]),
-    body: _Wasm_decode$elm$http$Http$Body(_Wasm_mem32[index32 + 4]),
+    allowCookiesFromOtherDomains: _Wasm_decodeBool(_Wasm_mem_i32[index32 + 3]),
+    body: _Wasm_decode$elm$http$Http$Body(_Wasm_mem_i32[index32 + 4]),
     expect: _Wasm_decode$elm$http$Http$Expect(
       _Wasm_decodeAny,
-      _Wasm_mem32[index32 + 5]
+      _Wasm_mem_i32[index32 + 5]
     ),
     headers: _Wasm_decodeList(_Wasm_decode$elm$http$Http$Header)(
-      _Wasm_mem32[index32 + 6]
+      _Wasm_mem_i32[index32 + 6]
     ),
-    method: _Wasm_decodeString(_Wasm_mem32[index32 + 7]),
+    method: _Wasm_decodeString(_Wasm_mem_i32[index32 + 7]),
     timeout: _Wasm_decode$elm$core$Maybe$Maybe(_Wasm_decodeFloat)(
-      _Wasm_mem32[index32 + 8]
+      _Wasm_mem_i32[index32 + 8]
     ),
     tracker: _Wasm_decode$elm$core$Maybe$Maybe(_Wasm_decodeString)(
-      _Wasm_mem32[index32 + 9]
+      _Wasm_mem_i32[index32 + 9]
     ),
-    url: _Wasm_decodeString(_Wasm_mem32[index32 + 10])
+    url: _Wasm_decodeString(_Wasm_mem_i32[index32 + 10])
   };
 }
 
@@ -160,9 +160,9 @@ export function _Wasm_callJsKernel(kernelFnIndex: number, argsAddr: number) {
         return _Wasm_encodeBool(
           state,
           _Parser_isAsciiCode(
-            _Wasm_decodeInt(_Wasm_mem32[argsIndex32]),
-            _Wasm_decodeInt(_Wasm_mem32[argsIndex32 + 1]),
-            _Wasm_decodeString(_Wasm_mem32[argsIndex32 + 2])
+            _Wasm_decodeInt(_Wasm_mem_i32[argsIndex32]),
+            _Wasm_decodeInt(_Wasm_mem_i32[argsIndex32 + 1]),
+            _Wasm_decodeString(_Wasm_mem_i32[argsIndex32 + 2])
           )
         );
       });
@@ -176,9 +176,9 @@ export function _Wasm_callJsKernel(kernelFnIndex: number, argsAddr: number) {
             _Wasm_decodeClosure(
               [_Wasm_encodeChar],
               _Wasm_decodeBool
-            )(_Wasm_mem32[argsIndex32]),
-            _Wasm_decodeInt(_Wasm_mem32[argsIndex32 + 1]),
-            _Wasm_decodeString(_Wasm_mem32[argsIndex32 + 2])
+            )(_Wasm_mem_i32[argsIndex32]),
+            _Wasm_decodeInt(_Wasm_mem_i32[argsIndex32 + 1]),
+            _Wasm_decodeString(_Wasm_mem_i32[argsIndex32 + 2])
           )
         );
       });
