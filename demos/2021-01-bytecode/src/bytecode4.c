@@ -54,7 +54,7 @@ void eval_author_project_Main_update() {
   eval_Utils_gt();
   if (*sp-- == &True) {
     *sp++ = &int_1;
-    *sp++ = *model;
+    *sp++ = *model; // fresh deref => OK if GC moved it during eval_Utils_gt call
     eval_Basics_add();
     ret = sp - 2; // return value location
     *ret = *sp; // copy data downwards
@@ -66,33 +66,5 @@ void eval_author_project_Main_update() {
     ret = sp - 2; // return value location
     *ret = *sp; // copy data downwards
     sp = ret;
-  }
-}
-
-void eval_Utils_gt() {
-  ElmValue* x = *sp--;
-  ElmValue* y = *sp--;
-  *sp++ = (compare_help(x, y) == &Utils_GT) ? &True : &False;
-}
-
-static void* compare_help(ElmValue* x, ElmValue* y) {
-  if (x == y) return &Utils_EQ;
-}
-
-void evalHigherOrderFunc() {
-  void* local_0_closure = *sp--;
-  void* local_1_arg1 = *sp--;
-  void* local_2_arg2 = *sp--;
-  // end of function preamble
-
-  // pointlessly load into stack again because no optimisation
-  *sp++ = local_1_arg1;  // LoadLocal
-  *sp++ = local_2_arg2;  // LoadLocal
-
-  Closure* c = (Closure*)local_0_closure;
-  if (c->n_values == 0 && c->max_values == 2) {
-    c->evaluator(NULL);  // doesn't need any args
-  } else {
-    Utils_apply(c, 2, NULL);
   }
 }
