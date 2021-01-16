@@ -1,17 +1,19 @@
 module Main exposing (main)
 
 import Browser
+import Core
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Http
-import Json.Decode as JD
+import Json.Decode as JD exposing (Value)
 import Result exposing (Result(..))
 
 
 
 {-
    stuff to test
+       - core libs
        - ports
        - Cmd (done via HTTP)
        - Json (more complicated structures, passed in from JS)
