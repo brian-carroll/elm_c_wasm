@@ -97,17 +97,18 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
     }
   }
 
-  log_error("Failed to find field %d in record fieldgroup at %zx\n",
-      search,
-      (size_t)fieldgroup);
-
-  return 0;
+  return -1;
 }
 
 void* Utils_access_eval(void* args[2]) {
   u32 field = (u32)(size_t)args[0];  // unboxed!
   Record* record = (Record*)args[1];
   u32 index = fieldgroup_search(record->fieldgroup, field);
+
+  if (index == -1) {
+      log_error("Failed to find field %d in record access at %p\n", field, record);
+  }
+
   return record->values[index];
 }
 
@@ -117,6 +118,11 @@ Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
 
   for (u32 i = 0; i < n_updates; ++i) {
     u32 field_pos = fieldgroup_search(r_new->fieldgroup, fields[i]);
+
+    if (field_pos == -1) {
+        log_error("Failed to find field %d in record update at %p\n", fields[i], r_new);
+    }
+
     r_new->values[field_pos] = values[i];
   }
 

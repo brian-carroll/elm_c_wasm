@@ -10,6 +10,7 @@ void* eval_List_append(void* args[]);
 extern Closure List_cons;
 extern Closure List_append;
 extern Closure List_map2;
+extern Closure List_sortBy;
 
 // toArray & fromArray
 // Needed because core Elm code leaks details of the JS implementation

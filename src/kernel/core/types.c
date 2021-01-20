@@ -171,9 +171,7 @@ Closure* ctorClosure(
 }
 
 u32 custom_params(Custom* c) {
-  u32 total_size = c->header.size * SIZE_UNIT;
-  u32 before_pointers = sizeof(Header) + sizeof(u32);
-  return (total_size - before_pointers) / sizeof(void*);
+  return c->header.size - (sizeof(Custom) / SIZE_UNIT);
 }
 
 Cons Nil = {.header = HEADER_LIST, .head = NULL, .tail = NULL};

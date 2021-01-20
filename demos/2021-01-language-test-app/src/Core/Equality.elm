@@ -32,13 +32,18 @@ tests =
                 , test "ctor diff, special case" <| \() -> Expect.equal True ({ ctor = Just 3 } /= { ctor = Nothing })
                 ]
 
-        listTests =
-            describe "List equality"
-                [ fuzz2 (Fuzz.intRange 100 10000) (Fuzz.intRange 100 10000) "Simple comparison" <|
-                    \size1 size2 ->
-                        Expect.equal
-                            (size1 == size2)
-                            (List.range 0 size1 == List.range 0 size2)
-                ]
+        -- listTests =
+        --     describe "List equality"
+        --         [ fuzz2 (Fuzz.intRange 100 10000) (Fuzz.intRange 100 10000) "Simple comparison" <|
+        --             \size1 size2 ->
+        --                 Expect.equal
+        --                     (size1 == size2)
+        --                     (List.range 0 size1 == List.range 0 size2)
+        --         ]
     in
-    describe "Equality Tests" [ diffTests, recordTests, listTests ]
+    describe "Equality Tests"
+        [ diffTests
+        , recordTests
+
+        -- , listTests
+        ]

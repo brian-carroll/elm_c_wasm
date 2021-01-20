@@ -72,14 +72,14 @@ tests =
         hex : Test
         hex =
             describe "Hex"
-                [ test "0xFFFFFFFF" <|
+                [ test "0x7FFFFFFF" <|
                     \() ->
-                        0xFFFFFFFF
-                            |> Expect.equal 4294967295
-                , test "0xD066F00D" <|
+                        0x7FFFFFFF
+                            |> Expect.equal 2147483647
+                , test "0x8BADF00D" <|
                     \() ->
-                        0xD066F00D
-                            |> Expect.equal 3496407053
+                        0x8BADF00D
+                            |> Expect.equal 2343432205
                 , test "0x00" <|
                     \() ->
                         0x00

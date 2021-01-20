@@ -62,46 +62,54 @@ typedef struct {
 // Header size field has units corresponding to this many bytes:
 #define SIZE_UNIT sizeof(void*)
 
+#define SIZE_INT sizeof(ElmInt) / SIZE_UNIT
+#define SIZE_FLOAT sizeof(ElmFloat) / SIZE_UNIT
+#define SIZE_CHAR sizeof(ElmChar) / SIZE_UNIT
+#define SIZE_STRING(utf16len) \
+  (sizeof(Header) + (sizeof(u16) * utf16len) + SIZE_UNIT - 1) / SIZE_UNIT
+#define SIZE_LIST sizeof(Cons) / SIZE_UNIT
+#define SIZE_TUPLE2 sizeof(Tuple2) / SIZE_UNIT
+#define SIZE_TUPLE3 sizeof(Tuple3) / SIZE_UNIT
+#define SIZE_CUSTOM(p) (sizeof(Custom) + p * sizeof(void*)) / SIZE_UNIT
+#define SIZE_RECORD(p) (sizeof(Record) + p * sizeof(void*)) / SIZE_UNIT
+#define SIZE_FIELDGROUP(p) (sizeof(FieldGroup) + p * sizeof(u32)) / SIZE_UNIT
+#define SIZE_CLOSURE(p) (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT
+#define SIZE_JS_REF sizeof(JsRef) / SIZE_UNIT
+#define SIZE_GC_STACK_MAP sizeof(GcStackMap) / SIZE_UNIT
+
 #define HEADER_INT \
-  (Header) { .tag = Tag_Int, .size = sizeof(ElmInt) / SIZE_UNIT }
+  (Header) { .tag = Tag_Int, .size = SIZE_INT }
 #define HEADER_FLOAT \
-  (Header) { .tag = Tag_Float, .size = sizeof(ElmFloat) / SIZE_UNIT }
+  (Header) { .tag = Tag_Float, .size = SIZE_FLOAT }
 #define HEADER_CHAR \
-  (Header) { .tag = Tag_Char, .size = sizeof(ElmChar) / SIZE_UNIT }
-#define HEADER_STRING(utf16len)                                                     \
-  (Header) {                                                                        \
-    .tag = Tag_String,                                                              \
-    .size = (sizeof(Header) + (sizeof(u16) * utf16len) + SIZE_UNIT - 1) / SIZE_UNIT \
-  }
+  (Header) { .tag = Tag_Char, .size = SIZE_CHAR }
+#define HEADER_STRING(utf16len) \
+  (Header) { .tag = Tag_String, .size = SIZE_STRING(utf16len) }
 #define HEADER_LIST \
-  (Header) { .tag = Tag_List, .size = sizeof(Cons) / SIZE_UNIT }
+  (Header) { .tag = Tag_List, .size = SIZE_LIST }
 #define HEADER_TUPLE2 \
-  (Header) { .tag = Tag_Tuple2, .size = sizeof(Tuple2) / SIZE_UNIT }
+  (Header) { .tag = Tag_Tuple2, .size = SIZE_TUPLE2 }
 #define HEADER_TUPLE3 \
-  (Header) { .tag = Tag_Tuple3, .size = sizeof(Tuple3) / SIZE_UNIT }
+  (Header) { .tag = Tag_Tuple3, .size = SIZE_TUPLE3 }
 #define HEADER_CUSTOM(p) \
-  (Header) { .tag = Tag_Custom, .size = (sizeof(Custom) + p * sizeof(void*)) / SIZE_UNIT }
+  (Header) { .tag = Tag_Custom, .size = SIZE_CUSTOM(p) }
 #define HEADER_RECORD(p) \
-  (Header) { .tag = Tag_Record, .size = (sizeof(Record) + p * sizeof(void*)) / SIZE_UNIT }
-#define HEADER_FIELDGROUP(p)                                                          \
-  (Header) {                                                                          \
-    .tag = Tag_FieldGroup, .size = (sizeof(FieldGroup) + p * sizeof(u32)) / SIZE_UNIT \
-  }
-#define HEADER_CLOSURE(p)                                                         \
-  (Header) {                                                                      \
-    .tag = Tag_Closure, .size = (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT \
-  }
+  (Header) { .tag = Tag_Record, .size = SIZE_RECORD(p) }
+#define HEADER_FIELDGROUP(p) \
+  (Header) { .tag = Tag_FieldGroup, .size = SIZE_FIELDGROUP(p) }
+#define HEADER_CLOSURE(p) \
+  (Header) { .tag = Tag_Closure, .size = SIZE_CLOSURE(p) }
 #define HEADER_JS_REF \
-  (Header) { .tag = Tag_JsRef, .size = sizeof(JsRef) / SIZE_UNIT }
+  (Header) { .tag = Tag_JsRef, .size = SIZE_JS_REF }
 
 #define HEADER_GC_STACK_EMPTY \
-  (Header) { .tag = Tag_GcStackEmpty, .size = sizeof(GcStackMap) / SIZE_UNIT }
+  (Header) { .tag = Tag_GcStackEmpty, .size = SIZE_GC_STACK_MAP }
 #define HEADER_GC_STACK_PUSH \
-  (Header) { .tag = Tag_GcStackPush, .size = sizeof(GcStackMap) / SIZE_UNIT }
+  (Header) { .tag = Tag_GcStackPush, .size = SIZE_GC_STACK_MAP }
 #define HEADER_GC_STACK_POP \
-  (Header) { .tag = Tag_GcStackPop, .size = sizeof(GcStackMap) / SIZE_UNIT }
+  (Header) { .tag = Tag_GcStackPop, .size = SIZE_GC_STACK_MAP }
 #define HEADER_GC_STACK_TC \
-  (Header) { .tag = Tag_GcStackTailCall, .size = sizeof(GcStackMap) / SIZE_UNIT }
+  (Header) { .tag = Tag_GcStackTailCall, .size = SIZE_GC_STACK_MAP }
 
 #define CAN_THROW(expr)                                 \
   ({                                                    \
@@ -244,7 +252,7 @@ typedef struct {
   u16 n_values;  // current number of applied args
   u16 max_values;
   void* (*evaluator)(void*[]);  // pointer to a function that takes an array of pointers
-                                 // and returns a pointer
+                                // and returns a pointer
   void* values[];
 } Closure;
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm

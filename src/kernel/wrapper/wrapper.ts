@@ -34,6 +34,8 @@ interface ElmWasmExports {
   evalClosure: (addr: number) => number;
   collectGarbage: () => void;
   debugHeapState: () => void;
+  debugAddrRange: (start: number, size: number) => void;
+  debugEvaluatorName: (evalId: number) => void;
 }
 
 /**
@@ -144,16 +146,23 @@ function wrapWasmElmApp(
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
-    fieldGroups: generatedAppTypes.fieldGroups.reduce(
-      (enumObj: NameToInt & IntToNames, name) => {
-        const addr = wasmExports.getFieldGroups();
-        enumObj[name] = addr;
-        enumObj[addr] = name.split(' ');
+    fieldGroups: mapFieldGroups(),
+  };
+  function mapFieldGroups(): NameToInt & IntToNames {
+    let fgPointersAddr = wasmExports.getFieldGroups();
+    return generatedAppTypes.fieldGroups.reduce(
+      (enumObj: NameToInt & IntToNames, name: string) => {
+        const fgIndex = fgPointersAddr >> 2;
+        const fgAddr = mem32[fgIndex];
+        fgPointersAddr += 4;
+        if (!fgAddr) throw new Error('Ran out of Wasm fieldgroups');
+        enumObj[name] = fgAddr;
+        enumObj[fgAddr] = name.split(' ');
         return enumObj;
       },
       {}
     )
-  };
+  }
 
   function arrayToEnum(names: string[]): NameToInt & IntToName {
     return names.reduce((enumObj: NameToInt & IntToName, name, index) => {
@@ -386,12 +395,24 @@ function wrapWasmElmApp(
         jsChildren: args,
         bodyWriter: null
       };
-      const addr = handleWasmWrite((startIndex: number) => {
+      const closureAddr = handleWasmWrite((startIndex: number) => {
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
-      const resultAddr = wasmExports.evalClosure(addr);
-      const resultValue = readWasmValue(resultAddr);
-      return resultValue;
+      try {
+        const resultAddr = wasmExports.evalClosure(closureAddr);
+        const resultValue = readWasmValue(resultAddr);
+        return resultValue;  
+      }
+      catch (e) {
+        wasmExports.debugEvaluatorName(evaluator);
+        console.log('Wasm callback error', {
+          evaluator,
+          freeVars,
+          args,
+          closureAddr: closureAddr.toString(16),
+        });
+        throw e;
+      }
     }
     // Attach info in case we have to write this Closure back to Wasm
     wasmCallback.freeVars = freeVars;
@@ -426,17 +447,18 @@ function wrapWasmElmApp(
 
   function handleWasmWrite(writer: (nextIndex: number) => WriteResult): number {
     for (let attempts = 0; attempts < 2; attempts++) {
+      const maxAddr = wasmExports.getMaxWriteAddr();
+      maxWriteIndex16 = maxAddr >> 1;
+      maxWriteIndex32 = maxAddr >> 2;
+      const startAddr = wasmExports.getWriteAddr();
+      const startIndex = startAddr >> 2;
       try {
-        const maxAddr = wasmExports.getMaxWriteAddr();
-        maxWriteIndex16 = maxAddr >> 1;
-        maxWriteIndex32 = maxAddr >> 2;
-        const startAddr = wasmExports.getWriteAddr();
-        const startIndex = startAddr >> 2;
         const result: WriteResult = writer(startIndex);
         wasmExports.finishWritingAt(result.nextIndex << 2);
         return result.addr;
       } catch (e) {
         if (e === heapOverflowError) {
+          console.log('Wrapper handleWasmWrite heap overflow, running GC', {startAddr, maxAddr});
           wasmExports.collectGarbage();
         } else {
           console.error(e);
@@ -971,17 +993,12 @@ function wrapWasmElmApp(
 
   const mains: any[] = [];
 
-  wasmExports.debugHeapState();
-
   const deref = (addr: number) => mem32[addr >> 2];
   let mainsArrayEntryAddr = wasmExports.getMains();
-  console.log({mainsArrayEntryAddr}) // 10856 (2a68)
   while (true) {
-    const gcRootAddr = deref(mainsArrayEntryAddr); // 12484 (0x30c4)
-    console.log({gcRootAddr})
+    const gcRootAddr = deref(mainsArrayEntryAddr);
     if (!gcRootAddr) break;
     const mainAddr = deref(gcRootAddr);
-    console.log({mainAddr})
     if (!mainAddr) break;
     mains.push(readWasmValue(mainAddr));
     mainsArrayEntryAddr += 4;

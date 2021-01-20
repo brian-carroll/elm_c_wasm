@@ -711,6 +711,9 @@ void* GC_apply_replay(void** apply_push) {
    ==================================================== */
 
 static void collect(GcState* state, size_t* ignore_below) {
+  printf("skipping GC for debug, was requested from %p\n", ignore_below);
+  return;
+  printf("collecting garbage from %p\n", ignore_below);
   mark(state, ignore_below);
   compact(state, ignore_below);
   sweepJsRefs(ignore_below == gc_state.heap.start);

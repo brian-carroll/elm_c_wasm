@@ -7,7 +7,7 @@ extra_opt="$extra_opt -DDEBUG"
 extra_opt="$extra_opt -O1"
 
 extra_opt="$extra_opt -g4"
-extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/"
+extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/dist/"
 
 mkdir -p dist
 
@@ -35,3 +35,13 @@ emcc build/codemods/$FILENAME.c \
 #   -s MODULARIZE=1 \
 
 set +x
+
+
+if grep error emcc.log
+then
+  head -n 20 emcc.log
+else
+  echo
+  echo "SUCCESS"
+  echo
+fi

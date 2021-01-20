@@ -106,3 +106,13 @@ Closure List_map2 = {
     .evaluator = &eval_List_map2,
     .max_values = 3,
 };
+
+// Dummy to get core tests running
+void* eval_List_sortBy(void* args[]) {
+  return &Nil;
+}
+Closure List_sortBy = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_List_sortBy,
+    .max_values = 2,
+};

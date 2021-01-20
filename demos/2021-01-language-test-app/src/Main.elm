@@ -7,7 +7,9 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as JD exposing (Value)
+import Random
 import Result exposing (Result(..))
+import Test.Runner.Html as TestHtml
 
 
 
@@ -64,9 +66,17 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
+    let
+        testConfig =
+            TestHtml.defaultConfig (Random.initialSeed 10000)
+    in
     div [ class "view" ]
         [ button [ onClick ButtonClicked ] [ text "LOAD" ]
         , div [] [ text model.text ]
+        , div []
+            [ h1 [] [ text "core tests" ]
+            , TestHtml.viewResults testConfig Core.tests
+            ]
         ]
 
 
@@ -78,3 +88,20 @@ main =
         , update = update
         , subscriptions = \_ -> Sub.none
         }
+
+
+
+{-
+   TODO
+   pattern match tests
+
+
+   tuple destructuring
+   scope tests with `let`, local function vars, nesting...
+   TCE free vars, scopes
+   functin application tests
+    - partial application
+    - too many args
+    - apply args to returned function
+
+-}

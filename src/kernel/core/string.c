@@ -143,6 +143,32 @@ Closure String_length = {
 };
 
 /*
+ * String.foldr
+ */
+static void* eval_String_foldr(void* args[]) {
+  Closure* func = args[0];
+  void* state = args[1];
+  ElmString16* string = args[2];
+
+  size_t i = code_units(string);
+  while (i--) {
+    u32 word = string->words16[i];
+    if (0xDC00 <= word && word <= 0xDFFF) {
+      i--;
+      word = (word << 16) | string->words16[i];
+    }
+    ElmChar* c = NEW_ELM_CHAR(word);
+    state = A2(func, c, state);
+  }
+  return state;
+}
+Closure String_foldr = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_foldr,
+    .max_values = 3,
+};
+
+/*
  * String.split
  */
 static void* eval_String_split(void* args[]) {
@@ -556,5 +582,32 @@ static void* eval_String_toInt(void* args[]) {
 Closure String_toInt = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_String_toInt,
+    .max_values = 1,
+};
+
+/*
+ * String.toFloat
+ */
+static void* eval_String_toFloat(void* args[]) {
+  ElmString16* s = args[0];
+  size_t len = code_units(s);
+  char ascii[len];
+  size_t i = 0;
+  for (; i < len; i++) {
+    u16 word = s->words16[i];
+    if (word > 127) break;
+    ascii[i] = word;
+  }
+  ascii[i] = 0;
+
+  f64 value;
+  int successChars = sscanf(ascii, "%lf", &value);
+
+  return (successChars > 0) ? A1(&g_elm_core_Maybe_Just, NEW_ELM_FLOAT(value))
+                            : &g_elm_core_Maybe_Nothing;
+}
+Closure String_toFloat = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_String_toFloat,
     .max_values = 1,
 };

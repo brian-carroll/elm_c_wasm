@@ -42,6 +42,10 @@ extern char etext, edata, end;  // memory regions, defined by linker
 #endif
 
 void pretty_print_child(int indent, void* p) {
+  if (indent > 10) {
+    printf("...etc...\n");
+    return;
+  }
   printf(FORMAT_PTR, p);
   for (int i = 0; i < indent; i++) {
     printf(" ");
@@ -50,6 +54,15 @@ void pretty_print_child(int indent, void* p) {
 }
 
 static void Debug_prettyHelp(int indent, void* p) {
+  if (p == NULL) {
+    printf("NULL\n");
+    return;
+  }
+  if (indent > 10) {
+    printf("...etc...\n");
+    return;
+  }
+
   ElmValue* v = p;
 
   int deeper = indent + 2;
@@ -115,8 +128,13 @@ static void Debug_prettyHelp(int indent, void* p) {
         printf("[]\n");
       } else {
         printf("[\n");
+        size_t count = 0;
         for (Cons* cell = p; cell != &Nil; cell = cell->tail) {
           pretty_print_child(deeper, cell->head);
+          if (count++ > 10) {
+            printf("...\n");
+            break;
+          }
         }
         print_indent(FORMAT_PTR_LEN + indent);
         printf("]\n");
@@ -148,7 +166,7 @@ static void Debug_prettyHelp(int indent, void* p) {
       } else {
         printf("Custom (ctor %d)\n", ctor);
       }
-      for (int i = 0; i < custom_params(p); i++) {
+      for (int i = 0; i < custom_params(p) && i < 10; i++) {
         pretty_print_child(deeper, v->custom.values[i]);
       }
       break;
@@ -157,7 +175,7 @@ static void Debug_prettyHelp(int indent, void* p) {
       printf("{\n");
       FieldGroup* fg = v->record.fieldgroup;
       u32 n_fields = v->header.size - (sizeof(Record) / SIZE_UNIT);
-      for (int i = 0; i < n_fields; i++) {
+      for (int i = 0; i < n_fields && i < 10; i++) {
         void* child = v->custom.values[i];
         printf(FORMAT_PTR, child);
         print_indent(deeper);
@@ -177,7 +195,7 @@ static void Debug_prettyHelp(int indent, void* p) {
     case Tag_FieldGroup: {
       printf("FieldGroup\n");
       u32 n_fields = v->fieldgroup.size;
-      for (int i = 0; i < n_fields; i++) {
+      for (int i = 0; i < n_fields && i < 10; i++) {
         print_indent(deeper);
         u32 field = v->fieldgroup.fields[i];
         if (field < Debug_fields_size) {
@@ -202,7 +220,7 @@ static void Debug_prettyHelp(int indent, void* p) {
         }
       }
       printf("Closure %s\n", name);
-      for (int i = 0; i < v->closure.n_values; i++) {
+      for (int i = 0; i < v->closure.n_values && i < 10; i++) {
         pretty_print_child(deeper, v->closure.values[i]);
       }
       break;
@@ -453,7 +471,7 @@ void Debug_pause() {
 void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  print_heap();
+  // print_heap();
   print_state();
   printf("Unit = %p\n", &Unit);
   printf("True = %p\n", &True);

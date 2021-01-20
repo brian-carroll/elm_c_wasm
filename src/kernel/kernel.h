@@ -7,3 +7,4 @@
 #include "core/core.h"
 #include "json/json.h"
 #include "wrapper/wrapper.h"
+#include "test/test.h"

@@ -14,7 +14,7 @@ extern Closure String_length;
 // extern Closure String_filter;
 // extern Closure String_reverse;
 // extern Closure String_foldl;
-// extern Closure String_foldr;
+extern Closure String_foldr;
 extern Closure String_split;
 extern Closure String_join;
 extern Closure String_slice;
@@ -33,7 +33,7 @@ extern Closure String_endsWith;
 extern Closure String_indexes;
 extern Closure String_fromNumber;
 extern Closure String_toInt;
-// extern Closure String_toFloat;
+extern Closure String_toFloat;
 // extern Closure String_fromList;
 
 #endif

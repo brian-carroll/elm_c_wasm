@@ -61,32 +61,33 @@ tests =
             , test "0-9" <| \() -> Expect.equal decCodes (List.map toCode dec)
             , test "UTF-16" <| \() -> Expect.equal 0x0001D306 (Char.toCode '𝌆')
             ]
-        , describe "fromCode"
-            [ test "a-z" <| \() -> Expect.equal lower (List.map fromCode lowerCodes)
-            , test "A-Z" <| \() -> Expect.equal upper (List.map fromCode upperCodes)
-            , test "0-9" <| \() -> Expect.equal dec (List.map fromCode decCodes)
-            , test "UTF-16" <| \() -> Expect.equal '𝌆' (Char.fromCode 0x0001D306)
-            ]
-        , describe "toLocaleLower"
-            [ test "a-z" <| \() -> Expect.equal lower (List.map toLocaleLower lower)
-            , test "A-Z" <| \() -> Expect.equal lower (List.map toLocaleLower upper)
-            , test "0-9" <| \() -> Expect.equal dec (List.map toLocaleLower dec)
-            ]
-        , describe "toLocaleUpper"
-            [ test "a-z" <| \() -> Expect.equal upper (List.map toLocaleUpper lower)
-            , test "A-Z" <| \() -> Expect.equal upper (List.map toLocaleUpper upper)
-            , test "0-9" <| \() -> Expect.equal dec (List.map toLocaleUpper dec)
-            ]
-        , describe "toLower"
-            [ test "a-z" <| \() -> Expect.equal lower (List.map toLower lower)
-            , test "A-Z" <| \() -> Expect.equal lower (List.map toLower upper)
-            , test "0-9" <| \() -> Expect.equal dec (List.map toLower dec)
-            ]
-        , describe "toUpper"
-            [ test "a-z" <| \() -> Expect.equal upper (List.map toUpper lower)
-            , test "A-Z" <| \() -> Expect.equal upper (List.map toUpper upper)
-            , test "0-9" <| \() -> Expect.equal dec (List.map toUpper dec)
-            ]
+
+        -- , describe "fromCode"
+        --     [ test "a-z" <| \() -> Expect.equal lower (List.map fromCode lowerCodes)
+        --     , test "A-Z" <| \() -> Expect.equal upper (List.map fromCode upperCodes)
+        --     , test "0-9" <| \() -> Expect.equal dec (List.map fromCode decCodes)
+        --     , test "UTF-16" <| \() -> Expect.equal '𝌆' (Char.fromCode 0x0001D306)
+        --     ]
+        -- , describe "toLocaleLower"
+        --     [ test "a-z" <| \() -> Expect.equal lower (List.map toLocaleLower lower)
+        --     , test "A-Z" <| \() -> Expect.equal lower (List.map toLocaleLower upper)
+        --     , test "0-9" <| \() -> Expect.equal dec (List.map toLocaleLower dec)
+        --     ]
+        -- , describe "toLocaleUpper"
+        --     [ test "a-z" <| \() -> Expect.equal upper (List.map toLocaleUpper lower)
+        --     , test "A-Z" <| \() -> Expect.equal upper (List.map toLocaleUpper upper)
+        --     , test "0-9" <| \() -> Expect.equal dec (List.map toLocaleUpper dec)
+        --     ]
+        -- , describe "toLower"
+        --     [ test "a-z" <| \() -> Expect.equal lower (List.map toLower lower)
+        --     , test "A-Z" <| \() -> Expect.equal lower (List.map toLower upper)
+        --     , test "0-9" <| \() -> Expect.equal dec (List.map toLower dec)
+        --     ]
+        -- , describe "toUpper"
+        --     [ test "a-z" <| \() -> Expect.equal upper (List.map toUpper lower)
+        --     , test "A-Z" <| \() -> Expect.equal upper (List.map toUpper upper)
+        --     , test "0-9" <| \() -> Expect.equal dec (List.map toUpper dec)
+        --     ]
         , describe "isLower"
             [ test "a-z" <| \() -> Expect.equal True (List.all isLower lower)
             , test "A-Z" <| \() -> Expect.equal False (List.any isLower upper)

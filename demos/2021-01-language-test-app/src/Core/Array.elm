@@ -12,13 +12,14 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "Array"
-        [ initTests
-        , isEmptyTests
+        [ -- initTests,
+          isEmptyTests
         , lengthTests
-        , getSetTests
-        , conversionTests
-        , transformTests
-        , sliceTests
+
+        -- , getSetTests
+        -- , conversionTests
+        -- , transformTests
+        -- , sliceTests
         , runtimeCrashTests
         ]
 

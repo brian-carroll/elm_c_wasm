@@ -152,12 +152,13 @@ testListOfN n =
             [ test "sorted" <| \() -> Expect.equal xs (sort xs)
             , test "unsorted" <| \() -> Expect.equal xsOpp (sort xsNeg)
             ]
-        , describe "sortBy"
-            [ test "sorted" <| \() -> Expect.equal xsNeg (sortBy negate xsNeg)
-            , test "unsorted" <| \() -> Expect.equal xsNeg (sortBy negate xsOpp)
-            ]
-        , describe "sortWith"
-            [ test "sorted" <| \() -> Expect.equal xsNeg (sortWith (\x -> \y -> compare y x) xsNeg)
-            , test "unsorted" <| \() -> Expect.equal xsNeg (sortWith (\x -> \y -> compare y x) xsOpp)
-            ]
+
+        -- , describe "sortBy"
+        --     [ test "sorted" <| \() -> Expect.equal xsNeg (sortBy negate xsNeg)
+        --     , test "unsorted" <| \() -> Expect.equal xsNeg (sortBy negate xsOpp)
+        --     ]
+        -- , describe "sortWith"
+        --     [ test "sorted" <| \() -> Expect.equal xsNeg (sortWith (\x -> \y -> compare y x) xsNeg)
+        --     , test "unsorted" <| \() -> Expect.equal xsNeg (sortWith (\x -> \y -> compare y x) xsOpp)
+        --     ]
         ]
