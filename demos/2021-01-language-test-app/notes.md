@@ -19,6 +19,9 @@
   - what would we even want here?
   - doesn't need a function body, the body of foldl will do it
 
+- [ ] GC throws during replay. Bumped up the initial heap size for now to avoid it.
+
+
 ```elm
 countAllRunnables =
     List.foldl (countRunnables >> (+)) 0

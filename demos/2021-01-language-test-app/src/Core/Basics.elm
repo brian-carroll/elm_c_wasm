@@ -36,9 +36,10 @@ tests =
                 , test "compare 'f' 'f'" <| \() -> Expect.equal EQ (compare 'f' 'f')
                 , test "compare (1, 2, 3) (0, 1, 2)" <| \() -> Expect.equal GT (compare ( 1, 2, 3 ) ( 0, 1, 2 ))
                 , test "compare ['a'] ['b']" <| \() -> Expect.equal LT (compare [ 'a' ] [ 'b' ])
-                , test "array equality" <| \() -> Expect.equal (Array.fromList [ 1, 1, 1, 1 ]) (Array.repeat 4 1)
-                , test "set equality" <| \() -> Expect.equal (Set.fromList [ 1, 2 ]) (Set.fromList [ 2, 1 ])
-                , test "dict equality" <| \() -> Expect.equal (Dict.fromList [ ( 1, 1 ), ( 2, 2 ) ]) (Dict.fromList [ ( 2, 2 ), ( 1, 1 ) ])
+
+                -- , test "array equality" <| \() -> Expect.equal (Array.fromList [ 1, 1, 1, 1 ]) (Array.repeat 4 1)
+                -- , test "set equality" <| \() -> Expect.equal (Set.fromList [ 1, 2 ]) (Set.fromList [ 2, 1 ])
+                -- , test "dict equality" <| \() -> Expect.equal (Dict.fromList [ ( 1, 1 ), ( 2, 2 ) ]) (Dict.fromList [ ( 2, 2 ), ( 1, 1 ) ])
                 , test "char equality" <| \() -> Expect.notEqual '0' '饑'
                 ]
 

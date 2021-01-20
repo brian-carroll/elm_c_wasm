@@ -109,7 +109,7 @@ int GC_init() {
 
   // Ask the system for more memory
   size_t top_of_current_page = (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
-  size_t pages = 16;
+  size_t pages = (GC_INITIAL_HEAP_MB * 1024 * 1024) / GC_WASM_PAGE_BYTES;
   size_t* top_of_nth_page =
       (size_t*)(top_of_current_page + (pages * GC_WASM_PAGE_BYTES) + 1);
 
@@ -711,8 +711,6 @@ void* GC_apply_replay(void** apply_push) {
    ==================================================== */
 
 static void collect(GcState* state, size_t* ignore_below) {
-  printf("skipping GC for debug, was requested from %p\n", ignore_below);
-  return;
   printf("collecting garbage from %p\n", ignore_below);
   mark(state, ignore_below);
   compact(state, ignore_below);

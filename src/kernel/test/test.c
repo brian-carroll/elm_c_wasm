@@ -8,7 +8,6 @@ void* eval_Test_runThunk(void* args[]) {
 
   void* test_return_val = A1(thunk, &Unit);
   void* wrapped = eval_elm_core_Result_Ok((void*[]){test_return_val});
-  Debug_pretty("wrapped", wrapped);
   return wrapped;
 }
 
