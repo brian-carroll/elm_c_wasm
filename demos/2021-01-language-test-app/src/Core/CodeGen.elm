@@ -69,6 +69,8 @@ tests =
                 , test "case" <| \() -> Expect.equal 42 caseQualified
                 ]
 
+        -- In this Wasm implementation, integers have to be 32 bits _total_, including the sign: -2^31 -> 2^31-1
+        -- That's the same size as a Wasm pointer, which makes speed optimisations much easier
         hex : Test
         hex =
             describe "Hex"
@@ -76,10 +78,10 @@ tests =
                     \() ->
                         0x7FFFFFFF
                             |> Expect.equal 2147483647
-                , test "0x8BADF00D" <|
+                , test "0x0C0010FF" <|
                     \() ->
-                        0x8BADF00D
-                            |> Expect.equal 2343432205
+                        0x0C0010FF
+                            |> Expect.equal 201330943
                 , test "0x00" <|
                     \() ->
                         0x00
