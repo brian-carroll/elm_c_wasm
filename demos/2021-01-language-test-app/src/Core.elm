@@ -19,21 +19,30 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "Elm Standard Library Tests" <|
-        []
-            ++ [ Basics.tests ]
-            ++ [ Bitwise.tests ]
-            ++ [ Char.tests ]
-            ++ [ CodeGen.tests ]
-            ++ [ Equality.tests ]
-            ++ [ Result.tests ]
-            ++ [ String.tests ]
-            ++ [ Maybe.tests ]
-            ++ [ Tuple.tests ]
+        [ List.tests ]
 
 
+mostlyWorking : List Test
+mostlyWorking =
+    []
+        ++ [ Basics.tests ]
+        ++ [ Bitwise.tests ]
+        ++ [ Char.tests ]
+        ++ [ CodeGen.tests ]
+        ++ [ Equality.tests ]
+        ++ [ Result.tests ]
+        ++ [ String.tests ]
+        ++ [ Maybe.tests ]
+        ++ [ Tuple.tests ]
+        ++ [ List.tests ]
+
+
+{-| mostly just broken because of GC!
+Tests use structures with thousands of elements
+-}
+notWorkingYet : List Test
 notWorkingYet =
     []
         ++ [ Array.tests ]
         ++ [ Dict.tests ]
-        ++ [ List.tests ]
         ++ [ Set.tests ]

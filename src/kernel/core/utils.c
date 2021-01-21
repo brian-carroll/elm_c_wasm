@@ -18,6 +18,12 @@ extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
 #define log_error(...)
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#else
+#define emscripten_run_script(x)
+#endif
+
 // Initialise a global value by evaluating an Elm expression
 //
 // global_permanent_ptr:  location of a pointer outside the heap
@@ -200,6 +206,13 @@ void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
     if (!push) {
       push = CAN_THROW(GC_stack_push());
     }
+
+    // char* name = Debug_evaluator_name(c->evaluator);
+    // printf("apply %s\n", name);
+    // if (name == Debug_unknown_evaluator) {
+    //   emscripten_run_script("debugger;");
+    // } else {
+    // }
 
     ElmValue* result = (*c->evaluator)(args);
     if ((void*)result == pGcFull) {

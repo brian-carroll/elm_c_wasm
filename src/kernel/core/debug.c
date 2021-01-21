@@ -16,6 +16,8 @@
 
 extern GcState gc_state;
 
+char Debug_unknown_evaluator[] = "(?)";
+
 bool is_marked(void* p) {
   GcState* state = &gc_state;
   size_t* pword = (size_t*)p;
@@ -472,10 +474,10 @@ void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   // print_heap();
-  print_state();
-  printf("Unit = %p\n", &Unit);
-  printf("True = %p\n", &True);
-  printf("False = %p\n", &False);
+  // print_state();
+  // printf("Unit = %p\n", &Unit);
+  // printf("True = %p\n", &True);
+  // printf("False = %p\n", &False);
   fprintf(stderr, fmt, args);
   va_end(args);
   // emscripten_run_script("debugger;");

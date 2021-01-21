@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include "types.h"
 
-#define GC_INITIAL_HEAP_MB 2
+#define GC_INITIAL_HEAP_MB 8
 #define GC_WASM_PAGE_BYTES 65536
 #define GC_BLOCK_WORDS 64
 #define GC_BLOCK_BYTES (GC_BLOCK_WORDS * sizeof(size_t))
