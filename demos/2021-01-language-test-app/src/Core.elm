@@ -19,14 +19,14 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "Elm Standard Library Tests" <|
-        [ List.tests ]
+        [ Bitwise.tests ]
 
 
 mostlyWorking : List Test
 mostlyWorking =
     []
         ++ [ Basics.tests ]
-        ++ [ Bitwise.tests ]
+        -- ++ [ Bitwise.tests ]
         ++ [ Char.tests ]
         ++ [ CodeGen.tests ]
         ++ [ Equality.tests ]

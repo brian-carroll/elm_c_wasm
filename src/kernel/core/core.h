@@ -5,6 +5,7 @@
 
 #include "../wrapper/wrapper.h"
 #include "basics.h"
+#include "bitwise.h"
 #include "char.h"
 #include "debug.h"
 #include "elm.h"
