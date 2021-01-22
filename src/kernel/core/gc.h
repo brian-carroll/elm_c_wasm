@@ -2,11 +2,12 @@
 #define ELM_KERNEL_GC
 
 #include "types.h"
+#include <stddef.h>
 
 int GC_init();
 
 void* GC_register_root(void** root);
-void* GC_malloc(size_t bytes);
+void* GC_malloc(ptrdiff_t bytes);
 void* GC_memcpy(void* dest, void* src, size_t bytes);
 
 void* GC_stack_empty();

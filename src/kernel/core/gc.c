@@ -57,9 +57,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../wrapper/wrapper.h"
 #include "gc-internals.h"
 #include "types.h"
-#include "../wrapper/wrapper.h"
 
 #if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
@@ -160,12 +160,12 @@ void* GC_register_root(void** ptr_to_mutable_ptr) {
   Allocate memory on the heap
   Same interface as malloc in stdlib.h
 */
-void* GC_malloc(size_t bytes) {
+void* GC_malloc(ptrdiff_t bytes) {
   GcState* state = &gc_state;
-  size_t words = bytes / sizeof(size_t);
+  ptrdiff_t words = bytes / sizeof(void*);
 
 #ifdef DEBUG
-  if (bytes % sizeof(size_t)) {
+  if (bytes % sizeof(void*)) {
     log_error("GC_malloc: Request for %zd bytes is misaligned\n", bytes);
   }
 #endif
@@ -711,7 +711,9 @@ void* GC_apply_replay(void** apply_push) {
    ==================================================== */
 
 static void collect(GcState* state, size_t* ignore_below) {
+#ifdef DEBUG
   printf("collecting garbage from %p\n", ignore_below);
+#endif
   mark(state, ignore_below);
   compact(state, ignore_below);
   sweepJsRefs(ignore_below == gc_state.heap.start);

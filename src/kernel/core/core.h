@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "elm.h"
 #include "gc.h"
+#include "js-array.h"
 #include "list.h"
 #include "string.h"
 #include "types.h"
