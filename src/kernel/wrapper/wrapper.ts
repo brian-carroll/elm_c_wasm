@@ -59,9 +59,8 @@ interface ElmCurriedFunction {
  * Wrap a WebAssembly instance and connect it to Elm's kernel JavaScript.
  * WebAssembly doesn't support Web APIs directly yet, so we need JS to implement most effects.
  *
- * After compiling TS to JS, this function definition must be inserted into Elm's generated JS.
- * That requires a build step for now - I'm using Makefiles and Bash scripts - but eventually,
- * the Elm compiler will do it.
+ * This needs to be compiled from TypeScript to JavaScript in a build step.
+ * Then Emscripten bundles it along with its own code and the Elm compiler output.
  *
  * @param elmImports         Values imported into the wrapper from Elm app
  * @param wasmBuffer         The `ArrayBuffer` memory block shared between JS and Wasm
