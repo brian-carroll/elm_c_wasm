@@ -27,7 +27,6 @@
 
 - [ ] GC throws during replay. Bumped up the initial heap size for now to avoid it.
 
-
 ```elm
 countAllRunnables =
     List.foldl (countRunnables >> (+)) 0
@@ -51,3 +50,32 @@ void* ginit_elm_explorations_test_Test_Runner_countAllRunnables();
 //...
   tmp0 = A1(ginit_elm_explorations_test_Test_Runner_countAllRunnables(), x_runners);
 ```
+
+| To test this               | I need to call this           |            |
+| -------------------------- | ----------------------------- | ---------- |
+| JsArray.empty              | Array.empty                   | empty      |
+| JsArray.singleton          | Array.push                    | push       |
+| JsArray.length             | Array.push,append,slice       | push       |
+| JsArray.initialize         | Array.initialize              | initialize |
+| JsArray.initializeFromList | Array.fromList,slice          | fromList   |
+| JsArray.unsafeGet          | Array.get                     | get        |
+| JsArray.unsafeSet          | Array.set                     | set        |
+| JsArray.push               | Array.push                    | push       |
+| JsArray.foldl              | Array.foldl,indexedMap,append | append     |
+| JsArray.foldr              | Array.foldr,toList            | toList     |
+| JsArray.map                | Array.map                     | map        |
+| JsArray.indexedMap         | Array.indexedMap              | indexedMap |
+| JsArray.slice              | Array.append,slice            | append     |
+| JsArray.appendN            | Array.append                  | append     |
+
+Unique Array tests to test JsArray
+- [x] empty
+- [ ] push
+- [x] initialize
+- [ ] fromList
+- [ ] get
+- [ ] set
+- [x] toList
+- [ ] map
+- [ ] indexedMap
+- [ ] append
