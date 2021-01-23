@@ -50,27 +50,27 @@ caseQualified =
 
 
 
--- scopes : Test
--- scopes =
---     describe "scopes"
---         [ test "parallel let scopes should have separate namespaces" <|
---             \() ->
---                 let
---                     x1 =
---                         let
---                             x =
---                                 5
---                         in
---                         x
---                     x2 =
---                         let
---                             x =
---                                 7
---                         in
---                         x
---                 in
---                 Expect.equal (x1 + x2) 12
---         ]
+scopes : Test
+scopes =
+    describe "scopes"
+        [ test "parallel let scopes should have separate namespaces" <|
+            \() ->
+                let
+                    x1 =
+                        let
+                            x =
+                                5
+                        in
+                        x
+                    x2 =
+                        let
+                            x =
+                                7
+                        in
+                        x
+                in
+                Expect.equal (x1 + x2) 12
+        ]
 
 
 tests : Test
@@ -116,6 +116,5 @@ tests =
         [ underscores
         , qualifiedPatterns
         , hex
-
-        -- , scopes
+        , scopes
         ]

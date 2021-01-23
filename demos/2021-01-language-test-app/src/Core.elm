@@ -19,7 +19,9 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "Elm Standard Library Tests" <|
-        [ Array.tests ]
+        []
+        ++ [ Maybe.tests ]
+        ++ [ CodeGen.tests ]
 
 
 mostlyWorking : List Test

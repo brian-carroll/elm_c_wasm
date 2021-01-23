@@ -7,9 +7,7 @@
 
 ## Bad code gen
 
-- [ ] `let` expressions within parens need their own C scope or at least namespace (`Maybe` tests)
-
-  - hacked around it for now
+- [x] `let` expressions within parens need their own C scope or at least namespace (`Maybe` tests)
 
 - [x] Tail recursive local functions not generated correctly. First arg is the function itself as a free var, but then we mis-count args in the tail call. Probably just need to skip free vars in tail call.
 
