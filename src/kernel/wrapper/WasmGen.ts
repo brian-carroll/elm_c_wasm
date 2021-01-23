@@ -33,17 +33,17 @@ declare function __Utils_chr(s: string): String;
 /*
  * Wasm not written yet
  */
-export declare var _Wasm_detectCustomType: (
+export declare var _WasmGen_detectCustomType: (
   addr: number
 ) => (addr: number) => object;
-export declare var _Wasm_detectRecordType: (
+export declare var _WasmGen_detectRecordType: (
   addr: number
 ) => (addr: number) => object;
 
 /*
  * `Maybe` not written yet
  */
-declare var _Wasm_decode$elm$core$Maybe$Maybe: (
+declare var _WasmGen_decode$elm$core$Maybe$Maybe: (
   inner: WasmDecoder
 ) => WasmDecoder;
 
@@ -54,38 +54,56 @@ declare var _Wasm_decode$elm$core$Maybe$Maybe: (
 /*
  * Http not written yet
  */
-declare function _Wasm_decode$elm$core$Task$MyCmd(addr: number): any;
-declare function _Wasm_decode$elm$http$Http$MySub(addr: number): any;
-declare function _Wasm_decode$elm$http$Http$Body(addr: number): any;
-declare function _Wasm_decode$elm$http$Http$Expect(
+declare function _WasmGen_decode$elm$core$Task$MyCmd(addr: number): any;
+declare function _WasmGen_decode$elm$http$Http$MySub(addr: number): any;
+declare function _WasmGen_decode$elm$http$Http$Body(addr: number): any;
+declare function _WasmGen_decode$elm$http$Http$Expect(
   typeVarDecoder: Function,
   addr: number
 ): any;
-declare function _Wasm_decode$elm$http$Http$Header(addr: number): any;
+declare function _WasmGen_decode$elm$http$Http$Header(addr: number): any;
 
-export var _Wasm_decodePlatformLeaf = function (addr8: number): object {
+// Compiler generateManager for, say, Task.command
+//
+// Generated C code:
+//    void* eval_elm_core_Task_command(void* args[]) {
+//      void* children[2];
+//      children[0] = (void*)0; // effectTypeEnum
+//      children[1] = args[0];
+//      return ctorCustom(CTOR_Platform_Leaf, 2, children);
+//    }
+// Generated JS code:
+//    a single case branch for the function below
+//    the JS manager
+// Generator state:
+//    List of JS case branches
+//    Next effectTypeEnum (Int)
+//
+// At the end of JS generation we can build the rest of the JS function
+//
+export var _WasmGen_decodePlatformLeaf = function (addr8: number): object {
   const index32 = addr8 >> 2;
   const effectTypeEnum = _Wasm_mem_i32[index32 + 2];
   const valueAddr = _Wasm_mem_i32[index32 + 3];
   switch (effectTypeEnum) {
     case 0:
       return $elm$core$Task$command(
-        _Wasm_decode$elm$core$Task$MyCmd(valueAddr)
+        _WasmGen_decode$elm$core$Task$MyCmd(valueAddr)
       );
     case 1:
       return $elm$http$Http$command(
-        _Wasm_decode$elm$http$Http$MyCmd(valueAddr)
+        _WasmGen_decode$elm$http$Http$MyCmd(valueAddr)
       );
     case 2:
       return $elm$http$Http$subscription(
-        _Wasm_decode$elm$http$Http$MySub(valueAddr)
+        _WasmGen_decode$elm$http$Http$MySub(valueAddr)
       );
     default:
       throw new Error('Corrupt WebAssembly memory at 0x' + addr8.toString(16));
   }
 };
 
-function _Wasm_decode$elm$http$Http$MyCmd(addr8) {
+function _WasmGen_decode$elm$http$Http$MyCmd(addr8: number) {
   const index32 = addr8 >> 2;
   const ctor = _Wasm_mem_i32[index32 + 1];
   switch (ctor) {
@@ -95,7 +113,7 @@ function _Wasm_decode$elm$http$Http$MyCmd(addr8) {
       );
     case 1:
       return $elm$http$Http$Request(
-        _Wasm_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_method_timeout_tracker_url(
+        _WasmGen_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_method_timeout_tracker_url(
           _Wasm_mem_i32[index32 + 2]
         )
       );
@@ -106,25 +124,25 @@ function _Wasm_decode$elm$http$Http$MyCmd(addr8) {
 
 // Can't assume a fieldgroup uniquely defines a _Wasm_decoder
 // Add a numeric index on the end as a sort of hash of the field types
-function _Wasm_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_method_timeout_tracker_url(
-  addr8
+function _WasmGen_decodeRecord_allowCookiesFromOtherDomains_body_expect_headers_method_timeout_tracker_url(
+  addr8: number
 ) {
   const index32 = addr8 >> 2;
   return {
     allowCookiesFromOtherDomains: _Wasm_decodeBool(_Wasm_mem_i32[index32 + 3]),
-    body: _Wasm_decode$elm$http$Http$Body(_Wasm_mem_i32[index32 + 4]),
-    expect: _Wasm_decode$elm$http$Http$Expect(
+    body: _WasmGen_decode$elm$http$Http$Body(_Wasm_mem_i32[index32 + 4]),
+    expect: _WasmGen_decode$elm$http$Http$Expect(
       _Wasm_decodeAny,
       _Wasm_mem_i32[index32 + 5]
     ),
-    headers: _Wasm_decodeList(_Wasm_decode$elm$http$Http$Header)(
+    headers: _Wasm_decodeList(_WasmGen_decode$elm$http$Http$Header)(
       _Wasm_mem_i32[index32 + 6]
     ),
     method: _Wasm_decodeString(_Wasm_mem_i32[index32 + 7]),
-    timeout: _Wasm_decode$elm$core$Maybe$Maybe(_Wasm_decodeFloat)(
+    timeout: _WasmGen_decode$elm$core$Maybe$Maybe(_Wasm_decodeFloat)(
       _Wasm_mem_i32[index32 + 8]
     ),
-    tracker: _Wasm_decode$elm$core$Maybe$Maybe(_Wasm_decodeString)(
+    tracker: _WasmGen_decode$elm$core$Maybe$Maybe(_Wasm_decodeString)(
       _Wasm_mem_i32[index32 + 9]
     ),
     url: _Wasm_decodeString(_Wasm_mem_i32[index32 + 10])
@@ -151,7 +169,7 @@ var _Parser_isSubChar = F3(function (predicate, offset, string) {
     : -1;
 });
 
-export function _Wasm_callJsKernel(kernelFnIndex: number, argsAddr: number) {
+export function _WasmGen_callJsKernel(kernelFnIndex: number, argsAddr: number) {
   const argsIndex32 = argsAddr >> 2;
   switch (kernelFnIndex) {
     case 0:
@@ -186,4 +204,8 @@ export function _Wasm_callJsKernel(kernelFnIndex: number, argsAddr: number) {
     default:
       throw new Error('Unknown JS kernel function ' + kernelFnIndex);
   }
+}
+
+export function _WasmGen_encodeFlags(flags: any): number {
+  return 98726;
 }

@@ -6,6 +6,7 @@
 #include "../core/types.h"
 
 // Compiler-generated app-specific data
+extern void* Wrapper_modelsArray[];
 extern FieldGroup* Wrapper_appFieldGroups[];
 extern void** Wrapper_mainsArray[];
 

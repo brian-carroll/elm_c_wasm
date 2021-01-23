@@ -13,6 +13,22 @@
 
 extern GcState gc_state;
 
+u32 field_init;
+u32 field_update;
+u32 field_subscriptions;
+u32 field_view;
+
+// Call from C main
+void Wrapper_main(u32 init, u32 update, u32 subscriptions, u32 view) {
+  field_init = init;
+  field_update = update;
+  field_subscriptions = subscriptions;
+  field_view = view;
+  for (size_t i = 0; Wrapper_modelsArray[i]; i++) {
+    GC_register_root(Wrapper_modelsArray + i);
+  }
+}
+
 /*
   API exposed to JS side of wrapper
 */
@@ -97,4 +113,39 @@ EMSCRIPTEN_KEEPALIVE void debugAddrRange(size_t start, size_t len) {
 
 EMSCRIPTEN_KEEPALIVE void debugEvaluatorName(size_t addr) {
   printf("%s\n", Debug_evaluator_name((void*)addr));
+}
+
+static Closure* copyTeaFunction(size_t mainIdx, u32 fieldId) {
+  Closure** mainRoot = Wrapper_mainsArray[mainIdx];
+  Closure* main = *mainRoot;
+  Record* tea = main->values[0];
+  Closure* fn = Utils_access_eval((void*[]){fieldId, tea});
+  Closure* copy = Utils_clone(fn);
+  copy->n_values = copy->max_values;
+  copy->header.size = SIZE_CLOSURE(copy->max_values);
+  return copy;
+}
+
+EMSCRIPTEN_KEEPALIVE size_t copyInit(size_t mainIdx) {
+  return (size_t)copyTeaFunction(mainIdx, field_init);
+}
+
+EMSCRIPTEN_KEEPALIVE size_t copyUpdate(size_t mainIdx) {
+  return (size_t)copyTeaFunction(mainIdx, field_update);
+}
+
+EMSCRIPTEN_KEEPALIVE size_t copySubs(size_t mainIdx) {
+  return (size_t)copyTeaFunction(mainIdx, field_subscriptions);
+}
+
+EMSCRIPTEN_KEEPALIVE size_t copyView(size_t mainIdx) {
+  return (size_t)copyTeaFunction(mainIdx, field_view);
+}
+
+EMSCRIPTEN_KEEPALIVE size_t getModel(size_t mainIdx) {
+  return (size_t)Wrapper_modelsArray[mainIdx];
+}
+
+EMSCRIPTEN_KEEPALIVE void setModel(size_t mainIdx, size_t modelAddr) {
+  Wrapper_modelsArray[mainIdx] = (void*)modelAddr;
 }

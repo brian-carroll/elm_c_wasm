@@ -971,8 +971,6 @@ function wrapWasmElmApp(
 
   const mains: any[] = [];
 
-  wasmExports.debugHeapState();
-
   const deref = (addr: number) => mem32[addr >> 2];
   let mainsArrayEntryAddr = wasmExports.getMains();
   console.log({mainsArrayEntryAddr}) // 10856 (2a68)

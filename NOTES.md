@@ -1,15 +1,3 @@
-# What to do next to get motivated?
-
-- make programs work
-- to do that, I need
-  - better debuggability
-    - to do that, I need fewer border crossings
-    - to do that, I need the JS heap stuff, and there's not that much left (famous last words!)
-  - a smaller example program that I build up
-  - a Time module, based on Float or smaller Int
-    - Float is a lot easier to migrate to! Type help.
-    - Hurdle: kernel JS
-
 # Generate Wasm encoder for Msg
 
 - Solves Int/Float ambiguity

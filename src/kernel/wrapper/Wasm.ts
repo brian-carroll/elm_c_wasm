@@ -1,7 +1,8 @@
 import {
-  _Wasm_decodePlatformLeaf,
-  _Wasm_detectCustomType,
-  _Wasm_detectRecordType
+  _WasmGen_decodePlatformLeaf,
+  _WasmGen_detectCustomType,
+  _WasmGen_detectRecordType,
+  _WasmGen_encodeFlags
 } from './WasmGen';
 
 // -----------------------------------------------------------------------
@@ -31,6 +32,7 @@ declare function F6(fun: Function): ElmCurriedFunction;
 declare function F7(fun: Function): ElmCurriedFunction;
 declare function F8(fun: Function): ElmCurriedFunction;
 declare function F9(fun: Function): ElmCurriedFunction;
+declare function A2(f: ElmCurriedFunction, a: any, b: any): any;
 
 declare function _Utils_chr(s: string): String;
 declare function _Utils_Tuple2(a: any, b: any): object;
@@ -38,6 +40,14 @@ declare function _Utils_Tuple3(a: any, b: any, c: any): object;
 declare function _List_Cons(a: any, b: List): Cons;
 declare function _List_toArray(list: List): any[];
 declare var _List_Nil: { $: '[]' | 0; b?: undefined };
+
+declare var _Json_run: any;
+declare var _Json_wrap: any;
+declare var _Result_isOk: any;
+declare var _Debug_crash: any;
+declare var _Json_errorToString: any;
+declare var _Platform_setupEffects: any;
+declare var _Platform_enqueueEffects: any;
 
 declare var scope: object;
 
@@ -61,6 +71,12 @@ interface ElmWasmExports {
   evalClosure: (addr: number) => number;
   collectGarbage: () => void;
   debugHeapState: () => void;
+  copyInit: (mainIndex: number) => number;
+  copyUpdate: (mainIndex: number) => number;
+  copySubs: (mainIndex: number) => number;
+  copyView: (mainIndex: number) => number;
+  getModel: (mainIndex: number) => number;
+  setModel: (mainIndex: number, modelAddr: number) => void;
 }
 
 interface EncoderState {
@@ -70,7 +86,6 @@ interface EncoderState {
 export type WasmWriter = (state: EncoderState) => number;
 export type WasmEncoder = (state: EncoderState, jsValue: any) => number;
 export type WasmDecoder = (addr: number) => any;
-
 
 // -----------------------------------------------------------------------
 // TODO
@@ -126,6 +141,84 @@ const _Wasm_Unit = _Wasm_exports.getUnit();
 const _Wasm_True = _Wasm_exports.getTrue();
 const _Wasm_False = _Wasm_exports.getFalse();
 
+
+declare function decodeTeaRecord(addr8: number): any;
+declare function _WasmGen_decodeVdomNode(addr8: any): any;
+
+declare function _Browser_application(record: any): any;
+declare function _WasmGen_encodeUrl(x: any): number;
+declare function _WasmGen_encodeJsRef(x: any): number;
+declare function _WasmGen_encodeMsg(x: any): number;
+
+const deref = (addr: number) => _Wasm_mem_i32[addr >> 2];
+
+export function _Wasm_Browser_application(mainIdx: number) {
+  const mainsArrayEntryAddr = _Wasm_exports.getMains() + (mainIdx << 2);
+  const mainRootAddr = deref(mainsArrayEntryAddr);
+  const mainAddr = deref(mainRootAddr);
+  const mainIndex32 = mainAddr >> 2;
+  const teaRecordAddr = _Wasm_mem_i32[mainIndex32 + 3];
+  const teaRecordJs = decodeTeaRecord(teaRecordAddr);
+
+  const init = F3(function (flags: any, url: any, navKey: any) {
+    const flagsAddr = _WasmGen_encodeFlags(flags);
+    const urlAddr = _WasmGen_encodeUrl(url);
+    const navKeyAddr = _WasmGen_encodeJsRef(navKey);
+    const newClosureAddr = _Wasm_exports.copyInit(mainIdx);
+    const max_values = _Wasm_mem_u16[(newClosureAddr >> 1) + 3];
+    let childIndex = (newClosureAddr >> 2) + 3 + max_values - 3;
+    _Wasm_mem_i32[childIndex++] = flagsAddr;
+    _Wasm_mem_i32[childIndex++] = urlAddr;
+    _Wasm_mem_i32[childIndex] = navKeyAddr;
+    const modelAddr = _Wasm_exports.evalClosure(newClosureAddr);
+    _Wasm_exports.setModel(mainIdx, modelAddr);
+    return {};
+  });
+
+  function subscriptions() {
+    const newClosureAddr = _Wasm_exports.copySubs(mainIdx);
+    const max_values = _Wasm_mem_u16[(newClosureAddr >> 1) + 3];
+    let childIndex = (newClosureAddr >> 2) + 3 + max_values - 1;
+    _Wasm_mem_i32[childIndex] = _Wasm_exports.getModel(mainIdx);
+    const subsAddr = _Wasm_exports.evalClosure(newClosureAddr);
+    return _WasmGen_decodePlatformLeaf(subsAddr);
+  }
+
+  const update = F2(function (msg: any, dummyModel: any) {
+    const msgAddr = _WasmGen_encodeMsg(msg);
+    const newClosureAddr = _Wasm_exports.copyInit(mainIdx);
+    const max_values = _Wasm_mem_u16[(newClosureAddr >> 1) + 3];
+    let childIndex = (newClosureAddr >> 2) + 3 + max_values - 2;
+    _Wasm_mem_i32[childIndex] = msgAddr;
+    const modelCmdMsgAddr = _Wasm_exports.evalClosure(newClosureAddr);
+    const modelCmdMsgIndex = modelCmdMsgAddr >> 2;
+    const modelAddr = _Wasm_mem_i32[modelCmdMsgIndex + 1];
+    const cmdAddr = _Wasm_mem_i32[modelCmdMsgIndex + 2];
+    _Wasm_exports.setModel(mainIdx, modelAddr);
+    const cmd = _WasmGen_decodePlatformLeaf(cmdAddr);
+    return _Utils_Tuple2(dummyModel, cmd);
+  });
+
+  function view() {
+    const newClosureAddr = _Wasm_exports.copyView(mainIdx);
+    const max_values = _Wasm_mem_u16[(newClosureAddr >> 1) + 3];
+    let childIndex = (newClosureAddr >> 2) + 3 + max_values - 1;
+    _Wasm_mem_i32[childIndex] = _Wasm_exports.getModel(mainIdx);
+    const viewAddr = _Wasm_exports.evalClosure(newClosureAddr);
+    return _WasmGen_decodeVdomNode(viewAddr);
+  }
+
+  _Browser_application({
+    init,
+    onUrlChange: teaRecordJs.onUrlChange,
+    onUrlRequest: teaRecordJs.onUrlRequest,
+    subscriptions,
+    update,
+    view
+  });
+}
+
+
 export function _Wasm_decodePlatformEffects(addr8: number): any {
   const index32 = addr8 >> 2;
   const ctor = _Wasm_mem_i32[index32 + 1];
@@ -133,7 +226,7 @@ export function _Wasm_decodePlatformEffects(addr8: number): any {
     // case 0:
     // return _Wasm_decodePlatformSelf(addr8); // JS->JS only
     case 1:
-      return _Wasm_decodePlatformLeaf(addr8);
+      return _WasmGen_decodePlatformLeaf(addr8);
     case 2:
       return _Wasm_decodePlatformNode(addr8);
     case 3:
@@ -178,11 +271,13 @@ function _Wasm_decodeDetectType(addr8: number): WasmDecoder {
       return _Wasm_decodeTuple3(aDecoder, bDecoder, cDecoder);
     }
     case 7:
-      return _Wasm_detectCustomType(addr8); // generated for all app Custom types
+      return _WasmGen_detectCustomType(addr8); // generated for all app Custom types
     case 8:
-      return _Wasm_detectRecordType(addr8); // generated for all app Record types
+      return _WasmGen_detectRecordType(addr8); // generated for all app Record types
     case 9:
-      throw new Error('No Wasm decoder for FieldGroup at 0x' + addr8.toString(16));
+      throw new Error(
+        'No Wasm decoder for FieldGroup at 0x' + addr8.toString(16)
+      );
     case 10: {
       const arityWord = _Wasm_mem_i32[index32 + 1];
       const n_values = arityWord & 0xffffffff;
