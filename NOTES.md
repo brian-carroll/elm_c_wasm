@@ -1,14 +1,51 @@
-# What to do next to get motivated?
+# Replay is so hard to debug
 
-- make programs work
-- to do that, I need
-  - better debuggability
-    - to do that, I need fewer border crossings
-    - to do that, I need the JS heap stuff, and there's not that much left (famous last words!)
-  - a smaller example program that I build up
-  - a Time module, based on Float or smaller Int
-    - Float is a lot easier to migrate to! Type help.
-    - Hurdle: kernel JS
+- stack map is mixed through the rest of the stuff
+- I really need a separate region. Something small will do.
+- Explicit stack is sounding so good right now.
+
+- stack map off to the side:
+- add every allocation to it
+- when the call returns, write that as the only pointer for this call
+- every stack frame says explicitly whether it's finished or running
+- when you do tail recursion you literally go back to the start of the frame and write the args
+  - having stack area in a separate region makes this OK
+
+running frame
+  - identifier (running)
+  - current length (updated on GC full)
+  - eval function (debug)
+  - array of stuff
+    - allocations (live)
+    - completed frames
+    - running frames
+
+completed frame
+  - identifier (distinct from an allocation)
+  - eval function (debug)
+  - return value ptr
+
+
+on entering Utils_apply, make a local ref to the stack-map pointer
+When the call completes, that's where we write the "completed" frame
+when a call completes in Utils_apply, we have a local var with the position in the parent's frame
+write a completed frame at that position
+update the stack map pointer
+
+
+Actually it's way simpler
+- during replay, both GC_malloc and
+
+
+
+
+
+# Recording/streaming issues
+- switching windows
+- I'm mumbling
+- slow build time
+- doing too hard a task
+
 
 # Generate Wasm encoder for Msg
 

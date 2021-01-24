@@ -473,14 +473,13 @@ void Debug_pause() {
 void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  // print_heap();
-  // print_state();
-  // printf("Unit = %p\n", &Unit);
-  // printf("True = %p\n", &True);
-  // printf("False = %p\n", &False);
-  fprintf(stderr, fmt, args);
+  print_heap();
+  print_state();
+  // fprintf(stderr, fmt, args);
+  printf(fmt, args);
   va_end(args);
   // emscripten_run_script("debugger;");
+  exit(EXIT_FAILURE);
 }
 #else
 void log_error(char* fmt, ...) {
@@ -488,5 +487,6 @@ void log_error(char* fmt, ...) {
   va_start(args, fmt);
   printf(fmt, args);
   va_end(args);
+  exit(EXIT_FAILURE);
 }
 #endif

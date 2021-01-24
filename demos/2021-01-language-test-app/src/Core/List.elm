@@ -10,11 +10,12 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "List Tests"
-        [ testListOfN 0
-        , testListOfN 1
-        , testListOfN 2
-
-        -- , testListOfN 5000
+        [
+        --  testListOfN 0
+        -- , testListOfN 1
+        -- , testListOfN 2
+        -- ,
+        testListOfN 5000
         ]
 
 

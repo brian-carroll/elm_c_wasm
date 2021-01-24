@@ -32,13 +32,13 @@
             we move things around safely?
         - Elm functions are pure. So we can abort execution, move values around,
             then "replay" the same function call with the same values, but at
-            the new locations.
+            the new locations, and resume execution where we left off.
         - On this second "replay" run, no registers can possibly hold pointers
             to the old locations.
         - Now, on "replay", every call our top-level function makes can be replaced
             with the return value we remember from the first time.
         - This means replay is fast, and doesn't regenerate the same garbage again.
-            It executes very little code, produces minimal garbage, and runs fast.
+            It quickly gets us back to the same execution state we were in before GC.
         - This only works with pure functions, but in Elm that's most of the program.
         - The `apply` operator has some hooks into the GC. The GC puts some extra
             marker values into the heap to track pushes and pops of the call stack.
@@ -164,28 +164,12 @@ void* GC_malloc(ptrdiff_t bytes) {
   GcState* state = &gc_state;
   ptrdiff_t words = bytes / sizeof(void*);
 
-#ifdef DEBUG
-  if (bytes % sizeof(void*)) {
-    log_error("GC_malloc: Request for %zd bytes is misaligned\n", bytes);
-  }
-#endif
+  assert(bytes % sizeof(void*) == 0);
 
   size_t* replay = state->replay_ptr;
   if (replay != NULL) {  // replay mode
 
-#ifdef DEBUG
-    u32 replay_words = ((Header*)replay)->size;
-    if (replay_words != words) {
-      log_error(
-          "GC_malloc: replay error. Requested size %zd doesn't match cached size %d "
-          "at %p\n",
-          words,
-          replay_words,
-          replay);
-      assert(0);
-    }
-#endif
-
+    assert(((Header*)replay)->size == words);
     size_t* next_replay = replay + words;
     if (next_replay >= state->next_alloc) {
       next_replay = NULL;  // exit replay mode
@@ -716,7 +700,8 @@ static void collect(GcState* state, size_t* ignore_below) {
 #endif
   mark(state, ignore_below);
   compact(state, ignore_below);
-  sweepJsRefs(ignore_below == gc_state.heap.start);
+  bool is_full_gc = ignore_below <= gc_state.heap.start;
+  sweepJsRefs(is_full_gc);
 
   bool stack_empty_was_deleted = (size_t*)state->stack_map_empty >= state->next_alloc;
   if (stack_empty_was_deleted) {

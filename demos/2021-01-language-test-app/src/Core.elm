@@ -20,8 +20,7 @@ tests : Test
 tests =
     describe "Elm Standard Library Tests" <|
         []
-        ++ [ Maybe.tests ]
-        ++ [ CodeGen.tests ]
+        ++ [ List.tests ]
 
 
 mostlyWorking : List Test

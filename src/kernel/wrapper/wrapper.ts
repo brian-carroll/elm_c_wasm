@@ -397,21 +397,9 @@ function wrapWasmElmApp(
       const closureAddr = handleWasmWrite((startIndex: number) => {
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
-      try {
-        const resultAddr = wasmExports.evalClosure(closureAddr);
-        const resultValue = readWasmValue(resultAddr);
-        return resultValue;  
-      }
-      catch (e) {
-        wasmExports.debugEvaluatorName(evaluator);
-        console.log('Wasm callback error', {
-          evaluator,
-          freeVars,
-          args,
-          closureAddr: closureAddr.toString(16),
-        });
-        throw e;
-      }
+      const resultAddr = wasmExports.evalClosure(closureAddr);
+      const resultValue = readWasmValue(resultAddr);
+      return resultValue;  
     }
     // Attach info in case we have to write this Closure back to Wasm
     wasmCallback.freeVars = freeVars;
