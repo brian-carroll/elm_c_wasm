@@ -473,7 +473,7 @@ void Debug_pause() {
 void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  print_heap();
+  // print_heap();
   print_state();
   // fprintf(stderr, fmt, args);
   printf(fmt, args);

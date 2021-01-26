@@ -1,5 +1,6 @@
-# Replay is so hard to debug
+# Replay rewrite
 
+- replay/stackmap is so hard to debug
 - stack map is mixed through the rest of the stuff
 - I really need a separate region. Something small will do.
 - Explicit stack is sounding so good right now.
@@ -7,37 +8,139 @@
 - stack map off to the side:
 - add every allocation to it
 - when the call returns, write that as the only pointer for this call
-- every stack frame says explicitly whether it's finished or running
-- when you do tail recursion you literally go back to the start of the frame and write the args
-  - having stack area in a separate region makes this OK
+- the _overwriting_ is key to keeping it small and simple and current
 
-running frame
-  - identifier (running)
-  - current length (updated on GC full)
-  - eval function (debug)
-  - array of stuff
-    - allocations (live)
-    - completed frames
-    - running frames
-
-completed frame
-  - identifier (distinct from an allocation)
-  - eval function (debug)
-  - return value ptr
+```c
+typedef struct {
+  void* (*evaluator)(void**); // for debug
+  void* start;
+  void* end;
+} GcLiveSection;
+GcLiveSection live_sections[1024];
+i16 current_live_section;
+i16 replay_live_section;
+void* replay;
+Closure* entry;
+```
 
 
-on entering Utils_apply, make a local ref to the stack-map pointer
-When the call completes, that's where we write the "completed" frame
-when a call completes in Utils_apply, we have a local var with the position in the parent's frame
-write a completed frame at that position
-update the stack map pointer
+- run mode
+  - evalClosure
+    - live_section_index = 0
+    - replay_section_index = -1
+    - initialise live_sections[0]
+    - entry = closure
+    - Utils_apply
+
+  - Utils_apply
+    - write to current live section end=alloc_next
+    - create a new live section with start=alloc_next, end=NULL, and save a reference to this (will pop to it later)
+    - evaluate the call
+    - either
+      - exit normally
+        - overwrite the live section I created, to just contain the return value
+        - create a new live section for parent's allocations, and set as current, with start=alloc_next, end=NULL
+      - exit with GC full
+        - nothing to do... could write to end but that's someone else's job and why bother
+  - GC_malloc
+    - check heap overflow _and_ live section overflow
+    - if live section overflows... we're fucked I think
+      - it's NOT possible to compress the live sections after compressing the heap!
+        - except in the simplest case where the returned value has no children
+        - because we're iterating up the headers
+      - might want to allocate another page for this if it overflows.. but 64kB is thousands of calls deep (16k pointers)
+      - but no real need for buckets, just unmap the current thing and request twice as much
+
+- GC
+  - mark the entry point
+  - loop over the live sections
+    - within each section, iterate using header sizes
+      - **Gaps are a disaster**
+      - Maybe we need a GC function to mark stuff as (sized) garbage.
+      - need to audit the kernel code for any shenanigans leaving gaps
+  - compress
+  - update stackmap & entry with relocated pointers
+
+- replay mode
+  - refactor so evalClosure is in the GC module rather than passing control back
+  - set replay mode
+    - need two stackmap indices, replay and real. When replay gets to real, exit replay mode.
+  - Utils_apply
+    - call GC_apply_replay
+    - if NULL, continue
+    - if not, 
+  - GC_apply_replay
+    - check if replay mode, if not return NULL
+    - assert that the section is one pointer wide (hmm unless we are merging live sections after compression)
+    - bump replay to next live section and update its pointer
+    - return saved value
+  - GC_malloc
+    - Check if in replay. If not, do as normal
+    - get replay pointer
+    - bump replay pointer by size requested
+      - if gone past current live section end, bump index & ptr to next live section (this is like a bucket array)
+      - if replay index gone past live index, exit replay
+    - return old value of replay pointer
+
+- tail call functions
+  - runtime
+    - should just allocate a Closure on entry and on tailcall, stop messing about
+    - on tailcall, mutates its own _first_ live section in the stackmap to start at the latest closure
+      - needs to reset its _first_ live section, not just the current live section. That requires a ref, like the existing implementation.
+      - could get that ref using an outer TCE wrapper, or with a GC function call before the `while`
+      - allocating unneccessary closure at start? could test address just below args array to see if it's a Closure pointing at this eval fn. hackology. Will go wrong, don't.
 
 
-Actually it's way simpler
-- during replay, both GC_malloc and
+# Other GC improvements
+
+## Heap regions
+- would enable all sorts of fancier GC stuff: the vdom region, dynamically growing improved stackmap
+- allocation
+  - when we overspill the current region, bump next_alloc up to next region
+- mark
+  - needs to know which region it is updating the mark bits for
+  - ignore_below might be more complex if region addresses can be out of order.. but compaction should avoid that
+- compact
+  - `to` pointer has to jump over the gaps between regions
+  - compaction gets an extra outer loop over regions
+- state
+  - doubly linked list of regions
+  - each region looks roughly like what our current heap struct is. Maybe that's the region header.
+
+# Enable modulo cons mutation
+- special region
+  - not compacted, can support limited local mutation with the freshest values
+  - instead of compact, use a depth-first copy (it's a bit like a mark and compact in one)
+  - need somewhere to copy into - the newest non-nursery region needs to have room, or if not, we create a new region
+  - if we're still running then don't copy the very freshest thing in case it gets mutated.
+  - actually couldn't that happen at any level of the stack? like in List.map the mapper could generate a massive pile of garbage.
+  - so the rule would have to be that the whole young generation uses copy instead of compact until its call is finished
+  - the thing is, this is unbounded really... and you **need a way to tidy up during execution. How does that work in this scheme?** Ends up being semi-space?
+  - I'm not sure if there's actually a way to have one section with mutation and one without...
+    - Probably can, if you grow the copying space indefinitely until the call ends
+
+- stack-based mutation?
+  - can it work?
+  - nope! Too much stuff. We're going the wrong way down the list so of course you get old-to-new pointers
+
+- just do something else that's almost as fast
+  - still perform all the work on the way down the list
+  - put each result pointer into a bucket list of temporary arrays
+  - keep a count of the list length
+  - at the end, create a list of that length and fill it from the bucket array
+    - content will be in reverse order from the cons cells (but then modulo-cons has weird heap shape too)
 
 
-
+# Prevent stack overflow in mark algo for deep structures
+- Reuse offset area for a "work list" as the GC Handbook calls it
+- As you visit each node, mark it, and mark its children
+- Move to first child, putting the other children in the worklist
+- When you get to the bottom, grab something else from the work list
+- If you ever run out of worklist space, bail to a slower algo
+  - Linearly march a cursor through the mark bitmap, looking for stuff that is marked but has unmarked children
+  - But now we can no longer assume that a marked object has all marked children
+  - So when tracing these partially-traced things, only put their children in the worklist if they are below the cursor
+  - If not below cursor, we'll get to them later - we'll find them in the bitmap!
 
 
 # Recording/streaming issues
