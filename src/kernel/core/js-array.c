@@ -213,11 +213,12 @@ static void* eval_JsArray_indexedMap(void* args[]) {
   ElmInt* offset = args[1];
   Custom* array = args[2];
 
-  size_t len = custom_params(array);
+  i32 o = offset->value;
+  i32 len = custom_params(array);
   Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
-  for (size_t i = 0; i < len; i++) {
-    ElmInt* index =  NEW_ELM_INT(i);
-    result->values[i] = A2(func, index, array->values[i]);
+  for (i32 i = 0; i < len; i++) {
+    ElmInt* num =  NEW_ELM_INT(i + o);
+    result->values[i] = A2(func, num, array->values[i]);
   }
 
   return result;

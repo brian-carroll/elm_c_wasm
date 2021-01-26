@@ -7,7 +7,7 @@
 #include <stdio.h>
 #endif
 #include "../core/core.h"
-#include "../core/gc-internals.h"
+#include "../core/gc/internals.h"
 #include "../json/json.h"
 #include "wrapper.h"
 

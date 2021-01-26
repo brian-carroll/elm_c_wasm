@@ -1,234 +1,14 @@
-/*
-    Garbage collector for Elm
-    -------------------------
-    A mark-compact collector, based on the Compressor algorithm.
+#include "internals.h"
 
-    Notable features:
-    ================
-    - Compression uses only a single pass over the heap
-
-    - Uses a bitmap of live/dead bits instead of marking the values themselves.
-        => Many operations involve only a few localised memory accesses
-
-    - Calculates 'forwarding addresses' of moved pointers on the fly
-        - New location has the same number of live bytes below it as the old one did
-        - Speeds up the calculation by storing a table of 'offsets' to the first
-            live value in each 512-byte block of memory
-
-    - Designed for both 32 and 64-bit platforms.
-        Uses the size_t data type everywhere (32 or 64 bits as per platform)
-
-    - Takes advantage of immutable-only data
-        - Can do partial compression, starting at any point and only looking
-        at values _above_ it, ignoring everything below.
-        - Enabled by the fact that immutable values can only reference older
-        values (lower addresses).
-        - Offers flexibility to do quick partial collections.
-
-    - Takes advantage of pure functions
-        - A novel stack map idea: "replay" for pure functions
-        - Wasm does not allow access to registers (which it models as a stack machine)
-        - Therefore we can't find or modify pointers stored in registers. So how can
-            we move things around safely?
-        - Elm functions are pure. So we can abort execution, move values around,
-            then "replay" the same function call with the same values, but at
-            the new locations, and resume execution where we left off.
-        - On this second "replay" run, no registers can possibly hold pointers
-            to the old locations.
-        - Now, on "replay", every call our top-level function makes can be replaced
-            with the return value we remember from the first time.
-        - This means replay is fast, and doesn't regenerate the same garbage again.
-            It quickly gets us back to the same execution state we were in before GC.
-        - This only works with pure functions, but in Elm that's most of the program.
-        - The `apply` operator has some hooks into the GC. The GC puts some extra
-            marker values into the heap to track pushes and pops of the call stack.
-
-
-    References
-        - "The Garbage Collection Handbook" by Jones, Hosking, and Moss (section 3.4)
-        - Kermany and Petrank, 2006
-        - Abuaiadh et al, 2004
-*/
-#include "gc.h"
-
-#include <assert.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "../wrapper/wrapper.h"
-#include "gc-internals.h"
-#include "types.h"
-
-#if defined(DEBUG) || defined(DEBUG_LOG)
-#include <stdio.h>
-
-#include "debug.h"
-#else
-#define log_error(...)
-#endif
-
-GcState gc_state;
-
-#ifdef _WIN32
-static void* sbrk(size_t size) {
-  return malloc(GC_WASM_PAGE_BYTES * 5 + size);
-}
-#endif
-
-/* ====================================================
-
-                PROGRAM STARTUP
-
-   ==================================================== */
-
-// Call exactly once on program startup
-int GC_init() {
-  GcState* state = &gc_state;  // local reference for debugger to see
-
-  // Get current max address of program data
-  size_t* break_ptr = sbrk(0);
-
-  // Align to next block boundary
-  size_t break_aligned = (size_t)break_ptr;
-  if (break_aligned % GC_BLOCK_BYTES) {
-    break_aligned |= (GC_BLOCK_BYTES - 1);
-    break_aligned++;
-  }
-  size_t* heap_bottom = (size_t*)break_aligned;
-
-  // Initialise heap with zero size
-  state->heap = (GcHeap){
-      .start = heap_bottom,
-      .end = heap_bottom,
-      .system_end = heap_bottom,
-      .bitmap = heap_bottom,
-      .offsets = heap_bottom,
-  };
-
-  // Ask the system for more memory
-  size_t top_of_current_page = (size_t)heap_bottom | (size_t)(GC_WASM_PAGE_BYTES - 1);
-  size_t pages = (GC_INITIAL_HEAP_MB * 1024 * 1024) / GC_WASM_PAGE_BYTES;
-  size_t* top_of_nth_page =
-      (size_t*)(top_of_current_page + (pages * GC_WASM_PAGE_BYTES) + 1);
-
-  int err = set_heap_end(&state->heap, top_of_nth_page);
-
-  reset_state(state);
-  if (!err) {
-    GC_stack_empty();
-  }
-
-  return err;
-}
-
-/*
-  GC ROOTS
-  --------
-  Roots should be registered by Kernel modules once on program startup.
-
-  Usage:
-    ElmValue* my_mutable_heap_pointer;
-
-    void My_init() {
-        GC_register_root(&my_mutable_heap_pointer);
-    }
-
-  Once the mutable pointer is registered, the Kernel module
-  can point it at any heap value it wants to keep alive.
-  It can later update the pointer to point at a different
-  ElmValue on the heap, as the program executes.
-  Whenever the GC does a collection, it checks this pointer
-  and preserves whatever heap value it is currently
-  pointing to. If it moves the value, it will update the
-  pointer to reference the new location.
-*/
-void* GC_register_root(void** ptr_to_mutable_ptr) {
+void GC_prep_replay() {
   GcState* state = &gc_state;
-  state->roots = NEW_CONS(ptr_to_mutable_ptr, state->roots);
-  return ptr_to_mutable_ptr;  // return anything but pGcFull to show success
+  reverse_stack_map(state);
+  size_t* first_allocated = (size_t*)(state->stack_map_empty + 1);
+  state->replay_ptr = first_allocated;
+  state->stack_depth = 0;
+  state->stack_map = state->stack_map_empty;
 }
 
-/* ====================================================
-
-                ALLOCATE & COPY
-
-   ==================================================== */
-
-/*
-  Allocate memory on the heap
-  Same interface as malloc in stdlib.h
-*/
-void* GC_malloc(ptrdiff_t bytes) {
-  GcState* state = &gc_state;
-  ptrdiff_t words = bytes / sizeof(void*);
-
-  assert(bytes % sizeof(void*) == 0);
-
-  size_t* replay = state->replay_ptr;
-  if (replay != NULL) {  // replay mode
-
-    assert(((Header*)replay)->size == words);
-    size_t* next_replay = replay + words;
-    if (next_replay >= state->next_alloc) {
-      next_replay = NULL;  // exit replay mode
-    }
-    state->replay_ptr = next_replay;
-    return (void*)replay;
-
-  } else {  // normal (non-replay) mode
-
-    size_t* old_heap = state->next_alloc;
-    size_t* new_heap = old_heap + words;
-
-    if (new_heap < state->heap.end) {
-      state->next_alloc = new_heap;
-      return old_heap;
-    } else {
-      return pGcFull;
-    }
-  }
-}
-
-void* GC_memcpy(void* dest, void* src, size_t bytes) {
-#ifdef DEBUG
-  if (bytes % sizeof(u16)) {  // string bodies can be 16-bit aligned
-    log_error("GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
-  }
-#endif
-  u32* src32;
-  u32* dest32;
-  u64* src64;
-  u64* dest64;
-
-  // Get 64-bit alignment if we don't already have it
-  if ((size_t)dest % sizeof(u64)) {
-    src32 = (u32*)src;
-    dest32 = (u32*)dest;
-    *dest32 = *src32;
-    bytes -= sizeof(u32);
-    src += sizeof(u32);
-    dest += sizeof(u32);
-  }
-
-  // Bulk copy in 64-bit chunks
-  src64 = (u64*)src;
-  dest64 = (u64*)dest;
-  size_t i = 0;
-  for (; i < bytes / sizeof(u64); i++) {
-    dest64[i] = src64[i];
-  }
-
-  // last 32 bits if needed
-  if (bytes % sizeof(u64)) {
-    src32 = (u32*)(&src64[i]);
-    dest32 = (u32*)(&dest64[i]);
-    *dest32 = *src32;
-  }
-
-  return dest;  // C standard lib returns this. Normally ignored.
-}
 
 /* ====================================================
 
@@ -688,96 +468,28 @@ void* GC_apply_replay(void** apply_push) {
   return replay;
 }
 
-/* ====================================================
+void reverse_stack_map(GcState* state) {
+#ifdef DEBUG_LOG
+  printf("reverse_stack_map\n");
+  print_state();
+#endif
 
-                COLLECT
-
-   ==================================================== */
-
-static void collect(GcState* state, size_t* ignore_below) {
+  GcStackMap* newer_item = (GcStackMap*)state->next_alloc;
+  GcStackMap* stack_item = state->stack_map;
+  while (stack_item > state->stack_map_empty) {
 #ifdef DEBUG
-  printf("collecting garbage from %p\n", ignore_below);
+    if (stack_item->header.tag != Tag_GcStackEmpty &&
+        stack_item->header.tag != Tag_GcStackPush &&
+        stack_item->header.tag != Tag_GcStackPop &&
+        stack_item->header.tag != Tag_GcStackTailCall) {
+      log_error("BUG: invalid stackmap item at %p\n", stack_item);
+    }
 #endif
-  mark(state, ignore_below);
-  compact(state, ignore_below);
-  bool is_full_gc = ignore_below <= gc_state.heap.start;
-  sweepJsRefs(is_full_gc);
-
-  bool stack_empty_was_deleted = (size_t*)state->stack_map_empty >= state->next_alloc;
-  if (stack_empty_was_deleted) {
-    GC_stack_empty();
+    stack_item->newer = newer_item;
+    newer_item = stack_item;
+    stack_item = stack_item->older;
   }
+
+  // GcStackEmpty
+  stack_item->newer = newer_item;
 }
-
-void GC_collect_full() {
-  collect(&gc_state, gc_state.heap.start);
-}
-
-void GC_collect_nursery() {
-  collect(&gc_state, gc_state.nursery);
-}
-
-void GC_prep_replay() {
-  GcState* state = &gc_state;
-  reverse_stack_map(state);
-  size_t* first_allocated = (size_t*)(state->stack_map_empty + 1);
-  state->replay_ptr = first_allocated;
-  state->stack_depth = 0;
-  state->stack_map = state->stack_map_empty;
-}
-
-/* ====================================================
-
-                SIZE CHECK
-
-   ==================================================== */
-
-#ifdef GC_SIZE_CHECK
-// Check compiled size of GC in Wasm
-// Only 6.4kB!!! :)
-// I don't have replay or controller yet, but wow
-// And this includes some fixed overhead that emcc generates
-//
-void* dummy_tce_eval(void* args[3], void** gc_tce_data) {
-  size_t dummy = (size_t)args + (size_t)gc_tce_data;
-  return (void*)dummy;
-}
-int main(int argc, char** argv) {
-  // Dummy code to prevent dead code elimination
-
-  GcState* state = &gc_state;
-
-  // Create variables of particular types, with values
-  // coming from outside world so compiler can't eliminate.
-  // We don't need to run this, just compile it,
-  // so segfaults are not an issue!
-  void** root = (void**)argv[0];
-  size_t word = (size_t)argc;
-  size_t* pword = (size_t*)argv[3];
-  Closure* c = (Closure*)argv[1];
-  ElmValue* v = (ElmValue*)argv[2];
-  void* dest = argv[4];
-  void* src = argv[5];
-  void** pointer_array = (void**)argv;
-
-  GC_init();
-  GC_register_root(root);
-  GC_malloc(word);
-  GC_memcpy(dest, src, word);
-
-  void* push = GC_stack_push();
-  GC_stack_tailcall(c, push);
-  GC_stack_pop(v, push);
-
-  mark(state, pword);
-  compact(state, pword);
-  reverse_stack_map(state);
-
-  GC_tce_iteration(word);
-  GC_tce_eval(&dummy_tce_eval, NULL, 3, pointer_array);
-
-  GC_apply_replay(&push);
-
-  return 0;
-}
-#endif

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "gc-internals.h"
+#include "./gc/internals.h"
 #include "string.h"
 #include "types.h"
 #ifdef __EMSCRIPTEN__

@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "../kernel/core/core.h"
-#include "../kernel/core/gc-internals.h"
+#include "../kernel/core/gc/internals.h"
 #include "gc/replay_test.h"
 #include "gc/stackmap_mark_test.h"
 #include "test.h"

@@ -5,7 +5,7 @@
 #endif
 // #include <stdio.h>
 #include "../../../src/kernel/kernel.h"
-#include "../../../src/kernel/core/gc-internals.h"
+#include "../../../src/kernel/core/gc/internals.h"
 
 extern GcState gc_state;
 

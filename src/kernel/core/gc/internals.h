@@ -7,7 +7,13 @@
 #define ELM_KERNEL_GC_INTERNALS
 
 #include <stdbool.h>
-#include "types.h"
+#include <assert.h>
+#include <errno.h>
+
+#include "../types.h"
+#include "../gc.h"
+#include "../debug.h"
+#include "../../wrapper/wrapper.h"
 
 #define GC_INITIAL_HEAP_MB 8
 #define GC_WASM_PAGE_BYTES 65536
@@ -16,6 +22,8 @@
 #define GC_BLOCK_MASK (-GC_BLOCK_BYTES)
 #define GC_WORD_BITS (sizeof(size_t) * 8)
 #define GC_DIV_ROUND_UP(num, den) ((num + den - 1) / den)
+
+#define ALL_ONES -1
 
 typedef struct {
   size_t* start;
@@ -36,22 +44,39 @@ typedef struct {
   size_t* replay_ptr;
 } GcState;
 
+extern GcState gc_state;
+
+// init/manage
 void reset_state(GcState*);
+int set_heap_end(GcHeap* heap, size_t* new_break_ptr);
+
+// mark/metadata
 void bitmap_reset(GcHeap*);
+
+// metadata/compact
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
+
+// compact
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer);
 
+// mutator/header/metadata?
 size_t child_count(ElmValue* v);
-int set_heap_end(GcHeap* heap, size_t* new_break_ptr);
+
+// metadata
 size_t make_bitmask(size_t first_bit, size_t last_bit);
+void bitmap_next_test_wrapper(size_t* word, size_t* mask);
+void bitmap_next(size_t* word, size_t* mask);
+
+// mark
 bool mark_words(GcHeap* heap, void* p_void, size_t size);
 void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below);
 void mark_stack_map(GcState* state, size_t* ignore_below);
 void mark(GcState* state, size_t* ignore_below);
 
-void bitmap_next_test_wrapper(size_t* word, size_t* mask);
+// compact
 void compact(GcState* state, size_t* compact_start);
 
+// replay
 void reverse_stack_map(GcState* state);
 
 #endif
