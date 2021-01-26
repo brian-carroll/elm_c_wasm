@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "jest"
+    "test": "node ./dist/www/test.js --all"
   },
   "repository": {
     "type": "git",

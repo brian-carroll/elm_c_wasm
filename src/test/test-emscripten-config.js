@@ -13,7 +13,7 @@ Module = {
       fieldGroups: [],
     };
     const kernelFuncRecord = {};
-    wasmWrapper = wrapWasmElmApp(wasmBuffer, wasmExports, generatedAppTypes, kernelFuncRecord);
+    wasmWrapper = wrapWasmElmApp(elmImports, wasmBuffer, wasmExports, generatedAppTypes, kernelFuncRecord);
   },
   print: function (text) {
     if (arguments.length > 1)
@@ -62,6 +62,7 @@ if (typeof process !== 'undefined') {
   });  
 }
 
+var elmImports = {_List_Cons: _List_Cons, _List_Nil: _List_Nil, _Utils_Tuple0: _Utils_Tuple0, _Utils_Tuple2: _Utils_Tuple2, _Utils_Tuple3: _Utils_Tuple3, _Utils_chr: _Utils_chr, F2: F2, F3: F3, F4: F4, F5: F5, F6: F6, F7: F7, F8: F8, F9: F9};
 
 function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }
 var _List_Nil = { $: '[]' };

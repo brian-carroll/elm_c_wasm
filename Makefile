@@ -18,21 +18,21 @@ HEADERS := $(KHEADERS) $(THEADERS)
 DATA_TSV := $(shell find $(SRC) -name '*.tsv')
 DATA_INC := $(DATA_TSV:.tsv=.inc)
 
-.PHONY: all check check-bin check-node debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
+.PHONY: all check check-bin check-www debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
 	@:
 
-check: check-bin check-node
+check: check-bin check-www
 	@:
 
 check-bin: $(DIST)/bin/test
-	@echo "\n\nRunning tests with binary executable"
+	@echo "\n\nRunning tests with binary executable\n"
 	$(DIST)/bin/test --all
 
-check-node: $(DIST)/www/test.html
-	@echo "\n\nRunning tests with Node.js WebAssembly"
+check-www: $(DIST)/www/test.html
+	@echo "\n\nRunning tests with Node.js WebAssembly\n"
 	node $(DIST)/www/test.js --all
 
 debug: CFLAGS = -Wall -ggdb -DDEBUG -DDEBUG_LOG
