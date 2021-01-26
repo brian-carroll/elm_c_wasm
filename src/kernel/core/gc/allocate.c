@@ -41,12 +41,10 @@ void* GC_malloc(ptrdiff_t bytes) {
   }
 }
 
+
 void* GC_memcpy(void* dest, void* src, size_t bytes) {
-#ifdef DEBUG
-  if (bytes % sizeof(u16)) {  // string bodies can be 16-bit aligned
-    log_error("GC_memcpy: Copy %zd bytes is misaligned\n", bytes);
-  }
-#endif
+  assert(bytes % sizeof(u16) == 0);
+
   u32* src32;
   u32* dest32;
   u64* src64;

@@ -1,6 +1,5 @@
 /*
-  GC internal structures and definitions, not part of its API
-  Only for including into tests, not other kernel code
+  GC internal structures and definitions, not part of public API
 */
 
 #ifndef ELM_KERNEL_GC_INTERNALS

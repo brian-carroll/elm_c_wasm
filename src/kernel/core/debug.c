@@ -490,3 +490,14 @@ void log_error(char* fmt, ...) {
   exit(EXIT_FAILURE);
 }
 #endif
+
+#if defined(DEBUG) && defined(DEBUG_LOG)
+void log_debug(char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  printf(fmt, args);
+  va_end(args);
+}
+#else
+void log_debug(char* fmt, ...) {}
+#endif

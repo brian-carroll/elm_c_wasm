@@ -104,6 +104,12 @@ int init_heap(GcHeap* heap) {
 
           BITMAP
 
+    This collector doesn't put mark bits in the
+    value headers, but rather "off to the side",
+    in their own block.
+    Scanning for live/garbage regions is fast.
+    The mark bits for 2-4kB of heap data can fit
+    into a single L1 cache line.
    ==================================================== */
 
 void bitmap_reset(GcHeap* heap) {
@@ -112,7 +118,8 @@ void bitmap_reset(GcHeap* heap) {
   }
 }
 
-// Count live words between two heap pointers, using the bitmap
+
+// Count garbage words between two heap pointers, using the bitmap
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
   size_t first_index = (size_t)(first - heap->start);
   size_t first_word = first_index / GC_WORD_BITS;
@@ -137,6 +144,8 @@ size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
   return count;
 }
 
+
+// Make a mask to test selected bits in a bitmap word
 size_t make_bitmask(size_t first_bit, size_t last_bit) {
   size_t mask = ALL_ONES;
   mask <<= GC_WORD_BITS - 1 - last_bit;
@@ -145,6 +154,8 @@ size_t make_bitmask(size_t first_bit, size_t last_bit) {
   return mask;
 }
 
+
+// advance to the next bit in the bitmap (for loops)
 void bitmap_next(size_t* word, size_t* mask) {
   *mask <<= 1;
   if (*mask == 0) {

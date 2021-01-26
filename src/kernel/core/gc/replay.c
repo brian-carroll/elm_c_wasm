@@ -220,7 +220,7 @@ typedef enum {
   BugScenario          // Heap doesn't make sense. Must be a bug somewhere.
 } ReplayScenario;
 
-#ifdef DEBUG
+#ifdef DEBUG_LOG
 char* scenario_to_string(ReplayScenario scenario) {
   switch (scenario) {
     case Finished:
@@ -242,6 +242,8 @@ char* scenario_to_string(ReplayScenario scenario) {
   }
   return "";
 }
+#else
+#define scenario_to_string(dummy) ""
 #endif
 
 void* GC_apply_replay(void** apply_push) {
@@ -438,18 +440,16 @@ void* GC_apply_replay(void** apply_push) {
     replay_next = EXIT_REPLAY_MODE;
   }
 
-#ifdef DEBUG_LOG
-  printf("GC_apply_replay:\n");
-  printf("  replay_ptr = %p\n", state->replay_ptr);
-  printf("  replay_tag = %x\n", replay_tag);
-  printf("  scenario = %s\n", scenario_to_string(scenario));
-  printf("  stackmap_next = %p\n", stackmap_next);
-  printf("  stack_depth_increment = %zu\n", stack_depth_increment);
-  printf("  replay = %p\n", replay);
-  printf("  replay_next = %p\n", replay_next);
-  printf("  push = %p\n", push);
-  printf("\n");
-#endif
+  log_debug("GC_apply_replay:\n");
+  log_debug("  replay_ptr = %p\n", state->replay_ptr);
+  log_debug("  replay_tag = %x\n", replay_tag);
+  log_debug("  scenario = %s\n", scenario_to_string(scenario));
+  log_debug("  stackmap_next = %p\n", stackmap_next);
+  log_debug("  stack_depth_increment = %zu\n", stack_depth_increment);
+  log_debug("  replay = %p\n", replay);
+  log_debug("  replay_next = %p\n", replay_next);
+  log_debug("  push = %p\n", push);
+  log_debug("\n");
 
   // Update the GC state
   // Don't do the memory write unless the value is changed
@@ -469,22 +469,12 @@ void* GC_apply_replay(void** apply_push) {
 }
 
 void reverse_stack_map(GcState* state) {
-#ifdef DEBUG_LOG
-  printf("reverse_stack_map\n");
-  print_state();
-#endif
-
   GcStackMap* newer_item = (GcStackMap*)state->next_alloc;
   GcStackMap* stack_item = state->stack_map;
   while (stack_item > state->stack_map_empty) {
-#ifdef DEBUG
-    if (stack_item->header.tag != Tag_GcStackEmpty &&
-        stack_item->header.tag != Tag_GcStackPush &&
-        stack_item->header.tag != Tag_GcStackPop &&
-        stack_item->header.tag != Tag_GcStackTailCall) {
-      log_error("BUG: invalid stackmap item at %p\n", stack_item);
-    }
-#endif
+    Tag tag = stack_item->header.tag;
+    assert(tag == Tag_GcStackEmpty || tag == Tag_GcStackPush || tag == Tag_GcStackPop || tag == Tag_GcStackTailCall);
+
     stack_item->newer = newer_item;
     newer_item = stack_item;
     stack_item = stack_item->older;

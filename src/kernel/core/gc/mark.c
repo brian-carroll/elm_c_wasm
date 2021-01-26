@@ -42,6 +42,7 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
   return already_marked;
 }
 
+
 void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
   size_t* first_word = (size_t*)v;
   if (first_word < ignore_below) return;
@@ -60,22 +61,13 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
   for (size_t i = 0; i < n_children; ++i) {
     ElmValue* child = child_ptr_array[i];
 
-#ifdef DEBUG
-    if ((size_t)child > (size_t)heap->end) {
-      log_error("BUG mark_trace: %p out of bounds, reached via %p with header tag %d\n",
-          child,
-          v,
-          v->header.tag);
-      assert(0);
-    }
-    if (child > v) {
-      log_error("BUG mark_trace: older %p points to newer %p\n", v, child);
-    }
-#endif
+    assert((size_t)child < (size_t)heap->end);
+    assert(child < v);
 
     mark_trace(heap, child, ignore_below);
   }
 }
+
 
 // Trace all Elm value between two memory addresses
 void mark_trace_values_between(
@@ -89,6 +81,7 @@ void mark_trace_values_between(
     v = (ElmValue*)((size_t*)v + size_words);
   }
 }
+
 
 // Scan the stack map, marking values allocated in live function calls.
 // Conversely, don't mark values allocated in function calls that have finished.

@@ -11,14 +11,12 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
   size_t prev_block_start_addr = (size_t)prev_block & GC_BLOCK_MASK;
   size_t* current_block = (size_t*)(prev_block_start_addr + GC_BLOCK_BYTES);
 
-#ifdef DEBUG_LOG
-  printf("\n");
-  printf("calc_offsets\n");
-  printf("compact_start %p\n", compact_start);
-  printf("heap->start %p\n", heap->start);
-  printf("current_block %p\n", current_block);
-  printf("\n");
-#endif
+  log_debug("\n");
+  log_debug("calc_offsets\n");
+  log_debug("compact_start %p\n", compact_start);
+  log_debug("heap->start %p\n", heap->start);
+  log_debug("current_block %p\n", current_block);
+  log_debug("\n");
 
   while (current_block < compact_end) {
     ndead += bitmap_dead_between(heap, prev_block, current_block);
@@ -28,6 +26,7 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
     current_block += GC_BLOCK_WORDS;
   }
 }
+
 
 // Calculate where a value has moved to, return a pointer to the new location
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
@@ -39,29 +38,22 @@ size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
 
   size_t* new_pointer = old_pointer - block_offset - offset_in_block;
 
-#ifdef DEBUG_LOG
-  printf("\nforwarding_address:\n");
-  printf("old_pointer %p\n", old_pointer);
-  printf("heap->start %p\n", heap->start);
-  printf("block_index %zd\n", block_index);
-  printf("block_offset %zd\n", block_offset);
-  printf("old_block_start %p\n", old_block_start);
-  printf("offset_in_block %zd\n", offset_in_block);
-  printf("new_pointer %p\n", new_pointer);
-  printf("old_pointer - new_pointer %zd\n", old_pointer - new_pointer);
-  printf("\n");
-#endif
-#ifdef DEBUG
-  if (new_pointer > heap->end || new_pointer < heap->start) {
-    log_error("BUG: forwarding_address out of range moving %p to %p (-%zd)\n",
-        old_pointer,
-        new_pointer,
-        old_pointer - new_pointer);
-  }
-#endif
+  log_debug("\nforwarding_address:\n");
+  log_debug("old_pointer %p\n", old_pointer);
+  log_debug("heap->start %p\n", heap->start);
+  log_debug("block_index %zd\n", block_index);
+  log_debug("block_offset %zd\n", block_offset);
+  log_debug("old_block_start %p\n", old_block_start);
+  log_debug("offset_in_block %zd\n", offset_in_block);
+  log_debug("new_pointer %p\n", new_pointer);
+  log_debug("old_pointer - new_pointer %zd\n", old_pointer - new_pointer);
+  log_debug("\n");
+
+  assert(new_pointer >= heap->start && new_pointer < heap->end);
 
   return new_pointer;
 }
+
 
 void compact(GcState* state, size_t* compact_start) {
   GcHeap* heap = &state->heap;
@@ -85,9 +77,7 @@ void compact(GcState* state, size_t* compact_start) {
   size_t* to = first_move_to;
   size_t garbage_so_far = 0;
 
-#ifdef DEBUG_LOG
-  printf("compact: first available space at %p\n", first_move_to);
-#endif
+  log_debug("compact: first available space at %p\n", first_move_to);
 
   // Iterate over live patches of data
   size_t* from = to;
@@ -107,14 +97,12 @@ void compact(GcState* state, size_t* compact_start) {
       next_garbage++;
     }
 
-#ifdef DEBUG_LOG
-    printf("Moving %zd words down by %zd from (%p - %p) to %p\n",
+    log_debug("Moving %zd words down by %zd from (%p - %p) to %p\n",
         next_garbage - live_patch_start,
         garbage_so_far,
         live_patch_start,
         next_garbage - 1,
         to);
-#endif
 
     // Copy each value in the live patch
     while (from < next_garbage) {
@@ -124,15 +112,8 @@ void compact(GcState* state, size_t* compact_start) {
       size_t* next_value = from + v->header.size;
       size_t* first_child_field = next_value - n_children;
 
-#ifdef DEBUG
-      if (n_children > 10 || next_value > heap->end || v->header.size > 100) {
-        log_error("Possibly corrupted object at %p : tag 0x%x size %d children %zd\n",
-            v,
-            v->header.tag,
-            v->header.size,
-            n_children);
-      }
-#endif
+      // sanity check for corrupted data
+      assert(n_children <= 10 && next_value < heap->end && v->header.size < 100);
 
       // Copy all the non-pointer data that comes before child pointers
       while (from < first_child_field) {
@@ -187,9 +168,7 @@ void compact(GcState* state, size_t* compact_start) {
     if (live_heap_value > first_move_to) {
       live_heap_value = forwarding_address(heap, live_heap_value);
 
-#ifdef DEBUG_LOG
-      printf("Changing root from %p to %p\n", *root_mutable_pointer, live_heap_value);
-#endif
+      log_debug("Changing root from %p to %p\n", *root_mutable_pointer, live_heap_value);
 
       *root_mutable_pointer = live_heap_value;
     }

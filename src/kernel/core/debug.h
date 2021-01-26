@@ -34,4 +34,5 @@ void print_heap();
 void print_state();
 void print_bitmap();
 void log_error(char* fmt, ...);
+void log_debug(char* fmt, ...);
 #endif
