@@ -16,7 +16,8 @@
 #include "stackmap_data/throw_below_tailcall.inc"
 #include "stackmap_data/throw_one_call_deep.inc"
 
-extern GcState gc_state;
+void mark_stack_map(GcState* state, size_t* ignore_below);
+
 extern int verbose;
 
 #define MAX_SPEC_LINES 50

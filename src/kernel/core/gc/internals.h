@@ -46,37 +46,17 @@ typedef struct {
 
 extern GcState gc_state;
 
-// init/manage
-void reset_state(GcState*);
-int set_heap_end(GcHeap* heap, size_t* new_break_ptr);
-
-// mark/metadata
-void bitmap_reset(GcHeap*);
-
-// metadata/compact
-size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
-
-// compact
-size_t* forwarding_address(GcHeap* heap, size_t* old_pointer);
-
-// mutator/header/metadata?
-size_t child_count(ElmValue* v);
-
-// metadata
-size_t make_bitmask(size_t first_bit, size_t last_bit);
-void bitmap_next_test_wrapper(size_t* word, size_t* mask);
-void bitmap_next(size_t* word, size_t* mask);
-
-// mark
-bool mark_words(GcHeap* heap, void* p_void, size_t size);
-void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below);
-void mark_stack_map(GcState* state, size_t* ignore_below);
 void mark(GcState* state, size_t* ignore_below);
-
-// compact
 void compact(GcState* state, size_t* compact_start);
-
-// replay
 void reverse_stack_map(GcState* state);
+
+void reset_state(GcState* state);
+int init_heap(GcHeap* heap);
+
+void bitmap_reset(GcHeap*);
+size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
+size_t child_count(ElmValue* v);
+size_t make_bitmask(size_t first_bit, size_t last_bit);
+void bitmap_next(size_t* word, size_t* mask);
 
 #endif

@@ -3,12 +3,15 @@
 #include <string.h>
 
 #include "../kernel/core/core.h"
-#include "../kernel/core/gc/internals.h"
 #include "gc/replay_test.h"
 #include "gc/stackmap_mark_test.h"
 #include "test.h"
+#include "gc_test.h"
 
-extern GcState gc_state;
+void reset_state(GcState*);
+bool mark_words(GcHeap* heap, void* p_void, size_t size);
+void compact(GcState* state, size_t* compact_start);
+
 
 struct fn {
   void* evaluator;
@@ -352,7 +355,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 2);
 
   word = 0;
@@ -362,7 +365,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 4);
 
   word = 1;
@@ -372,7 +375,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 2);
 
   word = 1;
@@ -382,7 +385,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 4);
 
   word = 0;
@@ -399,7 +402,7 @@ char* gc_bitmap_next_test() {
   assertion++;
 
   sprintf(gc_bitmap_next_test_str, format_str, assertion++, word, mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 1);
 
   return NULL;
