@@ -12,32 +12,19 @@
 */
 void* GC_malloc(ptrdiff_t bytes) {
   GcState* state = &gc_state;
+  if (state->replay) {
+    return malloc_replay(bytes);
+  }
   ptrdiff_t words = bytes / sizeof(void*);
-
   assert(bytes % sizeof(void*) == 0);
+  size_t* old_heap = state->next_alloc;
+  size_t* new_heap = old_heap + words;
 
-  size_t* replay = state->replay_ptr;
-  if (replay != NULL) {  // replay mode
-
-    assert(((Header*)replay)->size == words);
-    size_t* next_replay = replay + words;
-    if (next_replay >= state->next_alloc) {
-      next_replay = NULL;  // exit replay mode
-    }
-    state->replay_ptr = next_replay;
-    return (void*)replay;
-
-  } else {  // normal (non-replay) mode
-
-    size_t* old_heap = state->next_alloc;
-    size_t* new_heap = old_heap + words;
-
-    if (new_heap < state->heap.end) {
-      state->next_alloc = new_heap;
-      return old_heap;
-    } else {
-      return pGcFull;
-    }
+  if (new_heap < state->heap.end) {
+    state->next_alloc = new_heap;
+    return old_heap;
+  } else {
+    return pGcFull;
   }
 }
 

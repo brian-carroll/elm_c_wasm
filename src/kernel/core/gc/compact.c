@@ -147,15 +147,15 @@ void compact(GcState* state, size_t* compact_start) {
   state->next_alloc = to;
   state->nursery = to;
 
-  size_t* stack_map = (size_t*)state->stack_map;
-  if (stack_map > first_move_to) {
-    state->stack_map = (GcStackMap*)forwarding_address(heap, stack_map);
-  }
+  // size_t* stack_map = (size_t*)state->stack_map;
+  // if (stack_map > first_move_to) {
+  //   state->stack_map = (GcStackMap*)forwarding_address(heap, stack_map);
+  // }
 
-  size_t* stack_map_empty = (size_t*)state->stack_map_empty;
-  if (stack_map_empty > first_move_to) {
-    state->stack_map_empty = (GcStackMap*)forwarding_address(heap, stack_map_empty);
-  }
+  // size_t* stack_map_empty = (size_t*)state->stack_map_empty;
+  // if (stack_map_empty > first_move_to) {
+  //   state->stack_map_empty = (GcStackMap*)forwarding_address(heap, stack_map_empty);
+  // }
 
   size_t* roots = (size_t*)state->roots;
   if (roots > first_move_to) {

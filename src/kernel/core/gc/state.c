@@ -4,22 +4,37 @@
 
 /* ====================================================
 
-        OVERALL GC STATE
+        GC STATE
 
    ==================================================== */
 
-GcState gc_state; // one global for the whole GC
+// globals
+GcState gc_state;
+GcLiveSection live_sections[GC_STACK_LIVE_SECTIONS];
 
 void reset_state(GcState* state) {
   void* start = state->heap.start;
   state->nursery = start;
   state->next_alloc = start;
   state->roots = &Nil;
-  state->stack_map = start;
-  state->stack_map_empty = start;
-  state->stack_depth = 0;
-  state->replay_ptr = NULL;
+  state->entry = NULL;
+  state->first_live_section = live_sections;
+  state->end_live_section = &live_sections[GC_STACK_LIVE_SECTIONS];
+  reset_live_sections(state);
 }
+
+void reset_live_sections(GcState* state) {
+  state->current_live_section = live_sections;
+  state->replay_live_section = live_sections;
+  state->replay = NULL;
+}
+
+#ifdef DEBUG
+void bounds_check_live_section(GcLiveSection* section) {
+  assert(section >= live_sections);
+  assert(section < &live_sections[GC_STACK_LIVE_SECTIONS]);
+}
+#endif
 
 /* ====================================================
 

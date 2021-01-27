@@ -51,6 +51,7 @@
 */
 
 #include "internals.h"
+#include "./utils.h"
 
 /* ====================================================
 
@@ -119,11 +120,6 @@ static void collect(GcState* state, size_t* ignore_below) {
   compact(state, ignore_below);
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
-
-  bool stack_empty_was_deleted = (size_t*)state->stack_map_empty >= state->next_alloc;
-  if (stack_empty_was_deleted) {
-    GC_stack_empty();
-  }
 }
 
 void GC_collect_full() {
@@ -132,4 +128,24 @@ void GC_collect_full() {
 
 void GC_collect_nursery() {
   collect(&gc_state, gc_state.nursery);
+}
+
+/* ====================================================
+
+                PROGRAM ENTRY POINT
+  
+    Execute a function in the context of the GC
+
+   ==================================================== */
+
+void* GC_execute(Closure* c) {
+  GcState* state = &gc_state;
+
+  reset_live_sections(state);
+
+  while (true) {
+    void* result = Utils_apply(state->entry, 0, NULL);
+    if (result != pGcFull) return result;
+    GC_collect_full();
+  }
 }

@@ -89,34 +89,7 @@ void mark_trace_values_between(
 // *Most* of the work could be done with a simple trace from the stack map root,
 // but that would miss allocated values not yet returned from live calls.
 void mark_stack_map(GcState* state, size_t* ignore_below) {
-  GcStackMap* oldest_in_live_section = state->stack_map;
-  GcStackMap* newest_in_live_section = (GcStackMap*)state->next_alloc;
-  do {
-    // Iterate backwards in stack history to find start of this live section
-    Tag tag;
-    do {
-      tag = oldest_in_live_section->header.tag;
-      if (tag == Tag_GcStackPop || tag == Tag_GcStackTailCall || tag == Tag_GcStackEmpty)
-        break;
-      oldest_in_live_section = oldest_in_live_section->older;
-    } while ((size_t*)oldest_in_live_section >=
-             ignore_below);  // safeguard against infinite loop
 
-    // Trace everything in this live section
-    // including stack map items, and therefore any returned values from completed calls
-    mark_trace_values_between(
-        oldest_in_live_section, newest_in_live_section, &state->heap, ignore_below);
-
-    // Check if we've gone all the way back to the start of the stack map
-    if (tag == Tag_GcStackEmpty) return;
-
-    // Skip over anything allocated inside the completed function call, follow link to
-    // next live section
-    GcStackMap* push = oldest_in_live_section->older;
-    oldest_in_live_section = push;
-    newest_in_live_section = push;
-  } while ((size_t*)oldest_in_live_section >=
-           ignore_below);  // safeguard against infinite loop
 }
 
 
@@ -125,9 +98,9 @@ void mark(GcState* state, size_t* ignore_below) {
   bitmap_reset(&state->heap);
 
   // Mark values freshly allocated in still-running function calls
-  if (state->stack_depth > 0) {
-    mark_stack_map(state, ignore_below);
-  }
+  // if (state->stack_depth > 0) {
+  //   mark_stack_map(state, ignore_below);
+  // }
 
   // Mark GC roots (mutable values in Elm effect managers, including the program's
   // `model`)

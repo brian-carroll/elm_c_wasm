@@ -21,6 +21,7 @@
 #define GC_BLOCK_MASK (-GC_BLOCK_BYTES)
 #define GC_WORD_BITS (sizeof(size_t) * 8)
 #define GC_DIV_ROUND_UP(num, den) ((num + den - 1) / den)
+#define GC_STACK_LIVE_SECTIONS 1024
 
 #define ALL_ONES -1
 
@@ -33,14 +34,23 @@ typedef struct {
 } GcHeap;
 
 typedef struct {
+  void* (*evaluator)(void**); // for debug
+  void* start;
+  void* end;
+} GcLiveSection;
+
+typedef struct {
   GcHeap heap;
   size_t* next_alloc;
   size_t* nursery;
   Cons* roots;
-  GcStackMap* stack_map;
-  GcStackMap* stack_map_empty;
-  size_t stack_depth;
-  size_t* replay_ptr;
+
+  Closure* entry;
+  GcLiveSection* current_live_section;
+  GcLiveSection* replay_live_section;
+  GcLiveSection* first_live_section;
+  GcLiveSection* end_live_section;
+  void* replay;
 } GcState;
 
 extern GcState gc_state;
@@ -52,10 +62,19 @@ void reverse_stack_map(GcState* state);
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
 
+#ifdef DEBUG
+void bounds_check_live_section(GcLiveSection* section);
+#else
+#define bounds_check_live_section(x)
+#endif
+
 void bitmap_reset(GcHeap*);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
 size_t child_count(ElmValue* v);
 size_t make_bitmask(size_t first_bit, size_t last_bit);
 void bitmap_next(size_t* word, size_t* mask);
+
+
+void* malloc_replay(ptrdiff_t bytes);
 
 #endif
