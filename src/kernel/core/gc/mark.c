@@ -42,7 +42,6 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
   return already_marked;
 }
 
-
 void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
   size_t* first_word = (size_t*)v;
   if (first_word < ignore_below) return;
@@ -68,7 +67,6 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
   }
 }
 
-
 // Trace all Elm value between two memory addresses
 void mark_trace_values_between(
     void* start, void* end, GcHeap* heap, size_t* ignore_below) {
@@ -82,28 +80,19 @@ void mark_trace_values_between(
   }
 }
 
-
-// Scan the stack map, marking values allocated in live function calls.
-// Conversely, don't mark values allocated in function calls that have finished.
-// We only need the return values since they're pure functions.
-// *Most* of the work could be done with a simple trace from the stack map root,
-// but that would miss allocated values not yet returned from live calls.
-void mark_stack_map(GcState* state, size_t* ignore_below) {
-
-}
-
-
 void mark(GcState* state, size_t* ignore_below) {
   // Clear all mark bits
   bitmap_reset(&state->heap);
 
   // Mark values freshly allocated in still-running function calls
-  // if (state->stack_depth > 0) {
-  //   mark_stack_map(state, ignore_below);
-  // }
+  for (GcLiveSection* section = state->first_live_section;
+       section <= state->current_live_section;
+       section++) {
+    mark_trace_values_between(section->start, section->end, &state->heap, ignore_below);
+  }
 
-  // Mark GC roots (mutable values in Elm effect managers, including the program's
-  // `model`)
+  // Mark GC roots (mutable values in Elm effect managers, including the Model)
+
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {
     mark_words(&state->heap, root_cell, sizeof(Cons) / SIZE_UNIT);
 

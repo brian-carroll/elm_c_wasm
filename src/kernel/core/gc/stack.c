@@ -35,40 +35,40 @@
     This is only possible when there are no side-effects.
 */
 
-/*
-  GcLiveSection* live_sections;
-  void* replay;
-  i16 current_live_section;
-  i16 replay_live_section;
-*/
-
-/*
-  GC_apply_replay
-  GC_stack_push
-  GC_stack_pop
- */
-
-
 GcLiveSection* GC_stack_push(void* (*evaluator)(void**)) {
   GcState* state = &gc_state;
 
-  GcLiveSection* parent = state->current_live_section;
-  parent->end = state->next_alloc;
+  if (!state->replay) {
+    GcLiveSection* parent = state->current_live_section;
+    parent->end = state->next_alloc;
 
-  state->current_live_section++;
-  bounds_check_live_section(state->current_live_section);
+    state->current_live_section++;
+    bounds_check_live_section(state->current_live_section);
 
-  GcLiveSection* current = state->current_live_section;
-  current->evaluator = evaluator;
-  current->start = state->next_alloc;
-  current->end = NULL;
+    GcLiveSection* current = state->current_live_section;
+    current->evaluator = evaluator;
+    current->start = state->next_alloc;
+    current->end = NULL;
 
-  return current;
+    return current;
+  } else {
+    GcLiveSection* parent = state->replay_live_section;
+    assert(parent->end == state->replay);
+
+    state->replay_live_section++;
+    bounds_check_live_section(state->replay_live_section);
+
+    GcLiveSection* current = state->replay_live_section;
+    assert(current->evaluator == evaluator);
+    assert(current->start == state->replay);
+
+    return current;
+  }
 }
-
 
 void GC_stack_pop(void* (*evaluator)(void**), void* result, GcLiveSection* push) {
   GcState* state = &gc_state;
+  assert(!state->replay);
 
   // The only live value in this section is the return value
   // (and its children, which we will trace later if we do a GC)
@@ -88,17 +88,18 @@ void GC_stack_pop(void* (*evaluator)(void**), void* result, GcLiveSection* push)
   state->current_live_section = next;
 }
 
-
-void GC_stack_tailcall(Closure* c, GcLiveSection* push) {
+void GC_stack_tailcall(Closure* c) {
   GcState* state = &gc_state;
 
-  // The only live value in this section is the tail call closure
-  // (and its children, which we will trace later if we do a GC)
+  GcLiveSection* push = state->current_live_section - 1;
   assert(push->evaluator == c->evaluator);
+
+  // Save current state of tail recursion for later replay
+  // Can ignore everything else in this section
   push->start = c;
   push->end = c;
 
-  // Start a new live section for further allocations in the next tail call
+  // New live section for next iteration
   GcLiveSection* next = push + 1;
   bounds_check_live_section(next);
   next->evaluator = c->evaluator;
@@ -108,38 +109,28 @@ void GC_stack_tailcall(Closure* c, GcLiveSection* push) {
   state->current_live_section = next;
 }
 
-
 void* GC_apply_replay(void* (*evaluator)(void**)) {
   GcState* state = &gc_state;
   GcLiveSection* section = state->replay_live_section;
   assert(section->evaluator == evaluator);
 
   if (section->start == section->end) {
-    // This call was either a completed call or an incomplete tailcall
-    // completed => we saved the result so we can skip the call (referential transparency)
-    // tailcall => we saved a full Closure representing the next iteration
-    // Utils_apply will check for a full Closure and decide what to do
-    void* saved = section->start;
+    void* saved = section->start;  // call result or tailcall Closure
 
-    // Done with this section, it only had one value in it
     state->replay_live_section++;
     if (state->replay_live_section >= state->current_live_section) {
-      // We've run out of stuff to replay. Exit replay mode.
-      state->replay = NULL;
+      state->replay = NULL;  // Exit replay mode.
       state->replay_live_section = state->first_live_section;
     } else {
-      // Time to move on to the next live section
       state->replay = state->replay_live_section->start;
     }
 
     return saved;
   }
 
-  // This call was still running when the heap overflow happened before GC
-  // Now we resume execution of it by telling Utils_apply not to replay anything
+  // Resume this interrupted call by saying "no replay value"
   return NULL;
 }
-
 
 void* malloc_replay(ptrdiff_t bytes) {
   GcState* state = &gc_state;
@@ -153,13 +144,11 @@ void* malloc_replay(ptrdiff_t bytes) {
   void* next_replay = state->replay + bytes;
 
   if (next_replay >= state->next_alloc) {
-    // We've run out of stuff to replay. Exit replay mode.
     assert(state->replay_live_section == state->current_live_section);
     state->replay = NULL;
     state->replay_live_section = state->first_live_section;
 
   } else if (next_replay >= state->replay_live_section->end) {
-    // Time to move on to the next live section
     state->replay_live_section++;
     bounds_check_live_section(state->replay_live_section);
     state->replay = state->replay_live_section->start;

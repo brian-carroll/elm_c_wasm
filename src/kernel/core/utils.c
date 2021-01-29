@@ -148,85 +148,59 @@ Closure Utils_append = {
 //      FUNCTION APPLICATION
 // -----------------------------------------------------------
 
-void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
+void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
   void** args;
-  Closure* c;
-  void* push = NULL;
-
-  for (;;) {
-    void* replay = GC_apply_replay(&push);
-    if (replay != NULL) {
-      c = replay;
-      if (c->header.tag != Tag_Closure) {
-        return replay;
-      }
-      if (c->n_values < c->max_values) {
-        return replay;
-      }
+  do {
+    Closure* replay = GC_apply_replay(c);
+    if (replay) {
+      if (replay->header.tag != Tag_Closure) return replay;
+      if (replay->n_values < replay->max_values) return replay;
+      assert(c->evaluator == replay->evaluator);
+      args = replay->values;
+    } else if (n_applied >= c->max_values) {
+      // All args in one go (or too many args, expecting a function to be returned)
+      args = applied;
+    } else if (n_applied == 0) {
+      // All args already applied, but result not evaluated yet. A thunk.
+      // Elm syntax can't do this but runtime/kernel can
       args = c->values;
     } else {
-      if (c_old->max_values == n_applied) {
-        // 'saturated' call. No need to allocate a new Closure.
-        c = c_old;
-        args = applied;
-      } else if (n_applied == 0) {
-        // a full closure (thunk)
-        // from JS wrapper (or resumed tailcall? not sure if this happens)
-        c = c_old;
-        args = c_old->values;
-      } else {
-        u16 n_old = c_old->n_values;
-        u16 n_new = n_old + n_applied;
+      // Partial application, need a Closure. 'args' could be any size => heap
+      u16 n_old = c->n_values;
+      u16 n_new = n_old + n_applied;
 
-        size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
-        size_t size_applied = n_applied * sizeof(void*);
-        size_t size_new = size_old + size_applied;
+      Closure* c_copy = CAN_THROW(GC_malloc(SIZE_CLOSURE(n_new)));
+      GC_memcpy(c_copy, c, SIZE_CLOSURE(n_old));
+      GC_memcpy(&c_copy->values[n_old], applied, SIZE_CLOSURE(n_applied));
+      c_copy->header = HEADER_CLOSURE(n_new);
+      c_copy->n_values = n_new;
 
-        c = CAN_THROW(GC_malloc(size_new));
-        GC_memcpy(c, c_old, size_old);
-        GC_memcpy(&c->values[n_old], applied, size_applied);
-        c->header = HEADER_CLOSURE(n_new);
-        c->n_values = n_new;
-
-        if (n_new < c->max_values) {
-          // Partial application (not calling evaluator => no stack push)
-          return c;
-        }
-        args = c->values;
+      if (n_new < c_copy->max_values) {
+        return c_copy;
       }
-    }
-    if (!push) {
-      push = CAN_THROW(GC_stack_push());
+      args = c_copy->values; // enough args => execute
     }
 
-    // char* name = Debug_evaluator_name(c->evaluator);
-    // printf("apply %s\n", name);
-    // if (name == Debug_unknown_evaluator) {
-    //   emscripten_run_script("debugger;");
-    // } else {
-    // }
 
-    ElmValue* result = (*c->evaluator)(args);
-    if ((void*)result == pGcFull) {
+    // Execute! (and let the GC know what the stack is doing)
+    void* push = GC_stack_push(c->evaluator);
+    void* result = CAN_THROW(c->evaluator(args));
+    GC_stack_pop(c->evaluator, result, push);
+
+
+    u16 n_total = c->n_values + n_applied;
+    u16 n_done = c->max_values;
+    if (n_total <= n_done) {
       return result;
     }
 
-    void* pop = CAN_THROW(GC_stack_pop(result, push));
-    (void)pop;  // suppress "unused variable" warning
-
-    // In some cases, we may still have args to be applied.
-    // The first few were used to create a Closure
-    // Now we need to apply the rest to that new Closure... etc.
-    u16 n_total = c_old->n_values + n_applied;
-    u16 n_done = c_old->max_values;
-    if (n_total > n_done) {
-      c_old = (Closure*)result;
-      n_applied = n_total - n_done;
-      applied = &args[n_done];
-    } else {
-      return result;
-    }
-  }
+    // We have more args to apply. Go around again.
+    // (The function must have returned another function, since ELm type-checked it)
+    c = (Closure*)result;
+    assert(c->header.tag == Tag_Closure);
+    n_applied = n_total - n_done;
+    applied = &args[n_done];
+  } while (true);
 }
 
 // -----------------------------------------------------------
