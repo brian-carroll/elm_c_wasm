@@ -10,6 +10,7 @@ import Json.Decode as JD exposing (Value)
 import Random
 import Result exposing (Result(..))
 import Test.Runner.Html as TestHtml
+import Wasm
 
 
 
@@ -74,8 +75,8 @@ view model =
         [ button [ onClick ButtonClicked ] [ text "LOAD" ]
         , div [] [ text model.text ]
         , div []
-            [ h1 [] [ text "core tests" ]
-            , TestHtml.viewResults testConfig Core.tests
+            [ TestHtml.viewResults testConfig Wasm.tests
+            -- , TestHtml.viewResults testConfig Core.tests
             ]
         ]
 
@@ -90,18 +91,3 @@ main =
         }
 
 
-
-{-
-   TODO
-   pattern match tests
-
-
-   tuple destructuring
-   scope tests with `let`, local function vars, nesting...
-   TCE free vars, scopes
-   functin application tests
-    - partial application
-    - too many args
-    - apply args to returned function
-
--}
