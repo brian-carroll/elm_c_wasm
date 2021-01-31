@@ -5,6 +5,16 @@
 - I really need a separate region. Something small will do.
 - Explicit stack is sounding so good right now.
 
+## testing
+
+- Write test functions in Elm, compile them, and copy/paste into tests
+- Run them as top level functions with NEW_CLOSURE and GC_execute
+- after running the function, put expectations on the stackmap
+- modify the debug dumper to show live sections
+- run mark, check stuff is marked properly
+- run compact, eyeball it
+
+## implementation
 - stack map off to the side:
 - add every allocation to it
 - when the call returns, write that as the only pointer for this call
