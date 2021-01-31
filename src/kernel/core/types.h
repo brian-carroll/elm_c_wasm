@@ -247,19 +247,21 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]);
 
 // CLOSURE
 
+// pointer to a function that takes an array of pointers and returns a pointer
+typedef void* (*EvalFunction)(void*[]);
+
 typedef struct {
   Header header;
   u16 n_values;  // current number of applied args
   u16 max_values;
-  void* (*evaluator)(void*[]);  // pointer to a function that takes an array of pointers
-                                // and returns a pointer
+  EvalFunction evaluator;  
   void* values[];
 } Closure;
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
 
 Closure* ctorClosure(
-    u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]);
+    u16 n_values, u16 max_values, EvalFunction evaluator, void* values[]);
 #define NEW_CLOSURE(n, m, e, v) CAN_THROW(ctorClosure(n, m, e, v))
 
 // Reference to a JS object

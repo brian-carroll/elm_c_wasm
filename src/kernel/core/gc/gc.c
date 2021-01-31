@@ -49,9 +49,12 @@
         - Kermany and Petrank, 2006
         - Abuaiadh et al, 2004
 */
-
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 #include "internals.h"
-#include "./utils.h"
+#include "../gc.h"
+#include "../utils.h"
 
 /* ====================================================
 
@@ -62,14 +65,8 @@
 // Call exactly once on program startup
 int GC_init() {
   GcState* state = &gc_state;  // local reference for debugger to see
-
   int err = init_heap(&state->heap);
-
   reset_state(state);
-  if (!err) {
-    GC_stack_empty();
-  }
-
   return err;
 }
 
@@ -141,11 +138,14 @@ void GC_collect_nursery() {
 void* GC_execute(Closure* c) {
   GcState* state = &gc_state;
 
-  reset_live_sections(state);
+  GC_stack_clear();
 
   while (true) {
     void* result = Utils_apply(state->entry, 0, NULL);
-    if (result != pGcFull) return result;
+    if (result != pGcFull) {
+      GC_stack_clear();
+      return result;
+    }
     GC_collect_full();
   }
 }

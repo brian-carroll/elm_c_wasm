@@ -35,7 +35,7 @@
     This is only possible when there are no side-effects.
 */
 
-GcLiveSection* GC_stack_push(void* (*evaluator)(void**)) {
+GcLiveSection* GC_stack_push(EvalFunction evaluator) {
   GcState* state = &gc_state;
 
   if (!state->replay) {
@@ -66,7 +66,8 @@ GcLiveSection* GC_stack_push(void* (*evaluator)(void**)) {
   }
 }
 
-void GC_stack_pop(void* (*evaluator)(void**), void* result, GcLiveSection* push) {
+
+void GC_stack_pop(EvalFunction evaluator, void* result, GcLiveSection* push) {
   GcState* state = &gc_state;
   assert(!state->replay);
 
@@ -88,11 +89,21 @@ void GC_stack_pop(void* (*evaluator)(void**), void* result, GcLiveSection* push)
   state->current_live_section = next;
 }
 
-void GC_stack_tailcall(Closure* c) {
+
+void* GC_stack_tailcall(EvalFunction evaluator, u32 n_free, void* free_vars[], u32 n_explicit_args, void* explicit_args[]) {
   GcState* state = &gc_state;
 
+  u32 n = n_free + n_explicit_args;
+  Closure* c = NEW_CLOSURE(n, n, evaluator, NULL);
+  for (u32 i=0; i < n_free; i++) {
+    c->values[i] = free_vars[i];    
+  }
+  for (u32 i=0; i < n_explicit_args; i++) {
+    c->values[n_free + i] = explicit_args[i];
+  }
+
   GcLiveSection* push = state->current_live_section - 1;
-  assert(push->evaluator == c->evaluator);
+  assert(push->evaluator == evaluator);
 
   // Save current state of tail recursion for later replay
   // Can ignore everything else in this section
@@ -102,14 +113,16 @@ void GC_stack_tailcall(Closure* c) {
   // New live section for next iteration
   GcLiveSection* next = push + 1;
   bounds_check_live_section(next);
-  next->evaluator = c->evaluator;
+  next->evaluator = evaluator;
   next->start = state->next_alloc;
   next->end = NULL;
 
   state->current_live_section = next;
+  return NULL;
 }
 
-void* GC_apply_replay(void* (*evaluator)(void**)) {
+
+void* GC_apply_replay(EvalFunction evaluator) {
   GcState* state = &gc_state;
   GcLiveSection* section = state->replay_live_section;
   assert(section->evaluator == evaluator);
@@ -131,6 +144,7 @@ void* GC_apply_replay(void* (*evaluator)(void**)) {
   // Resume this interrupted call by saying "no replay value"
   return NULL;
 }
+
 
 void* malloc_replay(ptrdiff_t bytes) {
   GcState* state = &gc_state;

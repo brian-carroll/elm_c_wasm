@@ -25,16 +25,16 @@
 //           to initialise the global value
 void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
-  GC_stack_empty();
+
+  GC_stack_clear();
   for (;;) {
     void* heap_value = init_func();
     if (heap_value != pGcFull) {
       *global_permanent_ptr = heap_value;
-      GC_stack_empty();
+      GC_stack_clear();
       return;
     }
     GC_collect_full();
-    GC_prep_replay();
   }
 }
 

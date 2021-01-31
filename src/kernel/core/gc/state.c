@@ -20,10 +20,11 @@ void reset_state(GcState* state) {
   state->entry = NULL;
   state->first_live_section = live_sections;
   state->end_live_section = &live_sections[GC_STACK_LIVE_SECTIONS];
-  reset_live_sections(state);
+  GC_stack_clear();
 }
 
-void reset_live_sections(GcState* state) {
+void GC_stack_clear() {
+  GcState* state = &gc_state;
   state->current_live_section = live_sections;
   state->replay_live_section = live_sections;
   state->replay = NULL;

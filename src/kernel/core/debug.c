@@ -438,27 +438,21 @@ void print_state() {
   size_t system_end = (size_t)state->heap.system_end;
   size_t next_alloc = (size_t)state->next_alloc;
   size_t nursery = (size_t)state->nursery;
-  size_t stack_map_empty = (size_t)state->stack_map_empty;
 
   size_t total = (system_end - start + 512) / 1024;
   size_t available = (end - start + 512) / 1024;
   size_t used = (next_alloc - start + 512) / 1024;
-  size_t stack = (next_alloc - stack_map_empty + 512) / 1024;
   size_t since_gc = (next_alloc - nursery + 512) / 1024;
 
   printf("start %p\n", state->heap.start);
   printf("system_end %p      (%zd kB total heap)\n", state->heap.system_end, total);
   printf("end %p             (%zd kB app heap)\n", state->heap.end, available);
   printf("next_alloc %p      (%zd kB used)\n", state->next_alloc, used);
-  printf("stack_map_empty %p (%zd kB current call)\n", state->stack_map_empty, stack);
   printf("nursery %p         (%zd kB since last GC)\n", state->nursery, since_gc);
   printf("\n");
   printf("offsets %p\n", state->heap.offsets);
   printf("bitmap %p\n", state->heap.bitmap);
   printf("roots %p\n", state->roots);
-  printf("stack_map %p\n", state->stack_map);
-  printf("stack_depth %zd\n", state->stack_depth);
-  printf("replay_ptr %p\n", state->replay_ptr);
   printf("\n");
 
   // print_bitmap();

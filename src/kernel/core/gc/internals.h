@@ -34,12 +34,6 @@ typedef struct {
 } GcHeap;
 
 typedef struct {
-  void* (*evaluator)(void**); // for debug
-  void* start;
-  void* end;
-} GcLiveSection;
-
-typedef struct {
   GcHeap heap;
   size_t* next_alloc;
   size_t* nursery;
@@ -57,7 +51,6 @@ extern GcState gc_state;
 
 void mark(GcState* state, size_t* ignore_below);
 void compact(GcState* state, size_t* compact_start);
-void reverse_stack_map(GcState* state);
 
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
