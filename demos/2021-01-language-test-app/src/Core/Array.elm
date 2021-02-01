@@ -15,29 +15,35 @@ tests =
         [ initTests
         , isEmptyTests
         , lengthTests
+
         -- , getSetTests
         -- , conversionTests
         -- , transformTests
         , sliceTests
+
         -- , runtimeCrashTests
         ]
 
 
+threeLevelTree : Int
 threeLevelTree =
     -- 33000
     3
 
 
+bigSlice : Int
 bigSlice =
     -- 10000
     1
 
 
+smallSlice : Int
 smallSlice =
     -- 100
     1
 
 
+smallerSlice : Int
 smallerSlice =
     -- 50
     1
@@ -73,7 +79,6 @@ initTests =
             \() ->
                 toList (initialize 0 identity)
                     |> Expect.equal []
-
         , test "initialize negative" <|
             \() ->
                 toList (initialize -2 identity)
@@ -84,7 +89,7 @@ initTests =
 isEmptyTests : Test
 isEmptyTests =
     describe "isEmpty"
-        [test "all empty arrays are equal" <|
+        [ test "all empty arrays are equal" <|
             \() ->
                 Expect.equal empty (fromList [])
         , test "empty array" <|
@@ -288,6 +293,7 @@ sliceTests =
             \() ->
                 toList (slice -1 -2 smallSample)
                     |> Expect.equal []
+
         -- , test "crash" <|
         --     \() ->
         --         Array.repeat (33 * 32) 1

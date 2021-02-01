@@ -162,12 +162,14 @@ addJsVsWasmWithoutA2 =
 
 {-| Will be replaced with Wasm version, and have Elm's 'A2' helper removed from call, via build-combine.sh & patch.js
 -}
+wasmAddUnboxedNoA2 : Int -> Int -> Int
 wasmAddUnboxedNoA2 =
     wasmAddUnboxed
 
 
 {-| Will have Elm's 'A2' helper removed from call via build-combine.sh
 -}
+jsAddUnboxedNoA2 : Int -> Int -> Int
 jsAddUnboxedNoA2 =
     jsAddUnboxed
 

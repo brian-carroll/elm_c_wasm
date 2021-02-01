@@ -1,11 +1,12 @@
 module Wasm exposing (tests)
 
-import Test exposing (..)
 import Expect
+import Test exposing (..)
 import Wasm.Calls
 import Wasm.Functions
 import Wasm.HttpTests
 import Wasm.PatternMatching
+
 
 
 {-
@@ -17,11 +18,15 @@ import Wasm.PatternMatching
        - Task
 -}
 
+
 tests : Test
 tests =
     describe "Wasm code gen" <|
         []
-        --   ++ [ Wasm.Calls.tests ]
-          ++ [ Wasm.Functions.tests ]
-        --   ++ [ Wasm.HttpTests.tests ]
-        --   ++ [ Wasm.PatternMatching.tests ]
+            --   ++ [ Wasm.Calls.tests ]
+            ++ [ Wasm.Functions.tests ]
+
+
+
+--   ++ [ Wasm.HttpTests.tests ]
+--   ++ [ Wasm.PatternMatching.tests ]

@@ -7,42 +7,52 @@ import List
 import Test exposing (..)
 
 
+lower : List.List Char
 lower =
     [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' ]
 
 
+upper : List.List Char
 upper =
     [ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' ]
 
 
+dec : List.List Char
 dec =
     [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ]
 
 
+oct : List.List Char
 oct =
     List.take 8 dec
 
 
+hexLower : List.List Char
 hexLower =
     List.take 6 lower
 
 
+hexUpper : List.List Char
 hexUpper =
     List.take 6 upper
 
 
+hex : List.List Char
 hex =
     List.append hexLower hexUpper |> List.append dec
 
 
+lowerCodes : List.List Int
 lowerCodes =
     List.range 97 (97 + List.length lower - 1)
 
 
+upperCodes : List.List Int
 upperCodes =
     List.range 65 (65 + List.length upper - 1)
 
 
+decCodes : List.List Int
 decCodes =
     List.range 48 (48 + List.length dec - 1)
 

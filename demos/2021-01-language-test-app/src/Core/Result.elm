@@ -7,6 +7,7 @@ import String
 import Test exposing (..)
 
 
+isEven : Int -> Result String Int
 isEven n =
     if modBy 2 n == 0 then
         Ok n
@@ -25,14 +26,17 @@ toIntResult s =
             Err <| "could not convert string '" ++ s ++ "' to an Int"
 
 
+add3 : Int -> Int -> Int -> Int
 add3 a b c =
     a + b + c
 
 
+add4 : Int -> Int -> Int -> Int -> Int
 add4 a b c d =
     a + b + c + d
 
 
+add5 : Int -> Int -> Int -> Int -> Int -> Int
 add5 a b c d e =
     a + b + c + d + e
 
