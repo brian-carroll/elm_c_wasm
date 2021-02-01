@@ -1,7 +1,7 @@
 module Wasm.Functions exposing (tests)
 
-import Test exposing (..)
 import Expect exposing (Expectation)
+import Test exposing (..)
 
 
 tests : Test
@@ -15,29 +15,30 @@ tests =
         ]
 
 
+
 {-
-- global
+   - global
 
-- local
-- local (with free vars)
-- local (with nested scope free vars)
+   - local
+   - local (with free vars)
+   - local (with nested scope free vars)
 
-- local anon
-- local anon (with free vars)
+   - local anon
+   - local anon (with free vars)
 
-- global tailcall
-- local tailcall
-- local tailcall (with free vars)
+   - global tailcall
+   - local tailcall
+   - local tailcall (with free vars)
 
-- global non-tail self-call
-- local non-tail self-call
-- local non-tail self-call (with free vars)
+   - global non-tail self-call
+   - local non-tail self-call
+   - local non-tail self-call (with free vars)
 
-- global tail & non-tail self-call
-- local tail & non-tail self-call
-- local tail & non-tail self-call (with free vars)
+   - global tail & non-tail self-call
+   - local tail & non-tail self-call
+   - local tail & non-tail self-call (with free vars)
 
-- global cycles
+   - global cycles
 -}
 
 
@@ -66,8 +67,9 @@ globalRecursion : Int -> Int
 globalRecursion i =
     if i <= 1 then
         1
+
     else
-        globalRecursion (i-1) + globalRecursion (i-2)
+        globalRecursion (i - 1) + globalRecursion (i - 2)
 
 
 testGlobalRecursion : Test
@@ -84,8 +86,9 @@ testLocalRecursion =
                 local i =
                     if i <= 1 then
                         1
+
                     else
-                        local (i-1) + local (i-2)
+                        local (i - 1) + local (i - 2)
             in
             Expect.equal (local 6) 13
 
@@ -94,6 +97,7 @@ globalTailRecursion : Int -> Int -> Int
 globalTailRecursion acc x =
     if x <= 1 then
         acc
+
     else
         globalTailRecursion (acc * x) (x - 1)
 
@@ -112,6 +116,7 @@ testLocalTailRecursion =
                 local acc x =
                     if x <= 1 then
                         acc
+
                     else
                         local (acc * x) (x - 1)
             in
