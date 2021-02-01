@@ -44,7 +44,7 @@ typedef struct {
   GcLiveSection* replay_live_section;
   GcLiveSection* first_live_section;
   GcLiveSection* end_live_section;
-  void* replay;
+  size_t* replay;
 } GcState;
 
 extern GcState gc_state;

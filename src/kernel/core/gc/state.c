@@ -17,18 +17,34 @@ void reset_state(GcState* state) {
   state->nursery = start;
   state->next_alloc = start;
   state->roots = &Nil;
-  state->entry = NULL;
+  state->entry = start;
   state->first_live_section = live_sections;
   state->end_live_section = &live_sections[GC_STACK_LIVE_SECTIONS];
-  GC_stack_clear();
+  GC_stack_reset(start);
 }
 
-void GC_stack_clear() {
+void GC_stack_reset(Closure* c) {
   GcState* state = &gc_state;
+  void* p = c;
+  EvalFunction e;
+  if (!c) {
+    p = state->next_alloc; // when initialising globals, we don't have a Closure
+    e = NULL;
+  } else {
+    p = c;
+    e = c->evaluator;
+  }
+  state->entry = p;
+
   state->current_live_section = live_sections;
   state->replay_live_section = live_sections;
+
+  state->current_live_section->start = p;
+  state->current_live_section->end = state->heap.end;
+  state->current_live_section->evaluator = e;
+
   state->replay = NULL;
-}
+};
 
 #ifdef DEBUG
 void bounds_check_live_section(GcLiveSection* section) {

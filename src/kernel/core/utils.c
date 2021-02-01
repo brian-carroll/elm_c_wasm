@@ -26,12 +26,11 @@
 void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
 
-  GC_stack_clear();
+  GC_stack_reset(NULL);
   for (;;) {
     void* heap_value = init_func();
     if (heap_value != pGcFull) {
       *global_permanent_ptr = heap_value;
-      GC_stack_clear();
       return;
     }
     GC_collect_full();
@@ -151,7 +150,7 @@ Closure Utils_append = {
 void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
   void** args;
   do {
-    Closure* replay = GC_apply_replay(c);
+    Closure* replay = GC_apply_replay(c->evaluator);
     if (replay) {
       if (replay->header.tag != Tag_Closure) return replay;
       if (replay->n_values < replay->max_values) return replay;

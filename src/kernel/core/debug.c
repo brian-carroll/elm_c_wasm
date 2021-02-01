@@ -430,6 +430,24 @@ void print_bitmap() {
   printf("\n");
 }
 
+void print_live_sections() {
+  GcState* state = &gc_state;
+  printf("\n");
+  printf("\nLive Sections:\n");
+  int i=0;
+  for (GcLiveSection* section = state->first_live_section;
+       section <= state->current_live_section;
+       section++, i++) {
+    printf("%2d: %p -> %p (%zd -> %zd) %s\n",
+      i,
+      section->start,
+      section->end,
+      section->start - (size_t*)state->entry,
+      section->end - (size_t*)state->entry,
+      Debug_evaluator_name(section->evaluator));
+  }
+}
+
 void print_state() {
   GcState* state = &gc_state;
 
@@ -444,15 +462,22 @@ void print_state() {
   size_t used = (next_alloc - start + 512) / 1024;
   size_t since_gc = (next_alloc - nursery + 512) / 1024;
 
-  printf("start %p\n", state->heap.start);
-  printf("system_end %p      (%zd kB total heap)\n", state->heap.system_end, total);
-  printf("end %p             (%zd kB app heap)\n", state->heap.end, available);
-  printf("next_alloc %p      (%zd kB used)\n", state->next_alloc, used);
-  printf("nursery %p         (%zd kB since last GC)\n", state->nursery, since_gc);
+  printf("%p start\n", state->heap.start);
+  printf("%p system_end      (%zd kB total heap)\n", state->heap.system_end, total);
+  printf("%p end             (%zd kB app heap)\n", state->heap.end, available);
+  printf("%p next_alloc      (%zd kB used)\n", state->next_alloc, used);
+  printf("%p nursery         (%zd kB since last GC)\n", state->nursery, since_gc);
   printf("\n");
-  printf("offsets %p\n", state->heap.offsets);
-  printf("bitmap %p\n", state->heap.bitmap);
-  printf("roots %p\n", state->roots);
+  printf("%p offsets\n", state->heap.offsets);
+  printf("%p bitmap\n", state->heap.bitmap);
+  printf("%p roots\n", state->roots);
+  printf("\n");
+  printf("%p entry\n", state->entry);
+  printf("%p current_live_section\n", state->current_live_section);
+  printf("%p replay_live_section\n", state->replay_live_section);
+  printf("%p first_live_section\n", state->first_live_section);
+  printf("%p end_live_section\n", state->end_live_section);
+  printf("%p replay\n", state->replay);
   printf("\n");
 
   // print_bitmap();

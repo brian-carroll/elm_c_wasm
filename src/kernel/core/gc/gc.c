@@ -113,6 +113,7 @@ static void collect(GcState* state, size_t* ignore_below) {
 #ifdef DEBUG
   printf("collecting garbage from %p\n", ignore_below);
 #endif
+  state->current_live_section->end = state->next_alloc;
   mark(state, ignore_below);
   compact(state, ignore_below);
   bool is_full_gc = ignore_below <= gc_state.heap.start;
@@ -138,12 +139,12 @@ void GC_collect_nursery() {
 void* GC_execute(Closure* c) {
   GcState* state = &gc_state;
 
-  GC_stack_clear();
+  GC_stack_reset(c);
 
   while (true) {
     void* result = Utils_apply(state->entry, 0, NULL);
     if (result != pGcFull) {
-      GC_stack_clear();
+      GC_stack_reset(state->entry);
       return result;
     }
     GC_collect_full();

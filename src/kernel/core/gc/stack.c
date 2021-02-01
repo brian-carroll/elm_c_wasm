@@ -48,7 +48,7 @@ GcLiveSection* GC_stack_push(EvalFunction evaluator) {
     GcLiveSection* current = state->current_live_section;
     current->evaluator = evaluator;
     current->start = state->next_alloc;
-    current->end = NULL;
+    current->end = state->heap.end;
 
     return current;
   } else {
@@ -81,7 +81,7 @@ void GC_stack_pop(EvalFunction evaluator, void* result, GcLiveSection* push) {
   GcLiveSection* next = push + 1;
   bounds_check_live_section(next);
   next->start = state->next_alloc;
-  next->end = NULL;
+  next->end = state->heap.end;
 
   GcLiveSection* prev = push - 1;
   next->evaluator = prev->evaluator;
@@ -107,15 +107,15 @@ void* GC_stack_tailcall(EvalFunction evaluator, u32 n_free, void* free_vars[], u
 
   // Save current state of tail recursion for later replay
   // Can ignore everything else in this section
-  push->start = c;
-  push->end = c;
+  push->start = (size_t*)c;
+  push->end = (size_t*)c;
 
   // New live section for next iteration
   GcLiveSection* next = push + 1;
   bounds_check_live_section(next);
   next->evaluator = evaluator;
   next->start = state->next_alloc;
-  next->end = NULL;
+  next->end = state->heap.end;
 
   state->current_live_section = next;
   return NULL;
@@ -124,6 +124,10 @@ void* GC_stack_tailcall(EvalFunction evaluator, u32 n_free, void* free_vars[], u
 
 void* GC_apply_replay(EvalFunction evaluator) {
   GcState* state = &gc_state;
+  if (!state->replay) {
+    return NULL;
+  }
+
   GcLiveSection* section = state->replay_live_section;
   assert(section->evaluator == evaluator);
 
@@ -151,11 +155,11 @@ void* malloc_replay(ptrdiff_t bytes) {
   u32 requested_words = bytes / sizeof(void*);
   assert(bytes % sizeof(void*) == 0);
 
-  ElmValue* saved = state->replay;
+  ElmValue* saved = (ElmValue*)state->replay;
   u32 saved_words = saved->header.size;
   assert(requested_words == saved_words);
 
-  void* next_replay = state->replay + bytes;
+  size_t* next_replay = state->replay + requested_words;
 
   if (next_replay >= state->next_alloc) {
     assert(state->replay_live_section == state->current_live_section);

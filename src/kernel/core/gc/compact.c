@@ -30,6 +30,8 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
 
 // Calculate where a value has moved to, return a pointer to the new location
 size_t* forwarding_address(GcHeap* heap, size_t* old_pointer) {
+  if (old_pointer < heap->start) return old_pointer;
+
   size_t block_index = (old_pointer - heap->start) / GC_BLOCK_WORDS;
   size_t block_offset = heap->offsets[block_index];
 
@@ -146,7 +148,7 @@ void compact(GcState* state, size_t* compact_start) {
 
   state->next_alloc = to;
   state->nursery = to;
-  state->entry = forwarding_address(heap, state->entry);
+  state->entry = (Closure*)forwarding_address(heap, (size_t*)state->entry);
 
   for (GcLiveSection* section = state->first_live_section;
       section <= state->current_live_section;

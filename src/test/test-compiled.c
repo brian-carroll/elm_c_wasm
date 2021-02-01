@@ -24,35 +24,32 @@ Closure g_elm_core_List_reverse = {
 };
 
 Closure g_elm_core_List_foldl;
-void* tce_elm_core_List_foldl(void* args[], void** gc_tce_data) {
-tce_loop:;
-  void* x_func = args[0];
-  void* x_acc = args[1];
-  void* x_list = args[2];
-  void* tmp0;
-  do {
-    if (x_list == &Nil) {
-      tmp0 = x_acc;
-      break;
-    } else {
-      void* x_x = Utils_destruct_index(x_list, 0);
-      void* x_xs = Utils_destruct_index(x_list, 1);
-      void* tmp1 = x_func;
-      void* tmp2 = A2(x_func, x_x, x_acc);
-      void* tmp3 = x_xs;
-      *gc_tce_data = CAN_THROW(GC_tce_iteration(3));
-      args[2] = tmp3;
-      args[1] = tmp2;
-      args[0] = tmp1;
-      goto tce_loop;
-      tmp0 = NULL;
-      break;
-    };
-  } while (0);
-  return tmp0;
-}
-void* eval_elm_core_List_foldl(void* args[]) {
-  return GC_tce_eval(&tce_elm_core_List_foldl, &eval_elm_core_List_foldl, 3, args);
+void * eval_elm_core_List_foldl(void * args[]) {
+    void * x_func = args[0];
+    void * x_acc = args[1];
+    void * x_list = args[2];
+    u32 n_free = 0;
+    tce_loop:
+    ;
+    void * case0;
+    do {
+        if (x_list == &Nil) {
+            case0 = x_acc;
+            break;
+        } else {
+            void * x_x = ((Tuple3 * )(x_list))->a;
+            void * x_xs = ((Tuple3 * )(x_list))->b;
+            void * tmp1 = A2(x_func, x_x, x_acc);
+            x_list = x_xs;
+            x_acc = tmp1;
+            x_func = x_func;
+            CAN_THROW(GC_stack_tailcall(eval_elm_core_List_foldl, n_free, args, 3, ((void * []){ x_func, x_acc, x_list })));
+            goto tce_loop;
+            case0 = NULL;
+            break;
+        };
+    } while (0);
+    return case0;
 }
 Closure g_elm_core_List_foldl = {
     .header = HEADER_CLOSURE(0),
@@ -154,11 +151,11 @@ Closure g_elm_core_Array_initialize = {
 FieldGroup* Wrapper_appFieldGroups[] = {NULL};
 void** Wrapper_mainsArray[] = {NULL};
 
-char Debug_evaluator_name_buf[1024];
-char* Debug_evaluator_name(void* p) {
-  sprintf(Debug_evaluator_name_buf, "%p", p);
-  return Debug_evaluator_name_buf;
-}
+// char Debug_evaluator_name_buf[1024];
+// char* Debug_evaluator_name(void* p) {
+//   sprintf(Debug_evaluator_name_buf, "%p", p);
+//   return Debug_evaluator_name_buf;
+// }
 
 int Debug_ctors_size = 8;
 char* Debug_ctors[] = {

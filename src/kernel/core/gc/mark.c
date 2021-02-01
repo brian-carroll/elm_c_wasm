@@ -81,14 +81,17 @@ void mark_trace_values_between(
 }
 
 void mark(GcState* state, size_t* ignore_below) {
+  GcHeap* heap = &state->heap;
+
   // Clear all mark bits
-  bitmap_reset(&state->heap);
+  bitmap_reset(heap);
 
   // Mark values freshly allocated in still-running function calls
   for (GcLiveSection* section = state->first_live_section;
        section <= state->current_live_section;
        section++) {
-    mark_trace_values_between(section->start, section->end, &state->heap, ignore_below);
+    size_t* end = section->end < heap->end ? section->end : heap->end;
+    mark_trace_values_between(section->start, end, heap, ignore_below);
   }
 
   // Mark GC roots (mutable values in Elm effect managers, including the Model)
