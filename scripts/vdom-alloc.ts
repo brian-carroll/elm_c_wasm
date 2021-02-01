@@ -167,6 +167,24 @@ interface NodeThunk {
 
 type VdomNode = NodeText | NodeNormal | NodeKeyed | NodeTagger | NodeThunk;
 
+type u8 = number;
+type Pointer = number;
+
+interface NodeSOA {
+  tags: u8[];
+  factsBegin: number[];
+  factsEnd: number[];
+  kidsBegin: number[];
+  kidsEnd: number[];
+  extras: Pointer[]; // namespaces, keys, text, taggers, lazy thunks
+}
+
+interface FactsSOA {
+  types: u8[];
+  keys: ElmIndex[];
+  values: ElmIndex[];
+}
+
 // 1 non-index value
 interface FactEvent {
   type: VdomCtor.FACT_EVENT;
