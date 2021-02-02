@@ -211,12 +211,12 @@ char* gc_dead_between_test() {
 }
 
 /*
-globalRecursion : Int -> Int
-globalRecursion i =
+fib : Int -> Int
+fib i =
     if i <= 1 then
         1
     else
-        globalRecursion (i-1) + globalRecursion (i-2)
+        fib (i-1) + fib (i-2)
 */
 #define g_elm_core_Basics_le Utils_le
 #define g_elm_core_Basics_sub Basics_sub
@@ -226,29 +226,36 @@ ElmInt int_2 = { .header = HEADER_INT, .value = 2 };
 ElmInt int_1 = { .header = HEADER_INT, .value = 1 };
 ElmInt int_n = { .header = HEADER_INT, .value = 6 };
 
-Closure g_author_project_Wasm_Functions_globalRecursion;
-void * eval_author_project_Wasm_Functions_globalRecursion(void * args[]) {
+Closure fib;
+void * eval_fib(void * args[]) {
     void * x_i = args[0];
     void * if0;
     if (A2(&g_elm_core_Basics_le, x_i, &int_1) == &True) {
         if0 = &int_1;
     } else {
         void * tmp1 = A2(&g_elm_core_Basics_sub, x_i, &int_2);
-        void * tmp2 = A1(&g_author_project_Wasm_Functions_globalRecursion, tmp1);
+        void * tmp2 = A1(&fib, tmp1);
         void * tmp3 = A2(&g_elm_core_Basics_sub, x_i, &int_1);
-        void * tmp4 = A1(&g_author_project_Wasm_Functions_globalRecursion, tmp3);
+        void * tmp4 = A1(&fib, tmp3);
         if0 = A2(&g_elm_core_Basics_add, tmp4, tmp2);
     };
     return if0;
 }
-Closure g_author_project_Wasm_Functions_globalRecursion = { .header = HEADER_CLOSURE(0), .n_values = 0x0, .max_values = 0x1, .evaluator = &eval_author_project_Wasm_Functions_globalRecursion };
+Closure fib = { .header = HEADER_CLOSURE(0), .n_values = 0x0, .max_values = 0x1, .evaluator = &eval_fib };
 
-
+char unknown_function_address[FORMAT_PTR_LEN];
 char * Debug_evaluator_name(void * p) {
-  if (p == eval_author_project_Wasm_Functions_globalRecursion) {
-    return "eval_author_project_Wasm_Functions_globalRecursion";
+  if (p == eval_fib) {
+    return "fib       ";
+  } else if (p == Utils_le.evaluator) {
+    return "Utils_le  ";
+  } else if (p == Basics_sub.evaluator) {
+    return "Basics_sub";
+  } else if (p == Basics_add.evaluator) {
+    return "Basics_add";
   } else {
-    return "(?)";
+    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
+    return unknown_function_address;
   }
 }
 
@@ -272,18 +279,11 @@ char* gc_replay_test() {
         "- Expect execution to complete & return the correct result\n"
         "\n"
         "fib : Int -> Int\n"
-        "fib n =\n"
-        "    if n <= 0 then\n"
-        "        0\n"
+        "fib i =\n"
+        "    if i <= 1 then\n"
+        "        1\n"
         "    else\n"
-        "        (fibHelp n) 1 0\n"
-        "\n"
-        "fibHelp : Int -> Int -> Int -> Int\n"
-        "fibHelp iters prev1 prev2 =\n"
-        "    if iters <= 1 then\n"
-        "        prev1\n"
-        "    else\n"
-        "        fibHelp (iters - 1) (prev1 + prev2) prev1\n"
+        "        fib (i-1) + fib (i-2)\n"
         "\n");
   }
   gc_test_reset();
@@ -291,7 +291,7 @@ char* gc_replay_test() {
 #ifdef TARGET_64BIT
   size_t not_quite_enough_space = 150/sizeof(void*);
 #else
-  size_t not_quite_enough_space = 300;
+  size_t not_quite_enough_space = 150/sizeof(void*);
 #endif
   size_t* ignore_below = state->heap.end - not_quite_enough_space;
   state->next_alloc = ignore_below;
@@ -305,7 +305,7 @@ char* gc_replay_test() {
   // Create a thunk as if entering Wasm from JS
   void* args[1];
   args[0] = &int_n;
-  Closure* c = NEW_CLOSURE(1, 1, eval_author_project_Wasm_Functions_globalRecursion, args);
+  Closure* c = NEW_CLOSURE(1, 1, eval_fib, args);
 
   // ====================================================
   // Code copied from GC_execute
@@ -344,10 +344,10 @@ char* gc_replay_test() {
     printf(
         "Aaaand the %dth Fibonacci number is ...drumroll please...\n", int_n.value);
     print_value(result_replay);
+    printf("\n");
   }
 
-  i32 answers[29] = {
-      0,
+  i32 answers[28] = {
       1,
       1,
       2,
@@ -386,7 +386,7 @@ char* gc_replay_test() {
     print_state();
   }
 
-  mu_assert("should return the correct result after resuming", pass);
+  mu_expect_equal("should return the correct result after resuming", result_replay->value, answer);
 
   return NULL;
 }

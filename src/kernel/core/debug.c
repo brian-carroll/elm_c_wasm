@@ -259,11 +259,6 @@ void Debug_pretty(const char* label, void* p) {
 
 void print_value(void* p) {
   ElmValue* v = p;
-  printf("| " FORMAT_PTR " | " FORMAT_HEX " |  %c   |%5d | ",
-      v,
-      *((size_t*)v),
-      is_marked(v) ? 'X' : ' ',
-      v->header.size);
   switch (v->header.tag) {
     case Tag_Int:
       printf("Int %d", v->elm_int.value);
@@ -297,9 +292,19 @@ void print_value(void* p) {
       printf("Tuple3 a: %p b: %p c: %p", v->tuple3.a, v->tuple3.b, v->tuple3.c);
       break;
     case Tag_Custom:
-      printf("Custom ctor: %d ", v->custom.ctor);
-      for (size_t i = 0; i < custom_params(&v->custom); ++i) {
-        printf("%p ", v->custom.values[i]);
+      if (p == pTrue) {
+        printf("True");
+      } else if (p == pFalse) {
+        printf("False");
+      } else if (p == pUnit) {
+        printf("Unit");
+      } else if (p == pNil) {
+        printf("Nil");
+      } else {
+        printf("Custom ctor: %d ", v->custom.ctor);
+        for (size_t i = 0; i < custom_params(&v->custom); ++i) {
+          printf("%p ", v->custom.values[i]);
+        }
       }
       break;
     case Tag_Record: {
@@ -335,26 +340,19 @@ void print_value(void* p) {
     case Tag_JsRef:
       printf("JsRef %d", v->js_ref.index);
       break;
-    case Tag_GcStackPush:
-      printf(
-          "GcStackPush newer: %p older: %p", v->gc_stackmap.newer, v->gc_stackmap.older);
-      break;
-    case Tag_GcStackPop:
-      printf("GcStackPop newer: %p older: %p replay: %p",
-          v->gc_stackmap.newer,
-          v->gc_stackmap.older,
-          v->gc_stackmap.replay);
-      break;
-    case Tag_GcStackTailCall:
-      printf("GcStackTailCall newer: %p older: %p replay: %p",
-          v->gc_stackmap.newer,
-          v->gc_stackmap.older,
-          v->gc_stackmap.replay);
-      break;
-    case Tag_GcStackEmpty:
-      printf("GcStackEmpty newer: %p", v->gc_stackmap.newer);
-      break;
+    default:
+      printf("<Corrupt data, tag=0x%x>", v->header.tag);
   }
+}
+
+void print_value_line(void* p) {
+  ElmValue* v = p;
+  printf("| " FORMAT_PTR " | " FORMAT_HEX " |  %c   |%5d | ",
+      v,
+      *((size_t*)v),
+      is_marked(v) ? 'X' : ' ',
+      v->header.size);
+  print_value(v);
   printf("\n");
 }
 
@@ -383,7 +381,7 @@ void print_heap_range(size_t* start, size_t* end) {
         if (p >= end) break;
       }
       ElmValue* v = (ElmValue*)p;
-      print_value(v);
+      print_value_line(v);
       if (v->header.size > 0 && v->header.size < 102400) {
         next_value += v->header.size;
       } else {
@@ -434,17 +432,30 @@ void print_live_sections() {
   GcState* state = &gc_state;
   printf("\n");
   printf("\nLive Sections:\n");
+  printf("\n");
+
   int i=0;
   for (GcLiveSection* section = state->first_live_section;
        section <= state->current_live_section;
-       section++, i++) {
-    printf("%2d: %p -> %p (%zd -> %zd) %s\n",
-      i,
-      section->start,
-      section->end,
-      section->start - (size_t*)state->entry,
-      section->end - (size_t*)state->entry,
-      Debug_evaluator_name(section->evaluator));
+       section++, i++) {    
+    if (section->start == section->end) {
+      char start_offset[3];
+      if (section->start >= state->heap.start && section->start < state->heap.end) {
+        snprintf(start_offset, 3, "%2zd", section->start - (size_t*)state->entry);
+      } else {
+        snprintf(start_offset, 3, "  ");
+      }
+      printf("%2d | " FORMAT_PTR " | %s       | %s | ", i, section->start, start_offset, Debug_evaluator_name(section->evaluator));
+      print_value(section->start);
+      printf("\n");
+    } else {
+      printf("%2d | %p | %2zd -> %2zd | %s |\n",
+        i,
+        section->start,
+        section->start - (size_t*)state->entry,
+        section->end - (size_t*)state->entry,
+        Debug_evaluator_name(section->evaluator));
+    }
   }
 }
 
@@ -462,6 +473,7 @@ void print_state() {
   size_t used = (next_alloc - start + 512) / 1024;
   size_t since_gc = (next_alloc - nursery + 512) / 1024;
 
+  printf("\n");
   printf("%p start\n", state->heap.start);
   printf("%p system_end      (%zd kB total heap)\n", state->heap.system_end, total);
   printf("%p end             (%zd kB app heap)\n", state->heap.end, available);
