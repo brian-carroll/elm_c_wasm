@@ -41,14 +41,6 @@ void * eval_elm_core_List_foldl(void * args[]) {
             void * x_x = ((Tuple3 * )(x_list))->a;
             void * x_xs = ((Tuple3 * )(x_list))->b;
             void * tmp1 = A2(x_func, x_x, x_acc);
-
-            if (verbose) {
-              printf("\n---- List_foldl before tail ----\n");
-              print_live_sections();
-              print_heap();
-              printf("\n---- /List_foldl before tail ----\n");
-            }
-
             x_list = x_xs;
             x_acc = tmp1;
             x_func = x_func;
