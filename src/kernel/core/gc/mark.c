@@ -1,4 +1,5 @@
 #include "internals.h"
+#include <stdio.h>
 
 // Mark a value as live and return 'true' if previously marked
 bool mark_words(GcHeap* heap, void* p_void, size_t size) {
@@ -90,13 +91,22 @@ void mark(GcState* state, size_t* ignore_below) {
   for (GcLiveSection* section = state->first_live_section;
        section <= state->current_live_section;
        section++) {
-    size_t* end = section->end < heap->end ? section->end : heap->end;
-    mark_trace_values_between(section->start, end, heap, ignore_below);
+    if (section->end == section->start) {
+      printf("marking return value\n");
+      mark_trace(heap, (ElmValue*)section->start, ignore_below);
+    } else {
+      printf("marking live section\n");
+      size_t* end = section->end;
+      if (end > heap->end) end = heap->end;
+      printf("marking live section %p -> %p\n", section->start, section->end);
+      mark_trace_values_between(section->start, end, heap, ignore_below);
+    }
   }
 
   // Mark GC roots (mutable values in Elm effect managers, including the Model)
 
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {
+    printf("marking root\n");
     mark_words(&state->heap, root_cell, sizeof(Cons) / SIZE_UNIT);
 
     // Each GC root is a mutable pointer in a fixed location outside the dynamic heap,

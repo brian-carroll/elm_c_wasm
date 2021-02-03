@@ -404,6 +404,7 @@ void print_value_full(void* p) {
 
 void print_heap() {
   GcState* state = &gc_state;
+  mark(state, state->heap.start);
   print_heap_range(state->heap.start, state->next_alloc);
 }
 
@@ -438,22 +439,23 @@ void print_live_sections() {
   for (GcLiveSection* section = state->first_live_section;
        section <= state->current_live_section;
        section++, i++) {    
+
     if (section->start == section->end) {
-      char start_offset[3];
-      if (section->start >= state->heap.start && section->start < state->heap.end) {
-        snprintf(start_offset, 3, "%2zd", section->start - (size_t*)state->entry);
-      } else {
-        snprintf(start_offset, 3, "  ");
-      }
-      printf("%2d | " FORMAT_PTR " | %s       | %s | ", i, section->start, start_offset, Debug_evaluator_name(section->evaluator));
+      printf("%2d | " FORMAT_PTR " |    | %s | ", i, section->start, Debug_evaluator_name(section->evaluator));
       print_value(section->start);
       printf("\n");
     } else {
-      printf("%2d | %p | %2zd -> %2zd | %s |\n",
+      char size[3];
+      if (section->start < state->heap.end) {
+        snprintf(size, 3, "%2zd", section->end - section->start);
+      } else {
+        snprintf(size, 3, "  ");
+      }
+
+      printf("%2d | %p | %s | %s |\n",
         i,
         section->start,
-        section->start - (size_t*)state->entry,
-        section->end - (size_t*)state->entry,
+        size,
         Debug_evaluator_name(section->evaluator));
     }
   }

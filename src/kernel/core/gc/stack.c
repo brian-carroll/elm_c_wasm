@@ -1,4 +1,5 @@
 #include "internals.h"
+#include <stdio.h>
 
 /* ====================================================
 
@@ -50,6 +51,8 @@ GcLiveSection* GC_stack_push(EvalFunction evaluator) {
     current->start = state->next_alloc;
     current->end = state->heap.end;
 
+    printf("pushing from %s to %s current=%zd\n", Debug_evaluator_name(parent->evaluator), Debug_evaluator_name(current->evaluator), current - state->first_live_section);
+
     return current;
   } else {
     GcLiveSection* parent = state->replay_live_section;
@@ -87,23 +90,34 @@ void GC_stack_pop(EvalFunction evaluator, void* result, GcLiveSection* push) {
   next->evaluator = prev->evaluator;
 
   state->current_live_section = next;
+
+  printf("popping from %s, saving return value (%p) in section %zd, setting current=%zd (%s)\n",
+    Debug_evaluator_name(evaluator),
+    result,
+    push - state->first_live_section,
+    next - state->first_live_section,
+    Debug_evaluator_name(next->evaluator)
+  );
+  // saving return value to section %zd
+  // setting current section to %zd with evaluator %s
 }
 
+GcLiveSection* GC_stack_get_current_section() {
+  GcState* state = &gc_state;
+  return state->current_live_section;
+}
 
-void* GC_stack_tailcall(EvalFunction evaluator, u32 n_free, void* free_vars[], u32 n_explicit_args, void* explicit_args[]) {
+void* GC_stack_tailcall(GcLiveSection* push, u32 n_free, void* free_vars[], u32 n_explicit_args, void* explicit_args[]) {
   GcState* state = &gc_state;
 
   u32 n = n_free + n_explicit_args;
-  Closure* c = NEW_CLOSURE(n, n, evaluator, NULL);
+  Closure* c = NEW_CLOSURE(n, n, push->evaluator, NULL);
   for (u32 i=0; i < n_free; i++) {
     c->values[i] = free_vars[i];    
   }
   for (u32 i=0; i < n_explicit_args; i++) {
     c->values[n_free + i] = explicit_args[i];
   }
-
-  GcLiveSection* push = state->current_live_section - 1;
-  assert(push->evaluator == evaluator);
 
   // Save current state of tail recursion for later replay
   // Can ignore everything else in this section
@@ -113,11 +127,24 @@ void* GC_stack_tailcall(EvalFunction evaluator, u32 n_free, void* free_vars[], u
   // New live section for next iteration
   GcLiveSection* next = push + 1;
   bounds_check_live_section(next);
-  next->evaluator = evaluator;
+  next->evaluator = push->evaluator;
   next->start = state->next_alloc;
   next->end = state->heap.end;
 
+
+  printf("tailcall in %s with current=%zd push=%zd setting current=%zd\n",
+    Debug_evaluator_name(push->evaluator),
+    state->current_live_section - state->first_live_section,
+    push - state->first_live_section,
+    next - state->first_live_section
+  );
+
+
   state->current_live_section = next;
+
+  // printf("tailcall push=%zd (%s) next=%zd (%s) c=%p\n", push - state->first_live_section, Debug_evaluator_name(next->evaluator), next - state->first_live_section, Debug_evaluator_name(push->evaluator), c);
+  // printf("tailcall on %s push=%zd current=%zd c=%p\n", Debug_evaluator_name(evaluator), push - state->first_live_section, next - state->first_live_section, c);
+
   return NULL;
 }
 

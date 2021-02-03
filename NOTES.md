@@ -14,6 +14,48 @@
 - run mark, check stuff is marked properly
 - run compact, eyeball it
 
+I want to just eyeball everything I can.
+- print out the stackmap on every iteration of a test function
+- do some tail calls
+- allocate some garbage
+- have more than one function!
+- mark the heap on every iteration just to see
+- make some data structures, not just Ints. List will do.
+
+
+### expected results from eyeball test
+
+on stack reset:
+- first section should mark entry closure and its children
+
+on apply listNonsense
+- allocate acc
+- apply `foldl trashyFold acc list`
+  - check if list is Nil
+  - destructure list
+  - apply `func x acc` (trashyFold)
+    - assignments
+    - apply add
+    - apply sub
+    - construct Cons
+    - construct Cons
+    - print
+  - print
+  - tail call
+- apply `List.reverse`
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## implementation
 - stack map off to the side:
 - add every allocation to it

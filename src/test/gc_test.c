@@ -11,23 +11,6 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size);
 void compact(GcState* state, size_t* compact_start);
 
 
-#define MAX_STACKMAP_NAMES 100
-struct sn {
-  GcStackMap* stackmap;
-  char* name;
-} stackmap_names[MAX_STACKMAP_NAMES];
-
-char* find_stackmap_func_name(GcStackMap* sm) {
-  char* name = "unknown";
-  for (int i = 0; i < MAX_STACKMAP_NAMES; i++) {
-    if (stackmap_names[i].stackmap == sm) {
-      name = stackmap_names[i].name;
-    }
-  }
-  return name;
-}
-
-
 void gc_test_reset() {
   GcState* state = &gc_state;
   bitmap_reset(&state->heap);
@@ -46,12 +29,14 @@ char* gc_bitmap_test() {
   gc_test_reset();
 
   for (size_t i = 0; i < 10; i++) {
-    ElmValue *p1, *p2, *p3, *p4;
+    ElmInt* p1 = NEW_ELM_INT(0x101);
+    ElmInt* p2 = NEW_ELM_INT(0x102);
+    ElmString16* p3 = NEW_ELM_STRING16(sizeof(str) - 1);
+    ElmInt* p4 = NEW_ELM_INT(0x103);
 
-    p1 = (ElmValue*)NEW_ELM_INT(0x101);
-    p2 = (ElmValue*)NEW_ELM_INT(0x102);
-    p3 = (ElmValue*)NEW_ELM_STRING(sizeof(str), str);
-    p4 = (ElmValue*)NEW_ELM_INT(0x103);
+    for (int c=0; c < sizeof(str); c++) {
+      p3->words16[c] = str[c];
+    }
 
     mark_words(&state->heap, p1, p1->header.size);
     mark_words(&state->heap, p3, p3->header.size);
@@ -65,10 +50,7 @@ char* gc_bitmap_test() {
   if (verbose) {
     printf(
         "\n"
-        "#############################################################################\n"
-        "\n"
-        "gc_bitmap_test\n"
-        "--------------\n"
+        "# gc_bitmap_test\n"
         "\n");
     print_heap();
     print_state();
@@ -107,7 +89,7 @@ char gc_bitmap_next_test_str[100];
 char* gc_bitmap_next_test() {
   if (verbose) {
     printf("\n");
-    printf("gc_bitmap_next_test\n");
+    printf("## gc_bitmap_next_test\n");
     printf("\n");
   }
   gc_test_reset();
@@ -243,47 +225,13 @@ void * eval_fib(void * args[]) {
 }
 Closure fib = { .header = HEADER_CLOSURE(0), .n_values = 0x0, .max_values = 0x1, .evaluator = &eval_fib };
 
-char unknown_function_address[FORMAT_PTR_LEN];
-char * Debug_evaluator_name(void * p) {
-  if (p == eval_fib) {
-    return "fib       ";
-  } else if (p == Utils_le.evaluator) {
-    return "Utils_le  ";
-  } else if (p == Basics_sub.evaluator) {
-    return "Basics_sub";
-  } else if (p == Basics_add.evaluator) {
-    return "Basics_add";
-  } else {
-    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
-    return unknown_function_address;
-  }
-}
 
 char* gc_replay_test() {
   GcState* state = &gc_state;
   if (verbose) {
     printf(
         "\n"
-        "##############################################################################\n"
-        "\n"
-        "gc_replay_test\n"
-        "--------------\n"
-        "\n"
-        "- Set up heap to be 'nearly full'\n"
-        "- Call an Elm function that doesn't have enough heap space to finish\n"
-        "- Expect a GC exception to be thrown (interrupting execution and unravelling "
-        "the call stack)\n"
-        "- Collect garbage (mark & compact)\n"
-        "- Expect compacted heap to be consistent ('mark' succeeds)\n"
-        "- Restore the state of the stack with new pointer locations & resume execution\n"
-        "- Expect execution to complete & return the correct result\n"
-        "\n"
-        "fib : Int -> Int\n"
-        "fib i =\n"
-        "    if i <= 1 then\n"
-        "        1\n"
-        "    else\n"
-        "        fib (i-1) + fib (i-2)\n"
+        "## gc_replay_test\n"
         "\n");
   }
   gc_test_reset();
@@ -306,77 +254,20 @@ char* gc_replay_test() {
   void* args[1];
   args[0] = &int_n;
   Closure* c = NEW_CLOSURE(1, 1, eval_fib, args);
-
-  // ====================================================
-  // Code copied from GC_execute
-  // ====================================================
   GC_stack_reset(c);
-
-  printf("\n\n------------- BEFORE ENTRY --------------\n\n");
-  print_heap();
-  print_state();
-  print_live_sections();
-  printf("------------- /BEFORE ENTRY --------------\n\n");
-
   void* result = Utils_apply(state->entry, 0, NULL);
-
-  if (result != pGcFull) {
-    mu_assert("Expect GC exception when test function called with insufficient heap space", false);
-    return NULL;
-  } else {
-    printf("Heap full, as expected!!\n\n");
-  }
-  print_heap();
-  print_state();
-  print_live_sections();
-
-  printf("Going into GC_collect_full...\n\n");
+  mu_expect_equal("Expect GC exception when test function called with insufficient heap space", result, pGcFull);
   GC_collect_full();
-  printf("Finished GC_collect_full!\n\n");
-
   ElmInt* result_replay = Utils_apply(state->entry, 0, NULL);
-
-  // ====================================================
 
 
   if (verbose) {
-    printf("\nFinished replay and 2nd execution run...\n");
-    printf(
-        "Aaaand the %dth Fibonacci number is ...drumroll please...\n", int_n.value);
+    printf("Answer after replay = ");
     print_value(result_replay);
     printf("\n");
   }
 
-  i32 answers[28] = {
-      1,
-      1,
-      2,
-      3,
-      5,
-      8,
-      13,
-      21,
-      34,
-      55,
-      89,
-      144,
-      233,
-      377,
-      610,
-      987,
-      1597,
-      2584,
-      4181,
-      6765,
-      10946,
-      17711,
-      28657,
-      46368,
-      75025,
-      121393,
-      196418,
-      317811,
-  };
+  i32 answers[28] = { 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811 };
   i32 answer = answers[int_n.value];
 
   bool pass = result_replay->value == answer;
@@ -393,6 +284,7 @@ char* gc_replay_test() {
 
 
 void set_heap_layout(GcHeap* heap, size_t* new_break_ptr);
+
 char* test_heap_layout() {
   if (verbose) {
     printf(
@@ -437,22 +329,159 @@ char* test_heap_layout() {
   return NULL;
 }
 
+void* eval_trashyFold(void* args[]) {
+  ElmInt* a = args[0];
+  Cons* acc = args[1];
+  ElmInt* b = acc->head;
+  ElmInt* c = A2(&Basics_add, a, b);
+  ElmInt* d = A2(&Basics_sub, a, b);
+  Cons* result = NEW_CONS(d, NEW_CONS(c, acc));
+
+  if (verbose) {
+    printf("\n---- trashyFold ----\n");
+    // print_heap();
+    print_live_sections();
+    printf("\n---- /trashyFold ----\n");
+  }
+
+  return result;
+}
+Closure trashyFold = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = &eval_trashyFold,
+};
+
+void* eval_listNonsense(void* args[]) {
+  Cons* list = args[0];
+  Cons* acc = NEW_CONS(NEW_ELM_INT(64), &Nil);
+  Cons* folded = A3(&g_elm_core_List_foldl, &trashyFold, acc, list);
+  
+  if (verbose) {
+    printf("\n---- folded ----\n");
+    // print_heap();
+    print_live_sections();
+    printf("\n---- /folded ----\n");
+  }
+
+  Cons* reversed = A1(&g_elm_core_List_reverse, folded);
+
+  if (verbose) {
+    printf("\n---- reversed ----\n");
+    // print_heap();
+    print_live_sections();
+    printf("\n---- /reversed ----\n");
+  }
+
+  return reversed;
+}
+
+
+char* stackmap_mark_eyeball_test() {
+    if (verbose) {
+    printf(
+        "\n"
+        "## stackmap_mark_eyeball_test\n"
+        "\n");
+  }
+
+  gc_test_reset();
+
+  void* list_elems[3] = {
+    NEW_ELM_INT(123),
+    NEW_ELM_INT(999),
+    NEW_ELM_INT(-7),
+  };
+  Cons* list = List_create(3, list_elems);
+  Closure* c = NEW_CLOSURE(1, 1, eval_listNonsense, ((void*[]){list}));
+
+  GC_stack_reset(c);
+
+  if (verbose) {
+    printf("\n---- before execution ----\n");
+    mark(&gc_state, gc_state.heap.start);
+    // print_heap();
+    print_live_sections();
+    printf("\n---- /before execution ----\n");
+  }
+
+  Utils_apply(c, 0, NULL);
+
+  if (verbose) {
+    printf("\n---- exit ----\n");
+    mark(&gc_state, gc_state.heap.start);
+    // print_heap();
+    print_live_sections();
+    printf("\n---- /exit ----\n");
+  }
+
+  if (verbose) {
+    printf("\n---- all done ----\n");
+    mark(&gc_state, gc_state.heap.start);
+    print_heap();
+    print_live_sections();
+    printf("\n---- /all done ----\n");
+  }
+
+  return NULL;
+}
+
+
+
+
+
+
+
+
+
+char unknown_function_address[FORMAT_PTR_LEN];
+char * Debug_evaluator_name(void * p) {
+  if (p == eval_fib) {
+    return "fib          ";
+  } else if (p == Utils_le.evaluator) {
+    return "Utils_le     ";
+  } else if (p == Basics_sub.evaluator) {
+    return "Basics_sub   ";
+  } else if (p == Basics_add.evaluator) {
+    return "Basics_add   ";
+  } else if (p == g_elm_core_List_foldl.evaluator) {
+    return "List.foldl   ";
+  } else if (p == g_elm_core_List_reverse.evaluator) {
+    return "List.reverse ";
+  } else if (p == eval_trashyFold) {
+    return "trashyFold   ";
+  } else if (p == eval_listNonsense) {
+    return "listNonsense ";
+  } else {
+    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
+    return unknown_function_address;
+  }
+}
+
+
+
+
 char* gc_test() {
   if (verbose)
     printf(
         "##############################################################################\n"
         "\n"
-        "                              Garbage Collector tests\n");
+        "                              Garbage Collector tests\n"
+        "\n"
+        "##############################################################################\n");
 
-  mu_run_test(gc_replay_test);
-  // mu_run_test(replay_scenario_tests);
-  // mu_run_test(stackmap_mark_test);
   // mu_run_test(gc_bitmap_test);
-  // mu_run_test(gc_dead_between_test);
-  // mu_run_test(gc_mark_compact_test);
   // mu_run_test(gc_bitmap_next_test);
-  // mu_run_test(gc_stack_empty_survival_test);
+  // mu_run_test(gc_dead_between_test);
+  // mu_run_test(gc_replay_test);
   // mu_run_test(test_heap_layout);
+
+  mu_run_test(stackmap_mark_eyeball_test);
+
+
+  // mu_run_test(replay_scenario_tests);
+  // mu_run_test(gc_mark_compact_test);
+  // mu_run_test(gc_stack_empty_survival_test);
 
   return NULL;
 }

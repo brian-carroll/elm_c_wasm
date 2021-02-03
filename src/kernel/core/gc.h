@@ -25,7 +25,8 @@ typedef struct {
 void GC_stack_reset(Closure*);
 GcLiveSection* GC_stack_push(EvalFunction evaluator);
 void GC_stack_pop(EvalFunction evaluator, void* result, GcLiveSection* push);
-void* GC_stack_tailcall(EvalFunction evaluator, u32 n_free, void* free_vars[], u32 n_explicit_args, void* explicit_args[]);
+GcLiveSection* GC_stack_get_current_section();
+void* GC_stack_tailcall(GcLiveSection* push, u32 n_free, void* free_vars[], u32 n_explicit_args, void* explicit_args[]);
 void* GC_apply_replay(EvalFunction evaluator);
 
 

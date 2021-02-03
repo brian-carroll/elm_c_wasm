@@ -29,6 +29,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
     void * x_acc = args[1];
     void * x_list = args[2];
     u32 n_free = 0;
+    void* push = GC_stack_get_current_section();
     tce_loop:
     ;
     void * case0;
@@ -40,10 +41,18 @@ void * eval_elm_core_List_foldl(void * args[]) {
             void * x_x = ((Tuple3 * )(x_list))->a;
             void * x_xs = ((Tuple3 * )(x_list))->b;
             void * tmp1 = A2(x_func, x_x, x_acc);
+
+            if (verbose) {
+              printf("\n---- List_foldl before tail ----\n");
+              print_live_sections();
+              print_heap();
+              printf("\n---- /List_foldl before tail ----\n");
+            }
+
             x_list = x_xs;
             x_acc = tmp1;
             x_func = x_func;
-            CAN_THROW(GC_stack_tailcall(eval_elm_core_List_foldl, n_free, args, 3, ((void * []){ x_func, x_acc, x_list })));
+            CAN_THROW(GC_stack_tailcall(push, n_free, args, 3, ((void * []){ x_func, x_acc, x_list })));
             goto tce_loop;
             case0 = NULL;
             break;
