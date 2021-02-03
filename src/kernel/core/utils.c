@@ -168,9 +168,9 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
       u16 n_old = c->n_values;
       u16 n_new = n_old + n_applied;
 
-      Closure* c_copy = CAN_THROW(GC_malloc(SIZE_CLOSURE(n_new)));
-      GC_memcpy(c_copy, c, SIZE_CLOSURE(n_old));
-      GC_memcpy(&c_copy->values[n_old], applied, SIZE_CLOSURE(n_applied));
+      Closure* c_copy = CAN_THROW(GC_malloc(SIZE_CLOSURE(n_new) * SIZE_UNIT));
+      GC_memcpy(c_copy, c, SIZE_CLOSURE(n_old) * SIZE_UNIT);
+      GC_memcpy(&c_copy->values[n_old], applied, SIZE_CLOSURE(n_applied) * SIZE_UNIT);
       c_copy->header = HEADER_CLOSURE(n_new);
       c_copy->n_values = n_new;
 

@@ -92,13 +92,10 @@ void mark(GcState* state, size_t* ignore_below) {
        section <= state->current_live_section;
        section++) {
     if (section->end == section->start) {
-      printf("marking return value\n");
       mark_trace(heap, (ElmValue*)section->start, ignore_below);
     } else {
-      printf("marking live section\n");
       size_t* end = section->end;
       if (end > heap->end) end = heap->end;
-      printf("marking live section %p -> %p\n", section->start, section->end);
       mark_trace_values_between(section->start, end, heap, ignore_below);
     }
   }
@@ -106,7 +103,7 @@ void mark(GcState* state, size_t* ignore_below) {
   // Mark GC roots (mutable values in Elm effect managers, including the Model)
 
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {
-    printf("marking root\n");
+    // printf("marking root\n");
     mark_words(&state->heap, root_cell, sizeof(Cons) / SIZE_UNIT);
 
     // Each GC root is a mutable pointer in a fixed location outside the dynamic heap,
