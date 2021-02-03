@@ -6,7 +6,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Random
 import Result exposing (Result(..))
-import Test.Runner.Html as TestHtml
+import View
 import Wasm
 import Wasm.HttpTests as HttpTests
 
@@ -23,14 +23,15 @@ view : Model -> Html Msg
 view model =
     let
         testConfig =
-            TestHtml.defaultConfig (Random.initialSeed 10000)
+            View.defaultConfig (Random.initialSeed 10000)
     in
     div [ class "view" ]
         [ div []
             [ HttpTests.view model ]
         , div []
-            [ TestHtml.viewResults testConfig Wasm.tests
-            -- , TestHtml.viewResults testConfig Core.tests
+            [ View.viewResults testConfig Wasm.tests
+
+            -- , View.viewResults testConfig Core.tests
             ]
         ]
 
@@ -43,5 +44,3 @@ main =
         , update = HttpTests.update
         , subscriptions = \_ -> Sub.none
         }
-
-
