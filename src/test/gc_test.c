@@ -375,7 +375,10 @@ void* eval_listNonsense(void* args[]) {
 
   return reversed;
 }
-
+Closure listNonsense = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_listNonsense,
+};
 
 char* stackmap_mark_eyeball_test() {
     if (verbose) {
@@ -428,9 +431,61 @@ char* stackmap_mark_eyeball_test() {
 
 
 
+void* eval_infinite_tail_recursion(void* args[]) {
+  Cons* list = args[0];
+  u32 n_free = 0;
+  void* push = GC_stack_get_current_section();
+
+  while (true) {
+    list = A1(&listNonsense, list);
+    CAN_THROW(GC_stack_tailcall(push, n_free, args, 1, ((void * []){ list })));
+  }
+}
 
 
 
+void* test_execute(Closure* c, int gc_cycles) {
+  GcState* state = &gc_state;
+
+  GC_stack_reset(c);
+
+  for (int i = 0; i < gc_cycles; i++) {
+    void* result = Utils_apply(state->entry, 0, NULL);
+    if (result != pGcFull) {
+      GC_stack_reset(state->entry);
+      return result;
+    }
+    GC_collect_full();
+  }
+  return NULL;
+}
+
+
+
+char* assertions_test() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## assertions_test\n"
+        "(run for long enough to do a few GCs, try to trigger assertions)\n"
+        "\n");
+  }
+
+  gc_test_reset();
+
+  void* list_elems[3] = {
+    NEW_ELM_INT(123),
+    NEW_ELM_INT(999),
+    NEW_ELM_INT(-7),
+  };
+  Cons* list = List_create(3, list_elems);
+  Closure* c = NEW_CLOSURE(1, 1, eval_infinite_tail_recursion, ((void*[]){list}));
+
+  test_execute(c, 3);
+
+  mu_assert("should complete without triggering any assertions", true);
+  return NULL;
+}
 
 
 
@@ -452,6 +507,8 @@ char * Debug_evaluator_name(void * p) {
     return "trashyFold   ";
   } else if (p == eval_listNonsense) {
     return "listNonsense ";
+  } else if (p == eval_infinite_tail_recursion) {
+    return "infinite_tail_recursion ";
   } else {
     snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
     return unknown_function_address;
@@ -476,7 +533,8 @@ char* gc_test() {
   // mu_run_test(gc_replay_test);
   // mu_run_test(test_heap_layout);
 
-  mu_run_test(stackmap_mark_eyeball_test);
+  // mu_run_test(stackmap_mark_eyeball_test);
+  mu_run_test(assertions_test);
 
 
   // mu_run_test(replay_scenario_tests);
