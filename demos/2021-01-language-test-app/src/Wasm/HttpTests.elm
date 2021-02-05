@@ -1,7 +1,8 @@
 module Wasm.HttpTests exposing (Model, Msg, initialModel, update, view)
 
 import Browser
-import Html exposing (..)
+import Html exposing (Html, button, div, text)
+import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as JD exposing (Value)
@@ -50,7 +51,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
+    div [ class "http-test" ]
         [ button [ onClick ButtonClicked ] [ text "LOAD" ]
         , div [] [ text model.text ]
         ]

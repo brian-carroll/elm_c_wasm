@@ -1,39 +1,21 @@
 module View exposing
     ( Config
+    , defaultConfig
+    , hidePassedTests
+    , showPassedTests
     , viewResults
-    , defaultConfig, withFuzzCount, showPassedTests, hidePassedTests
+    , withFuzzCount
     )
-
-{-| This library aims to run and display tests as HTML on a web page, for example in order to create code kata.
-
-One limitation to that is that you need to add your test dependencies as project dependencies.
-
-
-# Definition
-
-@docs Config
-
-
-# Display tests results
-
-@docs viewResults
-
-
-# Configuration
-
-@docs defaultConfig, withFuzzCount, showPassedTests, hidePassedTests
-
--}
 
 import Array exposing (Array)
 import Expect exposing (Expectation)
-import Html exposing (Html, div, h3, li, p, pre, text, ul)
+import Html exposing (..)
 import Html.Attributes exposing (class, style)
 import Maybe.Extra
 import Random exposing (Seed, initialSeed)
 import Test exposing (Test)
-import Test.Runner exposing (Runner, fromTest, getFailureReason)
-import Test.Runner.Failure exposing (InvalidReason(..), Reason(..))
+import Test.Runner as Runner exposing (Runner)
+import Test.Runner.Failure as Failure
 
 
 {-| Config object used to define options like the fuzz count, the initial seed, whether or not the passed tests should be displayed...
@@ -45,6 +27,293 @@ type Config
 type PassedTestsDisplay
     = Show
     | Hide
+
+
+type TestResult
+    = Pass
+    | Fail (List ( String, Failure.Reason ))
+
+
+
+-- type Tree a
+--     = Node String (List (Tree a))
+--     | Leaf String a
+-- nestResults : String -> List ( List String, TestResult ) -> ResultsTree
+-- nestResults title flat =
+--     nestResultsHelp (SuiteResult title []) flat
+-- nestResultsHelp : String -> List ResultsTree -> ( List String, TestResult ) -> ResultsTree
+-- nestResultsHelp suiteName subTrees (( flatLabels, flatResult ) as flat) =
+--     case flatLabels of
+--         [ suiteName, testName ] ->
+--             SuiteResult suiteName (SingleResult testName flatResult :: subTrees)
+--         _ ->
+--             Debug.todo "yeah"
+{-
+
+   should capture a value across two scopes -> Functions -> Wasm code gen
+   non-tail recursion should work in local functions -> Functions -> Wasm code gen
+   tail recursion should work in top-level functions -> Things -> Wasm code gen
+   tail recursion should work in local functions -> Stuff -> Foozle
+
+    current subtree = []                         currentTree = ("", [])
+    current titles = [Functions, Wasm code gen]  currentTree = ("", [("Wasm code gen", [("Functions", ["should capture"])])])
+    current titles = [Functions, Wasm code gen]  currentTree = ("", [("Wasm code gen", [("Functions", ["should capture", "non-tail"])])])
+    current titles = [Things, Wasm code gen]  currentTree = ("", [("Wasm code gen", [("Functions", ["should capture", "non-tail"]), ("Things", ["should"])])])
+
+    Node "" []
+    Node "" [Node "Wasm" [Node "Function" [Leaf "capture" Pass]]]
+    Node "" [Node "Wasm" [Node "Function" [Leaf "non-tail" Pass, Leaf "capture" Pass]]]
+
+
+    to insert one thing into the tree
+        reverse the titles
+        traverse the tree to find my place
+            if I still have titles left to traverse on
+                search first subtree for a match
+                if not found, insert
+                recurse down with next title
+            if I'm out of titles, this is my gaff
+                chuck that shit in
+-}
+
+
+type Tree a
+    = Node String (List (Tree a))
+    | Leaf String a
+
+
+empty : Tree a
+empty =
+    Node "" []
+
+
+
+-- treeInsert : ( List String, a ) -> Tree a -> Tree a
+-- treeInsert ( titles, item ) tree =
+--     case titles of
+--         [] ->
+--             tree
+--         [ leafTitle ] ->
+--             Leaf leafTitle item
+--         first :: rest ->
+--             case tree of
+--                 Leaf _ _ -> Debug.todo "dammit"
+--                 Node nodeTitle subTrees ->
+--                     if nodeTitle == first then
+-- getLeafInsertionPoint title item trees =
+--     case List.Extra.find (titlesMatches title) trees of
+--         Nothing ->
+--             case titles of
+--                 [] -> trees
+--                 [leafTitle] ->
+--                     Leaf title item :: trees
+--                 first :: rest ->
+--                     if first ==
+--         Just matchingTree ->
+--         |> Maybe.map ()
+--         |> Maybe.withDefault (Leaf title item)
+
+
+titleMatches : String -> Tree a -> Bool
+titleMatches title tree =
+    case tree of
+        Leaf _ _ ->
+            False
+
+        Node nodeTitle _ ->
+            title == nodeTitle
+
+
+runTest : Runner -> ( List String, TestResult )
+runTest runner =
+    let
+        failures =
+            runner.run ()
+                |> List.map parseExpectation
+                |> List.filterMap identity
+
+        labels =
+            List.reverse runner.labels
+    in
+    case failures of
+        [] ->
+            ( labels, Pass )
+
+        _ ->
+            ( labels, Fail failures )
+
+
+parseExpectation : Expectation -> Maybe ( String, Failure.Reason )
+parseExpectation expectation =
+    Runner.getFailureReason expectation
+        |> Maybe.map (\record -> ( record.description, record.reason ))
+
+
+{-| Run and display test results
+
+    viewResults myConfig myTests
+
+-}
+viewResults : Config -> Test -> Html a
+viewResults (Config config) testsToRun =
+    case Runner.fromTest config.fuzzCount config.initialSeed testsToRun of
+        Runner.Plain tests ->
+            viewTestsResults config.passedTestsDisplay tests
+
+        Runner.Only tests ->
+            viewTestsResults config.passedTestsDisplay tests
+
+        Runner.Skipping tests ->
+            viewTestsResults config.passedTestsDisplay tests
+
+        Runner.Invalid reason ->
+            div []
+                [ p [] [ text "Invalid tests:" ]
+                , pre [] [ text reason ]
+                ]
+
+
+viewTestsResults : PassedTestsDisplay -> List Runner -> Html a
+viewTestsResults passedTestsDisplay runners =
+    let
+        allResults =
+            List.map runTest runners
+
+        ( passResults, failResults ) =
+            List.partition
+                (\( _, result ) -> result == Pass)
+                allResults
+    in
+    div []
+        [ ul [ class "test-fail-list" ]
+            (List.map viewFail failResults)
+        , if passedTestsDisplay == Show then
+            ul [ class "test-pass-list" ]
+                (List.map viewPass passResults)
+
+          else
+            text ""
+        ]
+
+
+{-| this string contains non-breaking spaces
+-}
+labelSeparator : String
+labelSeparator =
+    " → "
+
+
+viewPass : ( List String, TestResult ) -> Html a
+viewPass ( labels, _ ) =
+    li []
+        [ text ("✔️ " ++ String.join labelSeparator labels)
+        ]
+
+
+viewFail : ( List String, TestResult ) -> Html a
+viewFail ( labels, result ) =
+    let
+        expectationFailures =
+            case result of
+                Pass ->
+                    []
+
+                Fail failures ->
+                    failures
+    in
+    li []
+        [ h3 [] [ text ("❌ " ++ String.join labelSeparator labels) ]
+        , ul [] <| List.map viewExpectationFailure expectationFailures
+        ]
+
+
+viewExpectationFailure : ( String, Failure.Reason ) -> Html a
+viewExpectationFailure ( name, reason ) =
+    li []
+        [ text name
+        , br [] []
+        , viewReason reason
+        ]
+
+
+viewReason : Failure.Reason -> Html msg
+viewReason reason =
+    case reason of
+        Failure.Custom ->
+            text ""
+
+        Failure.Equality expected actual ->
+            text ("Expected: " ++ expected ++ " | Actual: " ++ actual)
+
+        Failure.Comparison expected actual ->
+            text ("Expected: " ++ expected ++ " | Actual: " ++ actual)
+
+        Failure.ListDiff expected received ->
+            viewListDiff expected received
+
+        Failure.CollectionDiff details ->
+            text ("Expected: " ++ details.expected ++ " | Actual: " ++ details.actual)
+
+        Failure.TODO ->
+            text "TODO"
+
+        Failure.Invalid invalidReason ->
+            viewInvalidReason invalidReason
+
+
+viewListDiff : List String -> List String -> Html msg
+viewListDiff expected actual =
+    let
+        expectedArray =
+            Array.fromList expected
+
+        actualArray =
+            Array.fromList actual
+    in
+    div []
+        [ text "The lists don't match! 😱"
+        , div [ style "display" "flex" ]
+            [ div [ style "margin-right" "5vw" ]
+                [ text "Expected"
+                , ul [] (List.indexedMap (viewListDiffPart actualArray) expected)
+                ]
+            , div []
+                [ text "Actual"
+                , ul [] (List.indexedMap (viewListDiffPart expectedArray) actual)
+                ]
+            ]
+        ]
+
+
+viewListDiffPart : Array String -> Int -> String -> Html msg
+viewListDiffPart otherList index listPart =
+    let
+        styles =
+            Array.get index otherList
+                |> Maybe.Extra.filter (\value -> value == listPart)
+                |> Maybe.map (always [ style "color" "green" ])
+                |> Maybe.withDefault [ style "color" "red", style "font-weight" "bold" ]
+    in
+    li styles [ text listPart ]
+
+
+viewInvalidReason : Failure.InvalidReason -> Html msg
+viewInvalidReason invalidReason =
+    case invalidReason of
+        Failure.EmptyList ->
+            text "You should have at least one test in the list"
+
+        Failure.NonpositiveFuzzCount ->
+            text "The fuzz count must be positive"
+
+        Failure.InvalidFuzzer ->
+            text "The fuzzer is invalid"
+
+        Failure.BadDescription ->
+            text "The description of your test is not valid"
+
+        Failure.DuplicatedName ->
+            text "At least two tests have the same name, please change at least one"
 
 
 {-| Create a default config, initializing it with an initial seed used for fuzz testing.
@@ -89,169 +358,3 @@ showPassedTests (Config config) =
 hidePassedTests : Config -> Config
 hidePassedTests (Config config) =
     Config { config | passedTestsDisplay = Hide }
-
-
-{-| Run and display test results
-
-    viewResults myConfig myTests
-
--}
-viewResults : Config -> Test -> Html a
-viewResults (Config config) testsToRun =
-    case fromTest config.fuzzCount config.initialSeed testsToRun of
-        Test.Runner.Plain tests ->
-            div [] <| List.map (viewTestsResults config.passedTestsDisplay) tests
-
-        Test.Runner.Only tests ->
-            div [] <| List.map (viewTestsResults config.passedTestsDisplay) tests
-
-        Test.Runner.Skipping tests ->
-            div [] <| List.map (viewTestsResults config.passedTestsDisplay) tests
-
-        Test.Runner.Invalid reason ->
-            div []
-                [ p [] [ text "Invalid tests, here is the reason:" ]
-                , pre [] [ text reason ]
-                ]
-
-
-viewTestsResults : PassedTestsDisplay -> Runner -> Html a
-viewTestsResults passedTestsDisplay runner =
-    let
-        label =
-            List.intersperse " " runner.labels
-                |> List.foldl (++) ""
-
-        getExpectationResults =
-            case passedTestsDisplay of
-                Show ->
-                    List.map viewExpectationResult
-                        >> List.map (Maybe.withDefault (text "Passed!"))
-
-                Hide ->
-                    List.filterMap viewExpectationResult
-    in
-    runner.run ()
-        |> getExpectationResults
-        |> (\expectationsResults ->
-                if List.length expectationsResults == 0 then
-                    div [ class "test-pass" ]
-                        [ h3 [] [ text label ]
-                        , text "✔️ All tests passed"
-                        ]
-
-                else
-                    let
-                        isFailure result =
-                            result /= text "Passed!"
-                    in
-                    List.map
-                        (\result ->
-                            div
-                                [ class
-                                    (if isFailure result then
-                                        "test-fail"
-
-                                     else
-                                        "test-pass"
-                                    )
-                                ]
-                                [ h3 [] [ text label ]
-                                , result
-                                ]
-                        )
-                        expectationsResults
-                        |> div []
-           )
-
-
-viewExpectationResult : Expectation -> Maybe (Html msg)
-viewExpectationResult expectation =
-    getFailureReason expectation
-        |> Maybe.map
-            (\reason ->
-                div []
-                    [ pre [] [ text reason.description ]
-                    , viewReason reason.reason
-                    ]
-            )
-
-
-viewReason : Reason -> Html msg
-viewReason reason =
-    case reason of
-        Custom ->
-            text ""
-
-        Equality expected actual ->
-            "Expected: " ++ expected ++ " | Actual: " ++ actual |> text
-
-        Comparison expected actual ->
-            "Expected: " ++ expected ++ " | Actual: " ++ actual |> text
-
-        ListDiff expected received ->
-            viewListDiff expected received
-
-        CollectionDiff details ->
-            "Expected: " ++ details.expected ++ " | Actual: " ++ details.actual |> text
-
-        TODO ->
-            "TODO" |> text
-
-        Invalid invalidReason ->
-            viewInvalidReason invalidReason
-
-
-viewListDiff : List String -> List String -> Html msg
-viewListDiff expected actual =
-    let
-        expectedArray =
-            Array.fromList expected
-
-        actualArray =
-            Array.fromList actual
-    in
-    div []
-        [ text "The lists don't match! 😱"
-        , div [ style "display" "flex" ]
-            [ div [ style "margin-right" "5vw" ]
-                [ text "Expected"
-                , ul [] (List.indexedMap (viewListDiffPart actualArray) expected)
-                ]
-            , div []
-                [ text "Actual"
-                , ul [] (List.indexedMap (viewListDiffPart expectedArray) actual)
-                ]
-            ]
-        ]
-
-
-viewListDiffPart : Array String -> Int -> String -> Html msg
-viewListDiffPart otherList index listPart =
-    let
-        styles =
-            Array.get index otherList
-                |> Maybe.Extra.filter (\value -> value == listPart)
-                |> Maybe.map (always [ style "color" "green" ])
-                |> Maybe.withDefault [ style "color" "red", style "font-weight" "bold" ]
-    in
-    li styles [ text listPart ]
-
-
-viewInvalidReason : InvalidReason -> Html msg
-viewInvalidReason reason =
-    case reason of
-        EmptyList ->
-            text "You should have at least one test in the list"
-
-        NonpositiveFuzzCount ->
-            text "The fuzz count must be positive"
-
-        InvalidFuzzer ->
-            text "The fuzzer used is invalid"
-
-        BadDescription ->
-            text "The description of your test is not valid"
-
-        DuplicatedName ->
-            text "At least two tests have the same name, please change at least one"
