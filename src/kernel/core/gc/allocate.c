@@ -1,4 +1,5 @@
 #include "internals.h"
+#include <stdio.h>
 
 /* ====================================================
 
@@ -24,6 +25,7 @@ void* GC_malloc(ptrdiff_t bytes) {
     state->next_alloc = new_heap;
     return old_heap;
   } else {
+    printf("OOM at %p\n", old_heap);
     return pGcFull;
   }
 }

@@ -9,6 +9,8 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
   // "already marked" (=> children won't be traced)
   if (p < heap->start) return true;
   if (size == 0) return true;
+  assert(p < heap->end);
+  assert(p + size < heap->end);
 
   size_t first_index = (size_t)(p - heap->start);
   size_t first_word = first_index / GC_WORD_BITS;
@@ -32,12 +34,13 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
     already_marked = !!(bitmap[first_word] & first_mask);
     if (!already_marked) {
       bitmap[first_word] |= first_mask;
-      bitmap[last_word] |= make_bitmask(0, last_bit);
 
       // Loop for values spanning >2 words in bitmap. Rare. ElmString only.
       for (size_t word = first_word + 1; word < last_word; ++word) {
         bitmap[word] = ALL_ONES;
       }
+
+      bitmap[last_word] |= make_bitmask(0, last_bit);
     }
   }
   return already_marked;
@@ -46,6 +49,9 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
 void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
   size_t* first_word = (size_t*)v;
   if (first_word < ignore_below) return;
+  size_t n_children = child_count(v);
+
+  assert(sanity_check(v));
 
   bool already_marked = mark_words(heap, v, v->header.size);
   if (already_marked) return;
@@ -54,30 +60,35 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
     markJsRef(v->js_ref.index);
   }
 
-  size_t n_children = child_count(v);
   size_t* first_child_field = first_word + v->header.size - n_children;
   ElmValue** child_ptr_array = (ElmValue**)first_child_field;
 
   for (size_t i = 0; i < n_children; ++i) {
     ElmValue* child = child_ptr_array[i];
 
-    assert((size_t)child < (size_t)heap->end);
+    assert((size_t*)child < heap->end);
     assert(child < v);
 
     mark_trace(heap, child, ignore_below);
   }
 }
 
-// Trace all Elm value between two memory addresses
+// Trace all Elm values between two memory addresses
 void mark_trace_values_between(
     void* start, void* end, GcHeap* heap, size_t* ignore_below) {
   ElmValue* v = start;
   ElmValue* endval = end;
   while (v < endval) {
+    if (!sanity_check(v)) {
+      printf("failed sanity check at %p\n", v);
+      print_state();
+      print_heap_range(start - 0x80, start);
+      print_heap_range(start, end);
+      print_live_sections();
+    }
     mark_trace(heap, v, ignore_below);
-    // guard against getting stuck on zeroed memory (shouldn't happen)
-    size_t size_words = v->header.size ? v->header.size : 1;
-    v = (ElmValue*)((size_t*)v + size_words);
+    assert(v->header.size > 0);
+    v = (ElmValue*)((size_t*)v + v->header.size);
   }
 }
 
@@ -91,11 +102,11 @@ void mark(GcState* state, size_t* ignore_below) {
   for (GcLiveSection* section = state->first_live_section;
        section <= state->current_live_section;
        section++) {
-    if (section->end == section->start) {
+    if (section->end == section->start && section->end < state->next_alloc) {
       mark_trace(heap, (ElmValue*)section->start, ignore_below);
     } else {
       size_t* end = section->end;
-      if (end > heap->end) end = heap->end;
+      if (end > state->next_alloc) end = state->next_alloc;
       mark_trace_values_between(section->start, end, heap, ignore_below);
     }
   }

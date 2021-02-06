@@ -258,6 +258,10 @@ void Debug_pretty(const char* label, void* p) {
 }
 
 void print_value(void* p) {
+  if (!sanity_check(p)) {
+    printf("(corrupt data?)");
+    return;
+  }
   ElmValue* v = p;
   switch (v->header.tag) {
     case Tag_Int:
@@ -382,7 +386,7 @@ void print_heap_range(size_t* start, size_t* end) {
       }
       ElmValue* v = (ElmValue*)p;
       print_value_line(v);
-      if (v->header.size > 0 && v->header.size < 102400) {
+      if (sanity_check(v)) {
         next_value += v->header.size;
       } else {
         next_value++;
@@ -442,7 +446,7 @@ void print_live_sections() {
 
     if (section->start == section->end) {
       printf("%2d | " FORMAT_PTR " |    | %s | ", i, section->start, Debug_evaluator_name(section->evaluator));
-      print_value(section->start);
+      // print_value(section->start);
       printf("\n");
     } else {
       char size[3];
@@ -452,7 +456,7 @@ void print_live_sections() {
         snprintf(size, 3, "  ");
       }
 
-      printf("%2d | %p | %s | %s |\n",
+      printf("%2d | " FORMAT_PTR " | %s | %s |\n",
         i,
         section->start,
         size,

@@ -4,6 +4,7 @@
 #define __USE_MINGW_ANSI_STDIO 1
 #include <stdio.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include "../kernel/core/types.h"
 

@@ -64,6 +64,7 @@ void bounds_check_live_section(GcLiveSection* section);
 void bitmap_reset(GcHeap*);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
 size_t child_count(ElmValue* v);
+bool sanity_check(void* v);
 size_t make_bitmask(size_t first_bit, size_t last_bit);
 void bitmap_next(size_t* word, size_t* mask);
 

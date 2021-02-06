@@ -5,54 +5,34 @@
 - I really need a separate region. Something small will do.
 - Explicit stack is sounding so good right now.
 
-## testing
+## testing status
 
-- Write test functions in Elm, compile them, and copy/paste into tests
-- Run them as top level functions with NEW_CLOSURE and GC_execute
-- after running the function, put expectations on the stackmap
-- modify the debug dumper to show live sections
-- run mark, check stuff is marked properly
-- run compact, eyeball it
+- Assertion testing: sprinkle assertions everywhere and then run some functions
+- Currently only triggering within gdb
+  - One section is starts one word too early, or maybe 2 too late
+  - It's partway through an infinite_loop Closure
+  - It's out of sequence with the other live sections which are mostly monotonically increasing
+- old infinite loop sections seem to be kept alive! stack map should be shallower
 
-I want to just eyeball everything I can.
-- print out the stackmap on every iteration of a test function
-- do some tail calls
-- allocate some garbage
-- have more than one function!
-- mark the heap on every iteration just to see
-- make some data structures, not just Ints. List will do.
+# design issues
+This is still a pain to debug, I can't tell what the hell is going on
+"Live section" is just not a nice mental model of this
+I think the main reason I'm doing it as an actual stack is to avoid having trouble with kernel
+shenanigans like growing arrays after allocating them and so on.
+BUT what if instead of using GC_malloc to push to the stack, I use the constructors?
+There's only a few of them.
+Even with shenanigans, the constructor only gets called once.
 
+So that allows me to use a stack structure which should be easier to get right
+I don't really need to track which parts are from which functions but it would be nice!
+Maybe separate call and value stacks
 
-### expected results from eyeball test
-
-on stack reset:
-- first section should mark entry closure and its children
-
-on apply listNonsense
-- allocate acc
-- apply `foldl trashyFold acc list`
-  - check if list is Nil
-  - destructure list
-  - apply `func x acc` (trashyFold)
-    - assignments
-    - apply add
-    - apply sub
-    - construct Cons
-    - construct Cons
-    - print
-  - print
-  - tail call
-- apply `List.reverse`
-
-
-
-
-
-
-
-
-
-
+What to do with tailcalls?
+  - At the top of the loop, inside it, do NEW_CLOSURE(stuff)
+  - Assign the arguments from the Closure, not from args
+  - On replay this will be a fake replayed allocation with the right stuff in it
+  - Boom, that's it
+  - There's no situation where you actually want to return the full Closure. It's always a local.
 
 
 
@@ -86,7 +66,7 @@ Closure* entry;
 
   - Utils_apply
     - write to current live section end=alloc_next
-    - create a new live section with start=alloc_next, end=NULL, and save a reference to this (will pop to it later)
+    - create a new live section with start=alloc_next, end=heap->end, and save a reference to this (will pop to it later)
     - evaluate the call
     - either
       - exit normally

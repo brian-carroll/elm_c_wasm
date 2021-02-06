@@ -8,6 +8,7 @@
 #include "../kernel/core/core.h"
 #include "../kernel/json/json.h"
 #include "test.h"
+bool sanity_check(void* v);
 
 void* eval_List_reverse(void* args[]) {
   Cons* list = args[0];
@@ -41,6 +42,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
             void * x_x = ((Tuple3 * )(x_list))->a;
             void * x_xs = ((Tuple3 * )(x_list))->b;
             void * tmp1 = A2(x_func, x_x, x_acc);
+            assert(sanity_check(tmp1));
             x_list = x_xs;
             x_acc = tmp1;
             x_func = x_func;

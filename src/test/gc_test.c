@@ -9,6 +9,7 @@
 void reset_state(GcState*);
 bool mark_words(GcHeap* heap, void* p_void, size_t size);
 void compact(GcState* state, size_t* compact_start);
+bool sanity_check(void* v);
 
 
 void gc_test_reset() {
@@ -20,6 +21,9 @@ void gc_test_reset() {
   }
   GC_stack_reset(NULL);
 }
+
+// --------------------------------------------------------------------------------
+
 
 char bitmap_msg[100];
 
@@ -83,6 +87,9 @@ char* gc_bitmap_test() {
 
   return NULL;
 }
+
+// --------------------------------------------------------------------------------
+
 
 char gc_bitmap_next_test_str[100];
 
@@ -159,6 +166,10 @@ char* gc_bitmap_next_test() {
   return NULL;
 }
 
+
+// --------------------------------------------------------------------------------
+
+
 char* gc_dead_between_test() {
   gc_test_reset();
   GcState* state = &gc_state;
@@ -191,6 +202,10 @@ char* gc_dead_between_test() {
 
   return NULL;
 }
+
+
+// --------------------------------------------------------------------------------
+
 
 /*
 fib : Int -> Int
@@ -282,6 +297,7 @@ char* gc_replay_test() {
   return NULL;
 }
 
+// --------------------------------------------------------------------------------
 
 void set_heap_layout(GcHeap* heap, size_t* new_break_ptr);
 
@@ -329,20 +345,18 @@ char* test_heap_layout() {
   return NULL;
 }
 
+// --------------------------------------------------------------------------------
+
 void* eval_trashyFold(void* args[]) {
   ElmInt* a = args[0];
   Cons* acc = args[1];
   ElmInt* b = acc->head;
   ElmInt* c = A2(&Basics_add, a, b);
+  assert(sanity_check(c));
   ElmInt* d = A2(&Basics_sub, a, b);
-  Cons* result = NEW_CONS(d, NEW_CONS(c, acc));
-
-  if (verbose) {
-    printf("\n---- trashyFold ----\n");
-    // print_heap();
-    print_live_sections();
-    printf("\n---- /trashyFold ----\n");
-  }
+  assert(sanity_check(d));
+  Cons* result = NEW_CONS(d, NEW_CONS(c, NEW_CONS(b, pNil)));
+  assert(sanity_check(result));
 
   return result;
 }
@@ -354,30 +368,20 @@ Closure trashyFold = {
 
 void* eval_listNonsense(void* args[]) {
   Cons* list = args[0];
+  assert(sanity_check(list));
   Cons* acc = NEW_CONS(NEW_ELM_INT(64), &Nil);
+  assert(sanity_check(acc));
   Cons* folded = A3(&g_elm_core_List_foldl, &trashyFold, acc, list);
-  
-  if (verbose) {
-    printf("\n---- folded ----\n");
-    // print_heap();
-    print_live_sections();
-    printf("\n---- /folded ----\n");
-  }
-
+  assert(sanity_check(folded));
   Cons* reversed = A1(&g_elm_core_List_reverse, folded);
-
-  if (verbose) {
-    printf("\n---- reversed ----\n");
-    // print_heap();
-    print_live_sections();
-    printf("\n---- /reversed ----\n");
-  }
+  assert(sanity_check(reversed));
 
   return reversed;
 }
 Closure listNonsense = {
   .header = HEADER_CLOSURE(0),
   .evaluator = eval_listNonsense,
+  .max_values = 1,
 };
 
 char* stackmap_mark_eyeball_test() {
@@ -400,48 +404,26 @@ char* stackmap_mark_eyeball_test() {
 
   GC_stack_reset(c);
 
-  if (verbose) {
-    printf("\n---- before execution ----\n");
-    mark(&gc_state, gc_state.heap.start);
-    // print_heap();
-    print_live_sections();
-    printf("\n---- /before execution ----\n");
-  }
-
   Utils_apply(c, 0, NULL);
-
-  if (verbose) {
-    printf("\n---- exit ----\n");
-    mark(&gc_state, gc_state.heap.start);
-    // print_heap();
-    print_live_sections();
-    printf("\n---- /exit ----\n");
-  }
-
-  if (verbose) {
-    printf("\n---- all done ----\n");
-    mark(&gc_state, gc_state.heap.start);
-    print_heap();
-    print_live_sections();
-    printf("\n---- /all done ----\n");
-  }
 
   return NULL;
 }
 
 
+// --------------------------------------------------------------------------------
 
-void* eval_infinite_tail_recursion(void* args[]) {
+
+void* eval_infinite_loop(void* args[]) {
   Cons* list = args[0];
   u32 n_free = 0;
   void* push = GC_stack_get_current_section();
 
   while (true) {
     list = A1(&listNonsense, list);
+    assert(sanity_check(list));
     CAN_THROW(GC_stack_tailcall(push, n_free, args, 1, ((void * []){ list })));
   }
 }
-
 
 
 void* test_execute(Closure* c, int gc_cycles) {
@@ -450,16 +432,30 @@ void* test_execute(Closure* c, int gc_cycles) {
   GC_stack_reset(c);
 
   for (int i = 0; i < gc_cycles; i++) {
+    if (verbose) {
+      printf("executing...");
+    }
     void* result = Utils_apply(state->entry, 0, NULL);
     if (result != pGcFull) {
       GC_stack_reset(state->entry);
       return result;
     }
+    if (verbose) {
+      printf("calling GC (%d)...\n", i);
+    }
+    // if (i == 4) {
+    //   print_live_sections();
+    //   print_state();
+    //   GcLiveSection* dump_from = state->current_live_section - 1;
+    //   bitmap_reset(&state->heap); // clear previous GC's mark bits to avoid confusion
+    //   print_heap_range(dump_from->start, state->next_alloc);
+    //   return NULL;
+    // }
+
     GC_collect_full();
   }
   return NULL;
 }
-
 
 
 char* assertions_test() {
@@ -470,7 +466,6 @@ char* assertions_test() {
         "(run for long enough to do a few GCs, try to trigger assertions)\n"
         "\n");
   }
-
   gc_test_reset();
 
   void* list_elems[3] = {
@@ -479,14 +474,15 @@ char* assertions_test() {
     NEW_ELM_INT(-7),
   };
   Cons* list = List_create(3, list_elems);
-  Closure* c = NEW_CLOSURE(1, 1, eval_infinite_tail_recursion, ((void*[]){list}));
+  Closure* c = NEW_CLOSURE(1, 1, eval_infinite_loop, ((void*[]){list}));
 
-  test_execute(c, 3);
+  test_execute(c, 100);
 
   mu_assert("should complete without triggering any assertions", true);
   return NULL;
 }
 
+// --------------------------------------------------------------------------------
 
 
 char unknown_function_address[FORMAT_PTR_LEN];
@@ -507,8 +503,8 @@ char * Debug_evaluator_name(void * p) {
     return "trashyFold   ";
   } else if (p == eval_listNonsense) {
     return "listNonsense ";
-  } else if (p == eval_infinite_tail_recursion) {
-    return "infinite_tail_recursion ";
+  } else if (p == eval_infinite_loop) {
+    return "infinite_loop";
   } else {
     snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
     return unknown_function_address;

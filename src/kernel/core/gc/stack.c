@@ -41,7 +41,20 @@ GcLiveSection* GC_stack_push(EvalFunction evaluator) {
 
   if (!state->replay) {
     GcLiveSection* parent = state->current_live_section;
-    parent->end = state->next_alloc;
+
+    if (parent->start == state->next_alloc) {
+      // Parent section is empty. We might use it later for the return value (if it's the first for this call)
+      parent->start = NULL;
+      parent->end = NULL;
+    } else {
+      parent->end = state->next_alloc;
+
+      for (size_t* allocation = parent->start; allocation < parent->end;) {
+        sanity_check(allocation);
+        Header h = *(Header*)allocation;
+        allocation += h.size;
+      }
+    }
 
     state->current_live_section++;
     bounds_check_live_section(state->current_live_section);
@@ -73,6 +86,7 @@ GcLiveSection* GC_stack_push(EvalFunction evaluator) {
 void GC_stack_pop(EvalFunction evaluator, void* result, GcLiveSection* push) {
   GcState* state = &gc_state;
   assert(!state->replay);
+  assert(sanity_check(result));
 
   // The only live value in this section is the return value
   // (and its children, which we will trace later if we do a GC)
@@ -113,11 +127,15 @@ void* GC_stack_tailcall(GcLiveSection* push, u32 n_free, void* free_vars[], u32 
   u32 n = n_free + n_explicit_args;
   Closure* c = NEW_CLOSURE(n, n, push->evaluator, NULL);
   for (u32 i=0; i < n_free; i++) {
+    assert(sanity_check(free_vars[i]));
     c->values[i] = free_vars[i];    
   }
   for (u32 i=0; i < n_explicit_args; i++) {
+    assert(sanity_check(explicit_args[i]));
     c->values[n_free + i] = explicit_args[i];
   }
+
+  assert(sanity_check(c));
 
   // Save current state of tail recursion for later replay
   // Can ignore everything else in this section
