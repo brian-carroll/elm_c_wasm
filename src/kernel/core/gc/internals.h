@@ -21,7 +21,7 @@
 #define GC_BLOCK_MASK (-GC_BLOCK_BYTES)
 #define GC_WORD_BITS (sizeof(size_t) * 8)
 #define GC_DIV_ROUND_UP(num, den) ((num + den - 1) / den)
-#define GC_STACK_MAP_SIZE 1024
+#define GC_STACK_MAP_SIZE (1024 * 1024 / sizeof(void*))
 
 #define ALL_ONES -1
 
@@ -42,6 +42,7 @@ typedef struct {
   Closure* entry;
   void** stack_values;
   char* stack_flags;
+  EvalFunction* stack_functions;
   GcStackMapIndex stack_index;
   GcStackMapIndex replay_until;
 } GcState;

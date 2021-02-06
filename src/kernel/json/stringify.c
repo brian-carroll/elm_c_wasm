@@ -7,8 +7,8 @@
 #define GC_NOT_FULL NULL;
 
 static void* grow(u16** end) {
-  CAN_THROW(GC_malloc(stringify_alloc_chunk));
-  *end = (u16*)GC_malloc(0);
+  CAN_THROW(GC_malloc(false, stringify_alloc_chunk));
+  *end = (u16*)GC_malloc(false, 0);
   if (stringify_alloc_chunk < 1024) stringify_alloc_chunk *= 2;
   return GC_NOT_FULL;
 }

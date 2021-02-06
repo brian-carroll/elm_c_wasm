@@ -2,6 +2,7 @@
 #define ELM_KERNEL_TYPES
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 // WEBASSEMBLY PRIMITIVE TYPES
 

@@ -80,14 +80,14 @@ static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
   }
   if (c->ctor == JSON_VALUE_WRAP) {
     void* unwrapped = (void*)writeJsonValue(c->values[0], jsShape);
-    Custom* wrapped = GC_malloc(sizeof(Custom) + sizeof(void*));
+    Custom* wrapped = GC_malloc(true, sizeof(Custom) + sizeof(void*));
     wrapped->header = HEADER_CUSTOM(1);
     wrapped->ctor = JSON_VALUE_WRAP;
     wrapped->values[0] = unwrapped;
     return (size_t)wrapped;
   }
   if (jsShape == MAYBE_CIRCULAR) {
-    JsRef* jsRef = GC_malloc(sizeof(JsRef));
+    JsRef* jsRef = GC_malloc(true, sizeof(JsRef));
     jsRef->header = HEADER_JS_REF;
     jsRef->index = allocateJsRef(value);
     return (size_t)jsRef;

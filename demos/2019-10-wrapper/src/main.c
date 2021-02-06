@@ -100,7 +100,7 @@ Closure elm_core_Task_andThen = {
     .evaluator = (void*)JS_Scheduler_andThen,
 };
 void* eval_Task_Perform(void* args[1]) {
-  Custom* p = GC_malloc(sizeof(Custom) + sizeof(void*));
+  Custom* p = GC_malloc(true, sizeof(Custom) + sizeof(void*));
   p->header = HEADER_CUSTOM(1);
   p->ctor = CTOR_Perform;
   p->values[0] = args[0];
@@ -177,7 +177,7 @@ Closure elm_virtual_dom_VirtualDom_on = {
 };
 
 void* eval_elm_virtual_dom_VirtualDom_Normal(void* args[1]) {
-  Custom* p = GC_malloc(sizeof(Custom) + sizeof(void*));
+  Custom* p = GC_malloc(true, sizeof(Custom) + sizeof(void*));
   p->header = HEADER_CUSTOM(1);
   p->ctor = CTOR_Normal;
   p->values[0] = args[0];

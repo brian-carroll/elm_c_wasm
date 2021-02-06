@@ -219,7 +219,7 @@ static void* eval_String_join(void* args[]) {
   ElmString16* s = strs->head;
   u32 result_len = code_units(s);
   Header h = HEADER_STRING(result_len);
-  ElmString16* result = GC_malloc(h.size * SIZE_UNIT);
+  ElmString16* result = GC_malloc(true, h.size * SIZE_UNIT);
   if (result == pGcFull) {
     return pGcFull;
   }
@@ -235,7 +235,7 @@ static void* eval_String_join(void* args[]) {
 
     result_len += sep_len + len;
     h = HEADER_STRING(result_len);
-    if (GC_malloc((h.size - result->header.size) * SIZE_UNIT) == pGcFull) {
+    if (GC_malloc(false, (h.size - result->header.size) * SIZE_UNIT) == pGcFull) {
       return pGcFull;
     }
     result->header = h;

@@ -11,7 +11,7 @@
   Allocate memory on the heap
   Same interface as malloc in stdlib.h
 */
-void* GC_malloc(ptrdiff_t bytes) {
+void* GC_malloc(bool push_to_stack, ptrdiff_t bytes) {
   GcState* state = &gc_state;
   if (state->replay_until) {
     return malloc_replay(bytes);
@@ -21,13 +21,15 @@ void* GC_malloc(ptrdiff_t bytes) {
   size_t* old_heap = state->next_alloc;
   size_t* new_heap = old_heap + words;
 
-  if (new_heap < state->heap.end) {
-    state->next_alloc = new_heap;
-    return old_heap;
-  } else {
+  if (new_heap >= state->heap.end) {
     printf("OOM at %p\n", old_heap);
     return pGcFull;
   }
+  if (push_to_stack) {
+    GC_stack_push(old_heap);
+  }
+  state->next_alloc = new_heap;
+  return old_heap;
 }
 
 

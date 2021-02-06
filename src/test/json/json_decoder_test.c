@@ -94,7 +94,7 @@ Custom* err(Custom* error) {
 }
 
 JsRef* ctorJsRef(u32 index) {
-  JsRef* jsRef = GC_malloc(sizeof(JsRef));
+  JsRef* jsRef = GC_malloc(true, sizeof(JsRef));
   *jsRef = (JsRef){
       .header = HEADER_JS_REF,
       .index = index,

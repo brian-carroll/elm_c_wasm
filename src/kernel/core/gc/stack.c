@@ -44,6 +44,9 @@ GcStackMapIndex GC_stack_get_current_pos() {
 // Push a newly constructed value onto the stack
 void GC_stack_push(void* value) {
   GcState* state = &gc_state;
+  if (state->replay_until) {
+    return;
+  }
   state->stack_values[state->stack_index] = value;
   state->stack_flags[state->stack_index] = 'A';
   state->stack_index++;

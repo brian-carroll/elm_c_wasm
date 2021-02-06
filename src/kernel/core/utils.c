@@ -69,7 +69,7 @@ void* Utils_clone(void* x) {
   Header* h = (Header*)x;
   if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 0)) return x;
   size_t n_bytes = SIZE_UNIT * (size_t)h->size;
-  ElmValue* x_new = CAN_THROW(GC_malloc(n_bytes));
+  ElmValue* x_new = CAN_THROW(GC_malloc(true, n_bytes));
   GC_memcpy(x_new, x, n_bytes);
   return x_new;
 }
@@ -168,7 +168,7 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
       u16 n_old = c->n_values;
       u16 n_new = n_old + n_applied;
 
-      Closure* c_copy = CAN_THROW(GC_malloc(SIZE_CLOSURE(n_new) * SIZE_UNIT));
+      Closure* c_copy = CAN_THROW(GC_malloc(true, SIZE_CLOSURE(n_new) * SIZE_UNIT));
       GC_memcpy(c_copy, c, SIZE_CLOSURE(n_old) * SIZE_UNIT);
       GC_memcpy(&c_copy->values[n_old], applied, SIZE_CLOSURE(n_applied) * SIZE_UNIT);
       c_copy->header = HEADER_CLOSURE(n_new);

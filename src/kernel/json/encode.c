@@ -66,7 +66,7 @@ void* eval_Json_addField(void* args[]) {
   u32 old_size = old_object->header.size;
   u32 new_size = old_size + 2;
 
-  Custom* new_object = CAN_THROW(GC_malloc(new_size * SIZE_UNIT));
+  Custom* new_object = CAN_THROW(GC_malloc(true, new_size * SIZE_UNIT));
   GC_memcpy(new_object, old_object, old_size * SIZE_UNIT);
   new_object->header.size = new_size;
   new_object->values[old_params] = key;
@@ -89,7 +89,7 @@ void* eval_Json_addEntry(void* args[]) {
   u32 old_size = old_array->header.size;
   u32 new_size = old_size + 1;
 
-  Custom* new_array = CAN_THROW(GC_malloc(new_size * SIZE_UNIT));
+  Custom* new_array = CAN_THROW(GC_malloc(true, new_size * SIZE_UNIT));
   GC_memcpy(new_array, old_array, old_size * SIZE_UNIT);
   new_array->header.size = new_size;
 

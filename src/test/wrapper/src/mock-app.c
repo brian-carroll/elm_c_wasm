@@ -169,7 +169,7 @@ FieldGroup* fieldGroupsArray[] = {
 };
 
 void* ctor_address_firstName_lastName(void* address, void* firstName, void* lastName) {
-  Record* r = GC_malloc(sizeof(Record) + 3 * sizeof(void*));
+  Record* r = GC_malloc(true, sizeof(Record) + 3 * sizeof(void*));
   r->header = HEADER_RECORD(3);
   r->fieldgroup = &address_firstName_lastName;
   r->values[0] = address;
@@ -179,7 +179,7 @@ void* ctor_address_firstName_lastName(void* address, void* firstName, void* last
 }
 
 void* ctor_firstName_lastName(void* firstName, void* lastName) {
-  Record* r = GC_malloc(sizeof(Record) + 2 * sizeof(void*));
+  Record* r = GC_malloc(true, sizeof(Record) + 2 * sizeof(void*));
   r->header = HEADER_RECORD(2);
   r->fieldgroup = &firstName_lastName;
   r->values[0] = firstName;
