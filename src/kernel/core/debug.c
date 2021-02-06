@@ -434,40 +434,36 @@ void print_bitmap() {
 }
 
 void print_stack_map() {
-  printf("(insert amazing stack map representation here)\n");
+  GcState* state = &gc_state;
+  printf("\n");
+  printf("\nStack map:\n");
+  printf("\n");
+
+  for (u32 i = 0; i < state->stack_index; ++i) {
+    void* value       = state->stack_values[i];
+    char flag         = state->stack_flags[i];
+    EvalFunction eval = state->stack_functions[i];
+    char* eval_name = eval ? Debug_evaluator_name(eval) : "NULL";
+    printf("%2d | " FORMAT_PTR " | %c | %s | ",
+            i,      value,        flag, eval_name);
+    print_value(value);
+    printf("\n");
+  }
 }
 
-// void print_live_sections() {
-//   GcState* state = &gc_state;
-//   printf("\n");
-//   printf("\nLive Sections:\n");
-//   printf("\n");
+void print_call_stack() {
+  GcState* state = &gc_state;
+  printf("\n");
+  printf("\nCall Stack:\n");
+  printf("\n");
 
-//   int i=0;
-//   for (GcLiveSection* section = state->first_live_section;
-//        section <= state->current_live_section;
-//        section++, i++) {    
+  for (u32 i = 0; i < state->call_stack_index; ++i) {
+    EvalFunction eval = state->call_stack[i];
+    char* eval_name = eval ? Debug_evaluator_name(eval) : "NULL";
+    printf("%2d | %s\n", i, eval_name);
+  }
+}
 
-//     if (section->start == section->end) {
-//       printf("%2d | " FORMAT_PTR " |    | %s | ", i, section->start, Debug_evaluator_name(section->evaluator));
-//       // print_value(section->start);
-//       printf("\n");
-//     } else {
-//       char size[3];
-//       if (section->start < state->heap.end) {
-//         snprintf(size, 3, "%2zd", section->end - section->start);
-//       } else {
-//         snprintf(size, 3, "  ");
-//       }
-
-//       printf("%2d | " FORMAT_PTR " | %s | %s |\n",
-//         i,
-//         section->start,
-//         size,
-//         Debug_evaluator_name(section->evaluator));
-//     }
-//   }
-// }
 
 void print_state() {
   GcState* state = &gc_state;

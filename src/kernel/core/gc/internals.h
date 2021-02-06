@@ -43,7 +43,9 @@ typedef struct {
   void** stack_values;
   char* stack_flags;
   EvalFunction* stack_functions;
+  EvalFunction* call_stack;
   GcStackMapIndex stack_index;
+  GcStackMapIndex call_stack_index;
   GcStackMapIndex replay_until;
 } GcState;
 

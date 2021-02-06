@@ -385,7 +385,7 @@ Closure listNonsense = {
 };
 
 char* stackmap_mark_eyeball_test() {
-    if (verbose) {
+  if (verbose) {
     printf(
         "\n"
         "## stackmap_mark_eyeball_test\n"
@@ -404,7 +404,15 @@ char* stackmap_mark_eyeball_test() {
 
   GC_stack_reset(c);
 
+  printf("Entering...\n");
   Utils_apply(c, 0, NULL);
+
+  GcState* state = &gc_state;
+  mark(state, state->heap.start);
+  print_heap();
+  print_state();
+  print_stack_map();
+  print_call_stack();
 
   return NULL;
 }
@@ -435,7 +443,7 @@ void* test_execute(Closure* c, int gc_cycles) {
 
   for (int i = 0; i < gc_cycles; i++) {
     if (verbose) {
-      printf("executing...");
+      printf("executing...\n");
     }
     void* result = Utils_apply(state->entry, 0, NULL);
     if (result != pGcFull) {
@@ -445,14 +453,11 @@ void* test_execute(Closure* c, int gc_cycles) {
     if (verbose) {
       printf("calling GC (%d)...\n", i);
     }
-    // if (i == 4) {
-    //   print_live_sections();
-    //   print_state();
-    //   GcLiveSection* dump_from = state->current_live_section - 1;
-    //   bitmap_reset(&state->heap); // clear previous GC's mark bits to avoid confusion
-    //   print_heap_range(dump_from->start, state->next_alloc);
-    //   return NULL;
-    // }
+    mark(state, state->heap.start);
+    print_heap_range(state->next_alloc - 256, state->next_alloc);
+    print_stack_map();
+    print_call_stack();
+    print_state();
 
     GC_collect_full();
   }
@@ -531,8 +536,8 @@ char* gc_test() {
   // mu_run_test(gc_replay_test);
   // mu_run_test(test_heap_layout);
 
-  // mu_run_test(stackmap_mark_eyeball_test);
-  mu_run_test(assertions_test);
+  mu_run_test(stackmap_mark_eyeball_test);
+  // mu_run_test(assertions_test);
 
 
   // mu_run_test(replay_scenario_tests);

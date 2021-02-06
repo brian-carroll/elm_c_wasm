@@ -47,8 +47,10 @@ void GC_stack_push(void* value) {
   if (state->replay_until) {
     return;
   }
+
   state->stack_values[state->stack_index] = value;
   state->stack_flags[state->stack_index] = 'A';
+  state->stack_functions[state->stack_index] = state->call_stack[state->call_stack_index];
   state->stack_index++;
   assert(state->stack_index < GC_STACK_MAP_SIZE);
 }
@@ -62,16 +64,22 @@ void GC_stack_pop(EvalFunction evaluator, void* result, GcStackMapIndex push) {
   state->stack_index = push;
   state->stack_values[state->stack_index] = result;
   state->stack_flags[state->stack_index] = 'R'; // treat as return value for replay
+  state->stack_functions[state->stack_index] = evaluator;
   state->stack_index++;
   assert(state->stack_index < GC_STACK_MAP_SIZE);
+
+  assert(state->call_stack[state->call_stack_index] == evaluator);
+  state->call_stack_index--;
 }
 
 // Track when a tail call occurs
-Closure* GC_stack_tailcall(GcStackMapIndex push, Closure* old, u32 n_explicit_args, void* explicit_args[]) {
+Closure* GC_stack_tailcall(GcStackMapIndex closure_stack_index, Closure* old, u32 n_explicit_args, void* explicit_args[]) {
   GcState* state = &gc_state;
+  assert(state->stack_values[closure_stack_index] == old);
   u16 max_values = old->max_values;
   u16 n_free = max_values - n_explicit_args;
 
+  state->stack_index = closure_stack_index;
   Closure* new = NEW_CLOSURE(max_values, max_values, old->evaluator, NULL);
   for (u32 i=0; i < n_free; i++) {
     assert(sanity_check(old->values[i]));
@@ -82,11 +90,6 @@ Closure* GC_stack_tailcall(GcStackMapIndex push, Closure* old, u32 n_explicit_ar
     new->values[n_free + i] = explicit_args[i];
   }
   assert(sanity_check(new));
-
-  state->stack_index = push;
-  state->stack_values[state->stack_index] = new;
-  state->stack_flags[state->stack_index] = 'A'; // treat as allocation for replay
-  state->stack_index++;
 
   return new;
 }
@@ -99,6 +102,8 @@ void* GC_apply_replay(EvalFunction evaluator) {
     char flag = state->stack_flags[state->stack_index];
     if (flag == 'R') {
       void* value = state->stack_values[state->stack_index];
+      assert(state->stack_functions[state->stack_index] == evaluator);
+
       state->stack_index++;
       if (state->stack_index > state->replay_until) {
         state->replay_until = 0;
@@ -106,6 +111,9 @@ void* GC_apply_replay(EvalFunction evaluator) {
       return value;
     }
     assert(flag == 'A');
+  } else {
+    state->call_stack_index++;
+    state->call_stack[state->call_stack_index] = evaluator;
   }
 
   // Resume this interrupted call by saying "no replay value"
@@ -124,6 +132,7 @@ void* malloc_replay(ptrdiff_t bytes) {
   ElmValue* saved = state->stack_values[state->stack_index];
   u32 saved_words = saved->header.size;
   assert(requested_words == saved_words);
+  assert(state->stack_functions[state->stack_index] == state->call_stack[state->call_stack_index]);
   state->stack_index++;
   if (state->stack_index > state->replay_until) {
     state->replay_until = 0;
