@@ -10,7 +10,8 @@
 
 // globals
 GcState gc_state;
-GcLiveSection live_sections[GC_STACK_LIVE_SECTIONS];
+void* stack_values[GC_STACK_MAP_SIZE];
+char stack_flags[GC_STACK_MAP_SIZE]; // flag which values are returns or allocations
 
 void reset_state(GcState* state) {
   void* start = state->heap.start;
@@ -18,8 +19,8 @@ void reset_state(GcState* state) {
   state->next_alloc = start;
   state->roots = &Nil;
   state->entry = start;
-  state->first_live_section = live_sections;
-  state->end_live_section = &live_sections[GC_STACK_LIVE_SECTIONS];
+  state->stack_values = stack_values;
+  state->stack_flags = stack_flags;
   GC_stack_reset(start);
 }
 
@@ -35,23 +36,15 @@ void GC_stack_reset(Closure* c) {
     e = c->evaluator;
   }
   state->entry = p;
-
-  state->current_live_section = live_sections;
-  state->replay_live_section = live_sections;
-
-  state->current_live_section->start = p;
-  state->current_live_section->end = state->heap.end;
-  state->current_live_section->evaluator = e;
-
-  state->replay = NULL;
+  state->stack_index = 0;
+  state->replay_until = 0;
+  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) {
+    stack_values[i] = NULL;
+  }
+  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) {
+    stack_flags[i] = 0;
+  }
 };
-
-#ifdef DEBUG
-void bounds_check_live_section(GcLiveSection* section) {
-  assert(section >= live_sections);
-  assert(section < &live_sections[GC_STACK_LIVE_SECTIONS]);
-}
-#endif
 
 /* ====================================================
 

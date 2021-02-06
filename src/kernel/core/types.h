@@ -75,7 +75,6 @@ typedef struct {
 #define SIZE_FIELDGROUP(p) (sizeof(FieldGroup) + p * sizeof(u32)) / SIZE_UNIT
 #define SIZE_CLOSURE(p) (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT
 #define SIZE_JS_REF sizeof(JsRef) / SIZE_UNIT
-#define SIZE_GC_STACK_MAP sizeof(GcStackMap) / SIZE_UNIT
 
 #define HEADER_INT \
   (Header) { .tag = Tag_Int, .size = SIZE_INT }
@@ -102,14 +101,6 @@ typedef struct {
 #define HEADER_JS_REF \
   (Header) { .tag = Tag_JsRef, .size = SIZE_JS_REF }
 
-#define HEADER_GC_STACK_EMPTY \
-  (Header) { .tag = Tag_GcStackEmpty, .size = SIZE_GC_STACK_MAP }
-#define HEADER_GC_STACK_PUSH \
-  (Header) { .tag = Tag_GcStackPush, .size = SIZE_GC_STACK_MAP }
-#define HEADER_GC_STACK_POP \
-  (Header) { .tag = Tag_GcStackPop, .size = SIZE_GC_STACK_MAP }
-#define HEADER_GC_STACK_TC \
-  (Header) { .tag = Tag_GcStackTailCall, .size = SIZE_GC_STACK_MAP }
 
 #define CAN_THROW(expr)                                 \
   ({                                                    \
@@ -270,17 +261,6 @@ typedef struct {
   u32 index;
 } JsRef;
 
-// GARBAGE COLLECTOR TYPES
-
-// Doubly-linked list for tracking stack pointers
-// GC makes assumptions about order of these fields (child_count and its usages)
-typedef struct {
-  Header header;
-  PADDING64
-  void* newer;  // cheat! mutable field pointing at newer stuff
-  void* replay;
-  void* older;
-} GcStackMap;
 
 // ANY ELM VALUE (for pointers in collections)
 typedef union {
@@ -299,7 +279,6 @@ typedef union {
   FieldGroup fieldgroup;
   Closure closure;
   JsRef js_ref;
-  GcStackMap gc_stackmap;
 } ElmValue;
 
 // STATIC CONSTANTS

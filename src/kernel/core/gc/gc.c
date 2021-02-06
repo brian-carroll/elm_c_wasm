@@ -110,12 +110,10 @@ void* GC_register_root(void** ptr_to_mutable_ptr) {
    ==================================================== */
 
 static void collect(GcState* state, size_t* ignore_below) {
-#ifdef DEBUG
-  printf("collecting garbage from %p\n", ignore_below);
-#endif
-  state->current_live_section->end = state->next_alloc;
   mark(state, ignore_below);
   compact(state, ignore_below);
+  state->replay_until = state->stack_index;
+  state->stack_index = 0;
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
 }

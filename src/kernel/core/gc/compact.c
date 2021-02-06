@@ -150,11 +150,8 @@ void compact(GcState* state, size_t* compact_start) {
   state->nursery = to;
   state->entry = (Closure*)forwarding_address(heap, (size_t*)state->entry);
 
-  for (GcLiveSection* section = state->first_live_section;
-      section <= state->current_live_section;
-      section++) {
-    section->start = forwarding_address(heap, section->start);
-    section->end = forwarding_address(heap, section->end);
+  for (size_t i = 0; i < state->stack_index; ++i) {
+    state->stack_values[i] = forwarding_address(heap, state->stack_values[i]);
   }
 
   size_t* roots = (size_t*)state->roots;

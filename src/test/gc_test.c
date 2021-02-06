@@ -414,15 +414,17 @@ char* stackmap_mark_eyeball_test() {
 
 
 void* eval_infinite_loop(void* args[]) {
-  Cons* list = args[0];
-  u32 n_free = 0;
-  void* push = GC_stack_get_current_section();
-
-  while (true) {
-    list = A1(&listNonsense, list);
-    assert(sanity_check(list));
-    CAN_THROW(GC_stack_tailcall(push, n_free, args, 1, ((void * []){ list })));
-  }
+  u32 gc_stack_pos = GC_stack_get_current_pos();
+  Closure* gc_resume = NEW_CLOSURE(1, 1, eval_infinite_loop, args);
+  Cons* list = gc_resume->values[0];
+  assert(sanity_check(list));
+  tce_loop:
+  list = A1(&listNonsense, list);
+  assert(sanity_check(list));
+  gc_resume = CAN_THROW(GC_stack_tailcall(
+    gc_stack_pos, gc_resume, 1, ((void * []){ list })
+  ));
+  goto tce_loop;
 }
 
 

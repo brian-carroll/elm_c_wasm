@@ -433,37 +433,41 @@ void print_bitmap() {
   printf("\n");
 }
 
-void print_live_sections() {
-  GcState* state = &gc_state;
-  printf("\n");
-  printf("\nLive Sections:\n");
-  printf("\n");
-
-  int i=0;
-  for (GcLiveSection* section = state->first_live_section;
-       section <= state->current_live_section;
-       section++, i++) {    
-
-    if (section->start == section->end) {
-      printf("%2d | " FORMAT_PTR " |    | %s | ", i, section->start, Debug_evaluator_name(section->evaluator));
-      // print_value(section->start);
-      printf("\n");
-    } else {
-      char size[3];
-      if (section->start < state->heap.end) {
-        snprintf(size, 3, "%2zd", section->end - section->start);
-      } else {
-        snprintf(size, 3, "  ");
-      }
-
-      printf("%2d | " FORMAT_PTR " | %s | %s |\n",
-        i,
-        section->start,
-        size,
-        Debug_evaluator_name(section->evaluator));
-    }
-  }
+void print_stack_map() {
+  printf("(insert amazing stack map representation here)\n");
 }
+
+// void print_live_sections() {
+//   GcState* state = &gc_state;
+//   printf("\n");
+//   printf("\nLive Sections:\n");
+//   printf("\n");
+
+//   int i=0;
+//   for (GcLiveSection* section = state->first_live_section;
+//        section <= state->current_live_section;
+//        section++, i++) {    
+
+//     if (section->start == section->end) {
+//       printf("%2d | " FORMAT_PTR " |    | %s | ", i, section->start, Debug_evaluator_name(section->evaluator));
+//       // print_value(section->start);
+//       printf("\n");
+//     } else {
+//       char size[3];
+//       if (section->start < state->heap.end) {
+//         snprintf(size, 3, "%2zd", section->end - section->start);
+//       } else {
+//         snprintf(size, 3, "  ");
+//       }
+
+//       printf("%2d | " FORMAT_PTR " | %s | %s |\n",
+//         i,
+//         section->start,
+//         size,
+//         Debug_evaluator_name(section->evaluator));
+//     }
+//   }
+// }
 
 void print_state() {
   GcState* state = &gc_state;
@@ -491,11 +495,8 @@ void print_state() {
   printf("%p roots\n", state->roots);
   printf("\n");
   printf("%p entry\n", state->entry);
-  printf("%p current_live_section\n", state->current_live_section);
-  printf("%p replay_live_section\n", state->replay_live_section);
-  printf("%p first_live_section\n", state->first_live_section);
-  printf("%p end_live_section\n", state->end_live_section);
-  printf("%p replay\n", state->replay);
+  printf("%d stack_index\n", state->stack_index);
+  printf("%d replay_until\n", state->replay_until);
   printf("\n");
 
   // print_bitmap();

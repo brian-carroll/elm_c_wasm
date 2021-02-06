@@ -8,6 +8,7 @@
 // see also NEW_CONS in header file
 Cons* ctorCons(void* head, void* tail) {
   Cons* p = CAN_THROW(GC_malloc(sizeof(Cons)));
+  GC_stack_push(p);
   p->header = HEADER_LIST;
   p->head = head;
   p->tail = tail;
@@ -17,6 +18,7 @@ Cons* ctorCons(void* head, void* tail) {
 // see also NEW_TUPLE2 in header file
 Tuple2* ctorTuple2(void* a, void* b) {
   Tuple2* p = CAN_THROW(GC_malloc(sizeof(Tuple2)));
+  GC_stack_push(p);
   p->header = HEADER_TUPLE2;
   p->a = a;
   p->b = b;
@@ -26,6 +28,7 @@ Tuple2* ctorTuple2(void* a, void* b) {
 // see also NEW_TUPLE3 in header file
 Tuple3* ctorTuple3(void* a, void* b, void* c) {
   Tuple3* p = CAN_THROW(GC_malloc(sizeof(Tuple3)));
+  GC_stack_push(p);
   p->header = HEADER_TUPLE3;
   p->a = a;
   p->b = b;
@@ -36,6 +39,7 @@ Tuple3* ctorTuple3(void* a, void* b, void* c) {
 // see also NEW_ELM_INT in header file
 ElmInt* ctorElmInt(i32 value) {
   ElmInt* p = CAN_THROW(GC_malloc(sizeof(ElmInt)));
+  GC_stack_push(p);
   p->header = HEADER_INT;
   p->value = value;
   return p;
@@ -44,6 +48,7 @@ ElmInt* ctorElmInt(i32 value) {
 // see also NEW_ELM_FLOAT in header file
 ElmFloat* ctorElmFloat(f64 value) {
   ElmFloat* p = CAN_THROW(GC_malloc(sizeof(ElmFloat)));
+  GC_stack_push(p);
   p->header = HEADER_FLOAT;
   p->value = value;
   return p;
@@ -52,6 +57,7 @@ ElmFloat* ctorElmFloat(f64 value) {
 // see also NEW_ELM_CHAR in header file
 ElmChar* ctorElmChar(u32 value) {
   ElmChar* p = CAN_THROW(GC_malloc(sizeof(ElmChar)));
+  GC_stack_push(p);
   p->header = HEADER_CHAR;
   p->value = value;
   return p;
@@ -67,6 +73,7 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
   ElmString* p = CAN_THROW(GC_malloc(aligned_bytes));
+  GC_stack_push(p);
   size_t* words = (size_t*)p;  // the ElmString as an array of words
 
 #if STRING_ENCODING == UTF16
@@ -119,6 +126,7 @@ ElmString16* ctorElmString16(size_t len16) {
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
   ElmString16* p = CAN_THROW(GC_malloc(aligned_bytes));
+  GC_stack_push(p);
 
   if (aligned_bytes != used_bytes) {
     size_t* words = (size_t*)p;
@@ -136,6 +144,8 @@ ElmString16* ctorElmString16(size_t len16) {
 
 Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
   Custom* c = CAN_THROW(GC_malloc(sizeof(Custom) + n_children * sizeof(void*)));
+  GC_stack_push(c);
+
   c->header = HEADER_CUSTOM(n_children);
   c->ctor = ctor;
   if (children != NULL) {
@@ -148,6 +158,7 @@ Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
 
 Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   Record* r = CAN_THROW(GC_malloc(sizeof(Record) + n_children * sizeof(void*)));
+  GC_stack_push(r);
   r->header = HEADER_RECORD(n_children);
   r->fieldgroup = fg;
   for (size_t i = 0; i < n_children; ++i) {
@@ -158,6 +169,7 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
 Closure* ctorClosure(
     u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
   Closure* c = CAN_THROW(GC_malloc(sizeof(Closure) + n_values * sizeof(void*)));
+  GC_stack_push(c);
   c->header = HEADER_CLOSURE(n_values);
   c->n_values = n_values;
   c->max_values = max_values;

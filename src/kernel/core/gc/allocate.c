@@ -13,7 +13,7 @@
 */
 void* GC_malloc(ptrdiff_t bytes) {
   GcState* state = &gc_state;
-  if (state->replay) {
+  if (state->replay_until) {
     return malloc_replay(bytes);
   }
   ptrdiff_t words = bytes / sizeof(void*);

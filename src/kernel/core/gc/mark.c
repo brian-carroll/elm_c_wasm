@@ -79,13 +79,7 @@ void mark_trace_values_between(
   ElmValue* v = start;
   ElmValue* endval = end;
   while (v < endval) {
-    if (!sanity_check(v)) {
-      printf("failed sanity check at %p\n", v);
-      print_state();
-      print_heap_range(start - 0x80, start);
-      print_heap_range(start, end);
-      print_live_sections();
-    }
+    assert(sanity_check(v));
     mark_trace(heap, v, ignore_below);
     assert(v->header.size > 0);
     v = (ElmValue*)((size_t*)v + v->header.size);
@@ -99,16 +93,9 @@ void mark(GcState* state, size_t* ignore_below) {
   bitmap_reset(heap);
 
   // Mark values freshly allocated in still-running function calls
-  for (GcLiveSection* section = state->first_live_section;
-       section <= state->current_live_section;
-       section++) {
-    if (section->end == section->start && section->end < state->next_alloc) {
-      mark_trace(heap, (ElmValue*)section->start, ignore_below);
-    } else {
-      size_t* end = section->end;
-      if (end > state->next_alloc) end = state->next_alloc;
-      mark_trace_values_between(section->start, end, heap, ignore_below);
-    }
+  for (size_t i = 0; i < state->stack_index; ++i) {
+    ElmValue* v = state->stack_values[i];
+    mark_trace(heap, v, ignore_below);
   }
 
   // Mark GC roots (mutable values in Elm effect managers, including the Model)

@@ -32,7 +32,7 @@ void print_value_full(void* p);
 void print_heap_range(size_t* start, size_t* end);
 void print_heap();
 void print_state();
-void print_live_sections();
+void print_stack_map();
 void print_bitmap();
 void log_error(char* fmt, ...);
 void log_debug(char* fmt, ...);

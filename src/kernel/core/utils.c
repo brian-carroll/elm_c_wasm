@@ -182,9 +182,9 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
 
 
     // Execute! (and let the GC know what the stack is doing)
-    void* push = GC_stack_push(c->evaluator);
+    GcStackMapIndex stack_pos = GC_stack_get_current_pos();
     void* result = CAN_THROW(c->evaluator(args));
-    GC_stack_pop(c->evaluator, result, push);
+    GC_stack_pop(c->evaluator, result, stack_pos);
 
 
     u16 n_total = c->n_values + n_applied;

@@ -21,7 +21,7 @@
 #define GC_BLOCK_MASK (-GC_BLOCK_BYTES)
 #define GC_WORD_BITS (sizeof(size_t) * 8)
 #define GC_DIV_ROUND_UP(num, den) ((num + den - 1) / den)
-#define GC_STACK_LIVE_SECTIONS 1024
+#define GC_STACK_MAP_SIZE 1024
 
 #define ALL_ONES -1
 
@@ -40,11 +40,10 @@ typedef struct {
   Cons* roots;
 
   Closure* entry;
-  GcLiveSection* current_live_section;
-  GcLiveSection* replay_live_section;
-  GcLiveSection* first_live_section;
-  GcLiveSection* end_live_section;
-  size_t* replay;
+  void** stack_values;
+  char* stack_flags;
+  GcStackMapIndex stack_index;
+  GcStackMapIndex replay_until;
 } GcState;
 
 extern GcState gc_state;
@@ -54,12 +53,6 @@ void compact(GcState* state, size_t* compact_start);
 
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
-
-#ifdef DEBUG
-void bounds_check_live_section(GcLiveSection* section);
-#else
-#define bounds_check_live_section(x)
-#endif
 
 void bitmap_reset(GcHeap*);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
