@@ -32,20 +32,17 @@ void GC_stack_reset(Closure* c) {
   GcState* state = &gc_state;
   if (c) {
     state->entry = c;
-    state->call_stack[0] = c->evaluator;
   } else {
     // when initialising globals, we don't have a Closure
     state->entry = (void*)state->next_alloc;
-    state->call_stack[0] = NULL;
   }
   state->stack_index = 0;
   state->replay_until = 0;
-  state->call_stack_index = 0;
-  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) {
-    stack_values[i] = NULL;
-    stack_functions[i] = NULL;
-    stack_flags[i] = 0;
-  }
+  state->call_stack_index = -1;
+  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) stack_values[i] = NULL;
+  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) stack_flags[i] = 0;
+  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) stack_functions[i] = NULL;
+  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) call_stack[i] = NULL;
 };
 
 /* ====================================================

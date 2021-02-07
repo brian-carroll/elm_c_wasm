@@ -1,11 +1,33 @@
 # Replay rewrite
 
-- replay/stackmap is so hard to debug
-- stack map is mixed through the rest of the stuff
-- I really need a separate region. Something small will do.
-- Explicit stack is sounding so good right now.
 
-## testing status
+## Notes after stack map v3, before v4!
+
+Things are a lot better, but not there yet. Gradually learning what I really need!
+This keeps getting closer to a normal stack structure and needs to go a bit further.
+Currently:
+- I have a value stack that I push all allocations to. This is good.
+- Plus a separate call stack to track what function I'm currently in, "for debug only"...
+- Also Kernel code is now forced to admit to any tricks like dynamically growing arrays/strings/etc.
+- Ended up building some extra stuff "for debug":
+  - an array of flags: returned vs allocated data (it's a data-oriented SOA design actually, which is nice)
+  - a call stack beside the value stack
+    - using this for various sanity-checking assertions
+    - but those are complicated and confusing now
+  - I am now trying to figure out how to get these to agree with each other in edge cases
+    like the very first call in normal or replay mode, etc. The value stack is labelled with function pointers
+    but those may or may not match the call stack. What am I doing?
+- Still not passing args via the fake stack!
+  - The only part of the standard stack setup that I am still avoiding... will I regret this too?
+  - If I use an explicit stack to pass args, the C code just gets horrible. Lots of wasted loads and stores. And kernel code is really hard to write/maintain.
+  - I don't want to block registers from being used to pass args some day.
+    - Currently preventing that by using arg arrays!
+    - But the door is open to refactor eval functions to use varargs, and to inline saturated function calls.
+- I do want stack frames to keep everything together
+  - Keep the flags array idea. Introduce a "start of frame" flag and put the eval function pointer there.
+
+
+## Notes after stack map v2, before v3!
 
 - Assertion testing: sprinkle assertions everywhere and then run some functions
 - Currently only triggering within gdb
@@ -14,7 +36,6 @@
   - It's out of sequence with the other live sections which are mostly monotonically increasing
 - old infinite loop sections seem to be kept alive! stack map should be shallower
 
-# design issues
 This is still a pain to debug, I can't tell what the hell is going on
 "Live section" is just not a nice mental model of this
 I think the main reason I'm doing it as an actual stack is to avoid having trouble with kernel
@@ -36,11 +57,18 @@ What to do with tailcalls?
 
 
 
-## implementation
-- stack map off to the side:
-- add every allocation to it
-- when the call returns, write that as the only pointer for this call
-- the _overwriting_ is key to keeping it small and simple and current
+## Notes before building stack map v2
+
+- replay/stackmap is so hard to debug
+- stack map is mixed through the rest of the stuff
+- I really need a separate region. Something small will do.
+- Explicit stack is sounding so good right now.
+
+- Do a rewrite
+  - stack map off to the side:
+  - add every allocation to it
+  - when the call returns, write that as the only pointer for this call
+  - the _overwriting_ is key to keeping it small and simple and current
 
 ```c
 typedef struct {
@@ -54,7 +82,6 @@ i16 replay_live_section;
 void* replay;
 Closure* entry;
 ```
-
 
 - run mode
   - evalClosure

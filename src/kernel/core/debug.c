@@ -439,7 +439,8 @@ void print_stack_map() {
   printf("\nStack map:\n");
   printf("\n");
 
-  for (u32 i = 0; i < state->stack_index; ++i) {
+  GcStackMapIndex top = state->replay_until ? state->replay_until : state->stack_index;
+  for (u32 i = 0; i < top; ++i) {
     void* value       = state->stack_values[i];
     char flag         = state->stack_flags[i];
     EvalFunction eval = state->stack_functions[i];
@@ -457,7 +458,8 @@ void print_call_stack() {
   printf("\nCall Stack:\n");
   printf("\n");
 
-  for (u32 i = 0; i < state->call_stack_index; ++i) {
+  GcStackMapIndex top = state->replay_until ? state->replay_until : state->stack_index;
+  for (u32 i = 0; i < top; ++i) {
     EvalFunction eval = state->call_stack[i];
     char* eval_name = eval ? Debug_evaluator_name(eval) : "NULL";
     printf("%2d | %s\n", i, eval_name);

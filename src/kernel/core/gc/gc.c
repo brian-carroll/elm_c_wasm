@@ -110,10 +110,12 @@ void* GC_register_root(void** ptr_to_mutable_ptr) {
    ==================================================== */
 
 static void collect(GcState* state, size_t* ignore_below) {
+  assert(state->call_stack[0] == state->entry->evaluator);
   mark(state, ignore_below);
   compact(state, ignore_below);
   state->replay_until = state->stack_index;
   state->stack_index = 0;
+  state->call_stack_index = 0;
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
 }
@@ -142,7 +144,7 @@ void* GC_execute(Closure* c) {
   while (true) {
     void* result = Utils_apply(state->entry, 0, NULL);
     if (result != pGcFull) {
-      GC_stack_reset(state->entry);
+      GC_stack_reset(NULL);
       return result;
     }
     GC_collect_full();

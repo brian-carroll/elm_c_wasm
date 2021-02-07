@@ -50,7 +50,13 @@ void GC_stack_push(void* value) {
 
   state->stack_values[state->stack_index] = value;
   state->stack_flags[state->stack_index] = 'A';
-  state->stack_functions[state->stack_index] = state->call_stack[state->call_stack_index];
+  if (state->call_stack_index == -1) {
+    // We haven't entered GC execution yet...
+    // this is probably a test because in real life JS would be writing this
+    state->stack_functions[state->stack_index] = NULL;
+  } else {
+    state->stack_functions[state->stack_index] = state->call_stack[state->call_stack_index];
+  }
   state->stack_index++;
   assert(state->stack_index < GC_STACK_MAP_SIZE);
 }
@@ -68,7 +74,14 @@ void GC_stack_pop(EvalFunction evaluator, void* result, GcStackMapIndex push) {
   state->stack_index++;
   assert(state->stack_index < GC_STACK_MAP_SIZE);
 
-  assert(state->call_stack[state->call_stack_index] == evaluator);
+  // assert(state->call_stack[state->call_stack_index] == evaluator);
+  if (state->call_stack[state->call_stack_index] != evaluator) {
+    printf("Returning from %s but call stack expects %s\n",
+      Debug_evaluator_name(evaluator),
+      Debug_evaluator_name(state->call_stack[state->call_stack_index])
+    );
+  }
+
   state->call_stack_index--;
 }
 
@@ -98,21 +111,28 @@ Closure* GC_stack_tailcall(GcStackMapIndex closure_stack_index, Closure* old, u3
 // Handle a function call in replay mode (replay return value or resume execution)
 void* GC_apply_replay(EvalFunction evaluator) {
   GcState* state = &gc_state;
+  state->call_stack_index++;
+
   if (state->replay_until) {
     char flag = state->stack_flags[state->stack_index];
     if (flag == 'R') {
-      void* value = state->stack_values[state->stack_index];
-      assert(state->stack_functions[state->stack_index] == evaluator);
-
+      EvalFunction returned_from = state->stack_functions[state->stack_index];
+      if (returned_from != evaluator) {
+        printf("Replaying call to %s but next replay value is for %s\n",
+          Debug_evaluator_name(evaluator), Debug_evaluator_name(returned_from)
+        );
+        return NULL; // This replay value is for another call deeper in the stack
+      }
+      ElmValue* value = state->stack_values[state->stack_index];
       state->stack_index++;
-      if (state->stack_index > state->replay_until) {
+      if (state->stack_index >= state->replay_until) {
         state->replay_until = 0;
+        printf("Exiting replay mode at stack_index=%d, after substituting a call to %s with recorded value %p\n", state->stack_index, Debug_evaluator_name(evaluator), value);
       }
       return value;
     }
     assert(flag == 'A');
   } else {
-    state->call_stack_index++;
     state->call_stack[state->call_stack_index] = evaluator;
   }
 
@@ -132,10 +152,19 @@ void* malloc_replay(ptrdiff_t bytes) {
   ElmValue* saved = state->stack_values[state->stack_index];
   u32 saved_words = saved->header.size;
   assert(requested_words == saved_words);
-  assert(state->stack_functions[state->stack_index] == state->call_stack[state->call_stack_index]);
+  EvalFunction f_value_stack = state->stack_functions[state->stack_index];
+  EvalFunction f_call_stack = state->call_stack[state->call_stack_index];
+  if (f_value_stack != f_call_stack) {
+    printf("Mismatching functions: value stack is from %s, but call stack is %s\n",
+      Debug_evaluator_name(f_value_stack), Debug_evaluator_name(f_call_stack)
+    );
+  }
   state->stack_index++;
-  if (state->stack_index > state->replay_until) {
+  if (state->stack_index >= state->replay_until) {
     state->replay_until = 0;
+    printf("Exiting replay mode at stack_index=%d, after substituting an allocation in %s with recorded value %p\n", state->stack_index,
+      Debug_evaluator_name(state->call_stack[state->call_stack_index]),
+      saved);
   }
 
   return saved;

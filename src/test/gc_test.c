@@ -56,8 +56,8 @@ char* gc_bitmap_test() {
         "\n"
         "# gc_bitmap_test\n"
         "\n");
-    print_heap();
-    print_state();
+    // print_heap();
+    // print_state();
     printf("\n");
   }
 
@@ -409,10 +409,10 @@ char* stackmap_mark_eyeball_test() {
 
   GcState* state = &gc_state;
   mark(state, state->heap.start);
-  print_heap();
-  print_state();
-  print_stack_map();
-  print_call_stack();
+  // print_heap();
+  // print_state();
+  // print_stack_map();
+  // print_call_stack();
 
   return NULL;
 }
@@ -445,21 +445,24 @@ void* test_execute(Closure* c, int gc_cycles) {
     if (verbose) {
       printf("executing...\n");
     }
+    assert(sanity_check(state->entry));
     void* result = Utils_apply(state->entry, 0, NULL);
     if (result != pGcFull) {
-      GC_stack_reset(state->entry);
+      GC_stack_reset(NULL);
       return result;
     }
     if (verbose) {
       printf("calling GC (%d)...\n", i);
+      print_stack_map();
+      print_call_stack();
     }
-    mark(state, state->heap.start);
-    print_heap_range(state->next_alloc - 256, state->next_alloc);
-    print_stack_map();
-    print_call_stack();
-    print_state();
 
     GC_collect_full();
+    if (verbose) {
+      printf("completed GC (%d), starting replay...\n", i);
+      print_stack_map();
+      print_call_stack();
+    }
   }
   return NULL;
 }
@@ -483,7 +486,7 @@ char* assertions_test() {
   Cons* list = List_create(3, list_elems);
   Closure* c = NEW_CLOSURE(1, 1, eval_infinite_loop, ((void*[]){list}));
 
-  test_execute(c, 100);
+  test_execute(c, 3);
 
   mu_assert("should complete without triggering any assertions", true);
   return NULL;
@@ -536,8 +539,8 @@ char* gc_test() {
   // mu_run_test(gc_replay_test);
   // mu_run_test(test_heap_layout);
 
-  mu_run_test(stackmap_mark_eyeball_test);
-  // mu_run_test(assertions_test);
+  // mu_run_test(stackmap_mark_eyeball_test);
+  mu_run_test(assertions_test);
 
 
   // mu_run_test(replay_scenario_tests);
