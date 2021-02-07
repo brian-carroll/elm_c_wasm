@@ -34,22 +34,22 @@ typedef struct {
 } GcHeap;
 
 typedef struct {
+  GcStackMapIndex frame;
+  GcStackMapIndex index;
+  GcStackMapIndex replay_until;  
+} GcStackMap;
+
+typedef struct {
   GcHeap heap;
   size_t* next_alloc;
   size_t* nursery;
   Cons* roots;
-
-  Closure* entry;
-  void** stack_values;
-  char* stack_flags;
-  EvalFunction* stack_functions;
-  EvalFunction* call_stack;
-  GcStackMapIndex stack_index;
-  GcStackMapIndex call_stack_index;
-  GcStackMapIndex replay_until;
+  GcStackMap stack_map;
 } GcState;
 
 extern GcState gc_state;
+extern void* stack_values[GC_STACK_MAP_SIZE];
+extern char stack_flags[GC_STACK_MAP_SIZE];
 
 void mark(GcState* state, size_t* ignore_below);
 void compact(GcState* state, size_t* compact_start);
@@ -58,12 +58,12 @@ void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
 
 void bitmap_reset(GcHeap*);
+void bitmap_next(size_t* word, size_t* mask);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
+size_t make_bitmask(size_t first_bit, size_t last_bit);
+
 size_t child_count(ElmValue* v);
 bool sanity_check(void* v);
-size_t make_bitmask(size_t first_bit, size_t last_bit);
-void bitmap_next(size_t* word, size_t* mask);
-
 
 void* malloc_replay(ptrdiff_t bytes);
 

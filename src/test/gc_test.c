@@ -19,7 +19,6 @@ void gc_test_reset() {
   for (size_t* p = state->heap.start; p < state->heap.end; p++) {
     *p = 0;
   }
-  GC_stack_reset(NULL);
 }
 
 // --------------------------------------------------------------------------------
@@ -269,11 +268,12 @@ char* gc_replay_test() {
   void* args[1];
   args[0] = &int_n;
   Closure* c = NEW_CLOSURE(1, 1, eval_fib, args);
-  GC_stack_reset(c);
-  void* result = Utils_apply(state->entry, 0, NULL);
+  GC_stack_clear();
+  GC_stack_enter(c);
+  void* result = Utils_apply(c, 0, NULL);
   mu_expect_equal("Expect GC exception when test function called with insufficient heap space", result, pGcFull);
   GC_collect_full();
-  ElmInt* result_replay = Utils_apply(state->entry, 0, NULL);
+  ElmInt* result_replay = Utils_apply(stack_values[1], 0, NULL);
 
 
   if (verbose) {
@@ -402,7 +402,7 @@ char* stackmap_mark_eyeball_test() {
   Cons* list = List_create(3, list_elems);
   Closure* c = NEW_CLOSURE(1, 1, eval_listNonsense, ((void*[]){list}));
 
-  GC_stack_reset(c);
+  GC_stack_clear();
 
   printf("Entering...\n");
   Utils_apply(c, 0, NULL);
@@ -412,7 +412,6 @@ char* stackmap_mark_eyeball_test() {
   // print_heap();
   // print_state();
   // print_stack_map();
-  // print_call_stack();
 
   return NULL;
 }
@@ -422,7 +421,7 @@ char* stackmap_mark_eyeball_test() {
 
 
 void* eval_infinite_loop(void* args[]) {
-  u32 gc_stack_pos = GC_stack_get_current_pos();
+  u32 gc_stack_frame = GC_get_stack_frame();
   Closure* gc_resume = NEW_CLOSURE(1, 1, eval_infinite_loop, args);
   Cons* list = gc_resume->values[0];
   assert(sanity_check(list));
@@ -430,38 +429,35 @@ void* eval_infinite_loop(void* args[]) {
   list = A1(&listNonsense, list);
   assert(sanity_check(list));
   gc_resume = CAN_THROW(GC_stack_tailcall(
-    gc_stack_pos, gc_resume, 1, ((void * []){ list })
+    gc_stack_frame, gc_resume, 1, ((void * []){ list })
   ));
   goto tce_loop;
 }
 
 
 void* test_execute(Closure* c, int gc_cycles) {
-  GcState* state = &gc_state;
-
-  GC_stack_reset(c);
+  GC_stack_clear();
+  GC_stack_enter(c);
 
   for (int i = 0; i < gc_cycles; i++) {
     if (verbose) {
       printf("executing...\n");
     }
-    assert(sanity_check(state->entry));
-    void* result = Utils_apply(state->entry, 0, NULL);
+    assert(sanity_check(stack_values[1]));
+    void* result = Utils_apply(stack_values[1], 0, NULL);
     if (result != pGcFull) {
-      GC_stack_reset(NULL);
+      GC_stack_clear();
       return result;
     }
     if (verbose) {
       printf("calling GC (%d)...\n", i);
       print_stack_map();
-      print_call_stack();
     }
 
     GC_collect_full();
     if (verbose) {
       printf("completed GC (%d), starting replay...\n", i);
       print_stack_map();
-      print_call_stack();
     }
   }
   return NULL;

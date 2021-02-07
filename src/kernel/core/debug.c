@@ -15,7 +15,7 @@
 #endif
 
 extern GcState gc_state;
-
+extern char stack_flags[GC_STACK_MAP_SIZE];
 char Debug_unknown_evaluator[] = "(?)";
 
 bool is_marked(void* p) {
@@ -434,35 +434,24 @@ void print_bitmap() {
 }
 
 void print_stack_map() {
-  GcState* state = &gc_state;
+  GcStackMap* sm = &gc_state.stack_map;
   printf("\n");
   printf("\nStack map:\n");
   printf("\n");
 
-  GcStackMapIndex top = state->replay_until ? state->replay_until : state->stack_index;
+  GcStackMapIndex top = sm->replay_until ? sm->replay_until : sm->index;
   for (u32 i = 0; i < top; ++i) {
-    void* value       = state->stack_values[i];
-    char flag         = state->stack_flags[i];
-    EvalFunction eval = state->stack_functions[i];
-    char* eval_name = eval ? Debug_evaluator_name(eval) : "NULL";
-    printf("%2d | " FORMAT_PTR " | %c | %s | ",
-            i,      value,        flag, eval_name);
-    print_value(value);
-    printf("\n");
-  }
-}
-
-void print_call_stack() {
-  GcState* state = &gc_state;
-  printf("\n");
-  printf("\nCall Stack:\n");
-  printf("\n");
-
-  GcStackMapIndex top = state->replay_until ? state->replay_until : state->stack_index;
-  for (u32 i = 0; i < top; ++i) {
-    EvalFunction eval = state->call_stack[i];
-    char* eval_name = eval ? Debug_evaluator_name(eval) : "NULL";
-    printf("%2d | %s\n", i, eval_name);
+    void* value = stack_values[i];
+    char flag = stack_flags[i];
+    if (flag == 'F') {
+      char* eval_name = value ? Debug_evaluator_name(value) : "NULL";
+      printf("-----------------\n");
+      printf("%2d | %c | " FORMAT_PTR " | %s\n", i, flag, value, eval_name);
+    } else {
+      printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);
+      print_value(value);
+      printf("\n");
+    }
   }
 }
 
@@ -492,9 +481,8 @@ void print_state() {
   printf("%p bitmap\n", state->heap.bitmap);
   printf("%p roots\n", state->roots);
   printf("\n");
-  printf("%p entry\n", state->entry);
-  printf("%d stack_index\n", state->stack_index);
-  printf("%d replay_until\n", state->replay_until);
+  printf("%d stack_index\n", state->stack_map.index);
+  printf("%d replay_until\n", state->stack_map.replay_until);
   printf("\n");
 
   // print_bitmap();

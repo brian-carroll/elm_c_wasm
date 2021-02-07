@@ -125,10 +125,10 @@ Closure* entry;
   - set replay mode
     - need two stackmap indices, replay and real. When replay gets to real, exit replay mode.
   - Utils_apply
-    - call GC_apply_replay
+    - call GC_stack_push_frame
     - if NULL, continue
     - if not, 
-  - GC_apply_replay
+  - GC_stack_push_frame
     - check if replay mode, if not return NULL
     - assert that the section is one pointer wide (hmm unless we are merging live sections after compression)
     - bump replay to next live section and update its pointer
@@ -1374,7 +1374,7 @@ Mutator API
 - GC_stack_push
 - GC_stack_pop
 - GC_stack_tailcall
-- GC_apply_replay
+- GC_stack_push_frame
 
 Mutator API can use hidden state but always delegates to functions handling state explicitly
 

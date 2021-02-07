@@ -16,26 +16,6 @@
 #define emscripten_run_script(x)
 #endif
 
-// Initialise a global value by evaluating an Elm expression
-//
-// global_permanent_ptr:  location of a pointer outside the heap
-//           that always points to the current heap location.
-//           GC will update this as it moves the value around.
-// init_func:   a function that evaluates the Elm expression
-//           to initialise the global value
-void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
-  GC_register_root(global_permanent_ptr);
-
-  GC_stack_reset(NULL);
-  for (;;) {
-    void* heap_value = init_func();
-    if (heap_value != pGcFull) {
-      *global_permanent_ptr = heap_value;
-      return;
-    }
-    GC_collect_full();
-  }
-}
 
 // Destructure by index
 //    custom, cons, or tuple
@@ -150,7 +130,7 @@ Closure Utils_append = {
 void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
   void** args;
   do {
-    Closure* replay = GC_apply_replay(c->evaluator);
+    Closure* replay = GC_stack_push_frame(c->evaluator);
     if (replay) {
       if (replay->header.tag != Tag_Closure) return replay;
       if (replay->n_values < replay->max_values) return replay;
@@ -182,9 +162,9 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
 
 
     // Execute! (and let the GC know what the stack is doing)
-    GcStackMapIndex stack_pos = GC_stack_get_current_pos();
+    GcStackMapIndex stack_frame = GC_get_stack_frame();
     void* result = CAN_THROW(c->evaluator(args));
-    GC_stack_pop(c->evaluator, result, stack_pos);
+    GC_stack_pop_frame(c->evaluator, result, stack_frame);
 
 
     u16 n_total = c->n_values + n_applied;

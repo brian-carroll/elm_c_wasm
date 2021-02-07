@@ -93,8 +93,8 @@ void mark(GcState* state, size_t* ignore_below) {
   bitmap_reset(heap);
 
   // Mark values freshly allocated in still-running function calls
-  for (size_t i = 0; i < state->stack_index; ++i) {
-    ElmValue* v = state->stack_values[i];
+  for (size_t i = 0; i < state->stack_map.index; ++i) {
+    ElmValue* v = stack_values[i];
     mark_trace(heap, v, ignore_below);
   }
 

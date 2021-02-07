@@ -110,12 +110,10 @@ void* GC_register_root(void** ptr_to_mutable_ptr) {
    ==================================================== */
 
 static void collect(GcState* state, size_t* ignore_below) {
-  assert(state->call_stack[0] == state->entry->evaluator);
   mark(state, ignore_below);
   compact(state, ignore_below);
-  state->replay_until = state->stack_index;
-  state->stack_index = 0;
-  state->call_stack_index = 0;
+  state->stack_map.replay_until = state->stack_map.index;
+  state->stack_map.index = 0;
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
 }
@@ -128,6 +126,7 @@ void GC_collect_nursery() {
   collect(&gc_state, gc_state.nursery);
 }
 
+
 /* ====================================================
 
                 PROGRAM ENTRY POINT
@@ -137,15 +136,43 @@ void GC_collect_nursery() {
    ==================================================== */
 
 void* GC_execute(Closure* c) {
-  GcState* state = &gc_state;
-
-  GC_stack_reset(c);
+  GC_stack_clear();
+  GC_stack_enter(c);
 
   while (true) {
-    void* result = Utils_apply(state->entry, 0, NULL);
+    void* result = Utils_apply(stack_values[1], 0, NULL);
     if (result != pGcFull) {
-      GC_stack_reset(NULL);
+      GC_stack_clear();
       return result;
+    }
+    GC_collect_full();
+  }
+}
+
+
+/* ====================================================
+
+  Initialise a global value by evaluating an Elm expression
+
+  global_permanent_ptr:  location of a pointer outside the heap
+            that always points to the current heap location.
+            GC will update this as it moves the value around.
+  init_func:   a function that evaluates the Elm expression
+            to initialise the global value
+  ==================================================== */
+
+void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
+  GC_register_root(global_permanent_ptr);
+
+  GC_stack_clear();
+  stack_flags[0] = 'F';
+  stack_values[0] = NULL;
+
+  while (true) {
+    void* heap_value = init_func();
+    if (heap_value != pGcFull) {
+      *global_permanent_ptr = heap_value;
+      return;
     }
     GC_collect_full();
   }

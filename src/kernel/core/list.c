@@ -57,7 +57,7 @@ void* eval_List_append(void* args[]) {
         .head = old_cell->head,
         .tail = i ? &new_cells[i - 1] : ys,
     };
-    GC_stack_push(&new_cells[i]);
+    GC_stack_push_value(&new_cells[i]);
     i--;
   }
 

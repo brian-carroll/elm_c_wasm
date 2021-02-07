@@ -13,7 +13,7 @@
 */
 void* GC_malloc(bool push_to_stack, ptrdiff_t bytes) {
   GcState* state = &gc_state;
-  if (state->replay_until) {
+  if (state->stack_map.replay_until) {
     return malloc_replay(bytes);
   }
   ptrdiff_t words = bytes / sizeof(void*);
@@ -23,11 +23,11 @@ void* GC_malloc(bool push_to_stack, ptrdiff_t bytes) {
 
   if (new_heap >= state->heap.end) {
     printf("OOM at %p with call stack at %s\n", old_heap,
-      Debug_evaluator_name(state->call_stack[state->call_stack_index]));
+      Debug_evaluator_name(stack_values[state->stack_map.frame]));
     return pGcFull;
   }
   if (push_to_stack) {
-    GC_stack_push(old_heap);
+    GC_stack_push_value(old_heap);
   }
   state->next_alloc = new_heap;
   return old_heap;

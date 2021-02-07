@@ -10,40 +10,14 @@
 
 // globals
 GcState gc_state;
-void* stack_values[GC_STACK_MAP_SIZE];
-char stack_flags[GC_STACK_MAP_SIZE]; // flag which values are returns or allocations
-EvalFunction stack_functions[GC_STACK_MAP_SIZE];
-EvalFunction call_stack[GC_STACK_MAP_SIZE];
 
 void reset_state(GcState* state) {
   void* start = state->heap.start;
   state->nursery = start;
   state->next_alloc = start;
   state->roots = &Nil;
-  state->entry = start;
-  state->stack_values = stack_values;
-  state->stack_flags = stack_flags;
-  state->stack_functions = stack_functions;
-  state->call_stack = call_stack;
-  GC_stack_reset(start);
+  GC_stack_clear();
 }
-
-void GC_stack_reset(Closure* c) {
-  GcState* state = &gc_state;
-  if (c) {
-    state->entry = c;
-  } else {
-    // when initialising globals, we don't have a Closure
-    state->entry = (void*)state->next_alloc;
-  }
-  state->stack_index = 0;
-  state->replay_until = 0;
-  state->call_stack_index = -1;
-  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) stack_values[i] = NULL;
-  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) stack_flags[i] = 0;
-  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) stack_functions[i] = NULL;
-  for (int i = 0; i < GC_STACK_MAP_SIZE; ++i) call_stack[i] = NULL;
-};
 
 /* ====================================================
 
