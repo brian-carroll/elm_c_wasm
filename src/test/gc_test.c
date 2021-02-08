@@ -402,8 +402,6 @@ char* stackmap_mark_eyeball_test() {
   Cons* list = List_create(3, list_elems);
   Closure* c = NEW_CLOSURE(1, 1, eval_listNonsense, ((void*[]){list}));
 
-  printf("Entering...\n");
-
   GC_stack_clear();
   GC_stack_enter(c);
 

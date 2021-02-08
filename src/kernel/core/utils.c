@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <stdio.h>
+
 #include "debug.h"
 #include "elm.h"
 #include "gc.h"
@@ -164,6 +166,17 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
     // Execute! (and let the GC know what the stack is doing)
     GcStackMapIndex stack_frame = GC_get_stack_frame();
     void* result = CAN_THROW(c->evaluator(args));
+
+    if (!result) {
+      printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
+      char label[5] = "arg 0";
+      for (int i=0; i< n_applied; i++) {
+        Debug_pretty(label, args[i]);
+        label[4]++;
+      }
+    }
+
+
     GC_stack_pop_frame(c->evaluator, result, stack_frame);
 
 
@@ -346,12 +359,25 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
       else
         return &Utils_GT;
 
-    case Tag_String:
-      // TODO
-      // iterate, decode char, compare, loop
-      // Probably call something from String lib
-      // foldl doesn't have early return so maybe write something that does?
-      return NULL;
+    case Tag_String: {
+      // https://tc39.es/ecma262/#sec-abstract-relational-comparison
+      size_t lx = code_units(&x->elm_string16);
+      size_t ly = code_units(&y->elm_string16);
+      size_t len = lx < ly ? lx : ly;
+      size_t i = 0;
+      u16 cx, cy;
+      for (i = 0; i < len; ++i) {
+        cx = x->elm_string16.words16[i];
+        cy = y->elm_string16.words16[i];
+        if (cx != cy) break;
+      }
+      if (i == len) {
+        if (lx == ly) return &Utils_EQ;
+        return (lx < ly) ? &Utils_LT : &Utils_GT;
+      }
+      if (cx == cy) return &Utils_EQ;
+      return (cx < cy) ? &Utils_LT : &Utils_GT;
+    }
 
     case Tag_List:
       if (y == pNil)
@@ -386,7 +412,7 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
     }
 
     default:
-      return NULL;
+      return NULL; // wtf
   }
 }
 
