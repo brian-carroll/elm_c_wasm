@@ -26,11 +26,11 @@ Closure g_elm_core_List_reverse = {
 
 Closure g_elm_core_List_foldl;
 void * eval_elm_core_List_foldl(void * args[]) {
+    void * x_func = args[0];
+    void * x_acc = args[1];
+    void * x_list = args[2];
     u32 gc_stack_frame = GC_get_stack_frame();
     Closure* gc_resume = NEW_CLOSURE(3, 3, eval_elm_core_List_foldl, args);
-    void * x_func = gc_resume->values[0];
-    void * x_acc = gc_resume->values[1];
-    void * x_list = gc_resume->values[2];
     tce_loop:
     ;
     void * case0;
