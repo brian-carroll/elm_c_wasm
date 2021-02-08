@@ -141,9 +141,10 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
   stack_flags[frame] = 'R';
   sm->index = frame + 1;
 
-  GcStackMapIndex parent = frame;
-  while (stack_flags[--parent] != 'F')
-    ;
+  GcStackMapIndex parent = frame - 1;
+  while (parent != 0 && stack_flags[parent] != 'F') {
+    parent--;
+  }
   sm->frame = parent;
 
   // printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",

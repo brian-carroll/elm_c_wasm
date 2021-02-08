@@ -402,9 +402,11 @@ char* stackmap_mark_eyeball_test() {
   Cons* list = List_create(3, list_elems);
   Closure* c = NEW_CLOSURE(1, 1, eval_listNonsense, ((void*[]){list}));
 
-  GC_stack_clear();
-
   printf("Entering...\n");
+
+  GC_stack_clear();
+  GC_stack_enter(c);
+
   Utils_apply(c, 0, NULL);
 
   GcState* state = &gc_state;
@@ -485,7 +487,7 @@ char* assertions_test() {
   Cons* list = List_create(3, list_elems);
   Closure* c = NEW_CLOSURE(1, 1, eval_infinite_loop, ((void*[]){list}));
 
-  test_execute(c, 100);
+  test_execute(c, 10);
 
   mu_assert("should complete without triggering any assertions", true);
   return NULL;
@@ -532,19 +534,14 @@ char* gc_test() {
         "\n"
         "##############################################################################\n");
 
-  // mu_run_test(gc_bitmap_test);
-  // mu_run_test(gc_bitmap_next_test);
-  // mu_run_test(gc_dead_between_test);
-  // mu_run_test(gc_replay_test);
-  // mu_run_test(test_heap_layout);
+  mu_run_test(gc_bitmap_test);
+  mu_run_test(gc_bitmap_next_test);
+  mu_run_test(gc_dead_between_test);
+  mu_run_test(test_heap_layout);
 
-  // mu_run_test(stackmap_mark_eyeball_test);
+  mu_run_test(gc_replay_test);
+  mu_run_test(stackmap_mark_eyeball_test);
   mu_run_test(assertions_test);
-
-
-  // mu_run_test(replay_scenario_tests);
-  // mu_run_test(gc_mark_compact_test);
-  // mu_run_test(gc_stack_empty_survival_test);
 
   return NULL;
 }
