@@ -22,8 +22,8 @@ void* GC_malloc(bool push_to_stack, ptrdiff_t bytes) {
   size_t* new_heap = old_heap + words;
 
   if (new_heap >= state->heap.end) {
-    printf("OOM at %p with call stack at %s\n", old_heap,
-      Debug_evaluator_name(stack_values[state->stack_map.frame]));
+    // printf("OOM at %p with call stack at %s\n", old_heap,
+      // Debug_evaluator_name(stack_values[state->stack_map.frame]));
     return pGcFull;
   }
   if (push_to_stack) {

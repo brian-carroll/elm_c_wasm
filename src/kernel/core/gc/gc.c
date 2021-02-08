@@ -113,7 +113,7 @@ static void collect(GcState* state, size_t* ignore_below) {
   mark(state, ignore_below);
   compact(state, ignore_below);
   state->stack_map.replay_until = state->stack_map.index;
-  state->stack_map.index = 0;
+  state->stack_map.index = 2; // skip entry frame
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
 }

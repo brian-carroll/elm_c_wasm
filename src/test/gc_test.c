@@ -439,6 +439,9 @@ void* test_execute(Closure* c, int gc_cycles) {
   GC_stack_clear();
   GC_stack_enter(c);
 
+  // printf("test_execute after setup\n");
+  // print_stack_map();
+
   for (int i = 0; i < gc_cycles; i++) {
     if (verbose) {
       printf("executing...\n");
@@ -450,13 +453,13 @@ void* test_execute(Closure* c, int gc_cycles) {
       return result;
     }
     if (verbose) {
-      printf("calling GC (%d)...\n", i);
+      printf("\n\ncalling GC (%d)...\n", i);
       print_stack_map();
     }
 
     GC_collect_full();
     if (verbose) {
-      printf("completed GC (%d), starting replay...\n", i);
+      printf("\n\ncompleted GC (%d), starting replay...\n", i);
       print_stack_map();
     }
   }
@@ -482,7 +485,7 @@ char* assertions_test() {
   Cons* list = List_create(3, list_elems);
   Closure* c = NEW_CLOSURE(1, 1, eval_infinite_loop, ((void*[]){list}));
 
-  test_execute(c, 3);
+  test_execute(c, 100);
 
   mu_assert("should complete without triggering any assertions", true);
   return NULL;
