@@ -30,8 +30,7 @@ view model =
             [ HttpTests.view model ]
         , div []
             [ View.viewResults testConfig Wasm.tests
-
-            -- , View.viewResults testConfig Core.tests
+            , View.viewResults testConfig Core.tests
             ]
         ]
 

@@ -285,10 +285,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_JsRef:
       return pa->js_ref.index == pb->js_ref.index;
 
-    case Tag_GcStackEmpty:
-    case Tag_GcStackPush:
-    case Tag_GcStackPop:
-    case Tag_GcStackTailCall:
+    default:
       return 0;
   }
 }

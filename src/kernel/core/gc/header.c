@@ -37,15 +37,8 @@ size_t child_count(ElmValue* v) {
       return v->closure.n_values;
 
     case Tag_JsRef:
-    case Tag_GcStackEmpty:
+    default:
       return 0;
-
-    case Tag_GcStackPush:
-      return 1;
-
-    case Tag_GcStackPop:
-    case Tag_GcStackTailCall:
-      return 2;
   }
 }
 

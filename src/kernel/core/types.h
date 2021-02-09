@@ -32,10 +32,6 @@ typedef enum {
   Tag_FieldGroup,       // 9
   Tag_Closure,          // a
   Tag_JsRef,            // b
-  Tag_GcStackEmpty,     // c
-  Tag_GcStackPush,      // d
-  Tag_GcStackPop,       // e
-  Tag_GcStackTailCall,  // f
 } Tag;
 
 typedef struct {

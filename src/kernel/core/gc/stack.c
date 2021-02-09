@@ -201,7 +201,11 @@ void* malloc_replay(ptrdiff_t bytes) {
 
   ElmValue* saved = stack_values[sm->index];
   u32 saved_words = saved->header.size;
-  assert(requested_words == saved_words);
+  // assert(requested_words == saved_words);
+  if (requested_words != saved_words) {
+    printf("requested_words (%d) != saved_words (%d)", requested_words, saved_words);
+    printf("\n");
+  }
 
   // printf("Replaying allocation at index %d %p\n", sm->index, saved);
 

@@ -19,8 +19,7 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "Elm Standard Library Tests" <|
-        []
-        ++ [ List.tests ]
+        mostlyWorking
 
 
 mostlyWorking : List Test
@@ -35,7 +34,6 @@ mostlyWorking =
         ++ [ String.tests ]
         ++ [ Maybe.tests ]
         ++ [ Tuple.tests ]
-        ++ [ List.tests ]
 
 
 {-| mostly just broken because of GC!
@@ -47,3 +45,4 @@ notWorkingYet =
         ++ [ Array.tests ]
         ++ [ Dict.tests ]
         ++ [ Set.tests ]
+        ++ [ List.tests ]

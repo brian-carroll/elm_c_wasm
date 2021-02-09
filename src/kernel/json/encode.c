@@ -120,6 +120,7 @@ void* eval_Json_encode(void* args[]) {
   void* gc_full = CAN_THROW(stringify(indentLevel->value, 0, value, &cursor, &end));
 
   // normalise the string length, chopping off any over-allocated space
+  // especially for 64-bit platforms
   size_t truncated_str_end_addr = ((size_t)cursor + SIZE_UNIT - 1) & (-SIZE_UNIT);
   size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
   str->header.size = (u32)final_size;

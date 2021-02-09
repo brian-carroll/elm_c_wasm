@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 #include "./gc/internals.h"
-#include "string.h"
-#include "types.h"
+#include "./string.h"
+#include "./types.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -18,18 +18,13 @@ extern GcState gc_state;
 extern char stack_flags[GC_STACK_MAP_SIZE];
 char Debug_unknown_evaluator[] = "(?)";
 
-bool is_marked(void* p) {
-  GcState* state = &gc_state;
-  size_t* pword = (size_t*)p;
-  if (pword < state->heap.start || pword > state->heap.end) return true;
-  size_t slot = pword - state->heap.start;
-  size_t word = slot / GC_WORD_BITS;
-  size_t bit = slot % GC_WORD_BITS;
-  size_t mask = (size_t)1 << bit;
-  size_t masked = state->heap.bitmap[word] & mask;
-  size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
-  return (bool)downshift;
-}
+
+
+// =======================================================================
+//
+//                PRETTY PRINTING - WITH MEMORY ADDRESSES
+//
+// =======================================================================
 
 static void print_indent(int indent) {
   for (int i = 0; i < indent; i++) {
@@ -230,18 +225,6 @@ static void Debug_prettyHelp(int indent, void* p) {
     case Tag_JsRef:
       printf("External JS object %d\n", v->js_ref.index);
       break;
-    case Tag_GcStackEmpty:
-      printf("GC marker (Stack Empty)\n");
-      break;
-    case Tag_GcStackPush:
-      printf("GC marker (Stack Push)\n");
-      break;
-    case Tag_GcStackPop:
-      printf("GC marker (Stack Pop)\n");
-      break;
-    case Tag_GcStackTailCall:
-      printf("GC marker (Stack Tail Call)\n");
-      break;
     default:
       printf("CORRUPTED!! tag %x size %d\n", v->header.tag, v->header.size);
       break;
@@ -347,6 +330,26 @@ void print_value(void* p) {
     default:
       printf("<Corrupt data, tag=0x%x>", v->header.tag);
   }
+}
+
+
+// =======================================================================
+//
+//                      GARBAGE COLLECTOR DEBUG
+//
+// =======================================================================
+
+bool is_marked(void* p) {
+  GcState* state = &gc_state;
+  size_t* pword = (size_t*)p;
+  if (pword < state->heap.start || pword > state->heap.end) return true;
+  size_t slot = pword - state->heap.start;
+  size_t word = slot / GC_WORD_BITS;
+  size_t bit = slot % GC_WORD_BITS;
+  size_t mask = (size_t)1 << bit;
+  size_t masked = state->heap.bitmap[word] & mask;
+  size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
+  return (bool)downshift;
 }
 
 void print_value_line(void* p) {
@@ -488,6 +491,14 @@ void print_state() {
   // print_bitmap();
 }
 
+
+// =======================================================================
+//
+//                      C DEBUGGING
+//
+// =======================================================================
+
+
 // Execute the JS `debugger` statement (browser devtools)
 void Debug_pause() {
   emscripten_run_script("debugger;");
@@ -525,3 +536,228 @@ void log_debug(char* fmt, ...) {
 #else
 void log_debug(char* fmt, ...) {}
 #endif
+
+
+
+// ========================================================
+//
+//      Elm functions
+//
+// ========================================================
+
+#define GC_NOT_FULL NULL;
+size_t toString_alloc_chunk;
+
+// assumes nothing else gets allocated while stringifying
+static void* grow(u16** end) {
+  CAN_THROW(GC_malloc(false, toString_alloc_chunk));
+  *end = (u16*)GC_malloc(false, 0);
+  if (toString_alloc_chunk < 1024) toString_alloc_chunk *= 2;
+  return GC_NOT_FULL;
+}
+
+
+static void* ensure_space(size_t need, u16** cursor, u16** end) {
+  while (end - cursor < need) {
+    CAN_THROW(grow(end));
+  }
+  return GC_NOT_FULL;
+}
+
+
+static void* copy_ascii(char* src, u16** dest, u16** end) {
+  char* from = src;
+  u16* to = *dest;
+
+  for (; *from; to++, from++) {
+    if (to >= *end) {
+      CAN_THROW(grow(end));
+    }
+    *to = *from;
+  }
+
+  *dest = to;
+  return GC_NOT_FULL;
+}
+
+
+void* Debug_toStringHelp(void* p, u16** cursor, u16** end) {
+  ElmValue* v = p;
+  char ascii_buf[25];
+
+  switch (v->header.tag) {
+    case Tag_Int: {
+      snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
+      return copy_ascii(ascii_buf, cursor, end);
+    }
+    case Tag_Float: {
+      snprintf(ascii_buf, sizeof(ascii_buf), "%.16g", v->elm_float.value);
+      return copy_ascii(ascii_buf, cursor, end);
+    }
+    case Tag_Char: {
+      u16 lower = v->elm_char.words16[0];
+      u16 upper = v->elm_char.words16[1];
+      CAN_THROW(ensure_space(upper ? 4 : 3, cursor, end));
+      u16* write = *cursor;
+      *write++ = '\'';
+      *write++ = lower;
+      if (upper) *write++ = upper;
+      *write++ = '\'';
+      *cursor = write;
+      return GC_NOT_FULL;
+    }
+    case Tag_String: {
+      size_t len = code_units(&v->elm_string16);
+      CAN_THROW(ensure_space(len, cursor, end));
+      u16* write = *cursor;
+      for (size_t i = 0; i < len; ++i) {
+        *write++ = v->elm_string16.words16[i];
+      }
+      *cursor = write;
+      return GC_NOT_FULL;
+    }
+    case Tag_List: {
+      CAN_THROW(copy_ascii("[", cursor, end));
+      for (Cons* list = &v->cons; list != pNil; list = list->tail) {
+        CAN_THROW(Debug_toStringHelp(list->head, cursor, end));
+        if (list->tail != pNil) CAN_THROW(copy_ascii(", ", cursor, end));
+      }
+      CAN_THROW(copy_ascii("]", cursor, end));
+      return GC_NOT_FULL;
+    }
+    case Tag_Tuple2: {
+      Tuple2* t = &v->tuple2;
+      CAN_THROW(copy_ascii("(", cursor, end));
+      CAN_THROW(Debug_toStringHelp(t->a, cursor, end));
+      CAN_THROW(copy_ascii(", ", cursor, end));
+      CAN_THROW(Debug_toStringHelp(t->b, cursor, end));
+      CAN_THROW(copy_ascii(")", cursor, end));
+      return GC_NOT_FULL;
+    }
+    case Tag_Tuple3: {
+      Tuple3* t = &v->tuple3;
+      CAN_THROW(copy_ascii("(", cursor, end));
+      CAN_THROW(Debug_toStringHelp(t->a, cursor, end));
+      CAN_THROW(copy_ascii(", ", cursor, end));
+      CAN_THROW(Debug_toStringHelp(t->b, cursor, end));
+      CAN_THROW(copy_ascii(", ", cursor, end));
+      CAN_THROW(Debug_toStringHelp(t->c, cursor, end));
+      CAN_THROW(copy_ascii(")", cursor, end));
+      return GC_NOT_FULL;
+    }
+    case Tag_Custom: {
+      Custom* c = &v->custom;
+      CAN_THROW(copy_ascii(Debug_ctors[c->ctor], cursor, end));
+      CAN_THROW(copy_ascii(" ", cursor, end));
+      int len = custom_params(c);
+      for (int i = 0; i < len; ++i) {
+        CAN_THROW(Debug_toStringHelp(c->values[i], cursor, end));
+        if (i != len - 1) CAN_THROW(copy_ascii(" ", cursor, end));
+      }
+      return GC_NOT_FULL;
+    }
+    case Tag_Record: {
+      Record* r = &v->record;
+      FieldGroup* fg = r->fieldgroup;
+      u32 size = fg->size;
+      CAN_THROW(copy_ascii("{", cursor, end));
+      for (int i = 0; i < size; ++i) {
+        char* field = Debug_fields[fg->fields[i]];
+        CAN_THROW(copy_ascii(field, cursor, end));
+        CAN_THROW(copy_ascii(": ", cursor, end));
+        CAN_THROW(Debug_toStringHelp(r->values[i], cursor, end));
+        if (i != size - 1) CAN_THROW(copy_ascii(",", cursor, end));
+      }
+      return GC_NOT_FULL;
+    }
+    case Tag_FieldGroup: {
+      CAN_THROW(copy_ascii("<fieldgroup>", cursor, end));
+      return GC_NOT_FULL;
+    }
+    case Tag_Closure: {
+      CAN_THROW(copy_ascii("<function>", cursor, end));
+      return GC_NOT_FULL;
+    }
+    case Tag_JsRef: {
+      CAN_THROW(copy_ascii("<JavaScript>", cursor, end));
+      return GC_NOT_FULL;
+    }
+    default: {
+      CAN_THROW(copy_ascii("<unknown>", cursor, end));
+      return GC_NOT_FULL;
+    }
+  }
+  return GC_NOT_FULL;
+}
+
+void* eval_Debug_toString(void* args[]) {
+  void* value = args[0];
+  toString_alloc_chunk = 64;
+  size_t len = toString_alloc_chunk / 2;
+  ElmString16* str = NEW_ELM_STRING16(len);
+  u16* cursor = str->words16;
+  u16* end = cursor + len;
+
+  void* gc_full = CAN_THROW(Debug_toStringHelp(value, &cursor, &end));
+
+  // normalise the string length, chopping off any over-allocated space
+  // especially for 64-bit platforms
+  size_t truncated_str_end_addr = ((size_t)cursor + SIZE_UNIT - 1) & (-SIZE_UNIT);
+  size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
+  str->header.size = (u32)final_size;
+  for (; cursor < (u16*)truncated_str_end_addr; cursor++) {
+    *cursor = 0;
+  }
+
+  return gc_full ? pGcFull : str;
+}
+Closure Debug_toString = {
+  .header = HEADER_CLOSURE(0),
+  .max_values = 1,
+  .evaluator = eval_Debug_toString,
+};
+
+
+void* eval_Debug_log(void* args[]) {
+  ElmString16* label = args[0];
+  void* value = args[1];
+
+  size_t label_len = code_units(label);
+  for (size_t i = 0; i < label_len; ++i) {
+    putchar(label->words16[i]);
+  }
+
+  putchar(':');
+  putchar(' ');
+
+  ElmString16* s = eval_Debug_toString(args + 1);
+  size_t s_len = code_units(label);
+  for (size_t i = 0; i < s_len; ++i) {
+    putchar(s->words16[i]);
+  }
+  putchar('\n');
+
+  return value;
+}
+Closure Debug_log = {
+  .header = HEADER_CLOSURE(0),
+  .max_values = 2,
+  .evaluator = eval_Debug_log,
+};
+
+
+void* eval_Debug_todo(void* args[]) {
+  ElmString16* message = args[0];
+  size_t len = code_units(message);
+  for (size_t i = 0; i < len; ++i) {
+    putchar(message->words16[i]);
+  }
+  putchar('\n');
+  exit(EXIT_FAILURE);
+  return NULL;
+}
+Closure Debug_todo = {
+  .header = HEADER_CLOSURE(0),
+  .max_values = 1,
+  .evaluator = eval_Debug_todo,
+};
