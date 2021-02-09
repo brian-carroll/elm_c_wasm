@@ -581,9 +581,13 @@ static void* copy_ascii(char* src, u16** dest, u16** end) {
 }
 
 
-void* Debug_toStringHelp(void* p, u16** cursor, u16** end) {
+void* Debug_toStringHelp(int depth, void* p, u16** cursor, u16** end) {
   ElmValue* v = p;
   char ascii_buf[25];
+
+  if (!depth) {
+    return copy_ascii("...", cursor, end);
+  }
 
   switch (v->header.tag) {
     case Tag_Int: {
@@ -619,7 +623,7 @@ void* Debug_toStringHelp(void* p, u16** cursor, u16** end) {
     case Tag_List: {
       CAN_THROW(copy_ascii("[", cursor, end));
       for (Cons* list = &v->cons; list != pNil; list = list->tail) {
-        CAN_THROW(Debug_toStringHelp(list->head, cursor, end));
+        CAN_THROW(Debug_toStringHelp(depth-1, list->head, cursor, end));
         if (list->tail != pNil) CAN_THROW(copy_ascii(", ", cursor, end));
       }
       CAN_THROW(copy_ascii("]", cursor, end));
@@ -628,20 +632,20 @@ void* Debug_toStringHelp(void* p, u16** cursor, u16** end) {
     case Tag_Tuple2: {
       Tuple2* t = &v->tuple2;
       CAN_THROW(copy_ascii("(", cursor, end));
-      CAN_THROW(Debug_toStringHelp(t->a, cursor, end));
+      CAN_THROW(Debug_toStringHelp(depth-1, t->a, cursor, end));
       CAN_THROW(copy_ascii(", ", cursor, end));
-      CAN_THROW(Debug_toStringHelp(t->b, cursor, end));
+      CAN_THROW(Debug_toStringHelp(depth-1, t->b, cursor, end));
       CAN_THROW(copy_ascii(")", cursor, end));
       return GC_NOT_FULL;
     }
     case Tag_Tuple3: {
       Tuple3* t = &v->tuple3;
       CAN_THROW(copy_ascii("(", cursor, end));
-      CAN_THROW(Debug_toStringHelp(t->a, cursor, end));
+      CAN_THROW(Debug_toStringHelp(depth-1, t->a, cursor, end));
       CAN_THROW(copy_ascii(", ", cursor, end));
-      CAN_THROW(Debug_toStringHelp(t->b, cursor, end));
+      CAN_THROW(Debug_toStringHelp(depth-1, t->b, cursor, end));
       CAN_THROW(copy_ascii(", ", cursor, end));
-      CAN_THROW(Debug_toStringHelp(t->c, cursor, end));
+      CAN_THROW(Debug_toStringHelp(depth-1, t->c, cursor, end));
       CAN_THROW(copy_ascii(")", cursor, end));
       return GC_NOT_FULL;
     }
@@ -651,7 +655,7 @@ void* Debug_toStringHelp(void* p, u16** cursor, u16** end) {
       CAN_THROW(copy_ascii(" ", cursor, end));
       int len = custom_params(c);
       for (int i = 0; i < len; ++i) {
-        CAN_THROW(Debug_toStringHelp(c->values[i], cursor, end));
+        CAN_THROW(Debug_toStringHelp(depth-1, c->values[i], cursor, end));
         if (i != len - 1) CAN_THROW(copy_ascii(" ", cursor, end));
       }
       return GC_NOT_FULL;
@@ -665,7 +669,7 @@ void* Debug_toStringHelp(void* p, u16** cursor, u16** end) {
         char* field = Debug_fields[fg->fields[i]];
         CAN_THROW(copy_ascii(field, cursor, end));
         CAN_THROW(copy_ascii(": ", cursor, end));
-        CAN_THROW(Debug_toStringHelp(r->values[i], cursor, end));
+        CAN_THROW(Debug_toStringHelp(depth-1, r->values[i], cursor, end));
         if (i != size - 1) CAN_THROW(copy_ascii(",", cursor, end));
       }
       return GC_NOT_FULL;
@@ -698,7 +702,7 @@ void* eval_Debug_toString(void* args[]) {
   u16* cursor = str->words16;
   u16* end = cursor + len;
 
-  void* gc_full = CAN_THROW(Debug_toStringHelp(value, &cursor, &end));
+  void* gc_full = CAN_THROW(Debug_toStringHelp(5, value, &cursor, &end));
 
   // normalise the string length, chopping off any over-allocated space
   // especially for 64-bit platforms
