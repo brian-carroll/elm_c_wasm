@@ -270,7 +270,11 @@ void print_value(void* p) {
 #endif
       break;
     case Tag_List:
-      printf("Cons head: %p tail: %p", v->cons.head, v->cons.tail);
+      if (p == pNil) {
+        printf("Nil");
+      } else {
+        printf("Cons head: %p tail: %p", v->cons.head, v->cons.tail);
+      }
       break;
     case Tag_Tuple2:
       printf("Tuple2 a: %p b: %p", v->tuple2.a, v->tuple2.b);
@@ -285,8 +289,6 @@ void print_value(void* p) {
         printf("False");
       } else if (p == pUnit) {
         printf("Unit");
-      } else if (p == pNil) {
-        printf("Nil");
       } else {
         printf("Custom ctor: %d ", v->custom.ctor);
         for (size_t i = 0; i < custom_params(&v->custom); ++i) {
@@ -612,11 +614,13 @@ void* Debug_toStringHelp(int depth, void* p, u16** cursor, u16** end) {
     }
     case Tag_String: {
       size_t len = code_units(&v->elm_string16);
-      CAN_THROW(ensure_space(len, cursor, end));
+      CAN_THROW(ensure_space(len + 2, cursor, end));
       u16* write = *cursor;
+      *write++ = '"';
       for (size_t i = 0; i < len; ++i) {
         *write++ = v->elm_string16.words16[i];
       }
+      *write++ = '"';
       *cursor = write;
       return GC_NOT_FULL;
     }
@@ -651,7 +655,15 @@ void* Debug_toStringHelp(int depth, void* p, u16** cursor, u16** end) {
     }
     case Tag_Custom: {
       Custom* c = &v->custom;
-      CAN_THROW(copy_ascii(Debug_ctors[c->ctor], cursor, end));
+      if (c == &True) {
+        return copy_ascii("True", cursor, end);
+      } else if (c == &False) {
+        return copy_ascii("False", cursor, end);
+      } else if (c == &Unit) {
+        return copy_ascii("()", cursor, end);
+      }
+      char* ctor = Debug_ctors[c->ctor] + 5;
+      CAN_THROW(copy_ascii(ctor, cursor, end));
       CAN_THROW(copy_ascii(" ", cursor, end));
       int len = custom_params(c);
       for (int i = 0; i < len; ++i) {
@@ -735,7 +747,7 @@ void* eval_Debug_log(void* args[]) {
   putchar(' ');
 
   ElmString16* s = eval_Debug_toString(args + 1);
-  size_t s_len = code_units(label);
+  size_t s_len = code_units(s);
   for (size_t i = 0; i < s_len; ++i) {
     putchar(s->words16[i]);
   }

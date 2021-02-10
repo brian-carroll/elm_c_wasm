@@ -5,10 +5,10 @@ static void* eval_toCode(void* args[]) {
   u32 high = (u32)(c->words16[0]);
   u32 low = (u32)(c->words16[1]);
   u32 codepoint;
-  if (high) {
+  if (low) {
     codepoint = (((high - 0xD800) << 10) | (low - 0xDC00)) + 0x10000;
   } else {
-    codepoint = low;
+    codepoint = high;
   }
 
   return NEW_ELM_INT(codepoint);
