@@ -51,13 +51,15 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div [ class "http-test" ]
+    div []
         [ ul []
             [ li [] [ text "DOM click event passed via JS wrapper to Wasm handler" ]
             , li [] [ text "Wasm update function calls Http.get, which calls JS kernel code" ]
             , li [] [ text "Http JS code receives JSON and calls Wasm Msg contructor" ]
             , li [] [ text "Wasm Msg passed to update function" ]
             ]
-        , button [ onClick ButtonClicked ] [ text "LOAD" ]
-        , div [] [ text model.text ]
+        , div [ class "effects-test" ]
+            [ button [ onClick ButtonClicked ] [ text "LOAD" ]
+            , div [] [ text model.text ]
+            ]
         ]
