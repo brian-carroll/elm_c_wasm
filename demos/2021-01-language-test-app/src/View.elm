@@ -243,16 +243,25 @@ viewReason reason =
             text ""
 
         Failure.Equality expected actual ->
-            text ("Expected: " ++ expected ++ " | Actual: " ++ actual)
+            ul []
+                [ li [] [ text ("Expected: " ++ expected) ]
+                , li [] [ text ("Actual: " ++ actual) ]
+                ]
 
         Failure.Comparison expected actual ->
-            text ("Expected: " ++ expected ++ " | Actual: " ++ actual)
+            ul []
+                [ li [] [ text ("Expected: " ++ expected) ]
+                , li [] [ text ("Actual: " ++ actual) ]
+                ]
 
         Failure.ListDiff expected received ->
             viewListDiff expected received
 
         Failure.CollectionDiff details ->
-            text ("Expected: " ++ details.expected ++ " | Actual: " ++ details.actual)
+            ul []
+                [ li [] [ text ("Expected: " ++ details.expected) ]
+                , li [] [ text ("Actual: " ++ details.actual) ]
+                ]
 
         Failure.TODO ->
             text "TODO"

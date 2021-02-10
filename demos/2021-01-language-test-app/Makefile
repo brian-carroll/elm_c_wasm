@@ -13,7 +13,7 @@ ELM_TO_C := $(HOME)/Code/wasm/compiler/.stack-work/install/x86_64-linux/lts-13.2
 all: dist/elm.wasm dist/elm.js
 
 clean:
-	rm -rf build/* dist/*
+	rm -rf build/* dist/* elm-stuff/*
 
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
