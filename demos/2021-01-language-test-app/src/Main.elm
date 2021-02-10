@@ -8,15 +8,15 @@ import Random
 import Result exposing (Result(..))
 import View
 import Wasm
-import Wasm.HttpTests as HttpTests
+import Wasm.JsEffects as JsEffects
 
 
 type alias Model =
-    HttpTests.Model
+    JsEffects.Model
 
 
 type alias Msg =
-    HttpTests.Msg
+    JsEffects.Msg
 
 
 view : Model -> Html Msg
@@ -27,9 +27,15 @@ view model =
     in
     div [ class "view" ]
         [ div []
-            [ HttpTests.view model ]
+            [ h2 [] [ text "Wasm/JS Effects Test" ]
+            , JsEffects.view model
+            ]
         , div []
-            [ View.viewResults testConfig Wasm.tests
+            [ h2 [] [ text "Wasm Code Gen Tests" ]
+            , View.viewResults testConfig Wasm.tests
+            ]
+        , div []
+            [ h2 [] [ text "Elm Standard Library Tests" ]
             , View.viewResults testConfig Core.tests
             ]
         ]
@@ -38,8 +44,8 @@ view model =
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \() -> ( HttpTests.initialModel, Cmd.none )
+        { init = \() -> ( JsEffects.initialModel, Cmd.none )
         , view = view
-        , update = HttpTests.update
+        , update = JsEffects.update
         , subscriptions = \_ -> Sub.none
         }

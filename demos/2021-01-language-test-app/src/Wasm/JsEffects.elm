@@ -1,7 +1,7 @@
-module Wasm.HttpTests exposing (Model, Msg, initialModel, update, view)
+module Wasm.JsEffects exposing (Model, Msg, initialModel, update, view)
 
 import Browser
-import Html exposing (Html, button, div, text)
+import Html exposing (..)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Http
@@ -52,6 +52,12 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div [ class "http-test" ]
-        [ button [ onClick ButtonClicked ] [ text "LOAD" ]
+        [ ul []
+            [ li [] [ text "DOM click event passed via JS wrapper to Wasm handler" ]
+            , li [] [ text "Wasm update function calls Http.get, which calls JS kernel code" ]
+            , li [] [ text "Http JS code receives JSON and calls Wasm Msg contructor" ]
+            , li [] [ text "Wasm Msg passed to update function" ]
+            ]
+        , button [ onClick ButtonClicked ] [ text "LOAD" ]
         , div [] [ text model.text ]
         ]
