@@ -183,9 +183,19 @@ viewTestsResults passedTestsDisplay runners =
             List.partition
                 (\( _, result ) -> result == Pass)
                 allResults
+
+        nPass =
+            String.fromInt (List.length passResults)
+
+        nFail =
+            String.fromInt (List.length failResults)
     in
     div []
-        [ ul [ class "test-fail-list" ]
+        [ ul []
+            [ li [] [ text (nPass ++ " passed") ]
+            , li [] [ text (nFail ++ " failed") ]
+            ]
+        , ul [ class "test-fail-list" ]
             (List.map viewFail failResults)
         , if passedTestsDisplay == Show then
             ul [ class "test-pass-list" ]

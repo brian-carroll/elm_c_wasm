@@ -31,16 +31,19 @@ Closure Basics_negate = {
 static void* eval_add(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
-  if (pa->f.header.tag == Tag_Float) {
-    f64 fa = pa->f.value;
-    f64 fb = pb->f.value;
-    f64 f = fa + fb;
-    return NEW_ELM_FLOAT(f);
+  Tag ta = pa->f.header.tag;
+  Tag tb = pb->f.header.tag;
+  // Compiler can generate Number literals so we can't rely on both being the same type!
+  if (ta == Tag_Float) {
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT(pa->f.value + pb->f.value);
+    else
+      return NEW_ELM_FLOAT(pa->f.value + (f64)pb->i.value);
   } else {
-    i32 ia = pa->i.value;
-    i32 ib = pb->i.value;
-    i32 i = ia + ib;
-    return NEW_ELM_INT(i);
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT((f64)pa->i.value + pb->f.value);
+    else
+      return NEW_ELM_INT(pa->i.value + pb->i.value);
   }
 }
 Closure Basics_add = {
@@ -55,16 +58,19 @@ Closure Basics_add = {
 static void* eval_sub(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
-  if (pa->f.header.tag == Tag_Float) {
-    f64 fa = pa->f.value;
-    f64 fb = pb->f.value;
-    f64 f = fa - fb;
-    return NEW_ELM_FLOAT(f);
+  Tag ta = pa->f.header.tag;
+  Tag tb = pb->f.header.tag;
+  // Compiler can generate Number literals so we can't rely on both being the same type!
+  if (ta == Tag_Float) {
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT(pa->f.value - pb->f.value);
+    else
+      return NEW_ELM_FLOAT(pa->f.value - (f64)pb->i.value);
   } else {
-    i32 ia = pa->i.value;
-    i32 ib = pb->i.value;
-    i32 i = ia - ib;
-    return NEW_ELM_INT(i);
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT((f64)pa->i.value - pb->f.value);
+    else
+      return NEW_ELM_INT(pa->i.value - pb->i.value);
   }
 }
 Closure Basics_sub = {
@@ -79,16 +85,18 @@ Closure Basics_sub = {
 static void* eval_mul(void* args[2]) {
   Number* pa = args[0];
   Number* pb = args[1];
-  if (pa->f.header.tag == Tag_Float) {
-    f64 fa = pa->f.value;
-    f64 fb = pb->f.value;
-    f64 f = fa * fb;
-    return NEW_ELM_FLOAT(f);
+  Tag ta = pa->f.header.tag;
+  Tag tb = pb->f.header.tag;
+  if (ta == Tag_Float) {
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT(pa->f.value * pb->f.value);
+    else
+      return NEW_ELM_FLOAT(pa->f.value * (f64)pb->i.value);
   } else {
-    i32 ia = pa->i.value;
-    i32 ib = pb->i.value;
-    i32 i = ia * ib;
-    return NEW_ELM_INT(i);
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT((f64)pa->i.value * pb->f.value);
+    else
+      return NEW_ELM_INT(pa->i.value * pb->i.value);
   }
 }
 Closure Basics_mul = {
@@ -101,9 +109,23 @@ Closure Basics_mul = {
  * fdiv
  */
 static void* eval_fdiv(void* args[2]) {
-  ElmFloat* fa = args[0];
-  ElmFloat* fb = args[1];
-  return NEW_ELM_FLOAT(fa->value / fb->value);
+  Number* pa = args[0];
+  Number* pb = args[1];
+  Tag ta = pa->f.header.tag;
+  Tag tb = pb->f.header.tag;
+  // Compiler generates round Number literals as Int, so we may need to implicitly convert like JS does
+  // Core library tests fail without this
+  if (ta == Tag_Float) {
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT(pa->f.value / pb->f.value);
+    else
+      return NEW_ELM_FLOAT(pa->f.value / (f64)pb->i.value);
+  } else {
+    if (tb == Tag_Float)
+      return NEW_ELM_FLOAT((f64)pa->i.value / pb->f.value);
+    else
+      return NEW_ELM_FLOAT((f64)pa->i.value / (f64)pb->i.value);
+  }
 }
 Closure Basics_fdiv = {
     .header = HEADER_CLOSURE(0),
@@ -315,8 +337,10 @@ Closure Basics_modBy = {
  * log
  */
 static void* eval_log(void* args[]) {
-  ElmFloat* f = args[0];
-  return NEW_ELM_FLOAT(log(f->value));
+  Number* x = args[0];
+  // Type uncertainty due to Number literals generated as Int
+  f64 value = x->f.header.tag == Tag_Float ? x->f.value : (f64)x->i.value;
+  return NEW_ELM_FLOAT(log(value));
 }
 Closure Basics_log = {
     .header = HEADER_CLOSURE(0),

@@ -410,7 +410,7 @@ static void* eval_String_all(void* args[]) {
   for (size_t i = 0; i < len; i++) {
     u16 word = s->words16[i];
     u32 codepoint = (u32)word;
-    if (IS_LOW_SURROGATE(word)) {
+    if (IS_HIGH_SURROGATE(word)) {
       i++;
       codepoint |= (s->words16[i] << 16);
     }
