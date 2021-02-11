@@ -28,8 +28,10 @@ extern Closure Basics_idiv;
 extern Closure Basics_pow;
 
 extern Closure Basics_toFloat;
+extern Closure Basics_round;
 extern Closure Basics_floor;
 extern Closure Basics_ceiling;
+// extern Closure Basics_truncate;
 
 extern Closure Basics_not;
 extern Closure Basics_and;

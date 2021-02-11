@@ -114,13 +114,12 @@ tests =
         --         ]
         basicMathTests =
             describe "Basic Math Tests"
-                [ test "add float" <| \() -> Expect.equal 159 (155.6 + 3.4)
-
-                -- , test "add int" <| \() -> Expect.equal 17 (round 10 + round 7)
-                -- , test "subtract float" <| \() -> Expect.within (Absolute 0.00000001) -6.3 (1 - 7.3)
-                -- , test "subtract int" <| \() -> Expect.equal 1130 (round 9432 - round 8302)
-                -- , test "multiply float" <| \() -> Expect.within (Relative 0.00000001) 432 (96 * 4.5)
-                -- , test "multiply int" <| \() -> Expect.equal 90 (round 10 * round 9)
+                [ test "add float" <| \() -> Expect.equal 159.0 (155.6 + 3.4)
+                , test "add int" <| \() -> Expect.equal 17 (round 10 + round 7)
+                , test "subtract float" <| \() -> Expect.within (Absolute 0.00000001) -6.3 (1 - 7.3)
+                , test "subtract int" <| \() -> Expect.equal 1130 (round 9432 - round 8302)
+                , test "multiply float" <| \() -> Expect.within (Relative 0.00000001) 432 (96 * 4.5)
+                , test "multiply int" <| \() -> Expect.equal 90 (round 10 * round 9)
                 , test "divide float" <| \() -> Expect.within (Relative 0.00000001) 13.175 (527 / 40)
                 , test "divide int" <| \() -> Expect.equal 23 (70 // 3)
                 , test "7 |> remainderBy 2" <| \() -> Expect.equal 1 (7 |> remainderBy 2)

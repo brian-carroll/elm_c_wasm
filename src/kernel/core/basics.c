@@ -193,6 +193,20 @@ Closure Basics_toFloat = {
 };
 
 /*
+ * round
+ */
+static void* eval_round(void* args[]) {
+  ElmFloat* f = args[0];
+  f64 result = round(f->value);
+  return NEW_ELM_INT((i32)result);
+}
+Closure Basics_round = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_round,
+    .max_values = 1,
+};
+
+/*
  * floor
  */
 static void* eval_floor(void* args[]) {
