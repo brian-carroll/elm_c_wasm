@@ -272,8 +272,6 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       return 1;
 
     case Tag_Closure:
-      // C doesn't have exceptions, would have to call out to JS.
-      // For now it's a warning rather than error and returns False
       log_error(
           "Warning: Trying to use `(==)` on functions.\n"
           "There is no way to know if functions are \"the same\" in the Elm sense.\n"
@@ -329,32 +327,32 @@ Closure Utils_notEqual = {
 // -----------------------------------------------------------
 
 static void* compare_help(ElmValue* x, ElmValue* y) {
-  if (x == y) return &Utils_EQ;
+  if (x == y) return &g_elm_core_Basics_EQ;
 
   switch (x->header.tag) {
     case Tag_Int:
       if (x->elm_int.value == y->elm_int.value)
-        return &Utils_EQ;
+        return &g_elm_core_Basics_EQ;
       else if (x->elm_int.value < y->elm_int.value)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
 
     case Tag_Float:
       if (x->elm_float.value == y->elm_float.value)
-        return &Utils_EQ;
+        return &g_elm_core_Basics_EQ;
       else if (x->elm_float.value < y->elm_float.value)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
 
     case Tag_Char:
       if (x->elm_char.value == y->elm_char.value)
-        return &Utils_EQ;
+        return &g_elm_core_Basics_EQ;
       else if (x->elm_char.value < y->elm_char.value)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
 
     case Tag_String: {
       // https://tc39.es/ecma262/#sec-abstract-relational-comparison
@@ -368,23 +366,28 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
         cy = y->elm_string16.words16[i];
         if (cx != cy) break;
       }
+      Custom* result;
       if (i == len) {
-        if (lx == ly) return &Utils_EQ;
-        return (lx < ly) ? &Utils_LT : &Utils_GT;
+        if (lx == ly) {
+          result = &g_elm_core_Basics_EQ;
+        } else {
+          result = (lx < ly) ? &g_elm_core_Basics_LT : &g_elm_core_Basics_GT;
+        }
+      } else {
+        result = (cx < cy) ? &g_elm_core_Basics_LT : &g_elm_core_Basics_GT;
       }
-      if (cx == cy) return &Utils_EQ;
-      return (cx < cy) ? &Utils_LT : &Utils_GT;
+      return result;
     }
 
     case Tag_List:
       if (y == pNil)
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
       else if (x == pNil)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
         while (1) {
           Custom* order_head = compare_help(x->cons.head, y->cons.head);
-          if (order_head != &Utils_EQ) return order_head;
+          if (order_head != &g_elm_core_Basics_EQ) return order_head;
           x = x->cons.tail;
           y = y->cons.tail;
           if (x == pNil || y == pNil) return compare_help(x, y);
@@ -393,7 +396,7 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
     case Tag_Tuple2: {
       Custom* ord;
       ord = compare_help(x->tuple2.a, y->tuple2.a);
-      if (ord != &Utils_EQ) return ord;
+      if (ord != &g_elm_core_Basics_EQ) return ord;
       ord = compare_help(x->tuple2.b, y->tuple2.b);
       return ord;
     }
@@ -401,9 +404,9 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
     case Tag_Tuple3: {
       Custom* ord;
       ord = compare_help(x->tuple3.a, y->tuple3.a);
-      if (ord != &Utils_EQ) return ord;
+      if (ord != &g_elm_core_Basics_EQ) return ord;
       ord = compare_help(x->tuple3.b, y->tuple3.b);
-      if (ord != &Utils_EQ) return ord;
+      if (ord != &g_elm_core_Basics_EQ) return ord;
       ord = compare_help(x->tuple3.c, y->tuple3.c);
       return ord;
     }
@@ -427,7 +430,7 @@ Closure Utils_compare = {
 static void* lt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) == &Utils_LT) ? &True : &False;
+  return (compare_help(x, y) == &g_elm_core_Basics_LT) ? &True : &False;
 }
 Closure Utils_lt = {
     .header = HEADER_CLOSURE(0),
@@ -438,7 +441,7 @@ Closure Utils_lt = {
 static void* le_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) != &Utils_GT) ? &True : &False;
+  return (compare_help(x, y) != &g_elm_core_Basics_GT) ? &True : &False;
 }
 Closure Utils_le = {
     .header = HEADER_CLOSURE(0),
@@ -449,7 +452,7 @@ Closure Utils_le = {
 static void* gt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) == &Utils_GT) ? &True : &False;
+  return (compare_help(x, y) == &g_elm_core_Basics_GT) ? &True : &False;
 }
 Closure Utils_gt = {
     .header = HEADER_CLOSURE(0),
@@ -460,23 +463,10 @@ Closure Utils_gt = {
 static void* ge_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) != &Utils_LT) ? &True : &False;
+  return (compare_help(x, y) != &g_elm_core_Basics_LT) ? &True : &False;
 }
 Closure Utils_ge = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &ge_eval,
     .max_values = 2,
-};
-
-Custom Utils_LT = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = -1,
-};
-Custom Utils_EQ = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = 0,
-};
-Custom Utils_GT = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = 1,
 };

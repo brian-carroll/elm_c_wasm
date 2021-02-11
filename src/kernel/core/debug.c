@@ -662,7 +662,9 @@ void* Debug_toStringHelp(int depth, void* p, u16** cursor, u16** end) {
       } else if (c == &Unit) {
         return copy_ascii("()", cursor, end);
       }
-      char* ctor = Debug_ctors[c->ctor] + 5;
+      char* ctor = (c->ctor < Debug_ctors_size)
+                      ? Debug_ctors[c->ctor] + 5
+                      : "<unknown ctor>";
       CAN_THROW(copy_ascii(ctor, cursor, end));
       CAN_THROW(copy_ascii(" ", cursor, end));
       int len = custom_params(c);

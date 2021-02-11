@@ -13,10 +13,6 @@ extern Closure Utils_le;
 extern Closure Utils_gt;
 extern Closure Utils_ge;
 
-extern Custom Utils_LT;
-extern Custom Utils_EQ;
-extern Custom Utils_GT;
-
 void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
 void* Utils_destruct_index(ElmValue* v, size_t index);

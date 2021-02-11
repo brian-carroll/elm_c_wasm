@@ -160,20 +160,29 @@ void** Wrapper_mainsArray[] = {NULL};
 //   return Debug_evaluator_name_buf;
 // }
 
+#define TEST_CTOR(x) #x,
 int Debug_ctors_size = 8;
 char* Debug_ctors[] = {
-    "CTOR_Nothing",
-    "CTOR_Just",
-    "CTOR_Ok",
-    "CTOR_Err",
-    "CTOR_Failure",
-    "CTOR_Field",
-    "CTOR_Index",
-    "CTOR_OneOf",
+#include "./test-ctors.inc"
 };
+#undef TEST_CTOR
+
 char* Debug_fields[] = {};
 char* Debug_jsValues[] = {};
 int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
 
 size_t Json_run_eval_index = 123;
+
+Custom g_elm_core_Basics_LT = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = CTOR_LT,
+};
+Custom g_elm_core_Basics_EQ = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = CTOR_EQ,
+};
+Custom g_elm_core_Basics_GT = {
+    .header = HEADER_CUSTOM(0),
+    .ctor = CTOR_GT,
+};

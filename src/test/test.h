@@ -8,22 +8,15 @@
 
 #include "../kernel/core/types.h"
 
+#define TEST_CTOR(x) x,
 enum {
-  CTOR_Nothing,
-  CTOR_Just,
-  CTOR_Ok,
-  CTOR_Err,
-  CTOR_Failure,
-  CTOR_Field,
-  CTOR_Index,
-  CTOR_OneOf,
-  CTOR_MockElmArray,
+#include "./test-ctors.inc"
 };
-
+#undef TEST_CTOR
 
 // ---------------------------------------------------------
 //
-//             TEST JS IMPORTS & CIRCULARAL VALUES
+//             TEST JS IMPORTS & CIRCULAR VALUES
 //
 // ---------------------------------------------------------
 

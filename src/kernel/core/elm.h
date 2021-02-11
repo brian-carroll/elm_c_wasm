@@ -5,6 +5,10 @@
 
 #include "types.h"
 
+extern Custom g_elm_core_Basics_LT;
+extern Custom g_elm_core_Basics_EQ;
+extern Custom g_elm_core_Basics_GT;
+
 extern Custom g_elm_core_Maybe_Nothing;
 extern Closure g_elm_core_Maybe_Just;
 
