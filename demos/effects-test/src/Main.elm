@@ -1,42 +1,66 @@
 module Main exposing (main)
 
 import Browser
-import Core
 import Html exposing (..)
-import Html.Attributes exposing (..)
-import Random
-import Result exposing (Result(..))
-import View
-import Wasm
-import Wasm.JsEffects as JsEffects
+import Html.Attributes exposing (class)
+import Html.Events exposing (onClick)
+import Http
+import Json.Decode as JD exposing (Value)
 
 
 type alias Model =
-    JsEffects.Model
+    { text : String }
 
 
-type alias Msg =
-    JsEffects.Msg
+initialModel : Model
+initialModel =
+    { text = "Initialised" }
+
+
+type Msg
+    = ButtonClicked
+    | JsonLoaded (Result Http.Error String)
+
+
+getJson : Cmd Msg
+getJson =
+    Http.get
+        { url = "./assets/data.json"
+        , expect = Http.expectJson JsonLoaded JD.string
+        }
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        ButtonClicked ->
+            ( { model | text = "Loading..." }
+            , getJson
+            )
+
+        JsonLoaded (Ok jsonString) ->
+            ( { model | text = jsonString }
+            , Cmd.none
+            )
+
+        JsonLoaded (Err _) ->
+            ( { model | text = "Error!" }
+            , Cmd.none
+            )
 
 
 view : Model -> Html Msg
 view model =
-    let
-        testConfig =
-            View.defaultConfig (Random.initialSeed 10000)
-    in
-    div [ class "view" ]
-        [ div []
-            [ h2 [] [ text "Wasm/JS Effects Test" ]
-            , JsEffects.view model
+    div []
+        [ ul []
+            [ li [] [ text "DOM click event passed via JS wrapper to Wasm handler" ]
+            , li [] [ text "Wasm update function calls Http.get, which calls JS kernel code" ]
+            , li [] [ text "Http JS code receives JSON and calls Wasm Msg contructor" ]
+            , li [] [ text "Wasm Msg passed to update function" ]
             ]
-        , div []
-            [ h2 [] [ text "Wasm Code Gen Tests" ]
-            , View.viewResults testConfig Wasm.tests
-            ]
-        , div []
-            [ h2 [] [ text "Elm Standard Library Tests" ]
-            , View.viewResults testConfig Core.tests
+        , div [ class "effects-test" ]
+            [ button [ onClick ButtonClicked ] [ text "LOAD" ]
+            , div [] [ text model.text ]
             ]
         ]
 
@@ -44,8 +68,8 @@ view model =
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \() -> ( JsEffects.initialModel, Cmd.none )
+        { init = \() -> ( initialModel, Cmd.none )
         , view = view
-        , update = JsEffects.update
+        , update = update
         , subscriptions = \_ -> Sub.none
         }
