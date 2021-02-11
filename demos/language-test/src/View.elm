@@ -9,7 +9,7 @@ module View exposing
 
 import Array exposing (Array)
 import Expect exposing (Expectation)
-import Html exposing (..)
+import Html exposing (Html, br, div, h3, li, p, pre, text, ul)
 import Html.Attributes exposing (class, style)
 import Maybe.Extra
 import Random exposing (Seed, initialSeed)

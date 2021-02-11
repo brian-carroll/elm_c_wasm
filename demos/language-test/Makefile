@@ -26,7 +26,7 @@ build/codemods/elm.c: build/elm/elm.c codemods.js
 	@mkdir -p build/codemods
 	node codemods.js build/elm/elm.c > build/codemods/elm.c
 
-dist/elm.wasm: build-wasm.sh build/codemods/elm.c $(KERNELC) $(KERNELH) $(WRAPPER).js
+dist/elm.wasm: build-wasm.sh build/codemods/elm.c src/print-virtual-dom.c $(KERNELC) $(KERNELH) $(WRAPPER).js
 	@dos2unix -q build-wasm.sh
 	bash build-wasm.sh
 
@@ -36,5 +36,5 @@ dist/elm.js: dist/elm.wasm
 $(WRAPPER).js: $(WRAPPER).ts
 	../../node_modules/.bin/tsc $(WRAPPER).ts
 
-dist/test: $(KERNELC) $(KERNELH) build/codemods/elm.c
-	gcc -Wall -O0 -g $(KERNELC) build/codemods/elm.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types
+dist/test: $(KERNELC) $(KERNELH) build/codemods/elm.c ../../src/test/test-imports.c
+	gcc -Wall -O0 -g $(KERNELC) build/codemods/elm.c ../../src/test/test-imports.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types
