@@ -11,6 +11,7 @@
 #define TEST_CTOR(x) x,
 enum {
 #include "./test-ctors.inc"
+NUM_TEST_CTORS
 };
 #undef TEST_CTOR
 

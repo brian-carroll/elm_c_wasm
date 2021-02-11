@@ -161,7 +161,6 @@ void** Wrapper_mainsArray[] = {NULL};
 // }
 
 #define TEST_CTOR(x) #x,
-int Debug_ctors_size = 8;
 char* Debug_ctors[] = {
 #include "./test-ctors.inc"
 };
@@ -171,6 +170,7 @@ char* Debug_fields[] = {};
 char* Debug_jsValues[] = {};
 int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
+int Debug_ctors_size = NUM_TEST_CTORS;
 
 size_t Json_run_eval_index = 123;
 
