@@ -184,6 +184,7 @@ Closure Basics_pow = {
  */
 static void* eval_toFloat(void* args[]) {
   ElmInt* i = args[0];
+  if (i->header.tag == Tag_Float) return i;
   return NEW_ELM_FLOAT((f64)i->value);
 }
 Closure Basics_toFloat = {
@@ -197,6 +198,7 @@ Closure Basics_toFloat = {
  */
 static void* eval_round(void* args[]) {
   ElmFloat* f = args[0];
+  if (f->header.tag == Tag_Int) return f;
   f64 result = round(f->value);
   return NEW_ELM_INT((i32)result);
 }
@@ -211,6 +213,7 @@ Closure Basics_round = {
  */
 static void* eval_floor(void* args[]) {
   ElmFloat* f = args[0];
+  if (f->header.tag == Tag_Int) return f;
   f64 result = floor(f->value);
   return NEW_ELM_INT((i32)result);
 }
@@ -225,6 +228,7 @@ Closure Basics_floor = {
  */
 static void* eval_ceiling(void* args[]) {
   ElmFloat* f = args[0];
+  if (f->header.tag == Tag_Int) return f;
   f64 result = ceil(f->value);
   return NEW_ELM_INT((i32)result);
 }
