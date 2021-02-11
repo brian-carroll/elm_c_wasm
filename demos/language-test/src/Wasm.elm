@@ -4,7 +4,6 @@ import Expect
 import Test exposing (..)
 import Wasm.Calls
 import Wasm.Functions
-import Wasm.JsEffects
 import Wasm.PatternMatching
 
 
@@ -28,5 +27,4 @@ tests =
 
 
 
---   ++ [ Wasm.JsEffects.tests ]
 --   ++ [ Wasm.PatternMatching.tests ]
