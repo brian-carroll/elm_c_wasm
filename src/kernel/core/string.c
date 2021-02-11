@@ -9,8 +9,8 @@
 #include "types.h"
 #include "utils.h"
 
-#define IS_LOW_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
-#define IS_HIGH_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
+#define IS_LEADING_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
+#define IS_TRAILING_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
 
 size_t code_units(ElmString16* s) {
   u32 size = s->header.size;
@@ -86,7 +86,7 @@ static void* eval_String_uncons(void* args[]) {
   u16 word = string->words16[0];
   u32 codepoint = (u32)word;
   size_t char_units;
-  if (IS_LOW_SURROGATE(word)) {
+  if (IS_LEADING_SURROGATE(word)) {
     char_units = 2;
     codepoint |= (string->words16[1] << 16);
   } else {
@@ -410,7 +410,7 @@ static void* eval_String_all(void* args[]) {
   for (size_t i = 0; i < len; i++) {
     u16 word = s->words16[i];
     u32 codepoint = (u32)word;
-    if (IS_HIGH_SURROGATE(word)) {
+    if (IS_LEADING_SURROGATE(word)) {
       i++;
       codepoint |= (s->words16[i] << 16);
     }
