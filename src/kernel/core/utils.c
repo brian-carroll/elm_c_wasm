@@ -136,6 +136,7 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
     if (replay) {
       if (replay->header.tag != Tag_Closure) return replay;
       if (replay->n_values < replay->max_values) return replay;
+      // If we get this far, we are resuming a tail-call thunk
       assert(c->evaluator == replay->evaluator);
       args = replay->values;
     } else if (n_applied >= c->max_values) {
@@ -146,15 +147,21 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
       // Elm syntax can't do this but runtime/kernel can
       args = c->values;
     } else {
-      // Partial application, need a Closure. 'args' could be any size => heap
+      // Partial application, need a Closure. 'args' could be any size.
       u16 n_old = c->n_values;
       u16 n_new = n_old + n_applied;
 
       Closure* c_copy = CAN_THROW(GC_malloc(true, SIZE_CLOSURE(n_new) * SIZE_UNIT));
-      GC_memcpy(c_copy, c, SIZE_CLOSURE(n_old) * SIZE_UNIT);
-      GC_memcpy(&c_copy->values[n_old], applied, SIZE_CLOSURE(n_applied) * SIZE_UNIT);
       c_copy->header = HEADER_CLOSURE(n_new);
       c_copy->n_values = n_new;
+      c_copy->max_values = c->max_values;
+      c_copy->evaluator = c->evaluator;
+      for (u32 i = 0; i < n_old; ++i) {
+        c_copy->values[i] = c->values[i];
+      }
+      for (u32 i = 0; i < n_applied; ++i) {
+        c_copy->values[n_old + i] = applied[i];
+      }
 
       if (n_new < c_copy->max_values) {
         return c_copy;

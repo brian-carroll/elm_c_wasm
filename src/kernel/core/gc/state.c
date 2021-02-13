@@ -72,10 +72,10 @@ int init_heap(GcHeap* heap) {
   // Get current max address of program data
   size_t* break_ptr = sbrk(0);
 
-  // Align to next block boundary
+  // Align to next page boundary
   size_t break_aligned = (size_t)break_ptr;
-  if (break_aligned % GC_BLOCK_BYTES) {
-    break_aligned |= (GC_BLOCK_BYTES - 1);
+  if (break_aligned % GC_WASM_PAGE_BYTES) {
+    break_aligned |= (GC_WASM_PAGE_BYTES - 1);
     break_aligned++;
   }
   size_t* heap_bottom = (size_t*)break_aligned;

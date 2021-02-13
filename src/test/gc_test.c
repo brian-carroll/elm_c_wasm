@@ -348,13 +348,22 @@ char* test_heap_layout() {
 // --------------------------------------------------------------------------------
 
 void* eval_trashyFold(void* args[]) {
-  ElmInt* a = args[0];
-  Cons* acc = args[1];
+  ElmInt* free_var = args[0];
+  ElmInt* a = args[1];
+  Cons* acc = args[2];
   ElmInt* b = acc->head;
-  ElmInt* c = A2(&Basics_add, a, b);
+
+  assert(sanity_check(free_var));
+  assert(sanity_check(a));
+  assert(sanity_check(acc));
+  assert(sanity_check(b));
+
+  ElmInt* c = A2(&Basics_add, a, free_var);
   assert(sanity_check(c));
-  ElmInt* d = A2(&Basics_sub, a, b);
+
+  ElmInt* d = A2(&Basics_sub, c, b);
   assert(sanity_check(d));
+
   Cons* result = NEW_CONS(d, NEW_CONS(c, NEW_CONS(b, pNil)));
   assert(sanity_check(result));
 
@@ -362,17 +371,26 @@ void* eval_trashyFold(void* args[]) {
 }
 Closure trashyFold = {
     .header = HEADER_CLOSURE(0),
-    .max_values = 2,
+    .max_values = 3,
     .evaluator = &eval_trashyFold,
 };
 
 void* eval_listNonsense(void* args[]) {
   Cons* list = args[0];
   assert(sanity_check(list));
+
   Cons* acc = NEW_CONS(NEW_ELM_INT(64), &Nil);
   assert(sanity_check(acc));
-  Cons* folded = A3(&g_elm_core_List_foldl, &trashyFold, acc, list);
+
+  ElmInt* free_var = NEW_ELM_INT(123);
+  assert(sanity_check(free_var));
+
+  Closure* partial = A1(&trashyFold, free_var);
+  assert(sanity_check(partial));
+
+  Cons* folded = A3(&g_elm_core_List_foldl, partial, acc, list);
   assert(sanity_check(folded));
+
   Cons* reversed = A1(&g_elm_core_List_reverse, folded);
   assert(sanity_check(reversed));
 
@@ -423,8 +441,11 @@ char* stackmap_mark_eyeball_test() {
 void* eval_infinite_loop(void* args[]) {
   u32 gc_stack_frame = GC_get_stack_frame();
   Closure* gc_resume = NEW_CLOSURE(1, 1, eval_infinite_loop, args);
+  assert(sanity_check(gc_resume));
+
   Cons* list = gc_resume->values[0];
   assert(sanity_check(list));
+
   tce_loop:
   list = A1(&listNonsense, list);
   assert(sanity_check(list));
@@ -460,6 +481,7 @@ void* test_execute(Closure* c, int gc_cycles) {
     GC_collect_full();
     if (verbose) {
       printf("\n\ncompleted GC (%d), starting replay...\n", i);
+      print_heap();
       print_stack_map();
     }
   }
@@ -532,13 +554,13 @@ char* gc_test() {
         "\n"
         "##############################################################################\n");
 
-  mu_run_test(gc_bitmap_test);
-  mu_run_test(gc_bitmap_next_test);
-  mu_run_test(gc_dead_between_test);
-  mu_run_test(test_heap_layout);
-
-  mu_run_test(gc_replay_test);
-  mu_run_test(stackmap_mark_eyeball_test);
+  // mu_run_test(gc_bitmap_test);
+  // mu_run_test(gc_bitmap_next_test);
+  // mu_run_test(gc_dead_between_test);
+  // mu_run_test(test_heap_layout);
+  // 
+  // mu_run_test(gc_replay_test);
+  // mu_run_test(stackmap_mark_eyeball_test);
   mu_run_test(assertions_test);
 
   return NULL;
