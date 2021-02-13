@@ -36,6 +36,8 @@
     This is only possible when there are no side-effects.
 */
 
+#define GC_STACK_VERBOSE 0
+
 void* stack_values[GC_STACK_MAP_SIZE];
 char stack_flags[GC_STACK_MAP_SIZE];  // flag which values are returns or allocations
 
@@ -100,7 +102,9 @@ void* GC_stack_push_frame(EvalFunction evaluator) {
     stack_flags[i] = 'F';
     stack_values[i] = evaluator;
     sm->index++;
-    // printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
+#if GC_STACK_VERBOSE
+    printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
+#endif
     return NULL;  // no replay value
   }
 
@@ -110,14 +114,33 @@ void* GC_stack_push_frame(EvalFunction evaluator) {
   if (flag == 'R') {
     // Call had completed before GC. We have a saved return value.
     ElmValue* value = stack_values[sm->index];
-    // printf("Replaying returned value at index %d = %p\n", sm->index, value);
+#if GC_STACK_VERBOSE
+    printf("Replaying returned value at index %d = %p\n", sm->index, value);
+#endif
     sm->index++;
     ret = value;
   } else {
-    // Call was interrupted by Out-Of-Memory. Resume executing.
+    // Call was interrupted by GC. Resume executing.
     assert(flag == 'F');
+#if GC_STACK_VERBOSE
+    if (stack_values[sm->index] != evaluator) {
+      printf("mismatching evaluator, expected %s got %s\n",
+        Debug_evaluator_name(stack_values[sm->index]),
+        Debug_evaluator_name(evaluator)
+      );
+      print_heap();
+      print_stack_map();
+      print_state();
+      fflush(NULL);
+    }
+#endif
+
     assert(stack_values[sm->index] == evaluator);
-    // printf("Resuming call at stack frame %d = %s\n", sm->index, Debug_evaluator_name(evaluator));
+
+#if GC_STACK_VERBOSE
+    printf("Resuming call at stack frame %d = %s\n", sm->index, Debug_evaluator_name(evaluator));
+#endif
+
     sm->frame = sm->index; 
     sm->index++;
     ret = NULL;  // Return no replay value so that we'll execute the call
@@ -126,9 +149,11 @@ void* GC_stack_push_frame(EvalFunction evaluator) {
   // maybe exit replay mode
   if (sm->index >= sm->replay_until) {
     sm->replay_until = 0;
-    // printf("Exiting replay mode at stack index=%d, in a call to %s", sm->index, Debug_evaluator_name(evaluator));
-    // if (ret) printf(" with recorded return value %p", ret);
-    // printf("\n");
+#if GC_STACK_VERBOSE
+    printf("Exiting replay mode at stack index=%d, in a call to %s", sm->index, Debug_evaluator_name(evaluator));
+    if (ret) printf(" with recorded return value %p", ret);
+    printf("\n");
+#endif
   }
 
   return ret;
@@ -151,11 +176,13 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
   while (parent != 0 && stack_flags[--parent] != 'F');
   sm->frame = parent;
 
-  // printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",
-  //   Debug_evaluator_name(evaluator),
-  //   frame,
-  //   parent
-  // );
+#if GC_STACK_VERBOSE
+  printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",
+    Debug_evaluator_name(evaluator),
+    frame,
+    parent
+  );
+#endif
 }
 
 
@@ -172,11 +199,13 @@ Closure* GC_stack_tailcall(
   u16 max_values = old->max_values;
   u16 n_free = max_values - n_explicit_args;
 
-  // printf("Tailcall in %s, rewinding to frame %d, writing closure at index %d\n",
-  //   Debug_evaluator_name(old->evaluator),
-  //   frame,
-  //   sm->index
-  // );
+#if GC_STACK_VERBOSE
+  printf("Tailcall in %s, rewinding to frame %d, writing closure at index %d\n",
+    Debug_evaluator_name(old->evaluator),
+    frame,
+    sm->index
+  );
+#endif
 
   // NEW_CLOSURE implicitly pushes a value to sm->index
   Closure* new = NEW_CLOSURE(max_values, max_values, old->evaluator, NULL);
@@ -205,23 +234,36 @@ void* malloc_replay(ptrdiff_t bytes) {
 
   ElmValue* saved = stack_values[sm->index];
   u32 saved_words = saved->header.size;
-  // assert(requested_words == saved_words);
+
+#if GC_STACK_VERBOSE
   if (requested_words != saved_words) {
-    printf("requested_words (%d) != saved_words (%d)", requested_words, saved_words);
-    printf("\n");
+    printf("requested_words (%d) != saved_words (%d) at index %d\n", requested_words, saved_words, sm->index);
+    print_heap_range((size_t*)saved - 8, (size_t*)saved + 8);
+    print_stack_map();
+    print_state();
+    fflush(0);
   }
 
-  // printf("Replaying allocation at index %d %p\n", sm->index, saved);
+  printf("Replaying allocation at index %d %p : ", sm->index, saved);
+  print_value(saved);
+  printf("\n");
+  fflush(0);
+#endif
+
+  assert(requested_words == saved_words);
 
   sm->index++;
 
   if (sm->index >= sm->replay_until) {
     sm->replay_until = 0;
-    // printf(
-    //     "Exiting replay mode at stack_index=%d, after substituting an allocation in %s"
-    //     " with recorded value %p\n", sm->index,
-    //     Debug_evaluator_name(stack_values[sm->frame]),
-    //     saved);
+
+#if GC_STACK_VERBOSE
+    printf(
+        "Exiting replay mode at stack_index=%d, after substituting an allocation in %s"
+        " with recorded value %p\n", sm->index,
+        Debug_evaluator_name(stack_values[sm->frame]),
+        saved);
+#endif
   }
 
   return saved;

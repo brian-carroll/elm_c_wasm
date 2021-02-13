@@ -202,6 +202,130 @@ char* gc_dead_between_test() {
   return NULL;
 }
 
+// --------------------------------------------------------------------------------
+
+void set_heap_layout(GcHeap* heap, size_t* new_break_ptr);
+
+char* test_heap_layout() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## test_heap_layout\n"
+        "\n");
+  }
+
+  gc_test_reset();
+
+  GcHeap* heap = &gc_state.heap;
+  size_t* original_break_ptr = heap->system_end;
+
+  for (size_t kb = 16; kb <= 1024; kb *= 2) {
+    size_t bytes = kb * 1024;
+    size_t words = bytes / sizeof(void*);
+    size_t* new_break_ptr = heap->start + words;
+
+    set_heap_layout(heap, new_break_ptr);
+
+    float percent_bitmap = 100.0 * (heap->system_end - heap->bitmap) / words;
+    float percent_offsets = 100.0 * (heap->bitmap - heap->offsets) / words;
+
+    bool bitmap_ok = (sizeof(void*) == sizeof(u64))
+                         ? (percent_bitmap > 1.5 && percent_bitmap < 1.6)
+                         : (percent_bitmap > 2.95 && percent_bitmap < 3.05);
+    bool offsets_ok = (percent_offsets > 1.45 && percent_offsets < 1.6);
+
+    assertions_made++;
+    if (!bitmap_ok || !offsets_ok) {
+      tests_failed++;
+      printf(
+          "FAIL: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
+      printf("bitmap %f %%\n", percent_bitmap);
+      printf("offsets %f %%\n", percent_offsets);
+    } else if (verbose) {
+      printf(
+          "PASS: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
+    }
+  }
+
+  set_heap_layout(heap, original_break_ptr);
+  gc_test_reset();
+
+  return NULL;
+}
+
+// --------------------------------------------------------------------------------
+
+#define TEST_MEMCPY_BUF_SIZE 10
+
+void test_memcpy_reset(u32* from, u32* to) {
+  for (int i = 0; i < TEST_MEMCPY_BUF_SIZE; ++i) {
+    to[i] = 0;
+    from[i] = i + 1;
+  }
+}
+
+void* test_memcpy() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## test_memcpy\n"
+        "\n");
+  }
+  gc_test_reset();
+
+  // Ensure buffers are 64-bit aligned by declaring them as u64
+  u64 from64[TEST_MEMCPY_BUF_SIZE / 2];
+  u64 to64[TEST_MEMCPY_BUF_SIZE / 2];
+
+  // Now cast to 32-bit values
+  u32* from = (u32*)from64;
+  u32* to = (u32*)to64;
+
+  u32* src;
+  u32* dest;
+  u32 size;
+  char description[100];
+
+  if (verbose) {
+    printf("\n32-bit aligned\n");
+  }
+  src = from + 1;
+  dest = to + 1;
+  assert((size_t)dest % sizeof(u64) == sizeof(u32));
+
+  for (size = 1; size <= 6; ++size) {
+    test_memcpy_reset(from, to);
+    GC_memcpy(dest, src, size * sizeof(u32));
+    int mismatches = 0;
+    for (int i = 0; i < size; ++i) {
+      if (dest[i] != src[i]) mismatches++;
+    }
+    snprintf(description, sizeof(description), "should correctly copy %d 32-bit words, 32-bit aligned", size);
+    mu_assert(description, mismatches == 0);
+  }
+
+
+  if (verbose) {
+    printf("\n64-bit aligned\n");
+  }
+  src = from;
+  dest = to;
+  assert((size_t)dest % sizeof(u64) == 0);
+
+  for (size = 1; size <= 6; ++size) {
+    test_memcpy_reset(from, to);
+    GC_memcpy(dest, src, size * sizeof(u32));
+    int mismatches = 0;
+    for (int i = 0; i < size; ++i) {
+      if (dest[i] != src[i]) mismatches++;
+    }
+    snprintf(description, sizeof(description), "should correctly copy %d 32-bit words, 64-bit aligned", size);
+    mu_assert(description, mismatches == 0);
+  }
+
+ return NULL;
+}
+
 
 // --------------------------------------------------------------------------------
 
@@ -294,54 +418,6 @@ char* gc_replay_test() {
 
   mu_expect_equal("should return the correct result after resuming", result_replay->value, answer);
 
-  return NULL;
-}
-
-// --------------------------------------------------------------------------------
-
-void set_heap_layout(GcHeap* heap, size_t* new_break_ptr);
-
-char* test_heap_layout() {
-  if (verbose) {
-    printf(
-        "\n"
-        "## test_heap_layout\n"
-        "\n");
-  }
-
-  gc_test_reset();
-
-  GcHeap* heap = &gc_state.heap;
-
-  for (size_t kb = 16; kb <= 1024; kb *= 2) {
-    size_t bytes = kb * 1024;
-    size_t words = bytes / sizeof(void*);
-    size_t* new_break_ptr = heap->start + words;
-
-    set_heap_layout(heap, new_break_ptr);
-
-    float percent_bitmap = 100.0 * (heap->system_end - heap->bitmap) / words;
-    float percent_offsets = 100.0 * (heap->bitmap - heap->offsets) / words;
-
-    bool bitmap_ok = (sizeof(void*) == sizeof(u64))
-                         ? (percent_bitmap > 1.5 && percent_bitmap < 1.6)
-                         : (percent_bitmap > 2.95 && percent_bitmap < 3.05);
-    bool offsets_ok = (percent_offsets > 1.45 && percent_offsets < 1.6);
-
-    assertions_made++;
-    if (!bitmap_ok || !offsets_ok) {
-      tests_failed++;
-      printf(
-          "FAIL: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
-      printf("bitmap %f %%\n", percent_bitmap);
-      printf("offsets %f %%\n", percent_offsets);
-    } else if (verbose) {
-      printf(
-          "PASS: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
-    }
-  }
-
-  gc_test_reset();
   return NULL;
 }
 
@@ -554,13 +630,13 @@ char* gc_test() {
         "\n"
         "##############################################################################\n");
 
-  // mu_run_test(gc_bitmap_test);
-  // mu_run_test(gc_bitmap_next_test);
-  // mu_run_test(gc_dead_between_test);
-  // mu_run_test(test_heap_layout);
-  // 
-  // mu_run_test(gc_replay_test);
-  // mu_run_test(stackmap_mark_eyeball_test);
+  mu_run_test(gc_bitmap_test);
+  mu_run_test(gc_bitmap_next_test);
+  mu_run_test(gc_dead_between_test);
+  mu_run_test(test_heap_layout);
+  mu_run_test(test_memcpy);
+  mu_run_test(gc_replay_test);
+  mu_run_test(stackmap_mark_eyeball_test);
   mu_run_test(assertions_test);
 
   return NULL;
