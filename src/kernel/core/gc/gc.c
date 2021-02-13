@@ -112,8 +112,7 @@ void* GC_register_root(void** ptr_to_mutable_ptr) {
 static void collect(GcState* state, size_t* ignore_below) {
   mark(state, ignore_below);
   compact(state, ignore_below);
-  state->stack_map.replay_until = state->stack_map.index;
-  state->stack_map.index = 2; // skip entry frame
+  stack_prepare_for_replay();
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
 }
@@ -136,13 +135,13 @@ void GC_collect_nursery() {
    ==================================================== */
 
 void* GC_execute(Closure* c) {
-  GC_stack_clear();
-  GC_stack_enter(c);
+  stack_clear();
+  stack_enter(c);
 
   while (true) {
     void* result = Utils_apply(stack_values[1], 0, NULL);
     if (result != pGcFull) {
-      GC_stack_clear();
+      stack_clear();
       return result;
     }
     GC_collect_full();
@@ -164,9 +163,8 @@ void* GC_execute(Closure* c) {
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
 
-  GC_stack_clear();
-  stack_flags[0] = 'F';
-  stack_values[0] = NULL;
+  stack_clear();
+  stack_enter(NULL);
 
   while (true) {
     void* heap_value = init_func();
@@ -174,6 +172,27 @@ void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
       *global_permanent_ptr = heap_value;
       return;
     }
-    GC_collect_full();
+
+    // printf("==============================================================\n");
+    // printf("            DUMPING BEFORE GC\n");
+    // printf("==============================================================\n");
+
+    // print_heap();
+    // print_stack_map();
+    // print_state();
+
+    // printf("==============================================================\n");
+    // printf("            STARTING GC\n");
+    // printf("==============================================================\n");
+
+    // GC_collect_full();
+
+    // printf("==============================================================\n");
+    // printf("            AFTER GC\n");
+    // printf("==============================================================\n");
+
+    // print_heap();
+    // print_stack_map();
+    // print_state();
   }
 }

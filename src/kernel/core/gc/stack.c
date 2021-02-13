@@ -39,7 +39,7 @@
 void* stack_values[GC_STACK_MAP_SIZE];
 char stack_flags[GC_STACK_MAP_SIZE];  // flag which values are returns or allocations
 
-void GC_stack_clear() {
+void stack_clear() {
   GcStackMap* sm = &gc_state.stack_map;
 
   sm->replay_until = 0;
@@ -53,7 +53,7 @@ void GC_stack_clear() {
 }
 
 
-void GC_stack_enter(Closure* c) {
+void stack_enter(Closure* c) {
   GcStackMap* sm = &gc_state.stack_map;
   stack_flags[0] = 'F';
   stack_flags[1] = 'A';
@@ -61,6 +61,12 @@ void GC_stack_enter(Closure* c) {
   sm->index = 2;
 }
 
+
+void stack_prepare_for_replay() {
+  GcStackMap* sm = &gc_state.stack_map;
+  sm->replay_until = sm->index;
+  sm->index = 2;
+}
 
 
 // Get current stack index (before doing a call or tail call)

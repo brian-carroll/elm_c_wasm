@@ -268,8 +268,8 @@ char* gc_replay_test() {
   void* args[1];
   args[0] = &int_n;
   Closure* c = NEW_CLOSURE(1, 1, eval_fib, args);
-  GC_stack_clear();
-  GC_stack_enter(c);
+  stack_clear();
+  stack_enter(c);
   void* result = Utils_apply(c, 0, NULL);
   mu_expect_equal("Expect GC exception when test function called with insufficient heap space", result, pGcFull);
   GC_collect_full();
@@ -402,8 +402,8 @@ char* stackmap_mark_eyeball_test() {
   Cons* list = List_create(3, list_elems);
   Closure* c = NEW_CLOSURE(1, 1, eval_listNonsense, ((void*[]){list}));
 
-  GC_stack_clear();
-  GC_stack_enter(c);
+  stack_clear();
+  stack_enter(c);
 
   Utils_apply(c, 0, NULL);
 
@@ -436,8 +436,8 @@ void* eval_infinite_loop(void* args[]) {
 
 
 void* test_execute(Closure* c, int gc_cycles) {
-  GC_stack_clear();
-  GC_stack_enter(c);
+  stack_clear();
+  stack_enter(c);
 
   // printf("test_execute after setup\n");
   // print_stack_map();
@@ -449,7 +449,7 @@ void* test_execute(Closure* c, int gc_cycles) {
     assert(sanity_check(stack_values[1]));
     void* result = Utils_apply(stack_values[1], 0, NULL);
     if (result != pGcFull) {
-      GC_stack_clear();
+      stack_clear();
       return result;
     }
     if (verbose) {

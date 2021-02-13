@@ -241,6 +241,10 @@ void Debug_pretty(const char* label, void* p) {
 }
 
 void print_value(void* p) {
+  if (!p) {
+    printf("NULL");
+    return;
+  }
   if (!sanity_check(p)) {
     printf("(corrupt data?)");
     return;
@@ -290,7 +294,12 @@ void print_value(void* p) {
       } else if (p == pUnit) {
         printf("Unit");
       } else {
-        printf("Custom ctor: %d ", v->custom.ctor);
+        u32 ctor = v->custom.ctor;
+        if (ctor < Debug_ctors_size) {
+          printf("Custom %s ", Debug_ctors[ctor] + 5);
+        } else {
+          printf("Custom ctor: %d ", ctor);
+        }
         for (size_t i = 0; i < custom_params(&v->custom); ++i) {
           printf("%p ", v->custom.values[i]);
         }
@@ -548,13 +557,13 @@ void log_debug(char* fmt, ...) {}
 // ========================================================
 
 #define GC_NOT_FULL NULL;
-size_t toString_alloc_chunk;
+size_t toString_alloc_chunk_bytes;
 
 // assumes nothing else gets allocated while stringifying
 static void* grow(u16** end) {
-  CAN_THROW(GC_malloc(false, toString_alloc_chunk));
+  CAN_THROW(GC_malloc(false, toString_alloc_chunk_bytes));
   *end = (u16*)GC_malloc(false, 0);
-  if (toString_alloc_chunk < 1024) toString_alloc_chunk *= 2;
+  if (toString_alloc_chunk_bytes < 1024) toString_alloc_chunk_bytes *= 2;
   return GC_NOT_FULL;
 }
 
@@ -710,13 +719,13 @@ void* Debug_toStringHelp(int depth, void* p, u16** cursor, u16** end) {
 
 void* eval_Debug_toString(void* args[]) {
   void* value = args[0];
-  toString_alloc_chunk = 64;
-  size_t len = toString_alloc_chunk / 2;
+  toString_alloc_chunk_bytes = 64;
+  size_t len = toString_alloc_chunk_bytes / sizeof(u16);
   ElmString16* str = NEW_ELM_STRING16(len);
   u16* cursor = str->words16;
   u16* end = cursor + len;
 
-  void* gc_full = CAN_THROW(Debug_toStringHelp(5, value, &cursor, &end));
+  void* maybe_gc_full = Debug_toStringHelp(5, value, &cursor, &end);
 
   // normalise the string length, chopping off any over-allocated space
   // especially for 64-bit platforms
@@ -727,7 +736,7 @@ void* eval_Debug_toString(void* args[]) {
     *cursor = 0;
   }
 
-  return gc_full ? pGcFull : str;
+  return maybe_gc_full ? pGcFull : str;
 }
 Closure Debug_toString = {
   .header = HEADER_CLOSURE(0),

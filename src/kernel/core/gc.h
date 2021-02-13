@@ -19,8 +19,10 @@ void* GC_memcpy(void* dest, void* src, size_t bytes);
 
 typedef u32 GcStackMapIndex;
 
-void GC_stack_clear();
-void GC_stack_enter(Closure* c);
+void stack_clear();
+void stack_enter(Closure* c);
+void stack_prepare_for_replay();
+
 void GC_stack_push_value(void* value);
 void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex push);
 GcStackMapIndex GC_get_stack_frame();

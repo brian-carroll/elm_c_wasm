@@ -46,6 +46,7 @@ size_t child_count(ElmValue* v) {
 #define SANITY_MAX_CHILDREN 32
 
 bool sanity_check(void* p) {
+  if (!p) return true;
   Header h = *(Header*)p;
   switch (h.tag) {
     case Tag_Int:

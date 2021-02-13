@@ -117,7 +117,7 @@ void* eval_Json_encode(void* args[]) {
   u16* cursor = str->words16;
   u16* end = cursor + len;
 
-  void* gc_full = CAN_THROW(stringify(indentLevel->value, 0, value, &cursor, &end));
+  void* maybe_gc_full = stringify(indentLevel->value, 0, value, &cursor, &end);
 
   // normalise the string length, chopping off any over-allocated space
   // especially for 64-bit platforms
@@ -128,7 +128,7 @@ void* eval_Json_encode(void* args[]) {
     *cursor = 0;
   }
 
-  return gc_full ? pGcFull : str;
+  return maybe_gc_full ? pGcFull : str;
 }
 Closure Json_encode = {
     .header = HEADER_CLOSURE(0),

@@ -37,4 +37,4 @@ $(WRAPPER).js: $(WRAPPER).ts
 	../../node_modules/.bin/tsc $(WRAPPER).ts
 
 dist/test: $(KERNELC) $(KERNELH) build/codemods/elm.c ../../src/test/test-imports.c
-	gcc -Wall -O0 -g $(KERNELC) build/codemods/elm.c ../../src/test/test-imports.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types
+	gcc -Wall -O0 -DDEBUG -g $(KERNELC) build/codemods/elm.c ../../src/test/test-imports.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types

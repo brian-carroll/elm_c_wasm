@@ -16,7 +16,7 @@ void reset_state(GcState* state) {
   state->nursery = start;
   state->next_alloc = start;
   state->roots = &Nil;
-  GC_stack_clear();
+  stack_clear();
 }
 
 /* ====================================================

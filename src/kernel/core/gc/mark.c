@@ -67,7 +67,7 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
     ElmValue* child = child_ptr_array[i];
 
     assert((size_t*)child < heap->end);
-    assert(child < v);
+    assert(child <= v); // Closures can refer to themselves (e.g. non-tail recursion)
 
     mark_trace(heap, child, ignore_below);
   }
