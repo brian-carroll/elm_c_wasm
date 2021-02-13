@@ -36,6 +36,7 @@ extern Closure Basics_ceiling;
 extern Closure Basics_not;
 extern Closure Basics_and;
 extern Closure Basics_or;
+extern Closure Basics_xor;
 
 extern Closure Basics_modBy;
 extern Closure Basics_remainderBy;

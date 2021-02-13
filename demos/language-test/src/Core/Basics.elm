@@ -193,20 +193,19 @@ tests =
                 , test "always 42 ()" <| \() -> Expect.equal 42 (always 42 ())
                 , test "<|" <| \() -> Expect.equal 9 (identity <| 3 + 6)
                 , test "|>" <| \() -> Expect.equal 9 (3 + 6 |> identity)
+                , test "<<" <| \() -> Expect.equal True (not << xor True <| True)
+                , describe ">>"
+                    [ test "with xor" <|
+                        \() ->
+                            (True |> xor True >> not)
+                                |> Expect.equal True
 
-                -- , test "<<" <| \() -> Expect.equal True (not << xor True <| True)
-                -- , describe ">>"
-                --     [ test "with xor" <|
-                --         \() ->
-                --             (True |> xor True >> not)
-                --                 |> Expect.equal True
-                --     ,
-                --     [ test "with a record accessor" <|
-                --         \() ->
-                --             [ { foo = "NaS", bar = "baz" } ]
-                --                 |> List.map (.foo >> String.reverse)
-                --                 |> Expect.equal [ "SaN" ]
-                --     ]
+                    --     , test "with a record accessor" <|
+                    --         \() ->
+                    --             [ { foo = "NaS", bar = "baz" } ]
+                    --                 |> List.map (.foo >> String.reverse)
+                    --                 |> Expect.equal [ "SaN" ]
+                    ]
                 ]
     in
     describe "Basics"

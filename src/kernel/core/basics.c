@@ -297,6 +297,18 @@ Closure Basics_or = {
 };
 
 /**
+ * xor
+ */
+static void* eval_xor(void* args[2]) {
+  return (args[0] != args[1]) ? &True : &False;
+}
+Closure Basics_xor = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_xor,
+    .max_values = 2,
+};
+
+/**
  * modBy
  */
 static void* eval_remainderBy(void* args[]) {
