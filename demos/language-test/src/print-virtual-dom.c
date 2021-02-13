@@ -7,6 +7,7 @@ Pointers are not dereferenced or typed, they're just address numbers.
 */
 
 #include <stdio.h>
+#include <string.h>
 #include "../../../src/kernel/kernel.h"
 
 extern Closure VirtualDom_node;
@@ -14,14 +15,16 @@ extern Closure VirtualDom_text;
 // extern Closure VirtualDom_style;
 // extern Closure VirtualDom_property;
 
-extern ElmString16 str_div;
-extern ElmString16 str_h2;
-extern ElmString16 str_h3;
-extern ElmString16 str_ul;
-extern ElmString16 str_li;
-extern ElmString16 str_br;
-extern ElmString16 str_p;
-extern ElmString16 str_pre;
+bool is_html_tag(char* c_tag, ElmString16* elm_tag) {
+  size_t c_len = strlen(c_tag);
+  size_t elm_len = code_units(elm_tag);
+  if (c_len != elm_len) return false;
+  for (size_t i = 0; i < elm_len; ++i) {
+    if (c_tag[i] != elm_tag->words16[i]) return false;
+  }
+  return true;
+}
+
 
 void print_virtual_dom_help(int indent, Closure* vdom) {
   if (vdom->evaluator == VirtualDom_text.evaluator) {
@@ -38,21 +41,21 @@ void print_virtual_dom_help(int indent, Closure* vdom) {
 
     bool newline = false;
 
-    if (tag == &str_h2) {
+    if (is_html_tag("h2", tag)) {
       printf("\n## ");
       newline = true;
-    } else if (tag == &str_h3) {
+    } else if (is_html_tag("h3", tag)) {
       printf("### ");
       newline = true;
-    } else if (tag == &str_ul) {
+    } else if (is_html_tag("ul", tag)) {
       indent += 2;
-    } else if (tag == &str_li) {
+    } else if (is_html_tag("li", tag)) {
       for (int i = 0; i < indent; ++i) {
         putchar(' ');
       }
       printf("- ");
       newline = true;
-    } else if (tag == &str_br) {
+    } else if (is_html_tag("br", tag)) {
       newline = true;
     }
 

@@ -27,15 +27,15 @@ void print_elm_string(ElmString16* str) {
   printf("\"");
 }
 
-void* expect_string(char* call_expr, char* expected_c_str, ElmString16* actual) {
+void* expect_string(char* unit_description, char* expected_c_str, ElmString16* actual) {
   ElmString16* expected = create_string(expected_c_str);
   bool ok = A2(&Utils_equal, actual, expected) == &True;
   if (!ok) {
     if (!verbose) {
-      printf("\n%s\n", test_description);
+      printf("\n%s\n", current_describe_string);
     }
     printf("\n");
-    printf("%s\n", call_expr);
+    printf("%s\n", unit_description);
     printf("Expected %s\n", expected_c_str);
     print_value_full(expected);
     printf("\n");
@@ -46,7 +46,7 @@ void* expect_string(char* call_expr, char* expected_c_str, ElmString16* actual) 
     printf("\n");
     tests_failed++;
   } else if (verbose) {
-    printf("PASS: %s == \"%s\"\n", call_expr, expected_c_str);
+    printf("PASS: %s == \"%s\"\n", unit_description, expected_c_str);
   }
   assertions_made++;
   return NULL;

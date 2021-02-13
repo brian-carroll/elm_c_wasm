@@ -32,12 +32,12 @@ int assertions_made = 0;
 //
 // ---------------------------------------------------------
 
-char* test_description;
+char* current_describe_string;
 void* test_heap_ptr;
 
 void describe(char* description, void* (*test)()) {
   tests_run++;
-  test_description = description;
+  current_describe_string = description;
   test_heap_ptr = GC_malloc(false, 0);
   if (verbose) {
     printf("\n%s\n", description);
@@ -50,7 +50,7 @@ void describe(char* description, void* (*test)()) {
 
 void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
   tests_run++;
-  test_description = description;
+  current_describe_string = description;
   test_heap_ptr = GC_malloc(false, 0);
   if (verbose) {
     printf("\n%s\n", description);
@@ -65,7 +65,7 @@ void* expect_equal(char* expect_description, void* left, void* right) {
   bool ok = A2(&Utils_equal, left, right) == &True;
   if (!ok) {
     if (!verbose) {
-      printf("\n%s\n", test_description);
+      printf("\n%s\n", current_describe_string);
     }
     print_heap_range(test_heap_ptr, GC_malloc(false, 0));
     printf("FAIL: %s\n", expect_description);
@@ -128,6 +128,7 @@ char* test_all(bool types,
     bool string,
     bool chr,
     bool list,
+    bool debug,
     bool json,
     bool gc) {
   if (verbose) {
@@ -138,6 +139,7 @@ char* test_all(bool types,
     if (string) printf("string ");
     if (chr) printf("char ");
     if (list) printf("list ");
+    if (debug) printf("debug ");
     if (json) printf("json ");
     if (gc) printf("gc ");
     printf("\n\n");
@@ -148,6 +150,7 @@ char* test_all(bool types,
   if (string) mu_run_test(string_test);
   if (chr) mu_run_test(char_test);
   if (list) mu_run_test(list_test);
+  if (debug) mu_run_test(list_test);
   if (json) mu_run_test(json_test);
   if (gc) mu_run_test(gc_test);
 
@@ -166,6 +169,7 @@ int main(int argc, char** argv) {
       {"string", optional_argument, NULL, 's'},
       {"char", optional_argument, NULL, 'c'},
       {"list", optional_argument, NULL, 'l'},
+      {"debug", optional_argument, NULL, 'd'},
       {"json", optional_argument, NULL, 'j'},
       {"gc", optional_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
@@ -178,6 +182,7 @@ int main(int argc, char** argv) {
   bool chr = false;
   bool utils = false;
   bool list = false;
+  bool debug = false;
   bool json = false;
   bool gc = false;
 
@@ -189,7 +194,7 @@ int main(int argc, char** argv) {
   verbose = true;
 #endif
 
-  char options[] = "vatubscljg";
+  char options[] = "vatubscldjg";
 
   int opt;
   while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
@@ -225,6 +230,9 @@ int main(int argc, char** argv) {
       case 'l':
         list = !optarg;
         break;
+      case 'd':
+        debug = !optarg;
+        break;
       case 'j':
         json = !optarg;
         break;
@@ -247,7 +255,7 @@ int main(int argc, char** argv) {
   printf("===================\n");
 #endif
 
-  test_all(types, utils, basics, string, chr, list, json, gc);
+  test_all(types, utils, basics, string, chr, list, debug, json, gc);
   int exit_code;
 
   if (tests_failed) {

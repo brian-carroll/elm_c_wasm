@@ -110,7 +110,7 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
     return 0;
   }
   u32 len = custom_params(obj);
-  void* value;
+  void* value = &Json_encodeNull;
   u32 i;
   for (i = 0; i < len; i += 2) {
     ElmString16* field = obj->values[i];

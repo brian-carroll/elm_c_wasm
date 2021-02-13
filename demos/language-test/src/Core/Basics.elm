@@ -18,7 +18,7 @@ tests =
     let
         comparison =
             describe "Comparison"
-                [ test "max" <| \() -> Expect.equal 43 (max 32 42)
+                [ test "max" <| \() -> Expect.equal 42 (max 32 42)
                 , test "min" <| \() -> Expect.equal 42 (min 91 42)
                 , test "clamp low" <| \() -> Expect.equal 10 (clamp 10 20 5)
                 , test "clamp mid" <| \() -> Expect.equal 15 (clamp 10 20 15)

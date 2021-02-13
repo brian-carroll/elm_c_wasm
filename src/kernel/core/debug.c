@@ -569,7 +569,7 @@ static void* grow(u16** end) {
 
 
 static void* ensure_space(size_t need, u16** cursor, u16** end) {
-  while (end - cursor < need) {
+  while (*end - *cursor < need) {
     CAN_THROW(grow(end));
   }
   return GC_NOT_FULL;
@@ -720,23 +720,28 @@ void* Debug_toStringHelp(int depth, void* p, u16** cursor, u16** end) {
 void* eval_Debug_toString(void* args[]) {
   void* value = args[0];
   toString_alloc_chunk_bytes = 64;
-  size_t len = toString_alloc_chunk_bytes / sizeof(u16);
+  size_t len = (toString_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
   ElmString16* str = NEW_ELM_STRING16(len);
   u16* cursor = str->words16;
   u16* end = cursor + len;
 
   void* maybe_gc_full = Debug_toStringHelp(5, value, &cursor, &end);
+  if (maybe_gc_full == pGcFull) {
+    str->header.size = SIZE_STRING(len); // original allocated size, so that replay works correctly
+    return pGcFull;
+  } else {
+    ptrdiff_t cursor_addr = (ptrdiff_t)cursor;
+    ptrdiff_t aligned_cursor_addr = (cursor_addr + SIZE_UNIT - 1) & (-SIZE_UNIT);
+    ptrdiff_t size = (aligned_cursor_addr - (ptrdiff_t)str) / SIZE_UNIT;
+    str->header.size = (u32)size;
 
-  // normalise the string length, chopping off any over-allocated space
-  // especially for 64-bit platforms
-  size_t truncated_str_end_addr = ((size_t)cursor + SIZE_UNIT - 1) & (-SIZE_UNIT);
-  size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
-  str->header.size = (u32)final_size;
-  for (; cursor < (u16*)truncated_str_end_addr; cursor++) {
-    *cursor = 0;
+    // Give back unused memory to the allocator
+    ptrdiff_t end_addr = (ptrdiff_t)end;
+    ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
+    GC_malloc(false, negative_alloc);
+
+    return str;
   }
-
-  return maybe_gc_full ? pGcFull : str;
 }
 Closure Debug_toString = {
   .header = HEADER_CLOSURE(0),
