@@ -68,16 +68,17 @@ static void* eval_JsArray_initializeFromList(void* args[]) {
   ElmInt* max = args[0];
   Cons* ls = args[1];
 
-  u32 max_len = max->value;
+  ptrdiff_t max_len = max->value;
   Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, max_len, NULL);
 
-  u32 i = 0;
+  ptrdiff_t i = 0;
   for (; i < max_len && ls != pNil; i++) {
     result->values[i] = ls->head;
     ls = ls->tail;
   }
   result->header.size = SIZE_CUSTOM(i); // Array logic depends on this
-  GC_malloc(false, i-max_len); // waste not, want not
+  ptrdiff_t reclaim = (i - max_len) * (ptrdiff_t)sizeof(void*);
+  GC_malloc(false, reclaim); // waste not, want not
 
   return NEW_TUPLE2(result, ls);
 }

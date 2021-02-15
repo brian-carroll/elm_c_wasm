@@ -19,7 +19,11 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "Elm Standard Library Tests" <|
-        mostlyWorking
+        []
+            ++ [ Array.tests ]
+            -- ++ [ Dict.tests ]
+            -- ++ [ Set.tests ]
+            ++ [ List.tests ]
 
 
 mostlyWorking : List Test

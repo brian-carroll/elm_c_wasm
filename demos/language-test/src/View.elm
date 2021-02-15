@@ -196,18 +196,19 @@ viewTestsResults passedTestsDisplay runners =
                 , li [] [ text (nFail ++ " failed") ]
                 ]
     in
-    div []
+    div [] <|
         [ summary
         , ul [ class "test-fail-list" ]
             (List.map viewFail failResults)
-        , if passedTestsDisplay == Show then
-            ul [ class "test-pass-list" ]
+        ] ++
+        if passedTestsDisplay == Show then
+            [ ul [ class "test-pass-list" ]
                 (List.map viewPass passResults)
+            , summary
+            ]
+        else
+            []
 
-          else
-            text ""
-        , summary
-        ]
 
 
 {-| this string contains non-breaking spaces

@@ -109,6 +109,8 @@ Closure List_map2 = {
 };
 
 // Dummy to get core tests running
+// Possible implementation here https://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.c
+// But it seems to rely on mutation and out-of-order lists which would be bad for our GC
 void* eval_List_sortBy(void* args[]) {
   return &Nil;
 }
