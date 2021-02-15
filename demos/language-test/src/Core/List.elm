@@ -80,7 +80,7 @@ testListOfN n =
             [ test "none" <| \() -> Expect.equal [] (take 0 xs)
             , test "some" <| \() -> Expect.equal (List.range 0 (n - 1)) (take n zs)
             , test "all" <| \() -> Expect.equal xs (take n xs)
-            -- , test "all+" <| \() -> Expect.equal xs (take (n + 1) xs) -- FAILS! Bad code gen. Two goto labels in takeFast, need break in between
+            , test "all+" <| \() -> Expect.equal xs (take (n + 1) xs)
             ]
         , describe "drop"
             [ test "none" <| \() -> Expect.equal xs (drop 0 xs)
