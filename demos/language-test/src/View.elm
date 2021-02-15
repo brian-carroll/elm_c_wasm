@@ -189,12 +189,15 @@ viewTestsResults passedTestsDisplay runners =
 
         nFail =
             String.fromInt (List.length failResults)
+
+        summary =
+            ul []
+                [ li [] [ text (nPass ++ " passed") ]
+                , li [] [ text (nFail ++ " failed") ]
+                ]
     in
     div []
-        [ ul []
-            [ li [] [ text (nPass ++ " passed") ]
-            , li [] [ text (nFail ++ " failed") ]
-            ]
+        [ summary
         , ul [ class "test-fail-list" ]
             (List.map viewFail failResults)
         , if passedTestsDisplay == Show then
@@ -203,6 +206,7 @@ viewTestsResults passedTestsDisplay runners =
 
           else
             text ""
+        , summary
         ]
 
 

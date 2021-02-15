@@ -4,8 +4,17 @@ import Core
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Random
+import Test exposing (..)
 import View
 import Wasm
+
+
+allTests : Test
+allTests =
+    describe "Wasm" <|
+        [ Wasm.tests
+        , Core.tests
+        ]
 
 
 main : Html a
@@ -13,14 +22,8 @@ main =
     let
         testConfig =
             View.defaultConfig (Random.initialSeed 10000)
+                |> View.hidePassedTests
     in
     div [ class "view" ]
-        [ div []
-            [ h2 [] [ text "Wasm Code Gen Tests" ]
-            , View.viewResults testConfig Wasm.tests
-            ]
-        , div []
-            [ h2 [] [ text "Elm Standard Library Tests" ]
-            , View.viewResults testConfig Core.tests
-            ]
+        [ View.viewResults testConfig allTests
         ]
