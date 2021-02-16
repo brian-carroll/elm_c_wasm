@@ -1,5 +1,8 @@
 # Build system
 
+## Lib paths
+- remove the need for code mods
+
 ## Port to Windows
 - So I can do debugging more easily
   - gdb is awful and VS Code on WSL is not good.

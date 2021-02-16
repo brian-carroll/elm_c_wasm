@@ -57,6 +57,10 @@ void compact(GcState* state, size_t* compact_start);
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
 
+void stack_clear();
+void stack_enter(Closure* c);
+void stack_prepare_for_replay();
+
 void bitmap_reset(GcHeap*);
 void bitmap_next(size_t* word, size_t* mask);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
