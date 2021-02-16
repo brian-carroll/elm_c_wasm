@@ -1,5 +1,6 @@
 FILENAME='elm'
-KERNELS=$(find ../../src/kernel -name '*.c')
+KDIR=../../src/kernel
+KERNELS="${KDIR}/core/core.c ${KDIR}/test/test.c ${KDIR}/json/json.c ${KDIR}/wrapper/wrapper.c"
 
 extra_opt=""
 extra_opt="$extra_opt -DDEBUG"

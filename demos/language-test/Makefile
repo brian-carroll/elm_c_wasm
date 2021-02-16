@@ -1,7 +1,8 @@
 .PHONY: all
 
 ELM_SOURCES := $(shell find ./src -name '*.elm')
-KERNELC := $(shell find ../../src/kernel -name '*.c')
+KERNEL := ../../src/kernel
+KERNELC := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
 KERNELH := $(shell find ../../src/kernel -name '*.h')
 WRAPPER := ../../src/kernel/wrapper/wrapper
 
