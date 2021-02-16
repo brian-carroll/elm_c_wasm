@@ -24,6 +24,7 @@ tests =
             -- ++ [ Dict.tests ]
             -- ++ [ Set.tests ]
             ++ [ List.tests ]
+            ++ mostlyWorking
 
 
 mostlyWorking : List Test

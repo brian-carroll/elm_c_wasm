@@ -1,3 +1,18 @@
+# Build system
+
+## Port to Windows
+- So I can do debugging more easily
+  - gdb is awful and VS Code on WSL is not good.
+- GC will need Windows heap allocation https://docs.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate
+
+## Speed up
+- "Unity build"
+  - Have a core.c that includes all the other core .c files in one translation unit
+  - Move all the header file stuff into core.h
+- Precompiled headers
+  - .pch files for things like types.h
+
+
 # Replay rewrite
 
 
