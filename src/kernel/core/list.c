@@ -8,17 +8,15 @@
 // Allocate an entire list at once, with no recursion overhead
 // First value in the array becomes the head of the list
 void* List_create(size_t len, void* values[]) {
-  void* space = GC_malloc(true, sizeof(Cons) * len);
-  if (space == pGcFull) return pGcFull;
-  Cons* cells = space;
   Cons* head = &Nil;
   for (size_t i = 0; i < len; ++i) {
-    cells[i] = (Cons){
+    Cons* next = CAN_THROW(GC_malloc(true, sizeof(Cons)));
+    *next = (Cons){
         .header = HEADER_LIST,
         .head = values[len - 1 - i],
         .tail = head,
     };
-    head = &cells[i];
+    head = next;
   }
   return head;
 }

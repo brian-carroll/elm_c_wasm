@@ -173,26 +173,6 @@ void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
       return;
     }
 
-    // printf("==============================================================\n");
-    // printf("            DUMPING BEFORE GC\n");
-    // printf("==============================================================\n");
-
-    // print_heap();
-    // print_stack_map();
-    // print_state();
-
-    // printf("==============================================================\n");
-    // printf("            STARTING GC\n");
-    // printf("==============================================================\n");
-
-    // GC_collect_full();
-
-    // printf("==============================================================\n");
-    // printf("            AFTER GC\n");
-    // printf("==============================================================\n");
-
-    // print_heap();
-    // print_stack_map();
-    // print_state();
+    GC_collect_full();
   }
 }
