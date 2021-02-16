@@ -1,4 +1,4 @@
-#include "debug.h"
+#include "core.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -6,8 +6,6 @@
 #include <stdlib.h>
 
 #include "./gc/internals.h"
-#include "./string.h"
-#include "./types.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else

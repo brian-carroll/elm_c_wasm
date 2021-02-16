@@ -1,4 +1,4 @@
-#include "bitwise.h"
+#include "core.h"
 
 
 static void* eval_Bitwise_and(void* args[]) {

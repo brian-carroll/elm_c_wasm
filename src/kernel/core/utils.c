@@ -1,16 +1,9 @@
-#include "utils.h"
+#include "core.h"
 
 #include <assert.h>
 #include <string.h>
 
 #include <stdio.h>
-
-#include "debug.h"
-#include "elm.h"
-#include "gc.h"
-#include "list.h"
-#include "string.h"
-#include "types.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>

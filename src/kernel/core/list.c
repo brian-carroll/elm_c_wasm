@@ -1,9 +1,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "gc.h"
-#include "types.h"
-#include "utils.h"
+#include "core.h"
 
 // Allocate an entire list at once, with no recursion overhead
 // First value in the array becomes the head of the list

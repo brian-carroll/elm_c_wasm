@@ -315,7 +315,7 @@ void* parse_recurse(u16** cursor, u16* end) {
   }
 }
 
-ElmValue* parse_json(ElmString16* json) {
+void* parse_json(ElmString16* json) {
   u16* cursor = json->words16;
   u16* end = json->words16 + code_units(json);
   skip_whitespace(&cursor, end);

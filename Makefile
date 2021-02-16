@@ -8,9 +8,9 @@ TEST := $(ROOT)/src/test
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
 
-KSOURCES := $(shell find $(KERNEL) -name '*.c')
+KSOURCES := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
 KHEADERS := $(shell find $(KERNEL) -name '*.h')
-TSOURCES := $(shell find $(TEST) -name '*.c' | grep -v wrapper)
+TSOURCES := $(shell find $(TEST) -name '*.c')
 THEADERS := $(shell find $(TEST) -name '*.h')
 SOURCES := $(KSOURCES) $(TSOURCES)
 HEADERS := $(KHEADERS) $(THEADERS)

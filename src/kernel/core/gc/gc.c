@@ -53,8 +53,15 @@
 #include <stdio.h>
 #endif
 #include "internals.h"
-#include "../gc.h"
-#include "../utils.h"
+#include "../core.h"
+
+#include "allocate.c"
+#include "compact.c"
+#include "header.c"
+#include "mark.c"
+#include "stack.c"
+#include "state.c"
+
 
 /* ====================================================
 

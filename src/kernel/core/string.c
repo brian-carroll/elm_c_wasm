@@ -4,10 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "elm.h"
-#include "gc.h"
-#include "types.h"
-#include "utils.h"
+#include "core.h"
 
 #define IS_LEADING_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
 #define IS_TRAILING_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)

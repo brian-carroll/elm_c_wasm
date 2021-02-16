@@ -9,10 +9,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include "../types.h"
-#include "../gc.h"
-#include "../debug.h"
-#include "../../wrapper/wrapper.h"
+#include "../core.h"
 
 #define GC_INITIAL_HEAP_MB 8
 #define GC_WASM_PAGE_BYTES 65536

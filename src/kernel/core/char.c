@@ -1,4 +1,4 @@
-#include "char.h"
+#include "core.h"
 
 static void* eval_toCode(void* args[]) {
   ElmChar* c = args[0];

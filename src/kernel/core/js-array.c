@@ -1,7 +1,5 @@
-#include "js-array.h"
+#include "core.h"
 #include "../json/json.h"
-#include "gc.h"
-#include "utils.h"
 
 /**
  * empty : JsArray a

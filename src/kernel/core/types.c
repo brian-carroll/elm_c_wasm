@@ -1,9 +1,7 @@
-#include "types.h"
+#include "core.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-#include "gc.h"
 
 // see also NEW_CONS in header file
 Cons* ctorCons(void* head, void* tail) {
