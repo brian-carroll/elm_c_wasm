@@ -10,7 +10,7 @@ DEPLOY := $(ROOT)/../gh-pages
 
 KSOURCES := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
 KHEADERS := $(shell find $(KERNEL) -name '*.h')
-TSOURCES := $(shell find $(TEST) -name '*.c')
+TSOURCES := $(TEST)/test.c
 THEADERS := $(shell find $(TEST) -name '*.h')
 SOURCES := $(KSOURCES) $(TSOURCES)
 HEADERS := $(KHEADERS) $(THEADERS)

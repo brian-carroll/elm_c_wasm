@@ -4,7 +4,7 @@
 #include "../../kernel/json/json.h"
 #include "../test.h"
 
-ElmValue* parse_json(ElmString16* json);
+void* parse_json(ElmString16* json);
 #define WRAP(ptr) A1(&Json_wrap, ptr)
 
 //=================================================================================================

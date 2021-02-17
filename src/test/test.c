@@ -9,6 +9,21 @@
 #include "../kernel/core/core.h"
 #include "gc_test.h"
 
+#include "basics_test.c"
+#include "char_test.c"
+#include "debug_test.c"
+#include "gc_test.c"
+#include "json/json_decoder_test.c"
+#include "json/json_encoder_test.c"
+#include "json/json_parser_test.c"
+#include "json_test.c"
+#include "list_test.c"
+#include "string_test.c"
+#include "test-compiled.c"
+#include "test-imports.c"
+#include "types_test.c"
+#include "utils_test.c"
+
 char* types_test();
 char* utils_test();
 char* basics_test();
