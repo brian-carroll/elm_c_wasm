@@ -15,9 +15,6 @@ THEADERS := $(shell find $(TEST) -name '*.h')
 SOURCES := $(KSOURCES) $(TSOURCES)
 HEADERS := $(KHEADERS) $(THEADERS)
 
-DATA_TSV := $(shell find $(SRC) -name '*.tsv')
-DATA_INC := $(DATA_TSV:.tsv=.inc)
-
 .PHONY: all check check-bin check-www debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
@@ -63,7 +60,6 @@ gc-size:
 clean:
 	@echo 'Deleting generated files'
 	@find $(DIST) -type f ! -name '.gitkeep' -exec rm {} \;
-	@rm -f $(DATA_INC)
 	@rm -f $(KERNEL)/wrapper/wrapper.js
 
 watch:
@@ -113,18 +109,14 @@ gh-pages: www codegen todo
 # https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
 
 
-# ../src/test/gc/stackmap_data/full_completion.tsv.inc: ../src/test/gc/stackmap_data/full_completion.tsv
-$(SRC)/%.inc : $(SRC)/%.tsv
-	@cd $$(dirname $@) ; xxd -i $$(basename $<) $$(basename $@)
-
 # Binary & Wasm
 
-$(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
+$(DIST)/bin/test: $(SOURCES) $(HEADERS)
 	@echo Building tests as native binary...
 	@mkdir -p $(DIST)/bin
 	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
 
-$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
+$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@echo Building tests as WebAssembly module...
 	@mkdir -p $(DIST)/www
 	@emcc $(CFLAGS) $(SOURCES) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
