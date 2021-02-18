@@ -76,9 +76,9 @@ extern Closure Char_toCode;
 #endif
 
 void Debug_pretty(const char* label, void* p);
-extern char** Debug_ctors;
-extern char** Debug_fields;
-extern char** Debug_jsValues;
+extern char* Debug_ctors[];
+extern char* Debug_fields[];
+extern char* Debug_jsValues[];
 extern int Debug_ctors_size;
 extern int Debug_fields_size;
 extern int Debug_jsValues_size;

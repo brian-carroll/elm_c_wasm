@@ -39,11 +39,11 @@ emcc build/codemods/$FILENAME.c \
 set +x
 
 
-if grep error emcc.log
-then
-  head -n 20 emcc.log
-else
-  echo
-  echo "SUCCESS"
-  echo
-fi
+# if grep error emcc.log
+# then
+#   head -n 20 emcc.log
+# else
+#   echo
+#   echo "SUCCESS"
+#   echo
+# fi

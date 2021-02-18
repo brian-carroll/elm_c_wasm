@@ -73,19 +73,6 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
   }
 }
 
-// Trace all Elm values between two memory addresses
-void mark_trace_values_between(
-    void* start, void* end, GcHeap* heap, size_t* ignore_below) {
-  ElmValue* v = start;
-  ElmValue* endval = end;
-  while (v < endval) {
-    assert(sanity_check(v));
-    mark_trace(heap, v, ignore_below);
-    assert(v->header.size > 0);
-    v = (ElmValue*)((size_t*)v + v->header.size);
-  }
-}
-
 void mark(GcState* state, size_t* ignore_below) {
   GcHeap* heap = &state->heap;
 
@@ -94,6 +81,7 @@ void mark(GcState* state, size_t* ignore_below) {
 
   // Mark values freshly allocated in still-running function calls
   for (size_t i = 0; i < state->stack_map.index; ++i) {
+    if (stack_flags[i] == 'F') continue;
     ElmValue* v = stack_values[i];
     mark_trace(heap, v, ignore_below);
   }

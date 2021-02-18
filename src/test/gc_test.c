@@ -396,11 +396,10 @@ char* gc_replay_test() {
   stack_enter(c);
 
   int n_long_jumps = 0;
-  void* result;
   int out_of_memory = setjmp(gcLongJumpBuf);
   n_long_jumps++;
   if (!out_of_memory) {
-    result = Utils_apply(c, 0, NULL);    
+    Utils_apply(c, 0, NULL);    
   }
 
   mu_expect_equal("Expect GC exception when test function called with insufficient heap space", n_long_jumps, 2);

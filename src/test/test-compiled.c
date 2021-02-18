@@ -161,14 +161,13 @@ void** Wrapper_mainsArray[] = {NULL};
 // }
 
 #define TEST_CTOR(x) #x,
-char* test_ctors[] = {
+char* Debug_ctors[NUM_TEST_CTORS] = {
 #include "./test-ctors.inc"
 };
-char** Debug_ctors = test_ctors;
 #undef TEST_CTOR
 
-char** Debug_fields = NULL;
-char** Debug_jsValues = NULL;
+char* Debug_fields[1] = {NULL};
+char* Debug_jsValues[1] = {NULL};
 int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
 int Debug_ctors_size = NUM_TEST_CTORS;

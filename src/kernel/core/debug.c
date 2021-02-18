@@ -601,13 +601,15 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
   char ascii_buf[25];
 
   if (!depth) {
-    return copy_ascii("...", sb);
+    copy_ascii("...", sb);
+    return;
   }
 
   switch (v->header.tag) {
     case Tag_Int: {
       snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
-      return copy_ascii(ascii_buf, sb);
+      copy_ascii(ascii_buf, sb);
+      return;
     }
     case Tag_Float: {
       snprintf(ascii_buf, sizeof(ascii_buf), "%.16g", v->elm_float.value);
@@ -670,11 +672,14 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
     case Tag_Custom: {
       Custom* c = &v->custom;
       if (c == &True) {
-        return copy_ascii("True", sb);
+        copy_ascii("True", sb);
+        return;
       } else if (c == &False) {
-        return copy_ascii("False", sb);
+        copy_ascii("False", sb);
+        return;
       } else if (c == &Unit) {
-        return copy_ascii("()", sb);
+        copy_ascii("()", sb);
+        return;
       }
       char* ctor = (c->ctor < Debug_ctors_size)
                       ? Debug_ctors[c->ctor] + 5

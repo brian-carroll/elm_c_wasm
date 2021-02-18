@@ -1,13 +1,22 @@
-# Rewriting "GC Full" handling
+# Build system
 
-- [x] use standard longjmp instead of basically rolling my own version of that
-  - Emscripten says that longjmp and C++ exceptions are v expensive. They prob have to do what I did.
-- [x] redo string growing for Debug.toString and Json.encode
-  - need to update the size every time, can't capture the exception value anymore
-- [x] check everywhere with `GC_malloc(false, x)` for similar size update stuff
-- search for CAN_THROW
+## Port to Windows
+- So I can do debugging more easily
+  - gdb is awful and VS Code on WSL is not good.
+- GC will need Windows heap allocation https://docs.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate
 
-
+Steps
+1. Rewrite "GC Full" handling
+  - Needed for Microsoft compiler compatibility since my custom exception thing uses non-standard GNU-C "statement expression".
+  - use standard longjmp instead of basically rolling my own version of that.
+    - Emscripten says that longjmp and C++ exceptions are v expensive. But my thing is the same so also slow!
+    - This is really the cost imposed by Wasm for not being able to examine stack or registers.
+  - redo string growing for Debug.toString and Json.encode
+    - need to update the size every time, can't capture the exception value anymore
+  - check everywhere with `GC_malloc(false, x)` for similar size update stuff
+  - Get rid of CAN_THROW
+2. Get compiler to work with new "GC full" stuff
+3. Get GC working on Windows
 ```c
 #include <heapapi.h>
 size_t heap_init_bytes = GC_INITIAL_HEAP_MB * 1024 * 1024;
@@ -16,23 +25,16 @@ void* heap = HeapAlloc(hHeap, 0, heap_init_bytes);
 ```
 
 
-
-# Build system
-
-## Lib paths
-- remove the need for code mods
-
-## Port to Windows
-- So I can do debugging more easily
-  - gdb is awful and VS Code on WSL is not good.
-- GC will need Windows heap allocation https://docs.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate
-
 ## Speed up
 - "Unity build"
   - Have a core.c that includes all the other core .c files in one translation unit
   - Move all the header file stuff into core.h
 - Precompiled headers
   - .pch files for things like types.h
+
+## Lib paths
+- remove the need for code mods
+
 
 
 # Replay rewrite

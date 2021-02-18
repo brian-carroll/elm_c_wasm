@@ -16,6 +16,9 @@ all: dist/elm.wasm dist/elm.js
 clean:
 	rm -rf build/* dist/* elm-stuff/*
 
+check: dist/test
+	dist/test
+
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
 	$(ELM_TO_C) make src/Main.elm --output build/elm/elm.c

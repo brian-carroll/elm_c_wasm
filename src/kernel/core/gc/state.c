@@ -7,7 +7,7 @@ void* sbrk(intptr_t x) {
   return (void*)x;
 }
 int brk(void* addr) {
-  return (int)addr;
+  return (int)(size_t)addr;
 }
 #else
 #include <unistd.h>

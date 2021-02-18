@@ -141,10 +141,7 @@ static ElmString16 str_b = {
     .header = HEADER_STRING(1),
     .words16 = {'b'},
 };
-// static ElmInt two = {
-//     .header = HEADER_INT,
-//     .value = 2,
-// };
+static ElmInt num = {.header = HEADER_INT, .value = 2};
 static Custom object_circular = {
     .header = HEADER_CUSTOM(4),
     .ctor = JSON_VALUE_OBJECT,
@@ -153,7 +150,7 @@ static Custom object_circular = {
             &str_a,
             &object_circular,
             &str_b,
-            &two,
+            &num,
         },
 };
 static Custom array_circular = {
@@ -162,7 +159,7 @@ static Custom array_circular = {
     .values =
         {
             &array_circular,
-            &two,
+            &num,
         },
 };
 

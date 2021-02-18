@@ -180,23 +180,23 @@ void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb) {
   Tag tag = v->header.tag;
 
   if (p == &Json_encodeNull) {
-    return copy_ascii("null", sb);
+    copy_ascii("null", sb);
   } else if (p == &True) {
-    return copy_ascii("true", sb);
+    copy_ascii("true", sb);
   } else if (p == &False) {
-    return copy_ascii("false", sb);
+    copy_ascii("false", sb);
   } else if (tag == Tag_Float) {
     char buf[32];
     sprintf(buf, "%g", v->elm_float.value);
-    return copy_ascii(buf, sb);
+    copy_ascii(buf, sb);
   } else if (tag == Tag_String) {
-    return stringify_string(&v->elm_string16, sb);
+    stringify_string(&v->elm_string16, sb);
   } else if (tag == Tag_Custom) {
     u32 ctor = v->custom.ctor;
     if (ctor == JSON_VALUE_ARRAY) {
-      return stringify_array(indent, indent_current, p, sb);
+      stringify_array(indent, indent_current, p, sb);
     } else if (ctor == JSON_VALUE_OBJECT) {
-      return stringify_object(indent, indent_current, p, sb);
+      stringify_object(indent, indent_current, p, sb);
     }
   }
 }
