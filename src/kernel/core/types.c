@@ -6,7 +6,7 @@
 // see also NEW_CONS in header file
 Cons* ctorCons(void* head, void* tail) {
   Cons* p = CAN_THROW(GC_malloc(true, sizeof(Cons)));
-  p->header = HEADER_LIST;
+  p->header = (Header)HEADER_LIST;
   p->head = head;
   p->tail = tail;
   return p;
@@ -15,7 +15,7 @@ Cons* ctorCons(void* head, void* tail) {
 // see also NEW_TUPLE2 in header file
 Tuple2* ctorTuple2(void* a, void* b) {
   Tuple2* p = CAN_THROW(GC_malloc(true, sizeof(Tuple2)));
-  p->header = HEADER_TUPLE2;
+  p->header = (Header)HEADER_TUPLE2;
   p->a = a;
   p->b = b;
   return p;
@@ -24,7 +24,7 @@ Tuple2* ctorTuple2(void* a, void* b) {
 // see also NEW_TUPLE3 in header file
 Tuple3* ctorTuple3(void* a, void* b, void* c) {
   Tuple3* p = CAN_THROW(GC_malloc(true, sizeof(Tuple3)));
-  p->header = HEADER_TUPLE3;
+  p->header = (Header)HEADER_TUPLE3;
   p->a = a;
   p->b = b;
   p->c = c;
@@ -34,7 +34,7 @@ Tuple3* ctorTuple3(void* a, void* b, void* c) {
 // see also NEW_ELM_INT in header file
 ElmInt* ctorElmInt(i32 value) {
   ElmInt* p = CAN_THROW(GC_malloc(true, sizeof(ElmInt)));
-  p->header = HEADER_INT;
+  p->header = (Header)HEADER_INT;
   p->value = value;
   return p;
 };
@@ -42,7 +42,7 @@ ElmInt* ctorElmInt(i32 value) {
 // see also NEW_ELM_FLOAT in header file
 ElmFloat* ctorElmFloat(f64 value) {
   ElmFloat* p = CAN_THROW(GC_malloc(true, sizeof(ElmFloat)));
-  p->header = HEADER_FLOAT;
+  p->header = (Header)HEADER_FLOAT;
   p->value = value;
   return p;
 };
@@ -50,7 +50,7 @@ ElmFloat* ctorElmFloat(f64 value) {
 // see also NEW_ELM_CHAR in header file
 ElmChar* ctorElmChar(u32 value) {
   ElmChar* p = CAN_THROW(GC_malloc(true, sizeof(ElmChar)));
-  p->header = HEADER_CHAR;
+  p->header = (Header)HEADER_CHAR;
   p->value = value;
   return p;
 };
@@ -135,7 +135,7 @@ ElmString16* ctorElmString16(size_t len16) {
 Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
   Custom* c = CAN_THROW(GC_malloc(true, sizeof(Custom) + n_children * sizeof(void*)));
 
-  c->header = HEADER_CUSTOM(n_children);
+  c->header = (Header)HEADER_CUSTOM(n_children);
   c->ctor = ctor;
   if (children != NULL) {
     for (size_t i = 0; i < n_children; ++i) {
@@ -147,7 +147,7 @@ Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
 
 Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   Record* r = CAN_THROW(GC_malloc(true, sizeof(Record) + n_children * sizeof(void*)));
-  r->header = HEADER_RECORD(n_children);
+  r->header = (Header)HEADER_RECORD(n_children);
   r->fieldgroup = fg;
   for (size_t i = 0; i < n_children; ++i) {
     r->values[i] = children[i];
@@ -157,7 +157,7 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
 Closure* ctorClosure(
     u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
   Closure* c = CAN_THROW(GC_malloc(true, sizeof(Closure) + n_values * sizeof(void*)));
-  c->header = HEADER_CLOSURE(n_values);
+  c->header = (Header)HEADER_CLOSURE(n_values);
   c->n_values = n_values;
   c->max_values = max_values;
   c->evaluator = evaluator;

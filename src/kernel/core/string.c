@@ -8,6 +8,7 @@
 
 #define IS_LEADING_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
 #define IS_TRAILING_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
+#define MAX_FLOAT_LEN 25
 
 size_t code_units(ElmString16* s) {
   u32 size = s->header.size;
@@ -91,9 +92,11 @@ static void* eval_String_uncons(void* args[]) {
   }
   ElmChar* c = NEW_ELM_CHAR(codepoint);
 
-  char* remainder = (char*)(&string->words16[char_units]);
-  size_t payload_bytes = (len - char_units) * 2;
-  ElmString16* s = NEW_ELM_STRING(payload_bytes, remainder);
+  ElmString16* s = NEW_ELM_STRING16(len - char_units);
+  u16* words = &string->words16[char_units];
+  for (size_t i = 0; i < len - char_units; ++i) {
+    s->words16[i] = words[i];
+  }
 
   return A1(&g_elm_core_Maybe_Just, NEW_TUPLE2(c, s));
 }
@@ -231,7 +234,7 @@ static void* eval_String_join(void* args[]) {
     u32 len = code_units(s);
 
     result_len += sep_len + len;
-    h = HEADER_STRING(result_len);
+    h = (Header)HEADER_STRING(result_len);
     if (GC_malloc(false, (h.size - result->header.size) * SIZE_UNIT) == pGcFull) {
       return pGcFull;
     }
@@ -532,17 +535,17 @@ Closure String_indexes = {
  */
 static void* String_fromNumber_eval(void* args[1]) {
   Number* box = args[0];
-  char buf[25];
-  size_t n_chars;
+  char buf[MAX_FLOAT_LEN];
+  int n_chars;
 
   if (box->i.header.tag == Tag_Int) {
-    n_chars = (size_t)snprintf(buf, sizeof(buf), "%d", box->i.value);
+    n_chars = snprintf(buf, sizeof(buf), "%d", box->i.value);
   } else {
-    n_chars = (size_t)snprintf(buf, sizeof(buf), "%.16g", box->f.value);
+    n_chars = snprintf(buf, sizeof(buf), "%.16g", box->f.value);
   }
 
   ElmString16* s = NEW_ELM_STRING16(n_chars);
-  for (size_t i = 0; i < n_chars; i++) {
+  for (int i = 0; i < n_chars; i++) {
     s->words16[i] = (u16)buf[i];
   }
   return s;
@@ -586,9 +589,12 @@ Closure String_toInt = {
  * String.toFloat
  */
 static void* eval_String_toFloat(void* args[]) {
+  char ascii[MAX_FLOAT_LEN];
   ElmString16* s = args[0];
+
   size_t len = code_units(s);
-  char ascii[len];
+  if (len > MAX_FLOAT_LEN) len = MAX_FLOAT_LEN;
+
   size_t i = 0;
   for (; i < len; i++) {
     u16 word = s->words16[i];

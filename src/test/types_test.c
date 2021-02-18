@@ -1,7 +1,10 @@
 #include "../kernel/core/types.h"
 #include <string.h>
-#include <unistd.h>
 #include "test.h"
+
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
 
 char* test_wasm_types() {
   if (verbose) {
@@ -308,7 +311,7 @@ char* test_strings() {
 char* test_custom() {
   u8 memory[sizeof(Custom) + 2 * sizeof(void*)];
   Custom* c = (Custom*)memory;
-  c->header = HEADER_CUSTOM(2);
+  c->header = (Header)HEADER_CUSTOM(2);
   c->ctor = 1;
   c->values[0] = &Unit;
   c->values[1] = &Unit;
@@ -343,7 +346,7 @@ char* test_record() {
 
   u8 mem_r[sizeof(Record) + 2 * sizeof(void*)];
   Record* r = (Record*)mem_r;
-  r->header = HEADER_RECORD(2);
+  r->header = (Header)HEADER_RECORD(2);
   r->fieldgroup = fg;
   r->values[0] = &Unit;
   r->values[1] = &Nil;
@@ -387,7 +390,7 @@ void* dummy_evaluator(void** args) {
 char* test_closure() {
   u8 mem_c[sizeof(Closure) + 2 * sizeof(void*)];
   Closure* c = (Closure*)mem_c;
-  c->header = HEADER_CLOSURE(2);
+  c->header = (Header)HEADER_CLOSURE(2);
   c->evaluator = &dummy_evaluator;
   c->max_values = 3;
   c->n_values = 2;

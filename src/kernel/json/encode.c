@@ -10,7 +10,7 @@ Custom Json_encodeNull = {
 void* eval_Json_wrap(void* args[]) {
   ElmValue* v = args[0];
   if (v->header.tag == Tag_Int) {
-    v = NEW_ELM_FLOAT(v->elm_int.value);
+    v = (ElmValue*)NEW_ELM_FLOAT(v->elm_int.value);
   }
   Custom* wrapped = NEW_CUSTOM(JSON_VALUE_WRAP, 1, (void*[]){v});
   return wrapped;

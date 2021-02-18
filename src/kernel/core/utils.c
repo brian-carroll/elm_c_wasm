@@ -145,7 +145,7 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
       u16 n_new = n_old + n_applied;
 
       Closure* c_copy = CAN_THROW(GC_malloc(true, SIZE_CLOSURE(n_new) * SIZE_UNIT));
-      c_copy->header = HEADER_CLOSURE(n_new);
+      c_copy->header = (Header)HEADER_CLOSURE(n_new);
       c_copy->n_values = n_new;
       c_copy->max_values = c->max_values;
       c_copy->evaluator = c->evaluator;
@@ -228,9 +228,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_String: {
       size_t* a_words = (size_t*)pa;
       size_t* b_words = (size_t*)pb;
-      // start at first word that contains characters (index 0 or 1)
-      size_t start = ((void*)pa->elm_string.bytes - (void*)pa) / sizeof(void*);
-      for (size_t i = start; i < pa->header.size; ++i) {
+      for (size_t i = 0; i < pa->header.size; ++i) {
         if (a_words[i] != b_words[i]) return 0;
       }
       return 1;

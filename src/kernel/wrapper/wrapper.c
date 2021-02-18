@@ -84,7 +84,7 @@ EMSCRIPTEN_KEEPALIVE void debugHeapState() {
 }
 
 EMSCRIPTEN_KEEPALIVE void debugAddrRange(size_t start, size_t len) {
-  print_heap_range((void*)start, (void*)start + len);
+  print_heap_range((void*)start, (void*)(start + len));
 }
 
 EMSCRIPTEN_KEEPALIVE void debugEvaluatorName(size_t addr) {

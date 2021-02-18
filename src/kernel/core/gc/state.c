@@ -1,5 +1,17 @@
-#include <unistd.h>
 #include "internals.h"
+
+#ifdef _MSC_VER
+// Totally broken nonsense, just to see if we can compile without errors
+#include <stdint.h>
+void* sbrk(intptr_t x) {
+  return (void*)x;
+}
+int brk(void* addr) {
+  return (int)addr;
+}
+#else
+#include <unistd.h>
+#endif
 
 
 /* ====================================================
@@ -57,7 +69,7 @@ void set_heap_layout(GcHeap* heap, size_t* new_break_ptr) {
 
 // currently only called on init but need later for growing the heap
 int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
-  int has_error = brk(new_break_ptr);
+  int has_error = brk(new_break_ptr); // TODO
   if (has_error) {
     log_error("Failed to get heap memory. Error code %d\n", errno);
     return errno;
@@ -70,7 +82,9 @@ int set_heap_end(GcHeap* heap, size_t* new_break_ptr) {
 // Call exactly once on program startup
 int init_heap(GcHeap* heap) {
   // Get current max address of program data
-  size_t* break_ptr = sbrk(0);
+  size_t* break_ptr = sbrk(0);  // TODO
+  // https://docs.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate
+  // HeapCreate 
 
   // Align to next page boundary
   size_t break_aligned = (size_t)break_ptr;

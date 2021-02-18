@@ -15,7 +15,7 @@ void* test_List_create() {
 
   expect_equal("List_create should match manually created list [1,2,3]", l1, l2);
 
-  Cons* n = List_create(0, (void*[]){});
+  Cons* n = List_create(0, NULL);
   expect_equal("List_create should return Nil when called with no values", n, &Nil);
 
   return NULL;

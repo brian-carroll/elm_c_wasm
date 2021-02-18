@@ -165,14 +165,14 @@ void* test_Json_decodeNull(void* runner) {
 }
 
 void* test_Json_decodeValue(void* runner) {
-  void* expected = runner == &Json_runOnString ? NEW_CUSTOM(JSON_VALUE_ARRAY,
+  void* expected = runner == &Json_runOnString ? (void*)NEW_CUSTOM(JSON_VALUE_ARRAY,
                                                      3,
                                                      ((void*[]){
                                                          NEW_ELM_FLOAT(1),
                                                          NEW_ELM_FLOAT(2),
                                                          NEW_ELM_FLOAT(3),
                                                      }))
-                                               : ctorJsRef(latest_jsref_index + 1);
+                                               : (void*)ctorJsRef(latest_jsref_index + 1);
   test_decode_ok(runner, &Json_decodeValue, "[1,2,3]", WRAP(expected));
   return NULL;
 }
@@ -436,9 +436,9 @@ void* test_Json_oneOf(void* runner) {
   test_decode_ok(runner, decoder, "123", NEW_ELM_INT(123));
   test_decode_ok(runner, decoder, "null", NEW_ELM_INT(0));
 
-  Custom* empty_array = runner == &Json_runOnString
-                            ? NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL)
-                            : ctorJsRef(latest_jsref_index + 1);
+  void* empty_array = runner == &Json_runOnString
+                            ? (void*)NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL)
+                            : (void*)ctorJsRef(latest_jsref_index + 1);
 
   test_decode_err(runner,
       decoder,

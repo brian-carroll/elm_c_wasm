@@ -24,7 +24,8 @@ void* GC_malloc(bool push_to_stack, ptrdiff_t bytes) {
   if (new_heap >= state->heap.end) {
     // printf("OOM at %p with call stack at %s\n", old_heap,
       // Debug_evaluator_name(stack_values[state->stack_map.frame]));
-    return pGcFull;
+    // return pGcFull;
+    longjmp(gcLongJumpBuf, 1);
   }
   if (push_to_stack) {
     GC_stack_push_value(old_heap);
@@ -34,9 +35,11 @@ void* GC_malloc(bool push_to_stack, ptrdiff_t bytes) {
 }
 
 
-void* GC_memcpy(void* dest, void* src, size_t bytes) {
+void* GC_memcpy(void* vdest, void* vsrc, size_t bytes) {
   assert(bytes % sizeof(u16) == 0);
 
+  u8* dest = vdest;
+  u8* src = vsrc;
   u32* src32;
   u32* dest32;
   u64* src64;

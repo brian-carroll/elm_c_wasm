@@ -73,38 +73,22 @@ typedef struct {
 #define SIZE_CLOSURE(p) (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT
 #define SIZE_JS_REF sizeof(JsRef) / SIZE_UNIT
 
-#define HEADER_INT \
-  (Header) { .tag = Tag_Int, .size = SIZE_INT }
-#define HEADER_FLOAT \
-  (Header) { .tag = Tag_Float, .size = SIZE_FLOAT }
-#define HEADER_CHAR \
-  (Header) { .tag = Tag_Char, .size = SIZE_CHAR }
-#define HEADER_STRING(utf16len) \
-  (Header) { .tag = Tag_String, .size = SIZE_STRING(utf16len) }
-#define HEADER_LIST \
-  (Header) { .tag = Tag_List, .size = SIZE_LIST }
-#define HEADER_TUPLE2 \
-  (Header) { .tag = Tag_Tuple2, .size = SIZE_TUPLE2 }
-#define HEADER_TUPLE3 \
-  (Header) { .tag = Tag_Tuple3, .size = SIZE_TUPLE3 }
-#define HEADER_CUSTOM(p) \
-  (Header) { .tag = Tag_Custom, .size = SIZE_CUSTOM(p) }
-#define HEADER_RECORD(p) \
-  (Header) { .tag = Tag_Record, .size = SIZE_RECORD(p) }
-#define HEADER_FIELDGROUP(p) \
-  (Header) { .tag = Tag_FieldGroup, .size = SIZE_FIELDGROUP(p) }
-#define HEADER_CLOSURE(p) \
-  (Header) { .tag = Tag_Closure, .size = SIZE_CLOSURE(p) }
-#define HEADER_JS_REF \
-  (Header) { .tag = Tag_JsRef, .size = SIZE_JS_REF }
+#define HEADER_INT { .tag = Tag_Int, .size = SIZE_INT }
+#define HEADER_FLOAT { .tag = Tag_Float, .size = SIZE_FLOAT }
+#define HEADER_CHAR { .tag = Tag_Char, .size = SIZE_CHAR }
+#define HEADER_STRING(utf16len) { .tag = Tag_String, .size = SIZE_STRING(utf16len) }
+#define HEADER_LIST { .tag = Tag_List, .size = SIZE_LIST }
+#define HEADER_TUPLE2 { .tag = Tag_Tuple2, .size = SIZE_TUPLE2 }
+#define HEADER_TUPLE3 { .tag = Tag_Tuple3, .size = SIZE_TUPLE3 }
+#define HEADER_CUSTOM(p) { .tag = Tag_Custom, .size = SIZE_CUSTOM(p) }
+#define HEADER_RECORD(p) { .tag = Tag_Record, .size = SIZE_RECORD(p) }
+#define HEADER_FIELDGROUP(p) { .tag = Tag_FieldGroup, .size = SIZE_FIELDGROUP(p) }
+#define HEADER_CLOSURE(p) { .tag = Tag_Closure, .size = SIZE_CLOSURE(p) }
+#define HEADER_JS_REF { .tag = Tag_JsRef, .size = SIZE_JS_REF }
 
 
-#define CAN_THROW(expr)                                 \
-  ({                                                    \
-    void* tmp_CAN_THROW = expr;                         \
-    if (tmp_CAN_THROW == pGcFull) return tmp_CAN_THROW; \
-    tmp_CAN_THROW;                                      \
-  })
+#define CAN_THROW(expr) expr
+
 
 // LIST
 
@@ -178,17 +162,26 @@ ElmChar* ctorElmChar(u32 value);
 // Make sure constant strings are properly aligned on 64-bit target.
 // Otherwise C compiler can truncate the zero padding at the end,
 // putting other data there. Messes up length calculation, etc.
-typedef struct __attribute__((aligned)) {
+#if defined(_MSC_VER)
+#define ALIGN(X) __declspec(align(X))
+#else
+#define ALIGN(X) __attribute__ ((aligned(X)))
+#endif
+
+struct ALIGN(8) elm_string {
   Header header;
   u8 bytes[];
-} ElmString;
+};
+typedef struct elm_string ElmString;
+
 ElmString* ctorElmString(size_t n, char* str);
 #define NEW_ELM_STRING(n, str) CAN_THROW(ctorElmString(n, str))
 
-typedef struct __attribute__((aligned)) {
+struct ALIGN(8) elm_string16 {
   Header header;
   u16 words16[];
-} ElmString16;
+};
+typedef struct elm_string16 ElmString16;
 ElmString16* ctorElmString16(size_t n);
 #define NEW_ELM_STRING16(len16) CAN_THROW(ctorElmString16(len16))
 

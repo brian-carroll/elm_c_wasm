@@ -1,10 +1,15 @@
 #include "test.h"
 
+#ifdef _MSC_VER
+#include "wingetopt.c"
+#else
 #include <getopt.h>
+#include <unistd.h>
+#endif
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "../kernel/core/core.h"
 #include "gc_test.h"
@@ -96,10 +101,9 @@ void* expect_equal(char* expect_description, void* left, void* right) {
 }
 
 ElmString16* create_string(char* c_string) {
-  size_t c_len = (size_t)strlen(c_string);
-  size_t bytes_utf16 = c_len * 2;
-  ElmString16* s = NEW_ELM_STRING(bytes_utf16, NULL);
-  for (size_t i = 0; i < c_len; i++) {
+  size_t len = (size_t)strlen(c_string);
+  ElmString16* s = NEW_ELM_STRING16(len);
+  for (size_t i = 0; i < len; i++) {
     s->words16[i] = (u16)c_string[i];
   }
   return s;
@@ -120,10 +124,10 @@ char* hex(void* addr, int size) {
     // Print in actual byte order (little endian)
     sprintf(hex_strings[rotate] + c,
         "%02x%02x%02x%02x|",
-        *(u8*)(addr + i),
-        *(u8*)(addr + i + 1),
-        *(u8*)(addr + i + 2),
-        *(u8*)(addr + i + 3));
+        *((u8*)addr + i),
+        *((u8*)addr + i + 1),
+        *((u8*)addr + i + 2),
+        *((u8*)addr + i + 3));
   }
   hex_strings[rotate][c - 1] = 0;  // erase last "|" and terminate the string
   return hex_strings[rotate];

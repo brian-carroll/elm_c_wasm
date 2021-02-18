@@ -64,12 +64,12 @@ char* test_records() {
   Record* r1 = (Record*)mem_r1;
   Record* r2 = (Record*)mem_r2;
 
-  r1->header = HEADER_RECORD(2);
+  r1->header = (Header)HEADER_RECORD(2);
   r1->fieldgroup = fgRecord1;
   r1->values[0] = NEW_ELM_INT(123);
   r1->values[1] = NEW_ELM_STRING(5, "hello");
 
-  r2->header = HEADER_RECORD(3);
+  r2->header = (Header)HEADER_RECORD(3);
   r2->fieldgroup = fgRecord2;
   r2->values[0] = NEW_ELM_INT(456);
   r2->values[1] = NEW_ELM_INT(321);
@@ -78,7 +78,7 @@ char* test_records() {
   // The actual accessor function
   u8 mem_accessor[sizeof(Closure) + sizeof(void*)];
   Closure* access_someField = (Closure*)mem_accessor;
-  access_someField->header = HEADER_CLOSURE(1);
+  access_someField->header = (Header)HEADER_CLOSURE(1);
   access_someField->max_values = 2;
   access_someField->n_values = 1;
   access_someField->evaluator = &Utils_access_eval;
@@ -377,7 +377,7 @@ char* test_eq(void) {
   u8 mem_1_1A[sizeof(Custom) + 2 * sizeof(void*)];
   Custom* custom_1_1A = (Custom*)mem_1_1A;
 
-  custom_1_1A->header = HEADER_CUSTOM(2);
+  custom_1_1A->header = (Header)HEADER_CUSTOM(2);
   custom_1_1A->ctor = 1;
   custom_1_1A->values[0] = &one;
   custom_1_1A->values[1] = &a1;
@@ -413,7 +413,7 @@ char* test_eq(void) {
 
   u8 mem_rec12[sizeof(Record) + 2 * sizeof(void*)];
   Record* rec12 = (Record*)mem_rec12;
-  rec12->header = HEADER_RECORD(2);
+  rec12->header = (Header)HEADER_RECORD(2);
   rec12->fieldgroup = fg;
   rec12->values[0] = &one;
   rec12->values[1] = &two;

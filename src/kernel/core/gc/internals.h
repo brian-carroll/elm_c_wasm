@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
+#include <setjmp.h>
 
 #include "../core.h"
 
@@ -21,6 +22,8 @@
 #define GC_STACK_MAP_SIZE (10 * 1024)
 
 #define ALL_ONES -1
+
+extern jmp_buf gcLongJumpBuf;
 
 typedef struct {
   size_t* start;

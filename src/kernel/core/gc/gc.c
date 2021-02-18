@@ -62,6 +62,7 @@
 #include "stack.c"
 #include "state.c"
 
+jmp_buf gcLongJumpBuf;
 
 /* ====================================================
 
@@ -145,14 +146,12 @@ void* GC_execute(Closure* c) {
   stack_clear();
   stack_enter(c);
 
-  while (true) {
-    void* result = Utils_apply(stack_values[1], 0, NULL);
-    if (result != pGcFull) {
-      stack_clear();
-      return result;
-    }
+  // long jump creates an implicit loop
+  int out_of_memory = setjmp(gcLongJumpBuf);
+  if (out_of_memory) {
     GC_collect_full();
   }
+  return Utils_apply(stack_values[1], 0, NULL);
 }
 
 
@@ -173,13 +172,10 @@ void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
   stack_clear();
   stack_enter(NULL);
 
-  while (true) {
-    void* heap_value = init_func();
-    if (heap_value != pGcFull) {
-      *global_permanent_ptr = heap_value;
-      return;
-    }
-
+  // long jump creates an implicit loop
+  int out_of_memory = setjmp(gcLongJumpBuf);
+  if (out_of_memory) {
     GC_collect_full();
   }
+  *global_permanent_ptr = init_func();
 }
