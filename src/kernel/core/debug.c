@@ -557,162 +557,168 @@ void log_debug(char* fmt, ...) {}
 #define GC_NOT_FULL NULL;
 size_t toString_alloc_chunk_bytes;
 
+struct string_builder {
+  ElmString16* s;
+  u16* cursor;
+  u16* end;
+};
+typedef struct string_builder StringBuilder;
+
 // assumes nothing else gets allocated while stringifying
-static void* grow(u16** end) {
-  CAN_THROW(GC_malloc(false, toString_alloc_chunk_bytes));
-  *end = (u16*)GC_malloc(false, 0);
+static void grow(StringBuilder* sb) {
+  GC_malloc(false, toString_alloc_chunk_bytes);
+  sb->end = GC_malloc(false, 0);
+  sb->s->header.size += toString_alloc_chunk_bytes / SIZE_UNIT;
   if (toString_alloc_chunk_bytes < 1024) toString_alloc_chunk_bytes *= 2;
-  return GC_NOT_FULL;
+  return;
 }
 
 
-static void* ensure_space(size_t need, u16** cursor, u16** end) {
-  while (*end - *cursor < need) {
-    CAN_THROW(grow(end));
+static void ensure_space(size_t need, StringBuilder* sb) {
+  while (sb->end - sb->cursor < need) {
+    grow(sb);
   }
-  return GC_NOT_FULL;
 }
 
 
-static void* copy_ascii(char* src, u16** dest, u16** end) {
+static void copy_ascii(char* src, StringBuilder* sb) {
   char* from = src;
-  u16* to = *dest;
+  u16* to = sb->cursor;
 
   for (; *from; to++, from++) {
-    if (to >= *end) {
-      CAN_THROW(grow(end));
+    if (to >= sb->end) {
+      grow(sb);
     }
     *to = *from;
   }
 
-  *dest = to;
-  return GC_NOT_FULL;
+  sb->cursor = to;
 }
 
 
-void* Debug_toStringHelp(int depth, void* p, u16** cursor, u16** end) {
+void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
   ElmValue* v = p;
   char ascii_buf[25];
 
   if (!depth) {
-    return copy_ascii("...", cursor, end);
+    return copy_ascii("...", sb);
   }
 
   switch (v->header.tag) {
     case Tag_Int: {
       snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
-      return copy_ascii(ascii_buf, cursor, end);
+      return copy_ascii(ascii_buf, sb);
     }
     case Tag_Float: {
       snprintf(ascii_buf, sizeof(ascii_buf), "%.16g", v->elm_float.value);
-      return copy_ascii(ascii_buf, cursor, end);
+      copy_ascii(ascii_buf, sb);
+      return;
     }
     case Tag_Char: {
       u16 lower = v->elm_char.words16[0];
       u16 upper = v->elm_char.words16[1];
-      CAN_THROW(ensure_space(upper ? 4 : 3, cursor, end));
-      u16* write = *cursor;
+      ensure_space(upper ? 4 : 3, sb);
+      u16* write = sb->cursor;
       *write++ = '\'';
       *write++ = lower;
       if (upper) *write++ = upper;
       *write++ = '\'';
-      *cursor = write;
-      return GC_NOT_FULL;
+      sb->cursor = write;
+      return;
     }
     case Tag_String: {
       size_t len = code_units(&v->elm_string16);
-      CAN_THROW(ensure_space(len + 2, cursor, end));
-      u16* write = *cursor;
+      ensure_space(len + 2, sb);
+      u16* write = sb->cursor;
       *write++ = '"';
       for (size_t i = 0; i < len; ++i) {
         *write++ = v->elm_string16.words16[i];
       }
       *write++ = '"';
-      *cursor = write;
-      return GC_NOT_FULL;
+      sb->cursor = write;
+      return;
     }
     case Tag_List: {
-      CAN_THROW(copy_ascii("[", cursor, end));
+      copy_ascii("[", sb);
       for (Cons* list = &v->cons; list != pNil; list = list->tail) {
-        CAN_THROW(Debug_toStringHelp(depth-1, list->head, cursor, end));
-        if (list->tail != pNil) CAN_THROW(copy_ascii(", ", cursor, end));
+        Debug_toStringHelp(depth-1, list->head, sb);
+        if (list->tail != pNil) copy_ascii(", ", sb);
       }
-      CAN_THROW(copy_ascii("]", cursor, end));
-      return GC_NOT_FULL;
+      copy_ascii("]", sb);
+      return;
     }
     case Tag_Tuple2: {
       Tuple2* t = &v->tuple2;
-      CAN_THROW(copy_ascii("(", cursor, end));
-      CAN_THROW(Debug_toStringHelp(depth-1, t->a, cursor, end));
-      CAN_THROW(copy_ascii(", ", cursor, end));
-      CAN_THROW(Debug_toStringHelp(depth-1, t->b, cursor, end));
-      CAN_THROW(copy_ascii(")", cursor, end));
-      return GC_NOT_FULL;
+      copy_ascii("(", sb);
+      Debug_toStringHelp(depth-1, t->a, sb);
+      copy_ascii(", ", sb);
+      Debug_toStringHelp(depth-1, t->b, sb);
+      copy_ascii(")", sb);
+      return;
     }
     case Tag_Tuple3: {
       Tuple3* t = &v->tuple3;
-      CAN_THROW(copy_ascii("(", cursor, end));
-      CAN_THROW(Debug_toStringHelp(depth-1, t->a, cursor, end));
-      CAN_THROW(copy_ascii(", ", cursor, end));
-      CAN_THROW(Debug_toStringHelp(depth-1, t->b, cursor, end));
-      CAN_THROW(copy_ascii(", ", cursor, end));
-      CAN_THROW(Debug_toStringHelp(depth-1, t->c, cursor, end));
-      CAN_THROW(copy_ascii(")", cursor, end));
-      return GC_NOT_FULL;
+      copy_ascii("(", sb);
+      Debug_toStringHelp(depth-1, t->a, sb);
+      copy_ascii(", ", sb);
+      Debug_toStringHelp(depth-1, t->b, sb);
+      copy_ascii(", ", sb);
+      Debug_toStringHelp(depth-1, t->c, sb);
+      copy_ascii(")", sb);
+      return;
     }
     case Tag_Custom: {
       Custom* c = &v->custom;
       if (c == &True) {
-        return copy_ascii("True", cursor, end);
+        return copy_ascii("True", sb);
       } else if (c == &False) {
-        return copy_ascii("False", cursor, end);
+        return copy_ascii("False", sb);
       } else if (c == &Unit) {
-        return copy_ascii("()", cursor, end);
+        return copy_ascii("()", sb);
       }
       char* ctor = (c->ctor < Debug_ctors_size)
                       ? Debug_ctors[c->ctor] + 5
                       : "<unknown ctor>";
-      CAN_THROW(copy_ascii(ctor, cursor, end));
-      CAN_THROW(copy_ascii(" ", cursor, end));
+      copy_ascii(ctor, sb);
+      copy_ascii(" ", sb);
       int len = custom_params(c);
       for (int i = 0; i < len; ++i) {
-        CAN_THROW(Debug_toStringHelp(depth-1, c->values[i], cursor, end));
-        if (i != len - 1) CAN_THROW(copy_ascii(" ", cursor, end));
+        Debug_toStringHelp(depth-1, c->values[i], sb);
+        if (i != len - 1) copy_ascii(" ", sb);
       }
-      return GC_NOT_FULL;
+      return;
     }
     case Tag_Record: {
       Record* r = &v->record;
       FieldGroup* fg = r->fieldgroup;
       u32 size = fg->size;
-      CAN_THROW(copy_ascii("{", cursor, end));
+      copy_ascii("{", sb);
       for (int i = 0; i < size; ++i) {
         char* field = Debug_fields[fg->fields[i]];
-        CAN_THROW(copy_ascii(field, cursor, end));
-        CAN_THROW(copy_ascii(": ", cursor, end));
-        CAN_THROW(Debug_toStringHelp(depth-1, r->values[i], cursor, end));
-        if (i != size - 1) CAN_THROW(copy_ascii(",", cursor, end));
+        copy_ascii(field, sb);
+        copy_ascii(": ", sb);
+        Debug_toStringHelp(depth-1, r->values[i], sb);
+        if (i != size - 1) copy_ascii(",", sb);
       }
-      return GC_NOT_FULL;
+      return;
     }
     case Tag_FieldGroup: {
-      CAN_THROW(copy_ascii("<fieldgroup>", cursor, end));
-      return GC_NOT_FULL;
+      copy_ascii("<fieldgroup>", sb);
+      return;
     }
     case Tag_Closure: {
-      CAN_THROW(copy_ascii("<function>", cursor, end));
-      return GC_NOT_FULL;
+      copy_ascii("<function>", sb);
+      return;
     }
     case Tag_JsRef: {
-      CAN_THROW(copy_ascii("<JavaScript>", cursor, end));
-      return GC_NOT_FULL;
+      copy_ascii("<JavaScript>", sb);
+      return;
     }
     default: {
-      CAN_THROW(copy_ascii("<unknown>", cursor, end));
-      return GC_NOT_FULL;
+      copy_ascii("<unknown>", sb);
+      return;
     }
   }
-  return GC_NOT_FULL;
 }
 
 void* eval_Debug_toString(void* args[]) {
@@ -720,26 +726,26 @@ void* eval_Debug_toString(void* args[]) {
   toString_alloc_chunk_bytes = 64;
   size_t len = (toString_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
   ElmString16* str = NEW_ELM_STRING16(len);
-  u16* cursor = str->words16;
-  u16* end = cursor + len;
+  StringBuilder sb = {
+    .s = str,
+    .cursor = str->words16,
+    .end = str->words16 + len,
+  };
 
-  void* maybe_gc_full = Debug_toStringHelp(5, value, &cursor, &end);
-  if (maybe_gc_full == pGcFull) {
-    str->header.size = SIZE_STRING(len); // original allocated size, so that replay works correctly
-    return pGcFull;
-  } else {
-    ptrdiff_t cursor_addr = (ptrdiff_t)cursor;
-    ptrdiff_t aligned_cursor_addr = (cursor_addr + SIZE_UNIT - 1) & (-SIZE_UNIT);
-    ptrdiff_t size = (aligned_cursor_addr - (ptrdiff_t)str) / SIZE_UNIT;
-    str->header.size = (u32)size;
+  Debug_toStringHelp(5, value, &sb);
 
-    // Give back unused memory to the allocator
-    ptrdiff_t end_addr = (ptrdiff_t)end;
-    ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
-    GC_malloc(false, negative_alloc);
+  // Shrink the string
+  ptrdiff_t cursor_addr = (ptrdiff_t)(sb.cursor);
+  ptrdiff_t aligned_cursor_addr = (cursor_addr + SIZE_UNIT - 1) & (-SIZE_UNIT);
+  ptrdiff_t size = (aligned_cursor_addr - (ptrdiff_t)str) / SIZE_UNIT;
+  str->header.size = (u32)size;
 
-    return str;
-  }
+  // Give back unused memory to the allocator
+  ptrdiff_t end_addr = (ptrdiff_t)(sb.end);
+  ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
+  GC_malloc(false, negative_alloc);
+
+  return str;
 }
 Closure Debug_toString = {
   .header = HEADER_CLOSURE(0),

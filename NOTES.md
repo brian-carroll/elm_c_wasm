@@ -1,3 +1,21 @@
+# GC Full rewrite
+
+- longjmp
+- redo string growing for Debug.toString and Json.encode
+  - need to update the size every time, can't capture the exception value anymore
+- check everywhere with `GC_malloc(false, x)` for similar size update stuff
+
+
+
+```c
+#include <heapapi.h>
+size_t heap_init_bytes = GC_INITIAL_HEAP_MB * 1024 * 1024;
+HANDLE hHeap = HeapCreate(0, heap_init_bytes, heap_init_bytes);
+void* heap = HeapAlloc(hHeap, 0, heap_init_bytes);
+```
+
+
+
 # Build system
 
 ## Lib paths

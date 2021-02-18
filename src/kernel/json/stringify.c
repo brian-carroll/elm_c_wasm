@@ -6,31 +6,34 @@
 
 #define GC_NOT_FULL NULL;
 
-static void* grow(u16** end) {
-  CAN_THROW(GC_malloc(false, stringify_alloc_chunk));
-  *end = (u16*)GC_malloc(false, 0);
-  if (stringify_alloc_chunk < 1024) stringify_alloc_chunk *= 2;
-  return GC_NOT_FULL;
+// assumes nothing else gets allocated while stringifying
+static void grow(StringBuilder* sb) {
+  GC_malloc(false, stringify_alloc_chunk_bytes);
+  sb->end = GC_malloc(false, 0);
+  sb->s->header.size += stringify_alloc_chunk_bytes / SIZE_UNIT;
+  if (stringify_alloc_chunk_bytes < 1024) stringify_alloc_chunk_bytes *= 2;
+  return;
 }
 
-static void* copy_ascii(char* src, u16** dest, u16** end) {
+
+static void copy_ascii(char* src, StringBuilder* sb) {
   char* from = src;
-  u16* to = *dest;
+  u16* to = sb->cursor;
 
   for (; *from; to++, from++) {
-    if (to >= *end) {
-      CAN_THROW(grow(end));
+    if (to >= sb->end) {
+      grow(sb);
     }
     *to = *from;
   }
 
-  *dest = to;
-  return GC_NOT_FULL;
+  sb->cursor = to;
 }
 
-static void* stringify_string(ElmString16* src, u16** dest, u16** to_end) {
+
+static void stringify_string(ElmString16* src, StringBuilder* sb) {
   u16* from = src->words16;
-  u16* to = *dest;
+  u16* to = sb->cursor;
 
   size_t len = code_units(src);
   u16* from_end = from + len;
@@ -38,8 +41,8 @@ static void* stringify_string(ElmString16* src, u16** dest, u16** to_end) {
   *to++ = '"';
 
   for (; from < from_end; to++, from++) {
-    if (to + 5 >= *to_end) {
-      CAN_THROW(grow(to_end));
+    if (to + 5 >= sb->end) {
+      grow(sb);
     }
     u16 c = *from;
     if (c == '"' || c == '\\') {
@@ -83,119 +86,117 @@ static void* stringify_string(ElmString16* src, u16** dest, u16** to_end) {
 
   *to++ = '"';
 
-  *dest = to;
-  return GC_NOT_FULL;
+  sb->cursor = to;
 }
 
-void* stringify(u32 indent, u32 indent_current, void* p, u16** cursor, u16** end);
 
-static void* write_indent(u32 indent_current, u16** dest, u16** end) {
+void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb);
+
+
+static void write_indent(u32 indent_current, StringBuilder* sb) {
   if (indent_current) {
-    u16* to = *dest;
-    while (to + indent_current >= *end) {
-      CAN_THROW(grow(end));
+    u16* to = sb->cursor;
+    while (to + indent_current >= sb->end) {
+      grow(sb);
     }
     for (size_t i = 0; i < indent_current; i++) {
       *to++ = ' ';
     }
-    *dest = to;
+    sb->cursor = to;
   }
-  return GC_NOT_FULL;
 }
 
-static void* write_char(u16** to, u16** end, u16 c) {
-  if (to >= end) {
-    CAN_THROW(grow(end));
+
+static void write_char(StringBuilder* sb, u16 c) {
+  if (sb->cursor >= sb->end) {
+    grow(sb);
   }
-  **to = c;
-  (*to)++;
-  return GC_NOT_FULL;
+  *(sb->cursor) = c;
+  sb->cursor++;
 }
 
-static void* stringify_array(
-    u32 indent, u32 indent_current, Custom* array, u16** to, u16** end) {
+
+static void stringify_array(
+    u32 indent, u32 indent_current, Custom* array, StringBuilder* sb) {
   u32 indent_next = indent_current + indent;
 
-  CAN_THROW(write_char(to, end, '['));
+  write_char(sb, '[');
   if (indent) {
-    CAN_THROW(write_char(to, end, '\n'));
+    write_char(sb, '\n');
   }
 
   u32 len = custom_params(array);
   for (size_t i = 0; i < len; i++) {
-    CAN_THROW(write_indent(indent_next, to, end));
-    CAN_THROW(stringify(indent, indent_next, array->values[i], to, end));
+    write_indent(indent_next, sb);
+    stringify(indent, indent_next, array->values[i], sb);
     if (i < len - 1) {
-      CAN_THROW(write_char(to, end, ','));
+      write_char(sb, ',');
     }
     if (indent) {
-      CAN_THROW(write_char(to, end, '\n'));
+      write_char(sb, '\n');
     }
   }
 
-  CAN_THROW(write_indent(indent_current, to, end));
-  CAN_THROW(write_char(to, end, ']'));
-
-  return GC_NOT_FULL;
+  write_indent(indent_current, sb);
+  write_char(sb, ']');
 }
 
-static void* stringify_object(
-    u32 indent, u32 indent_current, Custom* object, u16** to, u16** end) {
+
+static void stringify_object(
+    u32 indent, u32 indent_current, Custom* object, StringBuilder* sb) {
   u32 indent_next = indent_current + indent;
 
-  CAN_THROW(write_char(to, end, '{'));
+  write_char(sb, '{');
   if (indent) {
-    CAN_THROW(write_char(to, end, '\n'));
+    write_char(sb, '\n');
   }
 
   u32 len = custom_params(object);
   for (size_t i = 0; i < len; i += 2) {
     ElmString16* field = object->values[i];
     void* value = object->values[i + 1];
-    CAN_THROW(write_indent(indent_next, to, end));
-    CAN_THROW(stringify(indent, indent_next, field, to, end));
-    CAN_THROW(write_char(to, end, ':'));
+    write_indent(indent_next, sb);
+    stringify(indent, indent_next, field, sb);
+    write_char(sb, ':');
     if (indent) {
-      CAN_THROW(write_char(to, end, ' '));
+      write_char(sb, ' ');
     }
-    CAN_THROW(stringify(indent, indent_next, value, to, end));
+    stringify(indent, indent_next, value, sb);
     if (i < len - 2) {
-      CAN_THROW(write_char(to, end, ','));
+      write_char(sb, ',');
     }
     if (indent) {
-      CAN_THROW(write_char(to, end, '\n'));
+      write_char(sb, '\n');
     }
   }
 
-  CAN_THROW(write_indent(indent_current, to, end));
-  CAN_THROW(write_char(to, end, '}'));
-
-  return GC_NOT_FULL;
+  write_indent(indent_current, sb);
+  write_char(sb, '}');
 }
 
-void* stringify(u32 indent, u32 indent_current, void* p, u16** cursor, u16** end) {
+
+void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb) {
   ElmValue* v = p;
   Tag tag = v->header.tag;
 
   if (p == &Json_encodeNull) {
-    return CAN_THROW(copy_ascii("null", cursor, end));
+    return copy_ascii("null", sb);
   } else if (p == &True) {
-    return CAN_THROW(copy_ascii("true", cursor, end));
+    return copy_ascii("true", sb);
   } else if (p == &False) {
-    return CAN_THROW(copy_ascii("false", cursor, end));
+    return copy_ascii("false", sb);
   } else if (tag == Tag_Float) {
     char buf[32];
     sprintf(buf, "%g", v->elm_float.value);
-    return CAN_THROW(copy_ascii(buf, cursor, end));
+    return copy_ascii(buf, sb);
   } else if (tag == Tag_String) {
-    return CAN_THROW(stringify_string(&v->elm_string16, cursor, end));
+    return stringify_string(&v->elm_string16, sb);
   } else if (tag == Tag_Custom) {
     u32 ctor = v->custom.ctor;
     if (ctor == JSON_VALUE_ARRAY) {
-      return CAN_THROW(stringify_array(indent, indent_current, p, cursor, end));
+      return stringify_array(indent, indent_current, p, sb);
     } else if (ctor == JSON_VALUE_OBJECT) {
-      return CAN_THROW(stringify_object(indent, indent_current, p, cursor, end));
+      return stringify_object(indent, indent_current, p, sb);
     }
   }
-  return GC_NOT_FULL;
 }

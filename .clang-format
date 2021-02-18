@@ -5,4 +5,5 @@
   AllowAllParametersOfDeclarationOnNextLine: true,
   BinPackArguments: false,
   AlignAfterOpenBracket: false,
+  MaxEmptyLinesToKeep: 2,
 }
