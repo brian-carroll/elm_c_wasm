@@ -220,9 +220,6 @@ static void* eval_String_join(void* args[]) {
   u32 result_len = code_units(s);
   Header h = HEADER_STRING(result_len);
   ElmString16* result = GC_malloc(true, h.size * SIZE_UNIT);
-  if (result == pGcFull) {
-    return pGcFull;
-  }
   result->header = h;
   memcpy(result->words16, s->words16, result_len * 2);
 

@@ -62,10 +62,7 @@ void describe(char* description, void* (*test)()) {
   if (verbose) {
     printf("\n%s\n", description);
   }
-  if (test() == pGcFull) {
-    fprintf(stderr, "Heap overflow in test \"%s\"\n", description);
-    print_heap();
-  }
+  test();
 }
 
 void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
@@ -75,10 +72,7 @@ void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
   if (verbose) {
     printf("\n%s\n", description);
   }
-  if (test(arg) == pGcFull) {
-    fprintf(stderr, "Heap overflow in test \"%s\"\n", description);
-    print_heap();
-  }
+  test(arg);
 }
 
 void* expect_equal(char* expect_description, void* left, void* right) {

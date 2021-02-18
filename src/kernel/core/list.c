@@ -62,7 +62,6 @@ static void* eval_List_map2(void* args[]) {
   Cons* ys = args[2];
 
   Custom* growingArray = GC_malloc(true, sizeof(Custom));
-  if (growingArray == pGcFull) return pGcFull;
   growingArray->header = (Header)HEADER_CUSTOM(0);
 
   ptrdiff_t i = 0;

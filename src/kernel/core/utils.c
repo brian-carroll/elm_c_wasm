@@ -86,8 +86,6 @@ void* Utils_access_eval(void* args[2]) {
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   Record* r_new = Utils_clone(r);
-  if (r_new == pGcFull) return pGcFull;
-
   for (u32 i = 0; i < n_updates; ++i) {
     u32 field_pos = fieldgroup_search(r_new->fieldgroup, fields[i]);
 
@@ -291,14 +289,14 @@ static void* eq_eval(void* args[2]) {
   ElmValue* stack = nil;
   u32 isEqual = eq_help(args[0], args[1], 0, &stack);
 
-  while (isEqual && stack != nil && stack != pGcFull) {
+  while (isEqual && stack != nil) {
     // eq_help reached max recursion depth. Pick up again where it left off.
     Tuple2* pair = stack->cons.head;
     stack = stack->cons.tail;
     isEqual = eq_help(pair->a, pair->b, 0, &stack);
   }
 
-  return stack == pGcFull ? pGcFull : isEqual ? &True : &False;
+  return isEqual ? &True : &False;
 }
 Closure Utils_equal = {
     .header = HEADER_CLOSURE(0),
@@ -309,9 +307,6 @@ Closure Utils_equal = {
 // INEQUALITY
 static void* eval_notEqual(void* args[2]) {
   void* equal = eq_eval(args);
-  if (equal == pGcFull) {
-    return pGcFull;
-  }
   return equal == &False ? &True : &False;
 }
 Closure Utils_notEqual = {

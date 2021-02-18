@@ -259,9 +259,6 @@ typedef union {
 
 // STATIC CONSTANTS
 
-extern Custom GcFull;
-extern void* pGcFull;
-
 extern Cons Nil;
 extern void* pNil;
 

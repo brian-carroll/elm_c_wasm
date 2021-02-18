@@ -394,8 +394,16 @@ char* gc_replay_test() {
   Closure* c = newClosure(1, 1, eval_fib, args);
   stack_clear();
   stack_enter(c);
-  void* result = Utils_apply(c, 0, NULL);
-  mu_expect_equal("Expect GC exception when test function called with insufficient heap space", result, pGcFull);
+
+  int n_long_jumps = 0;
+  void* result;
+  int out_of_memory = setjmp(gcLongJumpBuf);
+  n_long_jumps++;
+  if (!out_of_memory) {
+    result = Utils_apply(c, 0, NULL);    
+  }
+
+  mu_expect_equal("Expect GC exception when test function called with insufficient heap space", n_long_jumps, 2);
   GC_collect_full();
   ElmInt* result_replay = Utils_apply(stack_values[1], 0, NULL);
 
@@ -532,36 +540,21 @@ void* eval_infinite_loop(void* args[]) {
 }
 
 
-void* test_execute(Closure* c, int gc_cycles) {
+void* test_execute(Closure* c, int max_gc_cycles) {
   stack_clear();
   stack_enter(c);
 
-  // printf("test_execute after setup\n");
-  // print_stack_map();
-
-  for (int i = 0; i < gc_cycles; i++) {
-    if (verbose) {
-      printf("executing...\n");
-    }
-    assert(sanity_check(stack_values[1]));
-    void* result = Utils_apply(stack_values[1], 0, NULL);
-    if (result != pGcFull) {
-      stack_clear();
-      return result;
-    }
-    if (verbose) {
-      printf("\n\ncalling GC (%d)...\n", i);
-      print_stack_map();
-    }
-
-    GC_collect_full();
-    if (verbose) {
-      printf("\n\ncompleted GC (%d), starting replay...\n", i);
-      print_heap();
-      print_stack_map();
-    }
+  // long jump creates an implicit loop
+  int gc_cycles = 0;
+  int out_of_memory = setjmp(gcLongJumpBuf);
+  if (gc_cycles >= max_gc_cycles) {
+    return NULL;
   }
-  return NULL;
+  if (out_of_memory) {
+    GC_collect_full();
+    gc_cycles++;
+  }
+  return Utils_apply(stack_values[1], 0, NULL);
 }
 
 
