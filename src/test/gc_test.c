@@ -204,7 +204,7 @@ char* gc_dead_between_test() {
 
 // --------------------------------------------------------------------------------
 
-void set_heap_layout(GcHeap* heap, size_t* new_break_ptr);
+void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes);
 
 char* test_heap_layout() {
   if (verbose) {
@@ -217,14 +217,14 @@ char* test_heap_layout() {
   gc_test_reset();
 
   GcHeap* heap = &gc_state.heap;
-  size_t* original_break_ptr = heap->system_end;
+  size_t* original_start = heap->start;
+  size_t original_bytes = (heap->system_end - heap->start) * SIZE_UNIT;
 
   for (size_t kb = 16; kb <= 1024; kb *= 2) {
     size_t bytes = kb * 1024;
     size_t words = bytes / sizeof(void*);
-    size_t* new_break_ptr = heap->start + words;
 
-    set_heap_layout(heap, new_break_ptr);
+    set_heap_layout(heap, original_start, bytes);
 
     float percent_bitmap = 100.0 * (heap->system_end - heap->bitmap) / words;
     float percent_offsets = 100.0 * (heap->bitmap - heap->offsets) / words;
@@ -247,7 +247,7 @@ char* test_heap_layout() {
     }
   }
 
-  set_heap_layout(heap, original_break_ptr);
+  set_heap_layout(heap, original_start, original_bytes);
   gc_test_reset();
 
   return NULL;

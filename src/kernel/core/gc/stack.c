@@ -230,7 +230,7 @@ void* malloc_replay(ptrdiff_t bytes) {
   u32 requested_words = bytes / sizeof(void*);
   assert(bytes % sizeof(void*) == 0);
   char flag = stack_flags[sm->index];
-  assert(flag == 'A');
+  assert(flag == 'A' || flag == 'R'); // 'R' is a valid case: final call on partially-applied function
 
   ElmValue* saved = stack_values[sm->index];
   u32 saved_words = saved->header.size;

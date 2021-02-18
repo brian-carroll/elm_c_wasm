@@ -5,9 +5,7 @@
 bool mark_words(GcHeap* heap, void* p_void, size_t size) {
   size_t* p = (size_t*)p_void;
 
-  // If value is outside the heap (constant), then consider it
-  // "already marked" (=> children won't be traced)
-  if (p < heap->start) return true;
+  if (IS_OUTSIDE_HEAP(p)) return true;   // "already marked" (will not be GC'd, don't trace)
   if (size == 0) return true;
   assert(p < heap->end);
   assert(p + size < heap->end);
@@ -65,9 +63,10 @@ void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
 
   for (size_t i = 0; i < n_children; ++i) {
     ElmValue* child = child_ptr_array[i];
+    if (IS_OUTSIDE_HEAP(child)) continue;
 
     assert((size_t*)child < heap->end);
-    assert(child <= v); // Closures can refer to themselves (e.g. non-tail recursion)
+    assert(child <= v); // Need the '=' because Closures can refer to themselves
 
     mark_trace(heap, child, ignore_below);
   }

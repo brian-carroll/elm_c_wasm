@@ -30,7 +30,7 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
 
 // Calculate where a value has moved to, return a pointer to the new location
 void* forwarding_address(GcHeap* heap, size_t* old_pointer) {
-  if (old_pointer < heap->start) return old_pointer;
+  if (IS_OUTSIDE_HEAP(old_pointer)) return old_pointer;
 
   size_t block_index = (old_pointer - heap->start) / GC_BLOCK_WORDS;
   size_t block_offset = heap->offsets[block_index];
@@ -115,7 +115,7 @@ void compact(GcState* state, size_t* compact_start) {
       size_t* first_child_field = next_value - n_children;
 
       // sanity check for corrupted data
-      assert(n_children <= 10 && next_value < heap->end && v->header.size < 100);
+      assert(sanity_check(v) && next_value < heap->end);
 
       // Copy all the non-pointer data that comes before child pointers
       while (from < first_child_field) {
@@ -127,7 +127,7 @@ void compact(GcState* state, size_t* compact_start) {
       for (size_t c = 0; c < n_children; c++) {
         size_t* child_old = child_ptr_array[c];
         size_t* child_new;
-        if (child_old < first_move_to) {
+        if (child_old < first_move_to || child_old > heap->end) {
           // Child value has not been moved
           child_new = child_old;
         } else if (child_old >= live_patch_start) {
@@ -160,13 +160,13 @@ void compact(GcState* state, size_t* compact_start) {
 
   for (Cons* root_cell = state->roots; root_cell != &Nil; root_cell = root_cell->tail) {
     size_t** root_mutable_pointer = root_cell->head;
-    size_t* live_heap_value = *root_mutable_pointer;
-    if (live_heap_value > first_move_to) {
-      live_heap_value = forwarding_address(heap, live_heap_value);
+    size_t* current_root_value = *root_mutable_pointer;
+    if (current_root_value > first_move_to && current_root_value < heap->end) {
+      current_root_value = forwarding_address(heap, current_root_value);
 
-      log_debug("Changing root from %p to %p\n", *root_mutable_pointer, live_heap_value);
+      log_debug("Changing root from %p to %p\n", *root_mutable_pointer, current_root_value);
 
-      *root_mutable_pointer = live_heap_value;
+      *root_mutable_pointer = current_root_value;
     }
   }
 }

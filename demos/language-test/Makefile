@@ -2,7 +2,8 @@
 
 ELM_SOURCES := $(shell find ./src -name '*.elm')
 KERNEL := ../../src/kernel
-KERNELC := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
+ENTRY := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
+KERNELC := $(shell find ../../src/kernel -name '*.c')
 KERNELH := $(shell find ../../src/kernel -name '*.h')
 WRAPPER := ../../src/kernel/wrapper/wrapper
 
@@ -41,4 +42,4 @@ $(WRAPPER).js: $(WRAPPER).ts
 	../../node_modules/.bin/tsc $(WRAPPER).ts
 
 dist/test: $(KERNELC) $(KERNELH) build/codemods/elm.c ../../src/test/test-imports.c
-	gcc -Wall -O0 -DDEBUG -g $(KERNELC) build/codemods/elm.c ../../src/test/test-imports.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types
+	gcc -Wall -O0 -DDEBUG -g $(ENTRY) build/codemods/elm.c ../../src/test/test-imports.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types

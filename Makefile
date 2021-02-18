@@ -8,10 +8,15 @@ TEST := $(ROOT)/src/test
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
 
-KSOURCES := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
+KENTRY := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
+KSOURCES := $(shell find $(KERNEL) -name '*.c')
 KHEADERS := $(shell find $(KERNEL) -name '*.h')
-TSOURCES := $(TEST)/test.c
+
+TENTRY := $(TEST)/test.c
+TSOURCES := $(shell find $(TEST) -name '*.c' | grep -v wrapper)
 THEADERS := $(shell find $(TEST) -name '*.h')
+
+ENTRY := $(KENTRY) $(TENTRY)
 SOURCES := $(KSOURCES) $(TSOURCES)
 HEADERS := $(KHEADERS) $(THEADERS)
 
@@ -114,12 +119,12 @@ gh-pages: www codegen todo
 $(DIST)/bin/test: $(SOURCES) $(HEADERS)
 	@echo Building tests as native binary...
 	@mkdir -p $(DIST)/bin
-	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
+	@gcc -ggdb $(CFLAGS) $(ENTRY) -o $@ -lm
 
 $(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@echo Building tests as WebAssembly module...
 	@mkdir -p $(DIST)/www
-	@emcc $(CFLAGS) $(SOURCES) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
+	@emcc $(CFLAGS) $(ENTRY) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
 
 $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
 	@echo Compiling wrapper from TypeScript

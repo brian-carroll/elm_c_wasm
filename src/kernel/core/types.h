@@ -153,7 +153,7 @@ ElmChar* newElmChar(u32 value);
 // Make sure constant strings are properly aligned on 64-bit target.
 // Otherwise C compiler can truncate the zero padding at the end,
 // putting other data there. Messes up length calculation, etc.
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #define ALIGN(X) __declspec(align(X))
 #else
 #define ALIGN(X) __attribute__ ((aligned(X)))

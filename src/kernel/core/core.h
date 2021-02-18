@@ -75,6 +75,8 @@ extern Closure Char_toCode;
 #define FORMAT_PTR_LEN 8
 #endif
 
+#define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->system_end < (size_t*)p)
+
 void Debug_pretty(const char* label, void* p);
 extern char* Debug_ctors[];
 extern char* Debug_fields[];
