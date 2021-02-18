@@ -40,24 +40,14 @@ void* eval_List_append(void* args[]) {
   if (ys == &Nil) return xs;
 
   ptrdiff_t len_x = 0;
-  for (Cons* cell = xs; cell != &Nil; cell = cell->tail) {
-    len_x++;
+  Cons* result = ys;
+  for (Cons* x = xs; x != &Nil; x = x->tail) {
+    result = NEW_CONS(NULL, result);
   }
-  Cons* new_cells = GC_malloc(false, sizeof(Cons) * len_x);
-  if (new_cells == pGcFull) return pGcFull;
-
-  ptrdiff_t i = len_x - 1;
-  for (Cons* old_cell = xs; old_cell != &Nil; old_cell = old_cell->tail) {
-    new_cells[i] = (Cons){
-        .header = HEADER_LIST,
-        .head = old_cell->head,
-        .tail = i ? &new_cells[i - 1] : ys,
-    };
-    GC_stack_push_value(&new_cells[i]);
-    i--;
+  for (Cons* x = xs, *r = result; x != &Nil; x = x->tail, r = r->tail) {
+    r->head = x->head;
   }
-
-  return &new_cells[len_x - 1];
+  return result;
 }
 Closure List_append = {
     .header = HEADER_CLOSURE(0),
@@ -80,9 +70,7 @@ static void* eval_List_map2(void* args[]) {
   const size_t CHUNK = 8;
   for (; xs != &Nil && ys != &Nil; i += 2, xs = xs->tail, ys = ys->tail) {
     if (i % CHUNK == 0) {
-      if (GC_malloc(false, CHUNK * sizeof(void*)) == pGcFull) {
-        return pGcFull;
-      }
+      GC_malloc(false, CHUNK * sizeof(void*));
       growingArray->header.size += CHUNK;
     }
     growingArray->values[i] = xs->head;

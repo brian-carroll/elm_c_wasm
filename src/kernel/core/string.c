@@ -235,9 +235,7 @@ static void* eval_String_join(void* args[]) {
 
     result_len += sep_len + len;
     h = (Header)HEADER_STRING(result_len);
-    if (GC_malloc(false, (h.size - result->header.size) * SIZE_UNIT) == pGcFull) {
-      return pGcFull;
-    }
+    GC_malloc(false, (h.size - result->header.size) * SIZE_UNIT);
     result->header = h;
 
     memcpy(to, sep->words16, sep_len * 2);

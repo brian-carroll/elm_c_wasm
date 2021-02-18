@@ -1,10 +1,11 @@
-# GC Full rewrite
+# Rewriting "GC Full" handling
 
-- longjmp
-- redo string growing for Debug.toString and Json.encode
+- [x] use standard longjmp instead of basically rolling my own version of that
+  - Emscripten says that longjmp and C++ exceptions are v expensive. They prob have to do what I did.
+- [x] redo string growing for Debug.toString and Json.encode
   - need to update the size every time, can't capture the exception value anymore
 - check everywhere with `GC_malloc(false, x)` for similar size update stuff
-
+- search for CAN_THROW
 
 
 ```c
