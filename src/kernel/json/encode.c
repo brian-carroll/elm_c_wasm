@@ -12,9 +12,9 @@ Custom Json_encodeNull = {
 void* eval_Json_wrap(void* args[]) {
   ElmValue* v = args[0];
   if (v->header.tag == Tag_Int) {
-    v = (ElmValue*)NEW_ELM_FLOAT(v->elm_int.value);
+    v = (ElmValue*)ctorElmFloat(v->elm_int.value);
   }
-  Custom* wrapped = NEW_CUSTOM(JSON_VALUE_WRAP, 1, (void*[]){v});
+  Custom* wrapped = ctorCustom(JSON_VALUE_WRAP, 1, (void*[]){v});
   return wrapped;
 }
 Closure Json_wrap = {
@@ -122,7 +122,7 @@ void* eval_Json_encode(void* args[]) {
 
   stringify_alloc_chunk_bytes = 64;
   size_t len = (stringify_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
-  ElmString16* str = NEW_ELM_STRING16(len);
+  ElmString16* str = ctorElmString16(len);
   StringBuilder sb = {
     .s = str,
     .cursor = str->words16,

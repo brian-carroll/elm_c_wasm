@@ -5,9 +5,9 @@ void* expect_string(char* unit_description, char* expected_c_str, ElmString16* a
 
 
 void* test_Debug_toString() {
-  ElmInt* int1 = NEW_ELM_INT(1);
-  ElmInt* int2 = NEW_ELM_INT(2);
-  ElmInt* int3 = NEW_ELM_INT(3);
+  ElmInt* int1 = ctorElmInt(1);
+  ElmInt* int2 = ctorElmInt(2);
+  ElmInt* int3 = ctorElmInt(3);
 
   void* list_items[3] = { int1, int2, int3 };
   Cons* list = List_create(3, list_items);
@@ -18,13 +18,13 @@ void* test_Debug_toString() {
   //   .fields = {},
   // };
 
-  expect_string("Int", "123", A1(&Debug_toString, NEW_ELM_INT(123)));
-  expect_string("Float", "3.14", A1(&Debug_toString, NEW_ELM_FLOAT(3.14)));
-  expect_string("Char", "'X'", A1(&Debug_toString, NEW_ELM_CHAR('X')));
+  expect_string("Int", "123", A1(&Debug_toString, ctorElmInt(123)));
+  expect_string("Float", "3.14", A1(&Debug_toString, ctorElmFloat(3.14)));
+  expect_string("Char", "'X'", A1(&Debug_toString, ctorElmChar('X')));
   expect_string("String", "\"hello\"", A1(&Debug_toString, create_string("hello")));
   expect_string("List", "[1,2,3]", A1(&Debug_toString, list));
-  expect_string("Tuple2", "(1,2)", A1(&Debug_toString, NEW_TUPLE2(int1, int2)));
-  expect_string("Tuple3", "(1,2,3)", A1(&Debug_toString, NEW_TUPLE3(int1, int2, int3)));
+  expect_string("Tuple2", "(1,2)", A1(&Debug_toString, ctorTuple2(int1, int2)));
+  expect_string("Tuple3", "(1,2,3)", A1(&Debug_toString, ctorTuple3(int1, int2, int3)));
   expect_string("Custom", "Just 3", A1(&Debug_toString, A1(&g_elm_core_Maybe_Just, int3)));
   // mu_expect_equal("Record", "123", A1(&Debug_toString, NULL));
 

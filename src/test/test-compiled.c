@@ -14,7 +14,7 @@ void* eval_List_reverse(void* args[]) {
   Cons* list = args[0];
   Cons* result = &Nil;
   for (; list != &Nil; list = list->tail) {
-    result = NEW_CONS(list->head, result);
+    result = ctorCons(list->head, result);
   }
   return result;
 }
@@ -30,7 +30,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
     void * x_acc = args[1];
     void * x_list = args[2];
     u32 gc_stack_frame = GC_get_stack_frame();
-    Closure* gc_resume = NEW_CLOSURE(3, 3, eval_elm_core_List_foldl, args);
+    Closure* gc_resume = ctorClosure(3, 3, eval_elm_core_List_foldl, args);
     tce_loop:
     ;
     void * case0;
@@ -139,9 +139,9 @@ Closure g_elm_json_Json_Decode_OneOf = {
 void* eval_elm_core_Array_initialize(void* args[]) {
   ElmInt* len = args[0];
   Closure* fn = args[1];
-  Custom* mock_array = NEW_CUSTOM(CTOR_MockElmArray, len->value, NULL);
+  Custom* mock_array = ctorCustom(CTOR_MockElmArray, len->value, NULL);
   for (size_t i = 0; i < len->value; i++) {
-    mock_array->values[i] = A1(fn, NEW_ELM_INT(i));
+    mock_array->values[i] = A1(fn, ctorElmInt(i));
   }
   return mock_array;
 }

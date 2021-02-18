@@ -13,7 +13,7 @@ Custom JsArray_empty = {
  * singleton : a -> JsArray a
  */
 static void* eval_JsArray_singleton(void* args[]) {
-  return NEW_CUSTOM(JSON_VALUE_ARRAY, 1, args);
+  return ctorCustom(JSON_VALUE_ARRAY, 1, args);
 }
 Closure JsArray_singleton = {
     .header = HEADER_CLOSURE(0),
@@ -26,7 +26,7 @@ Closure JsArray_singleton = {
  */
 static void* eval_JsArray_length(void* args[]) {
   i32 len = custom_params(args[0]);
-  return NEW_ELM_INT(len);
+  return ctorElmInt(len);
 }
 Closure JsArray_length = {
     .header = HEADER_CLOSURE(0),
@@ -44,10 +44,10 @@ static void* eval_JsArray_initialize(void* args[]) {
 
   u32 len = size->value;
   i32 o = offset->value;
-  Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  Custom* result = ctorCustom(JSON_VALUE_ARRAY, len, NULL);
 
   for (size_t i = 0; i < len; i++) {
-    ElmInt* num = NEW_ELM_INT(o + i);
+    ElmInt* num = ctorElmInt(o + i);
     result->values[i] = A1(func, num);
   }
 
@@ -67,7 +67,7 @@ static void* eval_JsArray_initializeFromList(void* args[]) {
   Cons* ls = args[1];
 
   ptrdiff_t max_len = max->value;
-  Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, max_len, NULL);
+  Custom* result = ctorCustom(JSON_VALUE_ARRAY, max_len, NULL);
 
   ptrdiff_t i = 0;
   for (; i < max_len && ls != pNil; i++) {
@@ -78,7 +78,7 @@ static void* eval_JsArray_initializeFromList(void* args[]) {
   ptrdiff_t reclaim = (i - max_len) * (ptrdiff_t)sizeof(void*);
   GC_malloc(false, reclaim); // waste not, want not :)
 
-  return NEW_TUPLE2(result, ls);
+  return ctorTuple2(result, ls);
 }
 Closure JsArray_initializeFromList = {
     .header = HEADER_CLOSURE(0),
@@ -189,7 +189,7 @@ static void* eval_JsArray_map(void* args[]) {
   Custom* array = args[1];
 
   size_t len = custom_params(array);
-  Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  Custom* result = ctorCustom(JSON_VALUE_ARRAY, len, NULL);
   for (size_t i = 0; i < len; i++) {
     result->values[i] = A1(func, array->values[i]);
   }
@@ -212,9 +212,9 @@ static void* eval_JsArray_indexedMap(void* args[]) {
 
   i32 o = offset->value;
   i32 len = custom_params(array);
-  Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  Custom* result = ctorCustom(JSON_VALUE_ARRAY, len, NULL);
   for (i32 i = 0; i < len; i++) {
-    ElmInt* num =  NEW_ELM_INT(i + o);
+    ElmInt* num =  ctorElmInt(i + o);
     result->values[i] = A2(func, num, array->values[i]);
   }
 
@@ -235,7 +235,7 @@ static void* eval_JsArray_slice(void* args[]) {
   Custom* array = args[2];
 
   i32 len = to->value - from->value;
-  Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  Custom* result = ctorCustom(JSON_VALUE_ARRAY, len, NULL);
   i32 j = 0;
   for (i32 i = from->value; i < to->value; i++) {
     result->values[j] = array->values[i];
@@ -267,7 +267,7 @@ static void* eval_JsArray_appendN(void* args[]) {
   }
 
   i32 size = destLen + itemsToCopy;
-  Custom* result = NEW_CUSTOM(JSON_VALUE_ARRAY, size, NULL);
+  Custom* result = ctorCustom(JSON_VALUE_ARRAY, size, NULL);
 
   for (i32 i = 0; i < destLen; i++) {
     result->values[i] = dest->values[i];

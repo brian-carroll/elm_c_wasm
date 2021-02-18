@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// see also NEW_CONS in header file
+// see also ctorCons in header file
 Cons* ctorCons(void* head, void* tail) {
   Cons* p = GC_malloc(true, sizeof(Cons));
   p->header = (Header)HEADER_LIST;
@@ -12,7 +12,7 @@ Cons* ctorCons(void* head, void* tail) {
   return p;
 };
 
-// see also NEW_TUPLE2 in header file
+// see also ctorTuple2 in header file
 Tuple2* ctorTuple2(void* a, void* b) {
   Tuple2* p = GC_malloc(true, sizeof(Tuple2));
   p->header = (Header)HEADER_TUPLE2;
@@ -21,7 +21,7 @@ Tuple2* ctorTuple2(void* a, void* b) {
   return p;
 };
 
-// see also NEW_TUPLE3 in header file
+// see also ctorTuple3 in header file
 Tuple3* ctorTuple3(void* a, void* b, void* c) {
   Tuple3* p = GC_malloc(true, sizeof(Tuple3));
   p->header = (Header)HEADER_TUPLE3;
@@ -31,7 +31,7 @@ Tuple3* ctorTuple3(void* a, void* b, void* c) {
   return p;
 };
 
-// see also NEW_ELM_INT in header file
+// see also ctorElmInt in header file
 ElmInt* ctorElmInt(i32 value) {
   ElmInt* p = GC_malloc(true, sizeof(ElmInt));
   p->header = (Header)HEADER_INT;
@@ -39,7 +39,7 @@ ElmInt* ctorElmInt(i32 value) {
   return p;
 };
 
-// see also NEW_ELM_FLOAT in header file
+// see also ctorElmFloat in header file
 ElmFloat* ctorElmFloat(f64 value) {
   ElmFloat* p = GC_malloc(true, sizeof(ElmFloat));
   p->header = (Header)HEADER_FLOAT;
@@ -47,7 +47,7 @@ ElmFloat* ctorElmFloat(f64 value) {
   return p;
 };
 
-// see also NEW_ELM_CHAR in header file
+// see also ctorElmChar in header file
 ElmChar* ctorElmChar(u32 value) {
   ElmChar* p = GC_malloc(true, sizeof(ElmChar));
   p->header = (Header)HEADER_CHAR;
@@ -57,7 +57,7 @@ ElmChar* ctorElmChar(u32 value) {
 
 // Strings are padded to the next 32/64-bit boundary.
 
-// see also NEW_ELM_STRING in header file
+// see also ctorElmString in header file
 ElmString* ctorElmString(size_t payload_bytes, char* str) {
   size_t used_bytes = sizeof(Header) + payload_bytes +
                       (STRING_ENCODING == UTF8);  // 1 byte for padding size
@@ -110,7 +110,7 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
   return p;
 }
 
-// see also NEW_ELM_STRING16 in header file
+// see also ctorElmString16 in header file
 ElmString16* ctorElmString16(size_t len16) {
   size_t used_bytes = sizeof(Header) + len16 * sizeof(u16);
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil

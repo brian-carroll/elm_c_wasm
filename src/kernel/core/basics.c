@@ -13,10 +13,10 @@ static void* eval_negate(void* args[]) {
   Number* x = args[0];
   if (x->f.header.tag == Tag_Float) {
     f64 val = x->f.value;
-    return NEW_ELM_FLOAT(-val);
+    return ctorElmFloat(-val);
   } else {
     i32 val = x->i.value;
-    return NEW_ELM_INT(-val);
+    return ctorElmInt(-val);
   }
 }
 Closure Basics_negate = {
@@ -36,14 +36,14 @@ static void* eval_add(void* args[2]) {
   // Compiler can generate Number literals so we can't rely on both being the same type!
   if (ta == Tag_Float) {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT(pa->f.value + pb->f.value);
+      return ctorElmFloat(pa->f.value + pb->f.value);
     else
-      return NEW_ELM_FLOAT(pa->f.value + (f64)pb->i.value);
+      return ctorElmFloat(pa->f.value + (f64)pb->i.value);
   } else {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT((f64)pa->i.value + pb->f.value);
+      return ctorElmFloat((f64)pa->i.value + pb->f.value);
     else
-      return NEW_ELM_INT(pa->i.value + pb->i.value);
+      return ctorElmInt(pa->i.value + pb->i.value);
   }
 }
 Closure Basics_add = {
@@ -63,14 +63,14 @@ static void* eval_sub(void* args[2]) {
   // Compiler can generate Number literals so we can't rely on both being the same type!
   if (ta == Tag_Float) {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT(pa->f.value - pb->f.value);
+      return ctorElmFloat(pa->f.value - pb->f.value);
     else
-      return NEW_ELM_FLOAT(pa->f.value - (f64)pb->i.value);
+      return ctorElmFloat(pa->f.value - (f64)pb->i.value);
   } else {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT((f64)pa->i.value - pb->f.value);
+      return ctorElmFloat((f64)pa->i.value - pb->f.value);
     else
-      return NEW_ELM_INT(pa->i.value - pb->i.value);
+      return ctorElmInt(pa->i.value - pb->i.value);
   }
 }
 Closure Basics_sub = {
@@ -89,14 +89,14 @@ static void* eval_mul(void* args[2]) {
   Tag tb = pb->f.header.tag;
   if (ta == Tag_Float) {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT(pa->f.value * pb->f.value);
+      return ctorElmFloat(pa->f.value * pb->f.value);
     else
-      return NEW_ELM_FLOAT(pa->f.value * (f64)pb->i.value);
+      return ctorElmFloat(pa->f.value * (f64)pb->i.value);
   } else {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT((f64)pa->i.value * pb->f.value);
+      return ctorElmFloat((f64)pa->i.value * pb->f.value);
     else
-      return NEW_ELM_INT(pa->i.value * pb->i.value);
+      return ctorElmInt(pa->i.value * pb->i.value);
   }
 }
 Closure Basics_mul = {
@@ -117,14 +117,14 @@ static void* eval_fdiv(void* args[2]) {
   // Core library tests fail without this
   if (ta == Tag_Float) {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT(pa->f.value / pb->f.value);
+      return ctorElmFloat(pa->f.value / pb->f.value);
     else
-      return NEW_ELM_FLOAT(pa->f.value / (f64)pb->i.value);
+      return ctorElmFloat(pa->f.value / (f64)pb->i.value);
   } else {
     if (tb == Tag_Float)
-      return NEW_ELM_FLOAT((f64)pa->i.value / pb->f.value);
+      return ctorElmFloat((f64)pa->i.value / pb->f.value);
     else
-      return NEW_ELM_FLOAT((f64)pa->i.value / (f64)pb->i.value);
+      return ctorElmFloat((f64)pa->i.value / (f64)pb->i.value);
   }
 }
 Closure Basics_fdiv = {
@@ -140,7 +140,7 @@ static void* eval_idiv(void* args[2]) {
   ElmInt* ia = args[0];
   ElmInt* ib = args[1];
   i32 result = ia->value / ib->value;
-  return NEW_ELM_INT(result);
+  return ctorElmInt(result);
 }
 Closure Basics_idiv = {
     .header = HEADER_CLOSURE(0),
@@ -187,12 +187,12 @@ static void* eval_pow(void* args[2]) {
     f64 fa = pa->f.value;
     f64 fb = pb->f.value;
     f64 f = pow(fa, fb);
-    return NEW_ELM_FLOAT(f);
+    return ctorElmFloat(f);
   } else {
     i32 ia = pa->i.value;
     i32 ib = pb->i.value;
     i32 i = ipow(ia, ib);
-    return NEW_ELM_INT(i);
+    return ctorElmInt(i);
   }
 }
 Closure Basics_pow = {
@@ -207,7 +207,7 @@ Closure Basics_pow = {
 static void* eval_toFloat(void* args[]) {
   ElmInt* i = args[0];
   if (i->header.tag == Tag_Float) return i;
-  return NEW_ELM_FLOAT((f64)i->value);
+  return ctorElmFloat((f64)i->value);
 }
 Closure Basics_toFloat = {
     .header = HEADER_CLOSURE(0),
@@ -222,7 +222,7 @@ static void* eval_round(void* args[]) {
   ElmFloat* f = args[0];
   if (f->header.tag == Tag_Int) return f;
   f64 result = round(f->value);
-  return NEW_ELM_INT((i32)result);
+  return ctorElmInt((i32)result);
 }
 Closure Basics_round = {
     .header = HEADER_CLOSURE(0),
@@ -237,7 +237,7 @@ static void* eval_floor(void* args[]) {
   ElmFloat* f = args[0];
   if (f->header.tag == Tag_Int) return f;
   f64 result = floor(f->value);
-  return NEW_ELM_INT((i32)result);
+  return ctorElmInt((i32)result);
 }
 Closure Basics_floor = {
     .header = HEADER_CLOSURE(0),
@@ -252,7 +252,7 @@ static void* eval_ceiling(void* args[]) {
   ElmFloat* f = args[0];
   if (f->header.tag == Tag_Int) return f;
   f64 result = ceil(f->value);
-  return NEW_ELM_INT((i32)result);
+  return ctorElmInt((i32)result);
 }
 Closure Basics_ceiling = {
     .header = HEADER_CLOSURE(0),
@@ -314,7 +314,7 @@ Closure Basics_xor = {
 static void* eval_remainderBy(void* args[]) {
   ElmInt* den = args[0];
   ElmInt* num = args[1];
-  return NEW_ELM_INT(num->value % den->value);
+  return ctorElmInt(num->value % den->value);
 }
 Closure Basics_remainderBy = {
     .header = HEADER_CLOSURE(0),
@@ -335,7 +335,7 @@ static void* eval_modBy(void* args[]) {
   assert(modulus != 0);
   i32 answer = x % modulus;
 
-  return NEW_ELM_INT(((answer > 0 && modulus < 0) || (answer < 0 && modulus > 0))
+  return ctorElmInt(((answer > 0 && modulus < 0) || (answer < 0 && modulus > 0))
                          ? answer + modulus
                          : answer);
 }
@@ -352,7 +352,7 @@ static void* eval_log(void* args[]) {
   Number* x = args[0];
   // Type uncertainty due to Number literals generated as Int
   f64 value = x->f.header.tag == Tag_Float ? x->f.value : (f64)x->i.value;
-  return NEW_ELM_FLOAT(log(value));
+  return ctorElmFloat(log(value));
 }
 Closure Basics_log = {
     .header = HEADER_CLOSURE(0),

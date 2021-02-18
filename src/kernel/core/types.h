@@ -96,7 +96,6 @@ typedef struct {
   void* tail;
 } Cons;
 Cons* ctorCons(void* head, void* tail);
-#define NEW_CONS(head, tail) ctorCons(head, tail)
 
 // TUPLES
 
@@ -107,7 +106,6 @@ typedef struct {
   void* b;
 } Tuple2;
 Tuple2* ctorTuple2(void* a, void* b);
-#define NEW_TUPLE2(a, b) ctorTuple2(a, b)
 
 typedef struct {
   Header header;
@@ -117,7 +115,6 @@ typedef struct {
   void* c;
 } Tuple3;
 Tuple3* ctorTuple3(void* a, void* b, void* c);
-#define NEW_TUPLE3(a, b, c) ctorTuple3(a, b, c)
 
 // NUMBERS
 
@@ -126,7 +123,6 @@ typedef struct {
   i32 value;
 } ElmInt;
 ElmInt* ctorElmInt(i32 value);
-#define NEW_ELM_INT(value) ctorElmInt(value)
 
 typedef struct {
   Header header;
@@ -134,7 +130,6 @@ typedef struct {
   f64 value;
 } ElmFloat;
 ElmFloat* ctorElmFloat(f64 value);
-#define NEW_ELM_FLOAT(value) ctorElmFloat(value)
 
 typedef union {
   ElmInt i;
@@ -152,7 +147,6 @@ typedef struct {
   };
 } ElmChar;
 ElmChar* ctorElmChar(u32 value);
-#define NEW_ELM_CHAR(value) ctorElmChar(value)
 
 // STRING
 
@@ -172,7 +166,6 @@ struct ALIGN(8) elm_string {
 typedef struct elm_string ElmString;
 
 ElmString* ctorElmString(size_t n, char* str);
-#define NEW_ELM_STRING(n, str) ctorElmString(n, str)
 
 struct ALIGN(8) elm_string16 {
   Header header;
@@ -180,7 +173,6 @@ struct ALIGN(8) elm_string16 {
 };
 typedef struct elm_string16 ElmString16;
 ElmString16* ctorElmString16(size_t n);
-#define NEW_ELM_STRING16(len16) ctorElmString16(len16)
 
 enum {
   UTF8,
@@ -198,7 +190,6 @@ typedef struct {
 
 u32 custom_params(Custom* c);  // number of parameters in a Custom struct
 Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]);
-#define NEW_CUSTOM(ctor, n, c) ctorCustom(ctor, n, c)
 
 // RECORD
 
@@ -215,7 +206,6 @@ typedef struct {
   void* values[];
 } Record;
 Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]);
-#define NEW_RECORD(fg, n, c) ctorRecord(fg, n, c)
 
 /*
  Elm compiler generates
@@ -240,7 +230,6 @@ typedef struct {
 
 Closure* ctorClosure(
     u16 n_values, u16 max_values, EvalFunction evaluator, void* values[]);
-#define NEW_CLOSURE(n, m, e, v) ctorClosure(n, m, e, v)
 
 // Reference to a JS object
 typedef struct {

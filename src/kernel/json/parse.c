@@ -79,7 +79,7 @@ void* parse_number(u16** cursor, u16* end) {
   if (!success) return NULL;
 
   *cursor += d;
-  return NEW_ELM_FLOAT(f);
+  return ctorElmFloat(f);
 }
 
 void* parse_string(u16** cursor, u16* end) {
@@ -91,7 +91,7 @@ void* parse_string(u16** cursor, u16* end) {
   from++;
 
   size_t alloc_chunk_bytes = 4 * SIZE_UNIT;  // Grow the output string in chunks this big
-  ElmString16* str = NEW_ELM_STRING16(alloc_chunk_bytes / 2);
+  ElmString16* str = ctorElmString16(alloc_chunk_bytes / 2);
   u16* str_end = GC_malloc(false, 0);
 
   for (to = str->words16;; to++, from++) {
@@ -187,7 +187,7 @@ void* parse_array(u16** cursor, u16* end) {
 
   if (*c == ']') {
     *cursor = ++c;
-    return NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL);
+    return ctorCustom(JSON_VALUE_ARRAY, 0, NULL);
   }
 
   // gather the values into a List
@@ -199,7 +199,7 @@ void* parse_array(u16** cursor, u16* end) {
     if (c >= end || value == NULL) return NULL;
 
     // store value
-    rev_values = NEW_CONS(value, rev_values);
+    rev_values = ctorCons(value, rev_values);
     len++;
 
     // separator/end
@@ -218,7 +218,7 @@ void* parse_array(u16** cursor, u16* end) {
   }
 
   // reverse the list into an array
-  Custom* array = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  Custom* array = ctorCustom(JSON_VALUE_ARRAY, len, NULL);
   for (size_t i = len - 1; rev_values != &Nil; rev_values = rev_values->tail, i--) {
     array->values[i] = rev_values->head;
   }
@@ -239,7 +239,7 @@ void* parse_object(u16** cursor, u16* end) {
 
   if (*c == '}') {
     *cursor = ++c;
-    return NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL);
+    return ctorCustom(JSON_VALUE_OBJECT, 0, NULL);
   }
 
   // temporary list-like structure for key-value pairs [field, value, last_pair]
@@ -263,7 +263,7 @@ void* parse_object(u16** cursor, u16* end) {
     if (c >= end || value == NULL) return NULL;
 
     // store pair
-    rev_pairs = NEW_TUPLE3(field, value, rev_pairs);
+    rev_pairs = ctorTuple3(field, value, rev_pairs);
     n_pairs++;
 
     // end of pair
@@ -282,7 +282,7 @@ void* parse_object(u16** cursor, u16* end) {
   }
 
   // reverse the list into an object
-  Custom* object = NEW_CUSTOM(JSON_VALUE_OBJECT, 2 * n_pairs, NULL);
+  Custom* object = ctorCustom(JSON_VALUE_OBJECT, 2 * n_pairs, NULL);
   for (size_t i = n_pairs - 1; rev_pairs != NULL; rev_pairs = rev_pairs->c, i--) {
     object->values[2 * i] = rev_pairs->a;
     object->values[2 * i + 1] = rev_pairs->b;

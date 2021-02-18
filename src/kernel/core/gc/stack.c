@@ -207,8 +207,8 @@ Closure* GC_stack_tailcall(
   );
 #endif
 
-  // NEW_CLOSURE implicitly pushes a value to sm->index
-  Closure* new = NEW_CLOSURE(max_values, max_values, old->evaluator, NULL);
+  // ctorClosure implicitly pushes a value to sm->index
+  Closure* new = ctorClosure(max_values, max_values, old->evaluator, NULL);
   for (u32 i = 0; i < n_free; i++) {
     assert(sanity_check(old->values[i]));
     new->values[i] = old->values[i];

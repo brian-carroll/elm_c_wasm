@@ -11,7 +11,7 @@ static void* eval_toCode(void* args[]) {
     codepoint = high;
   }
 
-  return NEW_ELM_INT(codepoint);
+  return ctorElmInt(codepoint);
 }
 Closure Char_toCode = {
     .header = HEADER_CLOSURE(0),
