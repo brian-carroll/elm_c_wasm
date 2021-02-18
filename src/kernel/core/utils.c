@@ -44,7 +44,7 @@ void* Utils_clone(void* x) {
   Header* h = (Header*)x;
   if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 0)) return x;
   size_t n_bytes = SIZE_UNIT * (size_t)h->size;
-  ElmValue* x_new = CAN_THROW(GC_malloc(true, n_bytes));
+  ElmValue* x_new = GC_malloc(true, n_bytes);
   GC_memcpy(x_new, x, n_bytes);
   return x_new;
 }
@@ -144,7 +144,7 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
       u16 n_old = c->n_values;
       u16 n_new = n_old + n_applied;
 
-      Closure* c_copy = CAN_THROW(GC_malloc(true, SIZE_CLOSURE(n_new) * SIZE_UNIT));
+      Closure* c_copy = GC_malloc(true, SIZE_CLOSURE(n_new) * SIZE_UNIT);
       c_copy->header = (Header)HEADER_CLOSURE(n_new);
       c_copy->n_values = n_new;
       c_copy->max_values = c->max_values;
@@ -165,7 +165,7 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
 
     // Execute! (and let the GC know what the stack is doing)
     GcStackMapIndex stack_frame = GC_get_stack_frame();
-    void* result = CAN_THROW(c->evaluator(args));
+    void* result = c->evaluator(args);
 
     if (!result) {
       printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));

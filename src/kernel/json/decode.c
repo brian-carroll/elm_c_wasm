@@ -403,7 +403,7 @@ ElmString16 str_invalid_json = {
 };
 
 void* Json_expecting(ElmString16* type, void* value) {
-  ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting, type}));
+  ElmString16* s = eval_String_append((void*[]){&str_err_expecting, type});
   return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, WRAP(value)));
 }
 
@@ -419,7 +419,7 @@ Custom* Json_runArrayDecoder(Custom* decoder, Custom* value, bool as_list) {
   u32 len = custom_params(value);
   Custom* array = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
   for (u32 i = 0; i < len; i++) {
-    Custom* result = CAN_THROW(Json_runHelp(decoder, value->values[i]));
+    Custom* result = Json_runHelp(decoder, value->values[i]);
     if (RESULT_IS_OK(result) == &False) {
       return TAIL_RESULT_ERR(
           A2(&g_elm_json_Json_Decode_Index, NEW_ELM_INT(i), result->values[0]));
@@ -428,7 +428,7 @@ Custom* Json_runArrayDecoder(Custom* decoder, Custom* value, bool as_list) {
   }
 
   void* elm_value = as_list
-                        ? CAN_THROW(List_create(len, array->values))
+                        ? List_create(len, array->values)
                         : A2(&g_elm_core_Array_initialize,
                               NEW_ELM_INT(len),
                               NEW_CLOSURE(1, 2, eval_Json_array_get, (void*[]){array}));
@@ -649,7 +649,7 @@ static void* eval_runOnString(void* args[]) {
   Custom* decoder = args[0];
   ElmString16* string = args[1];
 
-  ElmValue* json = CAN_THROW(parse_json(string));
+  ElmValue* json = parse_json(string);
   if (json == NULL) {
     return TAIL_RESULT_ERR(
         A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, WRAP(string)));

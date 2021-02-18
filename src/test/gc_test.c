@@ -525,9 +525,9 @@ void* eval_infinite_loop(void* args[]) {
   tce_loop:
   list = A1(&listNonsense, list);
   assert(sanity_check(list));
-  gc_resume = CAN_THROW(GC_stack_tailcall(
+  gc_resume = GC_stack_tailcall(
     gc_stack_frame, gc_resume, 1, ((void * []){ list })
-  ));
+  );
   goto tce_loop;
 }
 

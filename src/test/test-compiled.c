@@ -46,7 +46,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
             x_list = x_xs;
             x_acc = tmp1;
             x_func = x_func;
-            gc_resume = CAN_THROW(GC_stack_tailcall(gc_stack_frame, gc_resume, 3, ((void * []){ x_func, x_acc, x_list })));
+            gc_resume = GC_stack_tailcall(gc_stack_frame, gc_resume, 3, ((void * []){ x_func, x_acc, x_list }));
             goto tce_loop;
             case0 = NULL;
             break;

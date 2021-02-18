@@ -8,7 +8,7 @@
 void* List_create(size_t len, void* values[]) {
   Cons* head = &Nil;
   for (size_t i = 0; i < len; ++i) {
-    Cons* next = CAN_THROW(GC_malloc(true, sizeof(Cons)));
+    Cons* next = GC_malloc(true, sizeof(Cons));
     *next = (Cons){
         .header = HEADER_LIST,
         .head = values[len - 1 - i],
@@ -39,7 +39,6 @@ void* eval_List_append(void* args[]) {
   if (xs == &Nil) return ys;
   if (ys == &Nil) return xs;
 
-  ptrdiff_t len_x = 0;
   Cons* result = ys;
   for (Cons* x = xs; x != &Nil; x = x->tail) {
     result = NEW_CONS(NULL, result);
