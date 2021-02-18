@@ -28,15 +28,15 @@ void* test_Json_encode_null() {
 
 void* test_Json_encode_number() {
   expect_equal("should encode 3.14 to '3.14'",
-      A2(&Json_encode, &int0, WRAP(ctorElmFloat(3.14))),
+      A2(&Json_encode, &int0, WRAP(newElmFloat(3.14))),
       create_string("3.14"));
 
   expect_equal("should encode 1e22 to '1e+22'",
-      A2(&Json_encode, &int0, WRAP(ctorElmFloat(1e22))),
+      A2(&Json_encode, &int0, WRAP(newElmFloat(1e22))),
       create_string("1e+22"));
 
   expect_equal("should encode `123 : Int` to '123'",
-      A2(&Json_encode, &int0, WRAP(ctorElmInt(123))),
+      A2(&Json_encode, &int0, WRAP(newElmInt(123))),
       create_string("123"));
   return NULL;
 }
@@ -65,12 +65,12 @@ void* test_Json_stringify_array() {
   char* expected;
   char buf[512];
 
-  Custom* array123 = ctorCustom(JSON_VALUE_ARRAY,
+  Custom* array123 = newCustom(JSON_VALUE_ARRAY,
       3,
       ((void*[]){
-          ctorElmFloat(1),
-          ctorElmFloat(2),
-          ctorElmFloat(3),
+          newElmFloat(1),
+          newElmFloat(2),
+          newElmFloat(3),
       }));
 
   expect_equal("encode 0 [1,2,3] == \"[1,2,3]\"",
@@ -85,7 +85,7 @@ void* test_Json_stringify_array() {
       "]";
   sprintf(buf, "encode 2 [1,2,3] = \n%s", expected);
   expect_equal(
-      buf, A2(&Json_encode, ctorElmInt(2), WRAP(array123)), create_string(expected));
+      buf, A2(&Json_encode, newElmInt(2), WRAP(array123)), create_string(expected));
 
   expected =
       "[\n"
@@ -103,8 +103,8 @@ void* test_Json_stringify_array() {
   sprintf(buf, "encode 2 [[1,2,3]] = \n%s", expected);
   expect_equal(buf,
       A2(&Json_encode,
-          ctorElmInt(2),
-          WRAP(ctorCustom(JSON_VALUE_ARRAY,
+          newElmInt(2),
+          WRAP(newCustom(JSON_VALUE_ARRAY,
               2,
               ((void*[]){
                   array123,
@@ -119,15 +119,15 @@ void* test_Json_stringify_object() {
   char* expected;
   char buf[512];
 
-  Custom* exampleObj = ctorCustom(JSON_VALUE_OBJECT,
+  Custom* exampleObj = newCustom(JSON_VALUE_OBJECT,
       6,
       ((void*[]){
           create_string("a"),
-          ctorElmFloat(1),
+          newElmFloat(1),
           create_string("b"),
-          ctorElmFloat(2),
+          newElmFloat(2),
           create_string("c"),
-          ctorElmFloat(3),
+          newElmFloat(3),
       }));
 
   expect_equal("encode 0 {a:1,b:2,c:3} == \"{\"a\":1,\"b\":2,\"c\":3}\"",
@@ -142,7 +142,7 @@ void* test_Json_stringify_object() {
       "}";
   sprintf(buf, "encode 2 {a:1,b:2,c:3} = \n%s", expected);
   expect_equal(
-      buf, A2(&Json_encode, ctorElmInt(2), WRAP(exampleObj)), create_string(expected));
+      buf, A2(&Json_encode, newElmInt(2), WRAP(exampleObj)), create_string(expected));
 
   expected =
       "{\n"
@@ -160,8 +160,8 @@ void* test_Json_stringify_object() {
   sprintf(buf, "encode 2 {x:{a:1,b:2,c:3},y:{a:1,b:2,c:3}} = \n%s", expected);
   expect_equal(buf,
       A2(&Json_encode,
-          ctorElmInt(2),
-          WRAP(ctorCustom(JSON_VALUE_OBJECT,
+          newElmInt(2),
+          WRAP(newCustom(JSON_VALUE_OBJECT,
               4,
               ((void*[]){
                   create_string("x"),
@@ -199,7 +199,7 @@ void* test_Json_Encode_list() {
       &False,
   };
   Cons* list_bool = List_create(2, c_array);
-  Custom* json_array = ctorCustom(JSON_VALUE_ARRAY, 2, c_array);
+  Custom* json_array = newCustom(JSON_VALUE_ARRAY, 2, c_array);
 
   Custom* encoded =
       A2(&g_elm_json_Json_Encode_list, &g_elm_json_Json_Encode_bool, list_bool);
@@ -227,7 +227,7 @@ void* eval_elm_json_Json_Encode_object_lambda1(void* args[]) {
 }
 void* eval_elm_json_Json_Encode_object(void* args[]) {
   void* x_pairs = args[0];
-  Closure* tmp0 = ctorClosure(0, 2, &eval_elm_json_Json_Encode_object_lambda1, NULL);
+  Closure* tmp0 = newClosure(0, 2, &eval_elm_json_Json_Encode_object_lambda1, NULL);
   return A1(&Json_wrap,
       A3(&g_elm_core_List_foldl, tmp0, A1(&Json_emptyObject, &Unit), x_pairs));
 }
@@ -253,12 +253,12 @@ void* test_Json_encode_object() {
 
   Cons* elm_pairs = List_create(2,
       ((void*[]){
-          ctorTuple2(name, A1(&g_elm_json_Json_Encode_string, brian)),
-          ctorTuple2(age, A1(&g_elm_json_Json_Encode_int, &int42)),
+          newTuple2(name, A1(&g_elm_json_Json_Encode_string, brian)),
+          newTuple2(age, A1(&g_elm_json_Json_Encode_int, &int42)),
       }));
 
   Custom* json_object =
-      WRAP(ctorCustom(JSON_VALUE_OBJECT, 4, ((void*[]){name, brian, age, &float42})));
+      WRAP(newCustom(JSON_VALUE_OBJECT, 4, ((void*[]){name, brian, age, &float42})));
 
   void* encodedObject = A1(&g_elm_json_Json_Encode_object, elm_pairs);
 

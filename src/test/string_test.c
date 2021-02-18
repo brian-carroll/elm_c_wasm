@@ -61,7 +61,7 @@ void* expect_string(char* unit_description, char* expected_c_str, ElmString16* a
 char mu_message[1024];
 
 void* test_code_units() {
-  mu_assert("Expect code_units=0 for \"\"", code_units(ctorElmString16(0)) == 0);
+  mu_assert("Expect code_units=0 for \"\"", code_units(newElmString16(0)) == 0);
   mu_assert("Expect code_units=1 for \"1\"", code_units(create_string("1")) == 1);
 
   char buf[21];
@@ -244,18 +244,18 @@ void* test_String_uncons() {
   ElmString16* bc = create_string("bc");
   ElmString16* a_str = create_string("a");
   ElmString16* empty = create_string("");
-  ElmChar* a_char = ctorElmChar((u32)'a');
+  ElmChar* a_char = newElmChar((u32)'a');
 
   expect_equal("uncons \"abc\" == Just ('a',\"bc\")",
       A1(&String_uncons, abc),
-      A1(&g_elm_core_Maybe_Just, ctorTuple2(a_char, bc)));
+      A1(&g_elm_core_Maybe_Just, newTuple2(a_char, bc)));
 
   expect_equal(
       "uncons \"\" == Nothing", A1(&String_uncons, empty), &g_elm_core_Maybe_Nothing);
 
   expect_equal("uncons \"a\" == Just ('a',\"\")",
       A1(&String_uncons, a_str),
-      A1(&g_elm_core_Maybe_Just, ctorTuple2(a_char, empty)));
+      A1(&g_elm_core_Maybe_Just, newTuple2(a_char, empty)));
 
   return NULL;
 }
@@ -285,7 +285,7 @@ void* test_String_split() {
   ElmString16* abc = create_string("abc");
   ElmString16* ab = create_string("ab");
   ElmString16* empty = create_string("");
-  Cons* list_ab = ctorCons(ab, &Nil);
+  Cons* list_ab = newCons(ab, &Nil);
 
   expect_equal("split \"abc\" \"ab\" == [\"ab\"]  # separator longer than string",
       A2(&String_split, abc, ab),
@@ -308,7 +308,7 @@ void* test_String_split() {
           }));
 
   expect_equal(
-      "split \"ab\" \"\" == [\"\"]", A2(&String_split, ab, empty), ctorCons(empty, &Nil));
+      "split \"ab\" \"\" == [\"\"]", A2(&String_split, ab, empty), newCons(empty, &Nil));
 
   return NULL;
 }
@@ -327,9 +327,9 @@ void* test_String_join() {
                   create_string("Desktop"),
               })));
   expect_string("join \"/\" []", "", A2(&String_join, slash, &Nil));
-  expect_string("join \"\" [\"/\"]", "/", A2(&String_join, empty, ctorCons(slash, &Nil)));
-  expect_string("join \"/\" [\"\"]", "", A2(&String_join, slash, ctorCons(empty, &Nil)));
-  expect_string("join \"\" [\"\"]", "", A2(&String_join, empty, ctorCons(empty, &Nil)));
+  expect_string("join \"\" [\"/\"]", "/", A2(&String_join, empty, newCons(slash, &Nil)));
+  expect_string("join \"/\" [\"\"]", "", A2(&String_join, slash, newCons(empty, &Nil)));
+  expect_string("join \"\" [\"\"]", "", A2(&String_join, empty, newCons(empty, &Nil)));
   expect_string("join \"\" []", "", A2(&String_join, empty, &Nil));
   return NULL;
 }
@@ -338,31 +338,31 @@ void* test_String_slice() {
   ElmString16* abc = create_string("abc");
 
   expect_string(
-      "slice 1 2 \"abc\"", "b", A3(&String_slice, ctorElmInt(1), ctorElmInt(2), abc));
+      "slice 1 2 \"abc\"", "b", A3(&String_slice, newElmInt(1), newElmInt(2), abc));
   expect_string(
-      "slice 1 -1 \"abc\"", "b", A3(&String_slice, ctorElmInt(1), ctorElmInt(-1), abc));
+      "slice 1 -1 \"abc\"", "b", A3(&String_slice, newElmInt(1), newElmInt(-1), abc));
   expect_string(
-      "slice -2 2 \"abc\"", "b", A3(&String_slice, ctorElmInt(-2), ctorElmInt(2), abc));
+      "slice -2 2 \"abc\"", "b", A3(&String_slice, newElmInt(-2), newElmInt(2), abc));
   expect_string("slice -2 -1 \"abc\"",
       "b",
-      A3(&String_slice, ctorElmInt(-2), ctorElmInt(-1), abc));
+      A3(&String_slice, newElmInt(-2), newElmInt(-1), abc));
 
   expect_string(
-      "slice 2 1 \"abc\"", "", A3(&String_slice, ctorElmInt(2), ctorElmInt(1), abc));
+      "slice 2 1 \"abc\"", "", A3(&String_slice, newElmInt(2), newElmInt(1), abc));
 
   expect_string(
-      "slice 0 3 \"abc\"", "abc", A3(&String_slice, ctorElmInt(0), ctorElmInt(3), abc));
+      "slice 0 3 \"abc\"", "abc", A3(&String_slice, newElmInt(0), newElmInt(3), abc));
   expect_string(
-      "slice -3 0 \"abc\"", "", A3(&String_slice, ctorElmInt(-3), ctorElmInt(0), abc));
+      "slice -3 0 \"abc\"", "", A3(&String_slice, newElmInt(-3), newElmInt(0), abc));
   expect_string(
-      "slice  0 -3 \"abc\"", "", A3(&String_slice, ctorElmInt(0), ctorElmInt(-3), abc));
+      "slice  0 -3 \"abc\"", "", A3(&String_slice, newElmInt(0), newElmInt(-3), abc));
 
   expect_string("slice -100 100 \"abc\"",
       "abc",
-      A3(&String_slice, ctorElmInt(-100), ctorElmInt(100), abc));
+      A3(&String_slice, newElmInt(-100), newElmInt(100), abc));
   expect_string("slice -100 100 \"\"",
       "",
-      A3(&String_slice, ctorElmInt(-100), ctorElmInt(100), create_string("")));
+      A3(&String_slice, newElmInt(-100), newElmInt(100), create_string("")));
 
   return NULL;
 }
@@ -372,8 +372,8 @@ void* test_String_indexes() {
       A2(&String_indexes, create_string("/"), create_string("home/steve/Desktop")),
       List_create(2,
           (void*[]){
-              ctorElmInt(4),
-              ctorElmInt(10),
+              newElmInt(4),
+              newElmInt(10),
           }));
 
   ElmString16* abc = create_string("abc");
@@ -390,7 +390,7 @@ void* test_String_indexes() {
 
   expect_equal("indexes \"ab\" \"ab\" == [0]",
       A2(&String_indexes, ab, ab),
-      ctorCons(ctorElmInt(0), &Nil));
+      newCons(newElmInt(0), &Nil));
 
   expect_equal("indexes \"ab\" \"\" == []", A2(&String_indexes, ab, empty), &Nil);
 
@@ -404,7 +404,7 @@ void* test_String_trim() {
 
   expect_string("trim \"\"", "", A1(&String_trim, create_string("")));
 
-  ElmString16* allWhitespaceChars = ctorElmString16(n_whitespace_chars);
+  ElmString16* allWhitespaceChars = newElmString16(n_whitespace_chars);
   for (size_t i = 0; i < n_whitespace_chars; i++) {
     allWhitespaceChars->words16[i] = all_whitespace_chars[i];
   }
@@ -536,43 +536,43 @@ void* test_String_endsWith() {
 void* test_String_fromNumber() {
   expect_string("fromNumber 2147483647",
       "2147483647",
-      A1(&String_fromNumber, ctorElmInt(2147483647)));
+      A1(&String_fromNumber, newElmInt(2147483647)));
   expect_string("fromNumber -2147483648",
       "-2147483648",
-      A1(&String_fromNumber, ctorElmInt(-2147483648)));
+      A1(&String_fromNumber, newElmInt(-2147483648)));
   expect_string("fromNumber -3.141592653589793",
       "-3.141592653589793",
-      A1(&String_fromNumber, ctorElmFloat(-3.141592653589793)));
+      A1(&String_fromNumber, newElmFloat(-3.141592653589793)));
   expect_string("fromNumber -3141592653589793",
       "-3141592653589793",
-      A1(&String_fromNumber, ctorElmFloat(-3141592653589793)));
+      A1(&String_fromNumber, newElmFloat(-3141592653589793)));
   return NULL;
 }
 
 void* test_String_toInt() {
   expect_equal("toInt \"2147483647\" == Just 2147483647",
       A1(&String_toInt, create_string("2147483647")),
-      A1(&g_elm_core_Maybe_Just, ctorElmInt(2147483647)));
+      A1(&g_elm_core_Maybe_Just, newElmInt(2147483647)));
 
   expect_equal("toInt \"-2147483648\" == Just -2147483648",
       A1(&String_toInt, create_string("-2147483648")),
-      A1(&g_elm_core_Maybe_Just, ctorElmInt(-2147483648)));
+      A1(&g_elm_core_Maybe_Just, newElmInt(-2147483648)));
 
   expect_equal("toInt \"+10\" == Just 10",
       A1(&String_toInt, create_string("+10")),
-      A1(&g_elm_core_Maybe_Just, ctorElmInt(10)));
+      A1(&g_elm_core_Maybe_Just, newElmInt(10)));
 
   expect_equal("toInt \"0\" == Just 0",
       A1(&String_toInt, create_string("0")),
-      A1(&g_elm_core_Maybe_Just, ctorElmInt(0)));
+      A1(&g_elm_core_Maybe_Just, newElmInt(0)));
 
   expect_equal("toInt \"+0\" == Just 0",
       A1(&String_toInt, create_string("+0")),
-      A1(&g_elm_core_Maybe_Just, ctorElmInt(0)));
+      A1(&g_elm_core_Maybe_Just, newElmInt(0)));
 
   expect_equal("toInt \"-0\" == Just 0",
       A1(&String_toInt, create_string("-0")),
-      A1(&g_elm_core_Maybe_Just, ctorElmInt(0)));
+      A1(&g_elm_core_Maybe_Just, newElmInt(0)));
 
   expect_equal("toInt \"hello\" == Nothing",
       A1(&String_toInt, create_string("hello")),

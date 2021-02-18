@@ -63,7 +63,7 @@ int EMSCRIPTEN_KEEPALIVE export_count(int fromJS) {
   }
   while (1) {
     void* args[1];
-    ElmInt* remaining = ctorElmInt(fromJS);
+    ElmInt* remaining = newElmInt(fromJS);
     args[0] = remaining;
     if (remaining->header.tag == Tag_GcException) {
       // printf("export_count: GC point 2, call=%d, gc=%d\n", export_count_call_id,
@@ -120,7 +120,7 @@ int EMSCRIPTEN_KEEPALIVE export_count_no_tce(int fromJS) {
 
   ElmValue* result;
   while (1) {
-    ElmInt* remaining = ctorElmInt(fromJS);
+    ElmInt* remaining = newElmInt(fromJS);
     if (remaining->header.tag == Tag_GcException) {
       // printf("export_count_no_tce: GC point 1, call=%d, gc=%d\n",
       //        export_count_no_tce_call_id, ++gc_id);
@@ -144,8 +144,8 @@ int EMSCRIPTEN_KEEPALIVE export_add(int a, int b) {
   // printf("export_add: entering\n");
   GC_stack_empty();
   while (1) {
-    ElmInt* boxA = ctorElmInt(a);
-    ElmInt* boxB = ctorElmInt(b);
+    ElmInt* boxA = newElmInt(a);
+    ElmInt* boxB = newElmInt(b);
     // printf("export_add: calling Basics_add with %d and %d\n", boxA->value,
     // boxB->value);
     // if (boxA->value != 123 || boxB->value != 456) {

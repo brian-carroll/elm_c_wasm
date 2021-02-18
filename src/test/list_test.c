@@ -11,7 +11,7 @@ static ElmInt ten = {.header = HEADER_INT, .value = 10};
 
 void* test_List_create() {
   Cons* l1 = List_create(3, (void*[]){&one, &two, &three});
-  Cons* l2 = ctorCons(&one, ctorCons(&two, ctorCons(&three, &Nil)));
+  Cons* l2 = newCons(&one, newCons(&two, newCons(&three, &Nil)));
 
   expect_equal("List_create should match manually created list [1,2,3]", l1, l2);
 

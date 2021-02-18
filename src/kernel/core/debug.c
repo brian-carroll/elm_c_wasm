@@ -725,7 +725,7 @@ void* eval_Debug_toString(void* args[]) {
   void* value = args[0];
   toString_alloc_chunk_bytes = 64;
   size_t len = (toString_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
-  ElmString16* str = ctorElmString16(len);
+  ElmString16* str = newElmString16(len);
   StringBuilder sb = {
     .s = str,
     .cursor = str->words16,

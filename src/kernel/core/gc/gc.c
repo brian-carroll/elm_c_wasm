@@ -106,7 +106,7 @@ int GC_init() {
 */
 void* GC_register_root(void** ptr_to_mutable_ptr) {
   GcState* state = &gc_state;
-  state->roots = ctorCons(ptr_to_mutable_ptr, state->roots);
+  state->roots = newCons(ptr_to_mutable_ptr, state->roots);
   return ptr_to_mutable_ptr;  // return anything but pGcFull to show success
 }
 

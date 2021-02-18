@@ -200,8 +200,8 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
 // -----------------------------------------------------------
 
 static ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
-  Tuple2* t2 = ctorTuple2(pa, pb);
-  Cons* c = ctorCons(t2, *pstack);
+  Tuple2* t2 = newTuple2(pa, pb);
+  Cons* c = newCons(t2, *pstack);
   return (ElmValue*)c;
 }
 

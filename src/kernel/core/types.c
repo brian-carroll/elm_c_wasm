@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// see also ctorCons in header file
-Cons* ctorCons(void* head, void* tail) {
+Cons* newCons(void* head, void* tail) {
   Cons* p = GC_malloc(true, sizeof(Cons));
   p->header = (Header)HEADER_LIST;
   p->head = head;
@@ -12,8 +11,7 @@ Cons* ctorCons(void* head, void* tail) {
   return p;
 };
 
-// see also ctorTuple2 in header file
-Tuple2* ctorTuple2(void* a, void* b) {
+Tuple2* newTuple2(void* a, void* b) {
   Tuple2* p = GC_malloc(true, sizeof(Tuple2));
   p->header = (Header)HEADER_TUPLE2;
   p->a = a;
@@ -21,8 +19,7 @@ Tuple2* ctorTuple2(void* a, void* b) {
   return p;
 };
 
-// see also ctorTuple3 in header file
-Tuple3* ctorTuple3(void* a, void* b, void* c) {
+Tuple3* newTuple3(void* a, void* b, void* c) {
   Tuple3* p = GC_malloc(true, sizeof(Tuple3));
   p->header = (Header)HEADER_TUPLE3;
   p->a = a;
@@ -31,24 +28,21 @@ Tuple3* ctorTuple3(void* a, void* b, void* c) {
   return p;
 };
 
-// see also ctorElmInt in header file
-ElmInt* ctorElmInt(i32 value) {
+ElmInt* newElmInt(i32 value) {
   ElmInt* p = GC_malloc(true, sizeof(ElmInt));
   p->header = (Header)HEADER_INT;
   p->value = value;
   return p;
 };
 
-// see also ctorElmFloat in header file
-ElmFloat* ctorElmFloat(f64 value) {
+ElmFloat* newElmFloat(f64 value) {
   ElmFloat* p = GC_malloc(true, sizeof(ElmFloat));
   p->header = (Header)HEADER_FLOAT;
   p->value = value;
   return p;
 };
 
-// see also ctorElmChar in header file
-ElmChar* ctorElmChar(u32 value) {
+ElmChar* newElmChar(u32 value) {
   ElmChar* p = GC_malloc(true, sizeof(ElmChar));
   p->header = (Header)HEADER_CHAR;
   p->value = value;
@@ -57,8 +51,7 @@ ElmChar* ctorElmChar(u32 value) {
 
 // Strings are padded to the next 32/64-bit boundary.
 
-// see also ctorElmString in header file
-ElmString* ctorElmString(size_t payload_bytes, char* str) {
+ElmString* newElmString(size_t payload_bytes, char* str) {
   size_t used_bytes = sizeof(Header) + payload_bytes +
                       (STRING_ENCODING == UTF8);  // 1 byte for padding size
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
@@ -110,8 +103,7 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
   return p;
 }
 
-// see also ctorElmString16 in header file
-ElmString16* ctorElmString16(size_t len16) {
+ElmString16* newElmString16(size_t len16) {
   size_t used_bytes = sizeof(Header) + len16 * sizeof(u16);
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
@@ -132,7 +124,7 @@ ElmString16* ctorElmString16(size_t len16) {
   return p;
 }
 
-Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
+Custom* newCustom(u32 ctor, u32 n_children, void* children[]) {
   Custom* c = GC_malloc(true, sizeof(Custom) + n_children * sizeof(void*));
 
   c->header = (Header)HEADER_CUSTOM(n_children);
@@ -145,7 +137,7 @@ Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
   return c;
 }
 
-Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
+Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   Record* r = GC_malloc(true, sizeof(Record) + n_children * sizeof(void*));
   r->header = (Header)HEADER_RECORD(n_children);
   r->fieldgroup = fg;
@@ -154,7 +146,7 @@ Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   }
   return r;
 }
-Closure* ctorClosure(
+Closure* newClosure(
     u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
   Closure* c = GC_malloc(true, sizeof(Closure) + n_values * sizeof(void*));
   c->header = (Header)HEADER_CLOSURE(n_values);

@@ -32,10 +32,10 @@ char* gc_bitmap_test() {
   gc_test_reset();
 
   for (size_t i = 0; i < 10; i++) {
-    ElmInt* p1 = ctorElmInt(0x101);
-    ElmInt* p2 = ctorElmInt(0x102);
-    ElmString16* p3 = ctorElmString16(sizeof(str) - 1);
-    ElmInt* p4 = ctorElmInt(0x103);
+    ElmInt* p1 = newElmInt(0x101);
+    ElmInt* p2 = newElmInt(0x102);
+    ElmString16* p3 = newElmString16(sizeof(str) - 1);
+    ElmInt* p4 = newElmInt(0x103);
 
     for (int c=0; c < sizeof(str); c++) {
       p3->words16[c] = str[c];
@@ -391,7 +391,7 @@ char* gc_replay_test() {
   // Create a thunk as if entering Wasm from JS
   void* args[1];
   args[0] = &int_n;
-  Closure* c = ctorClosure(1, 1, eval_fib, args);
+  Closure* c = newClosure(1, 1, eval_fib, args);
   stack_clear();
   stack_enter(c);
   void* result = Utils_apply(c, 0, NULL);
@@ -440,7 +440,7 @@ void* eval_trashyFold(void* args[]) {
   ElmInt* d = A2(&Basics_sub, c, b);
   assert(sanity_check(d));
 
-  Cons* result = ctorCons(d, ctorCons(c, ctorCons(b, pNil)));
+  Cons* result = newCons(d, newCons(c, newCons(b, pNil)));
   assert(sanity_check(result));
 
   return result;
@@ -455,10 +455,10 @@ void* eval_listNonsense(void* args[]) {
   Cons* list = args[0];
   assert(sanity_check(list));
 
-  Cons* acc = ctorCons(ctorElmInt(64), &Nil);
+  Cons* acc = newCons(newElmInt(64), &Nil);
   assert(sanity_check(acc));
 
-  ElmInt* free_var = ctorElmInt(123);
+  ElmInt* free_var = newElmInt(123);
   assert(sanity_check(free_var));
 
   Closure* partial = A1(&trashyFold, free_var);
@@ -489,12 +489,12 @@ char* stackmap_mark_eyeball_test() {
   gc_test_reset();
 
   void* list_elems[3] = {
-    ctorElmInt(123),
-    ctorElmInt(999),
-    ctorElmInt(-7),
+    newElmInt(123),
+    newElmInt(999),
+    newElmInt(-7),
   };
   Cons* list = List_create(3, list_elems);
-  Closure* c = ctorClosure(1, 1, eval_listNonsense, ((void*[]){list}));
+  Closure* c = newClosure(1, 1, eval_listNonsense, ((void*[]){list}));
 
   stack_clear();
   stack_enter(c);
@@ -516,7 +516,7 @@ char* stackmap_mark_eyeball_test() {
 
 void* eval_infinite_loop(void* args[]) {
   u32 gc_stack_frame = GC_get_stack_frame();
-  Closure* gc_resume = ctorClosure(1, 1, eval_infinite_loop, args);
+  Closure* gc_resume = newClosure(1, 1, eval_infinite_loop, args);
   assert(sanity_check(gc_resume));
 
   Cons* list = gc_resume->values[0];
@@ -576,12 +576,12 @@ char* assertions_test() {
   gc_test_reset();
 
   void* list_elems[3] = {
-    ctorElmInt(123),
-    ctorElmInt(999),
-    ctorElmInt(-7),
+    newElmInt(123),
+    newElmInt(999),
+    newElmInt(-7),
   };
   Cons* list = List_create(3, list_elems);
-  Closure* c = ctorClosure(1, 1, eval_infinite_loop, ((void*[]){list}));
+  Closure* c = newClosure(1, 1, eval_infinite_loop, ((void*[]){list}));
 
   test_execute(c, 10);
 

@@ -95,7 +95,7 @@ typedef struct {
   void* head;
   void* tail;
 } Cons;
-Cons* ctorCons(void* head, void* tail);
+Cons* newCons(void* head, void* tail);
 
 // TUPLES
 
@@ -105,7 +105,7 @@ typedef struct {
   void* a;
   void* b;
 } Tuple2;
-Tuple2* ctorTuple2(void* a, void* b);
+Tuple2* newTuple2(void* a, void* b);
 
 typedef struct {
   Header header;
@@ -114,7 +114,7 @@ typedef struct {
   void* b;
   void* c;
 } Tuple3;
-Tuple3* ctorTuple3(void* a, void* b, void* c);
+Tuple3* newTuple3(void* a, void* b, void* c);
 
 // NUMBERS
 
@@ -122,14 +122,14 @@ typedef struct {
   Header header;
   i32 value;
 } ElmInt;
-ElmInt* ctorElmInt(i32 value);
+ElmInt* newElmInt(i32 value);
 
 typedef struct {
   Header header;
   u32 padding;  // on both 32 and 64-bit platforms
   f64 value;
 } ElmFloat;
-ElmFloat* ctorElmFloat(f64 value);
+ElmFloat* newElmFloat(f64 value);
 
 typedef union {
   ElmInt i;
@@ -146,7 +146,7 @@ typedef struct {
     u8 bytes[4];
   };
 } ElmChar;
-ElmChar* ctorElmChar(u32 value);
+ElmChar* newElmChar(u32 value);
 
 // STRING
 
@@ -165,14 +165,14 @@ struct ALIGN(8) elm_string {
 };
 typedef struct elm_string ElmString;
 
-ElmString* ctorElmString(size_t n, char* str);
+ElmString* newElmString(size_t n, char* str);
 
 struct ALIGN(8) elm_string16 {
   Header header;
   u16 words16[];
 };
 typedef struct elm_string16 ElmString16;
-ElmString16* ctorElmString16(size_t n);
+ElmString16* newElmString16(size_t n);
 
 enum {
   UTF8,
@@ -189,7 +189,7 @@ typedef struct {
 } Custom;
 
 u32 custom_params(Custom* c);  // number of parameters in a Custom struct
-Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]);
+Custom* newCustom(u32 ctor, u32 n_children, void* children[]);
 
 // RECORD
 
@@ -205,7 +205,7 @@ typedef struct {
   FieldGroup* fieldgroup;
   void* values[];
 } Record;
-Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]);
+Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]);
 
 /*
  Elm compiler generates
@@ -228,7 +228,7 @@ typedef struct {
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
 
-Closure* ctorClosure(
+Closure* newClosure(
     u16 n_values, u16 max_values, EvalFunction evaluator, void* values[]);
 
 // Reference to a JS object

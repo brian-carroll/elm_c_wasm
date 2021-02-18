@@ -22,7 +22,7 @@ void* List_create(size_t len, void* values[]) {
 // cons
 
 static void* eval_List_cons(void* args[]) {
-  return ctorCons(args[0], args[1]);
+  return newCons(args[0], args[1]);
 }
 Closure List_cons = {
     .header = HEADER_CLOSURE(0),
@@ -41,7 +41,7 @@ void* eval_List_append(void* args[]) {
 
   Cons* result = ys;
   for (Cons* x = xs; x != &Nil; x = x->tail) {
-    result = ctorCons(NULL, result);
+    result = newCons(NULL, result);
   }
   for (Cons* x = xs, *r = result; x != &Nil; x = x->tail, r = r->tail) {
     r->head = x->head;
@@ -81,7 +81,7 @@ static void* eval_List_map2(void* args[]) {
     void* y = growingArray->values[i + 1];
     void* x_ = growingArray->values[i];
     void* result = A2(f, x_, y);
-    head = ctorCons(result, head);
+    head = newCons(result, head);
   }
   return head;
 }

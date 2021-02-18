@@ -304,7 +304,7 @@ Closure elm_html_Html_Events_onClick = {
 // constructors and constants
 
 void* eval_author_project_Main_SetCounter(void* args[1]) {
-  return ctorCustom(CTOR_SetCounter, 1, args);
+  return newCustom(CTOR_SetCounter, 1, args);
 };
 Closure author_project_Main_SetCounter = {
     .header = HEADER_CLOSURE(0),
@@ -319,7 +319,7 @@ ElmInt literal_int_0 = {
     .value = 0,
 };
 void* eval_author_project_Main_init(void* args[1]) {
-  return ctorTuple2(&literal_int_0, &elm_core_Platform_Cmd_none);
+  return newTuple2(&literal_int_0, &elm_core_Platform_Cmd_none);
 }
 Closure author_project_Main_init = {
     .header = HEADER_CLOSURE(0),
@@ -368,7 +368,7 @@ void* eval_author_project_Main_update(void* args[2]) {
                   ? &elm_core_Platform_Cmd_none
                   : A1(&author_project_Main_delayedSetCounter,
                         A2(&Basics_sub, newModel, &literal_int_1));
-  return ctorTuple2(newModel, cmd);
+  return newTuple2(newModel, cmd);
 };
 Closure author_project_Main_update = {
     .header = HEADER_CLOSURE(0),
@@ -489,7 +489,7 @@ Closure wasm_WasmWrapper_element = {
 void* ptr_author_project_Main_main;
 void* init_author_project_Main_main() {
   return A1(&wasm_WasmWrapper_element,
-      ctorRecord(&fg_init_subscriptions_update_view,
+      newRecord(&fg_init_subscriptions_update_view,
           4,
           (void*[]){
               &author_project_Main_init,

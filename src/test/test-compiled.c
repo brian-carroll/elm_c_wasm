@@ -14,7 +14,7 @@ void* eval_List_reverse(void* args[]) {
   Cons* list = args[0];
   Cons* result = &Nil;
   for (; list != &Nil; list = list->tail) {
-    result = ctorCons(list->head, result);
+    result = newCons(list->head, result);
   }
   return result;
 }
@@ -30,7 +30,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
     void * x_acc = args[1];
     void * x_list = args[2];
     u32 gc_stack_frame = GC_get_stack_frame();
-    Closure* gc_resume = ctorClosure(3, 3, eval_elm_core_List_foldl, args);
+    Closure* gc_resume = newClosure(3, 3, eval_elm_core_List_foldl, args);
     tce_loop:
     ;
     void * case0;
@@ -62,7 +62,7 @@ Closure g_elm_core_List_foldl = {
 };
 
 void* eval_elm_core_Maybe_Just(void* args[]) {
-  return ctorCustom(CTOR_Just, 1, args);
+  return newCustom(CTOR_Just, 1, args);
 }
 Closure g_elm_core_Maybe_Just = {
     .header = HEADER_CLOSURE(0),
@@ -76,10 +76,10 @@ Custom g_elm_core_Maybe_Nothing = {
 };
 
 void* eval_elm_core_Result_Ok(void* args[]) {
-  return ctorCustom(CTOR_Ok, 1, args);
+  return newCustom(CTOR_Ok, 1, args);
 }
 void* eval_elm_core_Result_Err(void* args[]) {
-  return ctorCustom(CTOR_Err, 1, args);
+  return newCustom(CTOR_Err, 1, args);
 }
 void* eval_elm_core_Result_isOk(void* args[]) {
   void* x_result = args[0];
@@ -104,16 +104,16 @@ Closure g_elm_core_Result_isOk = {
 };
 
 void* eval_elm_json_Json_Decode_Failure(void* args[]) {
-  return ctorCustom(CTOR_Failure, 2, args);
+  return newCustom(CTOR_Failure, 2, args);
 }
 void* eval_elm_json_Json_Decode_Field(void* args[]) {
-  return ctorCustom(CTOR_Field, 2, args);
+  return newCustom(CTOR_Field, 2, args);
 }
 void* eval_elm_json_Json_Decode_Index(void* args[]) {
-  return ctorCustom(CTOR_Index, 2, args);
+  return newCustom(CTOR_Index, 2, args);
 }
 void* eval_elm_json_Json_Decode_OneOf(void* args[]) {
-  return ctorCustom(CTOR_OneOf, 1, args);
+  return newCustom(CTOR_OneOf, 1, args);
 }
 Closure g_elm_json_Json_Decode_Failure = {
     .header = HEADER_CLOSURE(0),
@@ -139,9 +139,9 @@ Closure g_elm_json_Json_Decode_OneOf = {
 void* eval_elm_core_Array_initialize(void* args[]) {
   ElmInt* len = args[0];
   Closure* fn = args[1];
-  Custom* mock_array = ctorCustom(CTOR_MockElmArray, len->value, NULL);
+  Custom* mock_array = newCustom(CTOR_MockElmArray, len->value, NULL);
   for (size_t i = 0; i < len->value; i++) {
-    mock_array->values[i] = A1(fn, ctorElmInt(i));
+    mock_array->values[i] = A1(fn, newElmInt(i));
   }
   return mock_array;
 }

@@ -66,14 +66,14 @@ char* test_records() {
 
   r1->header = (Header)HEADER_RECORD(2);
   r1->fieldgroup = fgRecord1;
-  r1->values[0] = ctorElmInt(123);
-  r1->values[1] = ctorElmString(5, "hello");
+  r1->values[0] = newElmInt(123);
+  r1->values[1] = newElmString(5, "hello");
 
   r2->header = (Header)HEADER_RECORD(3);
   r2->fieldgroup = fgRecord2;
-  r2->values[0] = ctorElmInt(456);
-  r2->values[1] = ctorElmInt(321);
-  r2->values[2] = ctorElmFloat(1.0);
+  r2->values[0] = newElmInt(456);
+  r2->values[1] = newElmInt(321);
+  r2->values[2] = newElmFloat(1.0);
 
   // The actual accessor function
   u8 mem_accessor[sizeof(Closure) + sizeof(void*)];
@@ -93,8 +93,8 @@ char* test_records() {
              , stuff = 3.14
            }
   */
-  ElmInt* updated_thing = ctorElmInt(111);
-  ElmFloat* updated_stuff = ctorElmFloat(3.14);
+  ElmInt* updated_thing = newElmInt(111);
+  ElmFloat* updated_stuff = newElmFloat(3.14);
   Record* r3 = Utils_update(
       r2, 2, (u32[]){things, stuff}, (void*[]){updated_thing, updated_stuff});
 
@@ -258,9 +258,9 @@ char* test_eq(void) {
   mu_assert("Expect: 2 == 2", A2(&Utils_equal, &two, &two) == &True);
   mu_assert("Expect: 2 /= 3", A2(&Utils_equal, &two, &three) == &False);
 
-  ElmFloat* f = ctorElmFloat(123.456);
-  ElmFloat* f1 = ctorElmFloat(123.456);
-  ElmFloat* f2 = ctorElmFloat(2.0);
+  ElmFloat* f = newElmFloat(123.456);
+  ElmFloat* f1 = newElmFloat(123.456);
+  ElmFloat* f2 = newElmFloat(2.0);
   mu_assert("Expect: 123.456 == 123.456 (by reference)", A2(&Utils_equal, f, f) == &True);
   mu_assert("Expect: 123.456 == 123.456 (by value)", A2(&Utils_equal, f, f1) == &True);
   mu_assert("Expect: 123.456 /= 2.0", A2(&Utils_equal, f, f2) == &False);
@@ -278,10 +278,10 @@ char* test_eq(void) {
   }
   mu_assert("Expect: True /= 3", A2(&Utils_equal, &True, &three) == &False);
 
-  ElmString* hello1 = ctorElmString(5, "hello");
-  ElmString* hello2 = ctorElmString(5, "hello");
-  ElmString* hello_ = ctorElmString(6, "hello_");
-  ElmString* world = ctorElmString(5, "world");
+  ElmString* hello1 = newElmString(5, "hello");
+  ElmString* hello2 = newElmString(5, "hello");
+  ElmString* hello_ = newElmString(6, "hello_");
+  ElmString* world = newElmString(5, "world");
 
   if (verbose) {
     printf("\nString equality\n");
@@ -308,13 +308,13 @@ char* test_eq(void) {
       "Expect: \"hello_\" /= \"hello\"", A2(&Utils_equal, hello_, hello1) == &False);
 
   if (verbose) printf("\nList equality\n");
-  Cons* cons2 = ctorCons(&two, &Nil);
-  Cons* cons2a = ctorCons(&two, &Nil);
-  Cons* cons3 = ctorCons(&three, &Nil);
-  Cons* cons23 = ctorCons(&two, cons3);
-  Cons* cons23a = ctorCons(&two, cons3);
-  Cons* cons32 = ctorCons(&three, cons2);
-  Cons* cons22 = ctorCons(&two, cons2);
+  Cons* cons2 = newCons(&two, &Nil);
+  Cons* cons2a = newCons(&two, &Nil);
+  Cons* cons3 = newCons(&three, &Nil);
+  Cons* cons23 = newCons(&two, cons3);
+  Cons* cons23a = newCons(&two, cons3);
+  Cons* cons32 = newCons(&three, cons2);
+  Cons* cons22 = newCons(&two, cons2);
 
   mu_assert("Expect: [] == []", A2(&Utils_equal, &Nil, &Nil) == &True);
   mu_assert("Expect: [] /= [2]", A2(&Utils_equal, &Nil, cons2) == &False);
@@ -330,10 +330,10 @@ char* test_eq(void) {
   mu_assert("Expect: [2,3] /= [2,2]", A2(&Utils_equal, cons23, cons22) == &False);
 
   if (verbose) printf("\nTuple equality\n");
-  Tuple2* tuple23 = ctorTuple2(&two, &three);
-  Tuple2* tuple23a = ctorTuple2(&two, &three);
-  Tuple2* tuple32 = ctorTuple2(&three, &two);
-  Tuple2* tuple22 = ctorTuple2(&two, &two);
+  Tuple2* tuple23 = newTuple2(&two, &three);
+  Tuple2* tuple23a = newTuple2(&two, &three);
+  Tuple2* tuple32 = newTuple2(&three, &two);
+  Tuple2* tuple22 = newTuple2(&two, &two);
 
   mu_assert(
       "Expect: (2,3) == (2,3) (by ref)", A2(&Utils_equal, tuple23, tuple23) == &True);
@@ -343,12 +343,12 @@ char* test_eq(void) {
   mu_assert("Expect: (2,3) /= (2,2)", A2(&Utils_equal, tuple23, tuple22) == &False);
 
   ElmInt one = (ElmInt){.header = HEADER_INT, .value = 1};
-  Tuple3* tuple123 = ctorTuple3(&one, &two, &three);
-  Tuple3* tuple123a = ctorTuple3(&one, &two, &three);
-  Tuple3* tuple111 = ctorTuple3(&one, &one, &one);
-  Tuple3* tuple211 = ctorTuple3(&two, &one, &one);
-  Tuple3* tuple121 = ctorTuple3(&one, &two, &one);
-  Tuple3* tuple112 = ctorTuple3(&one, &one, &two);
+  Tuple3* tuple123 = newTuple3(&one, &two, &three);
+  Tuple3* tuple123a = newTuple3(&one, &two, &three);
+  Tuple3* tuple111 = newTuple3(&one, &one, &one);
+  Tuple3* tuple211 = newTuple3(&two, &one, &one);
+  Tuple3* tuple121 = newTuple3(&one, &two, &one);
+  Tuple3* tuple112 = newTuple3(&one, &one, &two);
 
   mu_assert("Expect: (1,2,3) == (1,2,3) (by ref)",
       A2(&Utils_equal, tuple123, tuple123) == &True);
@@ -360,13 +360,13 @@ char* test_eq(void) {
 
   u32 big_list_size = 123;
   if (verbose) printf("\nLong list equality (recursive, %d elements)\n", big_list_size);
-  Cons* bigList1 = ctorCons(&one, &Nil);
-  Cons* bigList2 = ctorCons(&one, &Nil);
+  Cons* bigList1 = newCons(&one, &Nil);
+  Cons* bigList2 = newCons(&one, &Nil);
   Cons* bigList3 = cons2;
   for (u32 i = 0; i < big_list_size; ++i) {
-    bigList1 = ctorCons(&one, bigList1);
-    bigList2 = ctorCons(&one, bigList2);
-    bigList3 = ctorCons(&one, bigList3);
+    bigList1 = newCons(&one, bigList1);
+    bigList2 = newCons(&one, bigList2);
+    bigList3 = newCons(&one, bigList3);
   }
   mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]",
       A2(&Utils_equal, bigList1, bigList2) == &True);
@@ -446,18 +446,18 @@ char* test_compare() {
     printf("## Compare\n");
     printf("\nElmInt\n");
   }
-  ElmInt* i123 = ctorElmInt(123);
-  ElmInt* i123a = ctorElmInt(123);
-  ElmInt* i456 = ctorElmInt(456);
+  ElmInt* i123 = newElmInt(123);
+  ElmInt* i123a = newElmInt(123);
+  ElmInt* i456 = newElmInt(456);
   mu_assert("compare: 123 < 456", A2(&Utils_compare, i123, i456) == &g_elm_core_Basics_LT);
   mu_assert("compare: 456 > 123", A2(&Utils_compare, i456, i123) == &g_elm_core_Basics_GT);
   mu_assert("compare: 123 == 123 (ref)", A2(&Utils_compare, i123, i123) == &g_elm_core_Basics_EQ);
   mu_assert("compare: 123 == 123 (value)", A2(&Utils_compare, i123, i123a) == &g_elm_core_Basics_EQ);
 
   if (verbose) printf("\nElmFloat\n");
-  ElmFloat* f1 = ctorElmFloat(123.456);
-  ElmFloat* f1a = ctorElmFloat(123.456);
-  ElmFloat* f2 = ctorElmFloat(456.789);
+  ElmFloat* f1 = newElmFloat(123.456);
+  ElmFloat* f1a = newElmFloat(123.456);
+  ElmFloat* f2 = newElmFloat(456.789);
   mu_assert("compare: 123.456 < 456.789", A2(&Utils_compare, f1, f2) == &g_elm_core_Basics_LT);
   mu_assert("compare: 456.789 > 123.456", A2(&Utils_compare, f2, f1) == &g_elm_core_Basics_GT);
   mu_assert("compare: 123.456 == 123.456 (ref)", A2(&Utils_compare, f1, f1) == &g_elm_core_Basics_EQ);
@@ -479,10 +479,10 @@ char* test_compare() {
   ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
   ElmInt three = (ElmInt){.header = HEADER_INT, .value = 3};
 
-  Tuple2* tuple23 = ctorTuple2(&two, &three);
-  Tuple2* tuple23a = ctorTuple2(&two, &three);
-  Tuple2* tuple32 = ctorTuple2(&three, &two);
-  Tuple2* tuple22 = ctorTuple2(&two, &two);
+  Tuple2* tuple23 = newTuple2(&two, &three);
+  Tuple2* tuple23a = newTuple2(&two, &three);
+  Tuple2* tuple32 = newTuple2(&three, &two);
+  Tuple2* tuple22 = newTuple2(&two, &two);
 
   mu_assert("Expect: (2,3) == (2,3) (by ref)",
       A2(&Utils_compare, tuple23, tuple23) == &g_elm_core_Basics_EQ);
@@ -494,12 +494,12 @@ char* test_compare() {
   mu_assert("Expect: (2,2) < (2,3)", A2(&Utils_compare, tuple22, tuple23) == &g_elm_core_Basics_LT);
 
   if (verbose) printf("\nTuple3\n");
-  Tuple3* tuple123 = ctorTuple3(&one, &two, &three);
-  Tuple3* tuple123a = ctorTuple3(&one, &two, &three);
-  Tuple3* tuple111 = ctorTuple3(&one, &one, &one);
-  Tuple3* tuple211 = ctorTuple3(&two, &one, &one);
-  Tuple3* tuple121 = ctorTuple3(&one, &two, &one);
-  Tuple3* tuple112 = ctorTuple3(&one, &one, &two);
+  Tuple3* tuple123 = newTuple3(&one, &two, &three);
+  Tuple3* tuple123a = newTuple3(&one, &two, &three);
+  Tuple3* tuple111 = newTuple3(&one, &one, &one);
+  Tuple3* tuple211 = newTuple3(&two, &one, &one);
+  Tuple3* tuple121 = newTuple3(&one, &two, &one);
+  Tuple3* tuple112 = newTuple3(&one, &one, &two);
 
   mu_assert("Expect: (1,2,3) == (1,2,3) (by ref)",
       A2(&Utils_compare, tuple123, tuple123) == &g_elm_core_Basics_EQ);
@@ -519,13 +519,13 @@ char* test_compare() {
       "Expect: (1,1,2) > (1,1,1)", A2(&Utils_compare, tuple112, tuple111) == &g_elm_core_Basics_GT);
 
   if (verbose) printf("\nList\n");
-  Cons* cons2 = ctorCons(&two, &Nil);
-  Cons* cons2a = ctorCons(&two, &Nil);
-  Cons* cons3 = ctorCons(&three, &Nil);
-  Cons* cons23 = ctorCons(&two, cons3);
-  Cons* cons23a = ctorCons(&two, cons3);
-  Cons* cons32 = ctorCons(&three, cons2);
-  Cons* cons22 = ctorCons(&two, cons2);
+  Cons* cons2 = newCons(&two, &Nil);
+  Cons* cons2a = newCons(&two, &Nil);
+  Cons* cons3 = newCons(&three, &Nil);
+  Cons* cons23 = newCons(&two, cons3);
+  Cons* cons23a = newCons(&two, cons3);
+  Cons* cons32 = newCons(&three, cons2);
+  Cons* cons22 = newCons(&two, cons2);
 
   mu_assert("Expect: [] == []", A2(&Utils_compare, &Nil, &Nil) == &g_elm_core_Basics_EQ);
   mu_assert("Expect: [] < [2]", A2(&Utils_compare, &Nil, cons2) == &g_elm_core_Basics_LT);
@@ -547,13 +547,13 @@ char* test_compare() {
   mu_assert("Expect: [2,2] < [2,3]", A2(&Utils_compare, cons22, cons23) == &g_elm_core_Basics_LT);
 
   if (verbose) printf("\nLong list (recursive)\n");
-  Cons* bigList1 = ctorCons(&one, &Nil);
-  Cons* bigList2 = ctorCons(&one, &Nil);
+  Cons* bigList1 = newCons(&one, &Nil);
+  Cons* bigList2 = newCons(&one, &Nil);
   Cons* bigList3 = cons2;
   for (u32 i = 0; i < 123; ++i) {
-    bigList1 = ctorCons(&one, bigList1);
-    bigList2 = ctorCons(&one, bigList2);
-    bigList3 = ctorCons(&one, bigList3);
+    bigList1 = newCons(&one, bigList1);
+    bigList2 = newCons(&one, bigList2);
+    bigList3 = newCons(&one, bigList3);
   }
   mu_assert("Expect: [1,1,1, ... ,1] == [1,1,1, ... ,1]",
       A2(&Utils_compare, bigList1, bigList2) == &g_elm_core_Basics_EQ);

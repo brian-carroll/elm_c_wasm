@@ -20,18 +20,18 @@ char* test_number_binops() {
     printf("\n");
   }
 
-  ElmInt* i1 = ctorElmInt(1);
-  ElmInt* i2 = ctorElmInt(2);
-  ElmInt* im = ctorElmInt(-1);
+  ElmInt* i1 = newElmInt(1);
+  ElmInt* i2 = newElmInt(2);
+  ElmInt* im = newElmInt(-1);
 
-  ElmInt* ibig1 = ctorElmInt(123456);
-  ElmInt* ibig2 = ctorElmInt(654321);
-  ElmInt* imbig1 = ctorElmInt(-123456);
-  ElmInt* imbig2 = ctorElmInt(-654321);
+  ElmInt* ibig1 = newElmInt(123456);
+  ElmInt* ibig2 = newElmInt(654321);
+  ElmInt* imbig1 = newElmInt(-123456);
+  ElmInt* imbig2 = newElmInt(-654321);
 
-  ElmFloat* f1 = ctorElmFloat(1.0);
-  ElmFloat* f2 = ctorElmFloat(3.14);
-  ElmFloat* fm = ctorElmFloat(-123.456);
+  ElmFloat* f1 = newElmFloat(1.0);
+  ElmFloat* f2 = newElmFloat(3.14);
+  ElmFloat* fm = newElmFloat(-123.456);
 
   // ADD
 
@@ -84,7 +84,7 @@ char* test_number_binops() {
   mu_assert("Expect: 2^1=2", itest(A2(&Basics_pow, i2, i1), 2));
   mu_assert("Expect: -1^2=1", itest(A2(&Basics_pow, im, i2), 1));
   mu_assert("Expect: 2^-1=0", itest(A2(&Basics_pow, i2, im), 0));
-  mu_assert("Expect: 2^0=1", itest(A2(&Basics_pow, i2, ctorElmInt(0)), 1));
+  mu_assert("Expect: 2^0=1", itest(A2(&Basics_pow, i2, newElmInt(0)), 1));
   mu_assert("Expect: 1^123456=1", itest(A2(&Basics_pow, i1, ibig1), 1));
   mu_assert("Expect: 1^-123456=1", itest(A2(&Basics_pow, i1, imbig1), 1));
   mu_assert("Expect: 1^-654321=1", itest(A2(&Basics_pow, i1, imbig2), 1));
@@ -94,10 +94,10 @@ char* test_number_binops() {
   mu_assert("Expect: 1.0 ^ 3.14 = 1.0", ftest(A2(&Basics_pow, f1, f2), 1.0));
   mu_assert("Expect: 3.14 ^ 1.0 = 3.14", ftest(A2(&Basics_pow, f2, f1), 3.14));
 
-  ElmInt* i3 = ctorElmInt(3);
-  ElmInt* i8 = ctorElmInt(8);
-  ElmInt* im3 = ctorElmInt(-3);
-  ElmInt* im8 = ctorElmInt(-8);
+  ElmInt* i3 = newElmInt(3);
+  ElmInt* i8 = newElmInt(8);
+  ElmInt* im3 = newElmInt(-3);
+  ElmInt* im8 = newElmInt(-8);
 
   mu_assert("modBy 3 8 == 2", itest(A2(&Basics_modBy, i3, i8), 2));
   mu_assert("modBy 3 -8 == 1", itest(A2(&Basics_modBy, i3, im8), 1));
@@ -119,25 +119,25 @@ char* test_number_unops() {
     printf("\n");
   }
   // Basics.negate
-  mu_assert("-(3.14) == -3.14", ftest(A1(&Basics_negate, ctorElmFloat(3.14)), -3.14));
-  mu_assert("-(-3.14) == 3.14", ftest(A1(&Basics_negate, ctorElmFloat(-3.14)), 3.14));
-  mu_assert("-(123) == -123", itest(A1(&Basics_negate, ctorElmInt(-123)), 123));
-  mu_assert("-(-123) == 123", itest(A1(&Basics_negate, ctorElmInt(123)), -123));
+  mu_assert("-(3.14) == -3.14", ftest(A1(&Basics_negate, newElmFloat(3.14)), -3.14));
+  mu_assert("-(-3.14) == 3.14", ftest(A1(&Basics_negate, newElmFloat(-3.14)), 3.14));
+  mu_assert("-(123) == -123", itest(A1(&Basics_negate, newElmInt(-123)), 123));
+  mu_assert("-(-123) == 123", itest(A1(&Basics_negate, newElmInt(123)), -123));
 
   // Basics.toFloat
   mu_assert(
-      "toFloat -123 == -123.0", ftest(A1(&Basics_toFloat, ctorElmInt(-123)), -123.0));
+      "toFloat -123 == -123.0", ftest(A1(&Basics_toFloat, newElmInt(-123)), -123.0));
 
   // Basics.floor
-  mu_assert("floor 3.9 == 3", itest(A1(&Basics_floor, ctorElmFloat(3.9)), 3));
-  mu_assert("floor -3.14 == -4", itest(A1(&Basics_floor, ctorElmFloat(-3.14)), -4));
+  mu_assert("floor 3.9 == 3", itest(A1(&Basics_floor, newElmFloat(3.9)), 3));
+  mu_assert("floor -3.14 == -4", itest(A1(&Basics_floor, newElmFloat(-3.14)), -4));
 
   // Basics.ceiling
-  mu_assert("ceiling 3.14 == 4", itest(A1(&Basics_ceiling, ctorElmFloat(3.14)), 4));
-  mu_assert("ceiling -4.9 == -4", itest(A1(&Basics_ceiling, ctorElmFloat(-4.9)), -4));
+  mu_assert("ceiling 3.14 == 4", itest(A1(&Basics_ceiling, newElmFloat(3.14)), 4));
+  mu_assert("ceiling -4.9 == -4", itest(A1(&Basics_ceiling, newElmFloat(-4.9)), -4));
 
   // Basics_log
-  mu_assert("log 2.71828 == 1.0", ftest(A1(&Basics_log, ctorElmFloat(2.71828)), 1.0));
+  mu_assert("log 2.71828 == 1.0", ftest(A1(&Basics_log, newElmFloat(2.71828)), 1.0));
 
   return NULL;
 }
