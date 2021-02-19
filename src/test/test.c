@@ -199,14 +199,6 @@ int main(int argc, char** argv) {
   bool json = false;
   bool gc = false;
 
-// Running in a Windows CMD shell
-// Prob via Codelite IDE. Dunno how to set up CLI args there yet!
-// Set this up for whatever I'm working on
-#if defined(_WIN32)
-  gc = true;
-  verbose = true;
-#endif
-
   char options[] = "vatubscldjg";
 
   int opt;

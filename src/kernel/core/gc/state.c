@@ -1,6 +1,7 @@
 #include "internals.h"
 
 #ifdef _WIN32
+#include <windows.h>
 #include <heapapi.h>
 #else
 #include <sys/mman.h>
@@ -32,12 +33,15 @@ void reset_state(GcState* state) {
 
 #ifdef _WIN32
 
-HANDLE hHeap;
-
 void* get_memory_from_system(size_t bytes) {
   // https://docs.microsoft.com/en-us/windows/win32/api/heapapi/
   assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  return HeapAlloc(hHeap, 0, bytes);
+  HANDLE hHeap = GetProcessHeap();
+  DWORD  dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
+  void* unaligned = HeapAlloc(hHeap, dwFlags, bytes + GC_BLOCK_BYTES);
+  size_t unaligned_addr = (size_t)unaligned;
+  size_t aligned_addr = (unaligned_addr + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
+  return (void*)aligned_addr;
 }
 
 #else
@@ -95,11 +99,6 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
 
 // Call exactly once on program startup
 int init_heap(GcHeap* heap) {
-
-#ifdef _WIN32
-  hHeap = HeapCreate(0, GC_INITIAL_HEAP_MB * MB, GC_MAX_HEAP_MB * MB);
-#endif
-
   size_t bytes = GC_INITIAL_HEAP_MB * MB;
   void* start = get_memory_from_system(bytes);
 

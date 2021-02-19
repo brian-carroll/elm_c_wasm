@@ -40,9 +40,12 @@ void* test_decode_err(
   sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
   ElmString16* json = create_string(json_c_str);
 
-  void* actual_err = runner == &Json_runOnString
-                         ? A2(&Json_runOnString, decoder, json)
-                         : A2(&Json_run, decoder, createJsValue(json));
+  void* actual_err;
+  if (runner == &Json_runOnString) {
+    actual_err = A2(&Json_runOnString, decoder, json);
+  } else {
+    actual_err = A2(&Json_run, decoder, createJsValue(json));
+  }
 
   expect_equal(test_decode_buf, actual_err, expected_err);
 
@@ -107,15 +110,18 @@ JsRef* newJsRef(u32 index) {
 void* test_Json_decode_invalidJson() {
   Closure* runner = &Json_runOnString;
   char* json = "invalid JSON !";
-  test_decode_err(runner,
-      &Json_decodeBool,
-      json,
-      err(newCustom(CTOR_Failure,
+
+  Custom* expectedError = err(newCustom(CTOR_Failure,
           2,
           ((void*[]){
               create_string("This is not valid JSON!"),
               WRAP(create_string(json)),
-          }))));
+          })));
+
+  test_decode_err(runner,
+      &Json_decodeBool,
+      json,
+      expectedError);
 
   return NULL;
 }

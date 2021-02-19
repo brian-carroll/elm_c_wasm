@@ -80,8 +80,13 @@ char* test_header_layout() {
   }
 
   mu_assert("Header size should be 4 bytes", sizeof(Header) == 4);
+#ifdef _WIN32
+  mu_assert("Tag field should have 5 bits", count_flags(*(u32*)&mask_tag) == 5);
+  mu_assert("Size field should have 27 bits", count_flags(*(u32*)&mask_size) == 27);
+#else
   mu_assert("Tag field should have 4 bits", count_flags(*(u32*)&mask_tag) == 4);
   mu_assert("Size field should have 28 bits", count_flags(*(u32*)&mask_size) == 28);
+#endif
 
   return NULL;
 }
@@ -364,12 +369,12 @@ char* test_record() {
   }
 
 #ifdef TARGET_64BIT
-  mu_assert(
+  mu_expect_equal(
       "Record struct with no fields should be the right size for a header, 4 bytes of "
       "padding, and 1 pointer",
-      sizeof(Record) == sizeof(Header) + 4 + sizeof(void*));
-  mu_assert("HEADER_RECORD macro should insert correct size field",
-      r->header.size == 4);  // 0.5 + 0.5 + 1 + 2
+      sizeof(Record), sizeof(Header) + 4 + sizeof(void*));
+  mu_expect_equal("HEADER_RECORD macro should insert correct size field",
+      r->header.size, 4);  // 0.5 + 0.5 + 1 + 2
 #else
   mu_assert(
       "Record struct with 2 fields should be the right size for a header and a pointer",
@@ -377,8 +382,8 @@ char* test_record() {
   mu_assert("HEADER_RECORD macro should insert correct size field",
       r->header.size == 4);  // 4*1
 #endif
-  mu_assert(
-      "HEADER_RECORD macro should insert correct tag field", r->header.tag == Tag_Record);
+  mu_expect_equal(
+      "HEADER_RECORD macro should insert correct tag field", r->header.tag, Tag_Record);
 
   return NULL;
 }

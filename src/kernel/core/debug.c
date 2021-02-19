@@ -373,7 +373,10 @@ void print_value_line(void* p) {
 }
 
 void print_heap_range(size_t* start, size_t* end) {
-#ifdef TARGET_64BIT
+#ifdef _WIN32
+  printf("|     Address      |       Hex        | Mark | Size | Value\n");
+  printf("| ---------------- | ---------------- | ---- | ---- | -----\n");
+#elif defined(TARGET_64BIT)
   printf("|    Address     |       Hex        | Mark | Size | Value\n");
   printf("| -------------- | ---------------- | ---- | ---- | -----\n");
 #else

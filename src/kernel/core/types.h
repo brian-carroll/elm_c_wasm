@@ -34,10 +34,17 @@ typedef enum {
   Tag_JsRef,            // b
 } Tag;
 
+#ifdef _WIN32
+typedef struct {
+  u32 size : 27;
+  Tag tag : 5;    // Windows treats this as signed, so comparisons can go wrong
+} Header;
+#else
 typedef struct {
   u32 size : 28;  // payload size in integers (28 bits => <1GB)
   Tag tag : 4;    // runtime type tag (4 bits)
 } Header;
+#endif
 
 // It's nice if we can target 64-bit platforms
 // C compile times are dramatically faster for native than for WebAssembly => faster dev
