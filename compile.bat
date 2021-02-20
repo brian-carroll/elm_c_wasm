@@ -6,4 +6,12 @@ if exist dist\exe (
   mkdir dist\exe
 )
 
-CL /Z7 /Od /Fe"dist\exe\test" /Fodist\exe\ src\test\test.c src\kernel\core\core.c src\kernel\test\test.c src\kernel\json\json.c src\kernel\wrapper\wrapper.c /link /DEBUG:FULL
+set build_dir="build\exe"
+
+if exist %build_dir% (
+  del /Q %build_dir%\*
+) else (
+  mkdir %build_dir%
+)
+
+CL /Z7 /Od /Fe"dist\exe\test" /Fo%build_dir%\ src\test\test.c src\kernel\core\core.c src\kernel\test\test.c src\kernel\json\json.c src\kernel\wrapper\wrapper.c /link /DEBUG:FULL
