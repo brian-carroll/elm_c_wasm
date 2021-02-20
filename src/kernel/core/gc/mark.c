@@ -1,11 +1,13 @@
-#include "internals.h"
 #include <stdio.h>
+#include "internals.h"
 
 // Mark a value as live and return 'true' if previously marked
 bool mark_words(GcHeap* heap, void* p_void, size_t size) {
   size_t* p = (size_t*)p_void;
 
-  if (IS_OUTSIDE_HEAP(p)) return true;   // "already marked" (will not be GC'd, don't trace)
+  if (IS_OUTSIDE_HEAP(p)) {
+    return true;  // "already marked" (will not be GC'd, don't trace)
+  }
   if (size == 0) return true;
   assert(p < heap->end);
   assert(p + size < heap->end);
@@ -44,33 +46,46 @@ bool mark_words(GcHeap* heap, void* p_void, size_t size) {
   return already_marked;
 }
 
-void mark_trace(GcHeap* heap, ElmValue* v, size_t* ignore_below) {
-  size_t* first_word = (size_t*)v;
-  if (first_word < ignore_below) return;
-  size_t n_children = child_count(v);
-
-  assert(sanity_check(v));
-
-  bool already_marked = mark_words(heap, v, v->header.size);
-  if (already_marked) return;
-
-  if (v->header.tag == Tag_JsRef) {
-    markJsRef(v->js_ref.index);
+void mark_trace(GcHeap* heap, ElmValue* root, size_t* ignore_below) {
+  if ((size_t*)root < ignore_below || (size_t*)root > heap->end) {
+    return;
   }
 
-  size_t* first_child_field = first_word + v->header.size - n_children;
-  ElmValue** child_ptr_array = (ElmValue**)first_child_field;
+  // reuse the compactor's "offsets" area as a stack of values to be traced
+  ElmValue** todos = (ElmValue**)heap->offsets;
+  todos[0] = root;
+  size_t max_todos = heap->bitmap - heap->offsets;
+  size_t next_todo = 1;
 
-  for (size_t i = 0; i < n_children; ++i) {
-    ElmValue* child = child_ptr_array[i];
-    if (IS_OUTSIDE_HEAP(child)) continue;
+  do {
+    ElmValue* v = todos[--next_todo];  // pop
+    size_t* words = (size_t*)v;
+    assert(sanity_check(v));
 
-    assert((size_t*)child < heap->end);
-    assert(child <= v); // Need the '=' because Closures can refer to themselves
+    bool already_marked = mark_words(heap, v, v->header.size);
+    if (already_marked) continue;
 
-    mark_trace(heap, child, ignore_below);
-  }
+    if (v->header.tag == Tag_JsRef) {
+      markJsRef(v->js_ref.index);
+      continue;
+    }
+
+    size_t n_children = child_count(v);
+    ElmValue** children = (ElmValue**)(words + v->header.size - n_children);
+
+    for (size_t i = 0; i < n_children; ++i) {
+      ElmValue* child = children[i];
+      size_t* child_words = (size_t*)child;
+      if (child_words < ignore_below || child_words > heap->end) {
+        continue;
+      }
+      todos[next_todo] = child;
+      next_todo++;
+      assert(next_todo < max_todos); // stack overflow!
+    }
+  } while (next_todo);
 }
+
 
 void mark(GcState* state, size_t* ignore_below) {
   GcHeap* heap = &state->heap;
