@@ -8,7 +8,7 @@ TEST := $(ROOT)/src/test
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
 
-KENTRY := $(KERNEL)/core/core.c $(KERNEL)/test/test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
+KENTRY := $(KERNEL)/core/core.c $(KERNEL)/elm-test/elm-test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
 KSOURCES := $(shell find $(KERNEL) -name '*.c')
 KHEADERS := $(shell find $(KERNEL) -name '*.h')
 

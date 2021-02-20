@@ -14,4 +14,4 @@ if exist %build_dir% (
   mkdir %build_dir%
 )
 
-CL /Z7 /Od /Fe"dist\exe\test" /Fo%build_dir%\ src\test\test.c src\kernel\core\core.c src\kernel\test\test.c src\kernel\json\json.c src\kernel\wrapper\wrapper.c /link /DEBUG:FULL
+CL /Z7 /Od /Fe"dist\exe\test" /Fo%build_dir%\ src\test\test.c src\kernel\core\core.c src\kernel\elm-test\elm-test.c src\kernel\json\json.c src\kernel\wrapper\wrapper.c /link /DEBUG:FULL
