@@ -35,6 +35,7 @@ interface ElmWasmExports {
   collectGarbage: () => void;
   debugHeapState: () => void;
   debugAddrRange: (start: number, size: number) => void;
+  debugStackMap: () => void;
   debugEvaluatorName: (evalId: number) => void;
 }
 

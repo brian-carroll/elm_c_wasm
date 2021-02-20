@@ -33,17 +33,4 @@ emcc build/codemods/$FILENAME.c \
   $extra_opt \
   &> emcc.log
 
-#   -s EXPORT_NAME='EmscriptenModule' \
-#   -s MODULARIZE=1 \
-
 set +x
-
-
-# if grep error emcc.log
-# then
-#   head -n 20 emcc.log
-# else
-#   echo
-#   echo "SUCCESS"
-#   echo
-# fi

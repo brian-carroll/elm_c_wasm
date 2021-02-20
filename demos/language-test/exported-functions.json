@@ -16,5 +16,6 @@
   "_collectGarbage",
   "_debugHeapState",
   "_debugAddrRange",
+  "_debugStackMap",
   "_debugEvaluatorName"
 ]

@@ -90,3 +90,7 @@ EMSCRIPTEN_KEEPALIVE void debugAddrRange(size_t start, size_t len) {
 EMSCRIPTEN_KEEPALIVE void debugEvaluatorName(size_t addr) {
   printf("\nevaluator %zd: %s\n\n", addr, Debug_evaluator_name((void*)addr));
 }
+
+EMSCRIPTEN_KEEPALIVE void debugStackMap() {
+  print_stack_map();
+}

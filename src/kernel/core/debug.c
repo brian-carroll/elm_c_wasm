@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "./gc/internals.h"
+#include "../json/json.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -158,6 +159,10 @@ static void Debug_prettyHelp(int indent, void* p) {
       if (ctor < Debug_ctors_size) {
         size_t offset = sizeof("CTOR");
         printf("%s\n", &Debug_ctors[ctor][offset]);
+      } else if (ctor == JSON_VALUE_OBJECT) {
+        printf("(JSON Object)");
+      } else if (ctor == JSON_VALUE_ARRAY) {
+        printf("(JSON Array)");
       } else {
         printf("Custom (ctor %d)\n", ctor);
       }
@@ -684,9 +689,16 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
         copy_ascii("()", sb);
         return;
       }
-      char* ctor = (c->ctor < Debug_ctors_size)
-                      ? Debug_ctors[c->ctor] + 5
-                      : "<unknown ctor>";
+      char* ctor;
+      if (c->ctor < Debug_ctors_size) {
+        ctor = Debug_ctors[c->ctor] + 5;
+      } else if (c->ctor == JSON_VALUE_OBJECT) {
+        ctor = "<JSON Object>";
+      } else if (c->ctor == JSON_VALUE_ARRAY) {
+        ctor = "<JSON Array>";
+      } else {
+        ctor = "<unknown ctor>";
+      }
       copy_ascii(ctor, sb);
       copy_ascii(" ", sb);
       int len = custom_params(c);
