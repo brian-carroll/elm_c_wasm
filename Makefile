@@ -20,22 +20,22 @@ ENTRY := $(KENTRY) $(TENTRY)
 SOURCES := $(KSOURCES) $(TSOURCES)
 HEADERS := $(KHEADERS) $(THEADERS)
 
-.PHONY: all check check-bin check-www debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
+.PHONY: all check check-bin check-wasm debug verbose dist wasm wasm-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
 	@:
 
-check: check-bin check-www
+check: check-bin check-wasm
 	@:
 
 check-bin: $(DIST)/bin/test
 	@echo "\n\nRunning tests with binary executable\n"
 	$(DIST)/bin/test --all
 
-check-www: $(DIST)/www/test.html
+check-wasm: $(DIST)/wasm/test.js
 	@echo "\n\nRunning tests with Node.js WebAssembly\n"
-	node $(DIST)/www/test.js --all
+	node $(DIST)/wasm/test.js --all
 
 debug: CFLAGS = -Wall -ggdb -DDEBUG -DDEBUG_LOG
 debug: $(DIST)/bin/test
@@ -44,23 +44,23 @@ debug: $(DIST)/bin/test
 verbose: $(DIST)/bin/test
 	$(DIST)/bin/test -v
 
-dist: clean check www
+dist: clean check wasm
 	@:
 
-www: $(DIST)/www/test.html
+wasm: $(DIST)/wasm/test.js
 	@:
 
-www-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
-www-debug: www
+wasm-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
+wasm-debug: wasm
 	@:
 
-www-release: CFLAGS = -Wall -Oz
-www-release: www
+wasm-release: CFLAGS = -Wall -Oz
+wasm-release: wasm
 	@:
 
 gc-size:
-	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/www/gc.js
-	/bin/ls -lh $(DIST)/www/gc.wasm
+	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/wasm/gc.js
+	/bin/ls -lh $(DIST)/wasm/gc.wasm
 
 clean:
 	@echo 'Deleting generated files'
@@ -86,15 +86,15 @@ todo:
 	cd $(ROOT)/demos/todo-mvc && make clean && make
 
 gh-pages: CFLAGS=-Wall -O3
-gh-pages: www codegen todo
-	mkdir -p $(DEPLOY)/unit-tests/dist/www
+gh-pages: wasm codegen todo
+	mkdir -p $(DEPLOY)/unit-tests/dist/wasm
 	mkdir -p $(DEPLOY)/wrapper/dist
 	mkdir -p $(DEPLOY)/code-gen/dist
 	mkdir -p $(DEPLOY)/todo-mvc/dist
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
 	cp $(ROOT)/favicon.png $(DEPLOY)/unit-tests/
-	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www
-	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
+	cp $(DIST)/wasm/test.js $(DEPLOY)/unit-tests/dist/wasm
+	cp $(DIST)/wasm/test.wasm $(DEPLOY)/unit-tests/dist/wasm
 	cp $(ROOT)/demos/index.html $(DEPLOY)
 	cp $(ROOT)/demos/favicon.png $(DEPLOY)
 	cp $(ROOT)/demos/2019-12-code-gen/index.html $(DEPLOY)/code-gen/index.html
@@ -121,9 +121,9 @@ $(DIST)/bin/test: $(SOURCES) $(HEADERS)
 	@mkdir -p $(DIST)/bin
 	@gcc -ggdb $(CFLAGS) $(ENTRY) -o $@ -lm
 
-$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
+$(DIST)/wasm/test.js: $(SOURCES) $(HEADERS) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@echo Building tests as WebAssembly module...
-	@mkdir -p $(DIST)/www
+	@mkdir -p $(DIST)/wasm
 	@emcc $(CFLAGS) $(ENTRY) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
 
 $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts

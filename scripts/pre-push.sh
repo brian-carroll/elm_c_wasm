@@ -18,8 +18,8 @@ trap cleanup EXIT
 (make dist/bin/test ; ./dist/bin/test --all) &
 job_bin=$!
 
-(make www ; node ./dist/www/test.js --all) &
-job_www=$!
+(make wasm ; node ./dist/wasm/test.js --all) &
+job_wasm=$!
 
 wait $job_bin
-wait $job_www
+wait $job_wasm

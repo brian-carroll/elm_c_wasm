@@ -31,11 +31,11 @@ jobs:
     - name: Test native
       run: make check-bin
     - name: Build Wasm
-      run: make www
+      run: make wasm
     - name: Archive Emscripten test JS
       uses: actions/upload-artifact@v1
       with:
         name: emscripten-test-js
-        path: dist/www/test.js
+        path: dist/wasm/test.js
     - name: Test Wasm
       run: make check-node
