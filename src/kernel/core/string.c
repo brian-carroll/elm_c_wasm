@@ -588,7 +588,7 @@ static void* eval_String_toFloat(void* args[]) {
   ElmString16* s = args[0];
 
   size_t len = code_units(s);
-  if (len > MAX_FLOAT_LEN) len = MAX_FLOAT_LEN;
+  if (len >= MAX_FLOAT_LEN) len = MAX_FLOAT_LEN - 1;
 
   size_t i = 0;
   for (; i < len; i++) {

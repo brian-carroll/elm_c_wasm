@@ -22,7 +22,8 @@ main =
     let
         testConfig =
             View.defaultConfig (Random.initialSeed 10000)
-                |> View.hidePassedTests
+
+        -- |> View.hidePassedTests
     in
     div [ class "view" ]
         [ View.viewResults testConfig allTests
