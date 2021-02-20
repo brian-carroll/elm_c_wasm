@@ -1,3 +1,4 @@
+MAKEFLAGS := --jobs=$(shell nproc)
 CFLAGS=-Wall
 
 ROOT := .
@@ -9,19 +10,9 @@ BUILD := $(ROOT)/build
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
 
-KENTRY := $(KERNEL)/core/core.c $(KERNEL)/elm-test/elm-test.c $(KERNEL)/json/json.c $(KERNEL)/wrapper/wrapper.c
-KSOURCES := $(shell find $(KERNEL) -name '*.c')
-KHEADERS := $(shell find $(KERNEL) -name '*.h')
-
-TENTRY := $(TEST)/test.c
-TSOURCES := $(shell find $(TEST) -name '*.c' | grep -v wrapper)
-THEADERS := $(shell find $(TEST) -name '*.h')
-
-WASM_OBJ := $(BUILD)/wasm/core.o $(BUILD)/wasm/elm-test.o $(BUILD)/wasm/json.o $(BUILD)/wasm/wrapper.o $(BUILD)/wasm/test.o
-
-ENTRY := $(KENTRY) $(TENTRY)
-SOURCES := $(KSOURCES) $(TSOURCES)
-HEADERS := $(KHEADERS) $(THEADERS)
+OBJ := core.o elm-test.o json.o wrapper.o test.o
+BIN_OBJ := $(patsubst %,build/bin/%,$(OBJ))
+WASM_OBJ := $(patsubst %,build/wasm/%,$(OBJ))
 
 .PHONY: all check check-bin check-wasm debug verbose dist wasm wasm-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
@@ -74,9 +65,6 @@ clean:
 
 watch:
 	(while true ; do make build.log; sleep 1; done) | grep -v make
-
-build.log: $(SOURCES) $(HEADERS)
-	make check-bin | tee build.log
 
 benchmark:
 	cd $(ROOT)/demos/2019-08-benchmark && make clean && make
@@ -138,7 +126,7 @@ $(BUILD)/bin/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c
 	gcc -ggdb $(CFLAGS) -c $(TEST)/test.c -o $@
 
 
-$(DIST)/bin/test: $(BUILD)/bin/core.o $(BUILD)/bin/elm-test.o $(BUILD)/bin/json.o $(BUILD)/bin/wrapper.o $(BUILD)/bin/test.o
+$(DIST)/bin/test: $(BIN_OBJ)
 	@mkdir -p $(DIST)/bin
 	gcc -ggdb $(CFLAGS) $^ -o $@ -lm
 
@@ -170,7 +158,7 @@ $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
 
 $(DIST)/wasm/test.js: $(WASM_OBJ) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@mkdir -p $(DIST)/wasm
-	emcc $(CFLAGS) $(ENTRY) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
+	emcc $(CFLAGS) $(WASM_OBJ) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
 
 
 # handle any other arguments to 'make' by passing them to the executable

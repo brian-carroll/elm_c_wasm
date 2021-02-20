@@ -1,4 +1,4 @@
-.PHONY: all
+MAKEFLAGS := --jobs=$(shell nproc)
 
 ELM_SOURCES := $(shell find ./src -name '*.elm')
 KERNEL := ../../src/kernel
