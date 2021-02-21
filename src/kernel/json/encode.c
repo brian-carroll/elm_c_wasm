@@ -2,17 +2,19 @@
 #include "json-internal.h"
 #include "json.h"
 
+
 Custom Json_encodeNull = {
     .header = HEADER_CUSTOM(0),
     .ctor = JSON_VALUE_NULL,
 };
 
+
 void* eval_Json_wrap(void* args[]) {
   ElmValue* v = args[0];
   if (v->header.tag == Tag_Int) {
-    v = NEW_ELM_FLOAT(v->elm_int.value);
+    v = (ElmValue*)newElmFloat(v->elm_int.value);
   }
-  Custom* wrapped = NEW_CUSTOM(JSON_VALUE_WRAP, 1, (void*[]){v});
+  Custom* wrapped = newCustom(JSON_VALUE_WRAP, 1, (void*[]){v});
   return wrapped;
 }
 Closure Json_wrap = {
@@ -20,6 +22,7 @@ Closure Json_wrap = {
     .max_values = 1,
     .evaluator = &eval_Json_wrap,
 };
+
 
 void* eval_Json_unwrap(void* args[]) {
   Custom* x = args[0];
@@ -30,6 +33,7 @@ Closure Json_unwrap = {
     .max_values = 1,
     .evaluator = &eval_Json_unwrap,
 };
+
 
 Custom emptyArray = {
     .header = HEADER_CUSTOM(0),
@@ -44,7 +48,8 @@ Closure Json_emptyArray = {
     .evaluator = &eval_Json_emptyArray,
 };
 
-Custom Json_emptyObjVal = {
+
+Custom emptyObject = {
     .header = HEADER_CUSTOM(0),
     .ctor = JSON_VALUE_OBJECT,
 };
@@ -57,6 +62,7 @@ Closure Json_emptyObject = {
     .evaluator = &eval_Json_emptyObject,
 };
 
+
 void* eval_Json_addField(void* args[]) {
   ElmString16* key = args[0];
   Custom* wrappedValue = args[1];
@@ -66,7 +72,7 @@ void* eval_Json_addField(void* args[]) {
   u32 old_size = old_object->header.size;
   u32 new_size = old_size + 2;
 
-  Custom* new_object = CAN_THROW(GC_malloc(new_size * SIZE_UNIT));
+  Custom* new_object = GC_malloc(true, new_size * SIZE_UNIT);
   GC_memcpy(new_object, old_object, old_size * SIZE_UNIT);
   new_object->header.size = new_size;
   new_object->values[old_params] = key;
@@ -80,6 +86,7 @@ Closure Json_addField = {
     .evaluator = &eval_Json_addField,
 };
 
+
 void* eval_Json_addEntry(void* args[]) {
   Closure* func = args[0];
   void* entry = args[1];
@@ -89,7 +96,7 @@ void* eval_Json_addEntry(void* args[]) {
   u32 old_size = old_array->header.size;
   u32 new_size = old_size + 1;
 
-  Custom* new_array = CAN_THROW(GC_malloc(new_size * SIZE_UNIT));
+  Custom* new_array = GC_malloc(true, new_size * SIZE_UNIT);
   GC_memcpy(new_array, old_array, old_size * SIZE_UNIT);
   new_array->header.size = new_size;
 
@@ -104,30 +111,38 @@ Closure Json_addEntry = {
     .evaluator = &eval_Json_addEntry,
 };
 
-size_t stringify_alloc_chunk;
+
+size_t stringify_alloc_chunk_bytes;
+
 
 void* eval_Json_encode(void* args[]) {
   ElmInt* indentLevel = args[0];
   Custom* wrapped = args[1];
   void* value = wrapped->values[0];
 
-  stringify_alloc_chunk = 64;
-  size_t len = stringify_alloc_chunk / 2;
-  ElmString16* str = NEW_ELM_STRING16(len);
-  u16* cursor = str->words16;
-  u16* end = cursor + len;
+  stringify_alloc_chunk_bytes = 64;
+  size_t len = (stringify_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
+  ElmString16* str = newElmString16(len);
+  StringBuilder sb = {
+    .s = str,
+    .cursor = str->words16,
+    .end = str->words16 + len,
+  };
 
-  void* gc_full = CAN_THROW(stringify(indentLevel->value, 0, value, &cursor, &end));
+  stringify(indentLevel->value, 0, value, &sb);
 
-  // normalise the string length, chopping off any over-allocated space
-  size_t truncated_str_end_addr = ((size_t)cursor + SIZE_UNIT - 1) & (-SIZE_UNIT);
-  size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
-  str->header.size = (u32)final_size;
-  for (; cursor < (u16*)truncated_str_end_addr; cursor++) {
-    *cursor = 0;
-  }
+  // Shrink the string
+  ptrdiff_t cursor_addr = (ptrdiff_t)(sb.cursor);
+  ptrdiff_t aligned_cursor_addr = (cursor_addr + SIZE_UNIT - 1) & (-SIZE_UNIT);
+  ptrdiff_t size = (aligned_cursor_addr - (ptrdiff_t)str) / SIZE_UNIT;
+  str->header.size = (u32)size;
 
-  return gc_full ? pGcFull : str;
+  // Give back unused memory to the allocator
+  ptrdiff_t end_addr = (ptrdiff_t)(sb.end);
+  ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
+  GC_malloc(false, negative_alloc);
+
+  return str;
 }
 Closure Json_encode = {
     .header = HEADER_CLOSURE(0),

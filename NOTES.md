@@ -1,25 +1,3 @@
-# Language tests
-
-- Should make tests for some language constructs
-- Keep it simple, use what I already have - web page demo
-- Test results are `List (String, Bool)`
-- Have a way to display that in HTML
-- Later do it in Node
-  - stringify the list of tests results
-  - Use Debug.log or output port + console.log
-- A test is `(String, () -> Bool)`
-- Make a list of all the tests. A file can export a list of tests
-
-```elm
-[ ("it should do the things", \() ->
-     (1 + 1 == 2)
-  )
-, ("it should do the other things", \() ->
-     (2 + 2 == 4)
-  )
-]
-```
-
 # Virtual DOM
 
 ### Interface to elm/browser
@@ -535,7 +513,255 @@ When someone gives us a Closure for event handling, we need to trace it for Vdom
   - get more memory and move the whole vdom area up
 
 
-==============================
+=======
+# Build system
+
+## Port to Windows
+- So I can do debugging more easily
+  - gdb is awful and VS Code on WSL is not good.
+- GC will need Windows heap allocation https://docs.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate
+
+Steps
+1. Rewrite "GC Full" handling
+  - Needed for Microsoft compiler compatibility since my custom exception thing uses non-standard GNU-C "statement expression".
+  - use standard longjmp instead of basically rolling my own version of that.
+    - Emscripten says that longjmp and C++ exceptions are v expensive. But my thing is the same so also slow!
+    - This is really the cost imposed by Wasm for not being able to examine stack or registers.
+  - redo string growing for Debug.toString and Json.encode
+    - need to update the size every time, can't capture the exception value anymore
+  - check everywhere with `GC_malloc(false, x)` for similar size update stuff
+  - Get rid of CAN_THROW
+2. Get compiler to work with new "GC full" stuff
+3. Get GC working on Windows
+```c
+#include <heapapi.h>
+size_t heap_init_bytes = GC_INITIAL_HEAP_MB * 1024 * 1024;
+HANDLE hHeap = HeapCreate(0, heap_init_bytes, heap_init_bytes);
+void* heap = HeapAlloc(hHeap, 0, heap_init_bytes);
+```
+
+
+## Speed up
+- "Unity build"
+  - Have a core.c that includes all the other core .c files in one translation unit
+  - Move all the header file stuff into core.h
+- Precompiled headers
+  - .pch files for things like types.h
+
+## Lib paths
+- remove the need for code mods
+
+
+
+# Replay rewrite
+
+
+## Notes after stack map v3, before v4!
+
+Things are a lot better, but not there yet. Gradually learning what I really need!
+This keeps getting closer to a normal stack structure and needs to go a bit further.
+Currently:
+- I have a value stack that I push all allocations to. This is good.
+- Plus a separate call stack to track what function I'm currently in, "for debug only"...
+- Also Kernel code is now forced to admit to any tricks like dynamically growing arrays/strings/etc.
+- Ended up building some extra stuff "for debug":
+  - an array of flags: returned vs allocated data (it's a data-oriented SOA design actually, which is nice)
+  - a call stack beside the value stack
+    - using this for various sanity-checking assertions
+    - but those are complicated and confusing now
+  - I am now trying to figure out how to get these to agree with each other in edge cases
+    like the very first call in normal or replay mode, etc. The value stack is labelled with function pointers
+    but those may or may not match the call stack. What am I doing?
+- Still not passing args via the fake stack!
+  - The only part of the standard stack setup that I am still avoiding... will I regret this too?
+  - If I use an explicit stack to pass args, the C code just gets horrible. Lots of wasted loads and stores. And kernel code is really hard to write/maintain.
+  - I don't want to block registers from being used to pass args some day.
+    - Currently preventing that by using arg arrays!
+    - But the door is open to refactor eval functions to use varargs, and to inline saturated function calls.
+- I do want stack frames to keep everything together
+  - Keep the flags array idea. Introduce a "start of frame" flag and put the eval function pointer there.
+
+
+## Notes after stack map v2, before v3!
+
+- Assertion testing: sprinkle assertions everywhere and then run some functions
+- Currently only triggering within gdb
+  - One section is starts one word too early, or maybe 2 too late
+  - It's partway through an infinite_loop Closure
+  - It's out of sequence with the other live sections which are mostly monotonically increasing
+- old infinite loop sections seem to be kept alive! stack map should be shallower
+
+This is still a pain to debug, I can't tell what the hell is going on
+"Live section" is just not a nice mental model of this
+I think the main reason I'm doing it as an actual stack is to avoid having trouble with kernel
+shenanigans like growing arrays after allocating them and so on.
+BUT what if instead of using GC_malloc to push to the stack, I use the constructors?
+There's only a few of them.
+Even with shenanigans, the constructor only gets called once.
+
+So that allows me to use a stack structure which should be easier to get right
+I don't really need to track which parts are from which functions but it would be nice!
+Maybe separate call and value stacks
+
+What to do with tailcalls?
+  - At the top of the loop, inside it, do NEW_CLOSURE(stuff)
+  - Assign the arguments from the Closure, not from args
+  - On replay this will be a fake replayed allocation with the right stuff in it
+  - Boom, that's it
+  - There's no situation where you actually want to return the full Closure. It's always a local.
+
+
+
+## Notes before building stack map v2
+
+- replay/stackmap is so hard to debug
+- stack map is mixed through the rest of the stuff
+- I really need a separate region. Something small will do.
+- Explicit stack is sounding so good right now.
+
+- Do a rewrite
+  - stack map off to the side:
+  - add every allocation to it
+  - when the call returns, write that as the only pointer for this call
+  - the _overwriting_ is key to keeping it small and simple and current
+
+```c
+typedef struct {
+  void* (*evaluator)(void**); // for debug
+  void* start;
+  void* end;
+} GcLiveSection;
+GcLiveSection live_sections[1024];
+i16 current_live_section;
+i16 replay_live_section;
+void* replay;
+Closure* entry;
+```
+
+- run mode
+  - evalClosure
+    - live_section_index = 0
+    - replay_section_index = -1
+    - initialise live_sections[0]
+    - entry = closure
+    - Utils_apply
+
+  - Utils_apply
+    - write to current live section end=alloc_next
+    - create a new live section with start=alloc_next, end=heap->end, and save a reference to this (will pop to it later)
+    - evaluate the call
+    - either
+      - exit normally
+        - overwrite the live section I created, to just contain the return value
+        - create a new live section for parent's allocations, and set as current, with start=alloc_next, end=NULL
+      - exit with GC full
+        - nothing to do... could write to end but that's someone else's job and why bother
+  - GC_malloc
+    - check heap overflow _and_ live section overflow
+    - if live section overflows... we're fucked I think
+      - it's NOT possible to compress the live sections after compressing the heap!
+        - except in the simplest case where the returned value has no children
+        - because we're iterating up the headers
+      - might want to allocate another page for this if it overflows.. but 64kB is thousands of calls deep (16k pointers)
+      - but no real need for buckets, just unmap the current thing and request twice as much
+
+- GC
+  - mark the entry point
+  - loop over the live sections
+    - within each section, iterate using header sizes
+      - **Gaps are a disaster**
+      - Maybe we need a GC function to mark stuff as (sized) garbage.
+      - need to audit the kernel code for any shenanigans leaving gaps
+  - compress
+  - update stackmap & entry with relocated pointers
+
+- replay mode
+  - refactor so evalClosure is in the GC module rather than passing control back
+  - set replay mode
+    - need two stackmap indices, replay and real. When replay gets to real, exit replay mode.
+  - Utils_apply
+    - call GC_stack_push_frame
+    - if NULL, continue
+    - if not, 
+  - GC_stack_push_frame
+    - check if replay mode, if not return NULL
+    - assert that the section is one pointer wide (hmm unless we are merging live sections after compression)
+    - bump replay to next live section and update its pointer
+    - return saved value
+  - GC_malloc
+    - Check if in replay. If not, do as normal
+    - get replay pointer
+    - bump replay pointer by size requested
+      - if gone past current live section end, bump index & ptr to next live section (this is like a bucket array)
+      - if replay index gone past live index, exit replay
+    - return old value of replay pointer
+
+- tail call functions
+  - runtime
+    - should just allocate a Closure on entry and on tailcall, stop messing about
+    - on tailcall, mutates its own _first_ live section in the stackmap to start at the latest closure
+      - needs to reset its _first_ live section, not just the current live section. That requires a ref, like the existing implementation.
+      - could get that ref using an outer TCE wrapper, or with a GC function call before the `while`
+      - allocating unneccessary closure at start? could test address just below args array to see if it's a Closure pointing at this eval fn. hackology. Will go wrong, don't.
+
+
+# Other GC improvements
+
+## Heap regions
+- would enable all sorts of fancier GC stuff: the vdom region, dynamically growing improved stackmap
+- allocation
+  - when we overspill the current region, bump next_alloc up to next region
+- mark
+  - needs to know which region it is updating the mark bits for
+  - ignore_below might be more complex if region addresses can be out of order.. but compaction should avoid that
+- compact
+  - `to` pointer has to jump over the gaps between regions
+  - compaction gets an extra outer loop over regions
+- state
+  - doubly linked list of regions
+  - each region looks roughly like what our current heap struct is. Maybe that's the region header.
+
+# Enable modulo cons mutation
+- special region
+  - not compacted, can support limited local mutation with the freshest values
+  - instead of compact, use a depth-first copy (it's a bit like a mark and compact in one)
+  - need somewhere to copy into - the newest non-nursery region needs to have room, or if not, we create a new region
+  - if we're still running then don't copy the very freshest thing in case it gets mutated.
+  - actually couldn't that happen at any level of the stack? like in List.map the mapper could generate a massive pile of garbage.
+  - so the rule would have to be that the whole young generation uses copy instead of compact until its call is finished
+  - the thing is, this is unbounded really... and you **need a way to tidy up during execution. How does that work in this scheme?** Ends up being semi-space?
+  - I'm not sure if there's actually a way to have one section with mutation and one without...
+    - Probably can, if you grow the copying space indefinitely until the call ends
+
+- stack-based mutation?
+  - can it work?
+  - nope! Too much stuff. We're going the wrong way down the list so of course you get old-to-new pointers
+
+- just do something else that's almost as fast
+  - still perform all the work on the way down the list
+  - put each result pointer into a bucket list of temporary arrays
+  - keep a count of the list length
+  - at the end, create a list of that length and fill it from the bucket array
+    - content will be in reverse order from the cons cells (but then modulo-cons has weird heap shape too)
+
+
+# Prevent stack overflow in mark algo for deep structures
+- Reuse offset area for a "work list" as the GC Handbook calls it
+- As you visit each node, mark it, and mark its children
+- Move to first child, putting the other children in the worklist
+- When you get to the bottom, grab something else from the work list
+- If you ever run out of worklist space, bail to a slower algo
+  - Linearly march a cursor through the mark bitmap, looking for stuff that is marked but has unmarked children
+  - But now we can no longer assume that a marked object has all marked children
+  - So when tracing these partially-traced things, only put their children in the worklist if they are below the cursor
+  - If not below cursor, we'll get to them later - we'll find them in the bitmap!
+
+
+# Recording/streaming issues
+- switching windows
+- I'm mumbling
+- slow build time
+- doing too hard a task
 
 
 # Generate Wasm encoder for Msg
@@ -1709,7 +1935,7 @@ Mutator API
 - GC_stack_push
 - GC_stack_pop
 - GC_stack_tailcall
-- GC_apply_replay
+- GC_stack_push_frame
 
 Mutator API can use hidden state but always delegates to functions handling state explicitly
 

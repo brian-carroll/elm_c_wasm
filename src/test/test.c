@@ -1,13 +1,33 @@
 #include "test.h"
 
+#ifdef _WIN32
+#include "wingetopt.c"
+#else
 #include <getopt.h>
+#include <unistd.h>
+#endif
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "../kernel/core/core.h"
 #include "gc_test.h"
+
+#include "basics_test.c"
+#include "char_test.c"
+#include "debug_test.c"
+#include "gc_test.c"
+#include "json/json_decoder_test.c"
+#include "json/json_encoder_test.c"
+#include "json/json_parser_test.c"
+#include "json_test.c"
+#include "list_test.c"
+#include "string_test.c"
+#include "test-compiled.c"
+#include "test-imports.c"
+#include "types_test.c"
+#include "utils_test.c"
 
 char* types_test();
 char* utils_test();
@@ -32,42 +52,36 @@ int assertions_made = 0;
 //
 // ---------------------------------------------------------
 
-char* test_description;
+char* current_describe_string;
 void* test_heap_ptr;
 
 void describe(char* description, void* (*test)()) {
   tests_run++;
-  test_description = description;
-  test_heap_ptr = GC_malloc(0);
+  current_describe_string = description;
+  test_heap_ptr = GC_malloc(false, 0);
   if (verbose) {
     printf("\n%s\n", description);
   }
-  if (test() == pGcFull) {
-    fprintf(stderr, "Heap overflow in test \"%s\"\n", description);
-    print_heap();
-  }
+  test();
 }
 
 void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
   tests_run++;
-  test_description = description;
-  test_heap_ptr = GC_malloc(0);
+  current_describe_string = description;
+  test_heap_ptr = GC_malloc(false, 0);
   if (verbose) {
     printf("\n%s\n", description);
   }
-  if (test(arg) == pGcFull) {
-    fprintf(stderr, "Heap overflow in test \"%s\"\n", description);
-    print_heap();
-  }
+  test(arg);
 }
 
 void* expect_equal(char* expect_description, void* left, void* right) {
   bool ok = A2(&Utils_equal, left, right) == &True;
   if (!ok) {
     if (!verbose) {
-      printf("\n%s\n", test_description);
+      printf("\n%s\n", current_describe_string);
     }
-    print_heap_range(test_heap_ptr, GC_malloc(0));
+    print_heap_range(test_heap_ptr, GC_malloc(false, 0));
     printf("FAIL: %s\n", expect_description);
     Debug_pretty("Left", left);
     Debug_pretty("Right", right);
@@ -81,10 +95,9 @@ void* expect_equal(char* expect_description, void* left, void* right) {
 }
 
 ElmString16* create_string(char* c_string) {
-  size_t c_len = (size_t)strlen(c_string);
-  size_t bytes_utf16 = c_len * 2;
-  ElmString16* s = NEW_ELM_STRING(bytes_utf16, NULL);
-  for (size_t i = 0; i < c_len; i++) {
+  size_t len = (size_t)strlen(c_string);
+  ElmString16* s = newElmString16(len);
+  for (size_t i = 0; i < len; i++) {
     s->words16[i] = (u16)c_string[i];
   }
   return s;
@@ -105,10 +118,10 @@ char* hex(void* addr, int size) {
     // Print in actual byte order (little endian)
     sprintf(hex_strings[rotate] + c,
         "%02x%02x%02x%02x|",
-        *(u8*)(addr + i),
-        *(u8*)(addr + i + 1),
-        *(u8*)(addr + i + 2),
-        *(u8*)(addr + i + 3));
+        *((u8*)addr + i),
+        *((u8*)addr + i + 1),
+        *((u8*)addr + i + 2),
+        *((u8*)addr + i + 3));
   }
   hex_strings[rotate][c - 1] = 0;  // erase last "|" and terminate the string
   return hex_strings[rotate];
@@ -128,6 +141,7 @@ char* test_all(bool types,
     bool string,
     bool chr,
     bool list,
+    bool debug,
     bool json,
     bool gc) {
   if (verbose) {
@@ -138,6 +152,7 @@ char* test_all(bool types,
     if (string) printf("string ");
     if (chr) printf("char ");
     if (list) printf("list ");
+    if (debug) printf("debug ");
     if (json) printf("json ");
     if (gc) printf("gc ");
     printf("\n\n");
@@ -148,6 +163,7 @@ char* test_all(bool types,
   if (string) mu_run_test(string_test);
   if (chr) mu_run_test(char_test);
   if (list) mu_run_test(list_test);
+  if (debug) mu_run_test(list_test);
   if (json) mu_run_test(json_test);
   if (gc) mu_run_test(gc_test);
 
@@ -166,6 +182,7 @@ int main(int argc, char** argv) {
       {"string", optional_argument, NULL, 's'},
       {"char", optional_argument, NULL, 'c'},
       {"list", optional_argument, NULL, 'l'},
+      {"debug", optional_argument, NULL, 'd'},
       {"json", optional_argument, NULL, 'j'},
       {"gc", optional_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
@@ -178,18 +195,11 @@ int main(int argc, char** argv) {
   bool chr = false;
   bool utils = false;
   bool list = false;
+  bool debug = false;
   bool json = false;
   bool gc = false;
 
-// Running in a Windows CMD shell
-// Prob via Codelite IDE. Dunno how to set up CLI args there yet!
-// Set this up for whatever I'm working on
-#if defined(_WIN32)
-  gc = true;
-  verbose = true;
-#endif
-
-  char options[] = "vatubscljg";
+  char options[] = "vatubscldjg";
 
   int opt;
   while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
@@ -225,6 +235,9 @@ int main(int argc, char** argv) {
       case 'l':
         list = !optarg;
         break;
+      case 'd':
+        debug = !optarg;
+        break;
       case 'j':
         json = !optarg;
         break;
@@ -247,7 +260,7 @@ int main(int argc, char** argv) {
   printf("===================\n");
 #endif
 
-  test_all(types, utils, basics, string, chr, list, json, gc);
+  test_all(types, utils, basics, string, chr, list, debug, json, gc);
   int exit_code;
 
   if (tests_failed) {

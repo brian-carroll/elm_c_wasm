@@ -7,7 +7,7 @@
 #include <stdio.h>
 #endif
 #include "../core/core.h"
-#include "../core/gc-internals.h"
+#include "../core/gc/internals.h"
 #include "../json/json.h"
 #include "wrapper.h"
 
@@ -17,90 +17,80 @@ extern GcState gc_state;
   API exposed to JS side of wrapper
 */
 
-size_t mainsIndex = 0;
-size_t EMSCRIPTEN_KEEPALIVE getNextMain() {
-  assert(Wrapper_mainsArray != NULL);
-  void** mainGcRoot = Wrapper_mainsArray[mainsIndex];
-  if (mainGcRoot == NULL) {
-    return 0;
-  }
-  mainsIndex++;
-  void* heapVal = *mainGcRoot;
-  return (size_t)heapVal;
+EMSCRIPTEN_KEEPALIVE size_t getMains() {
+  return (size_t)Wrapper_mainsArray;
 };
 
-size_t fgIndex = 0;
-size_t EMSCRIPTEN_KEEPALIVE getNextFieldGroup() {
-  assert(Wrapper_appFieldGroups != NULL);
-  FieldGroup* fg = Wrapper_appFieldGroups[fgIndex];
-  if (fg != NULL) fgIndex++;
-  return (size_t)fg;
+EMSCRIPTEN_KEEPALIVE size_t getFieldGroups() {
+  return (size_t)Wrapper_appFieldGroups;
 }
 
-size_t EMSCRIPTEN_KEEPALIVE getUnit() {
+EMSCRIPTEN_KEEPALIVE size_t getUnit() {
   return (size_t)&Unit;
 }
-size_t EMSCRIPTEN_KEEPALIVE getNil() {
+
+EMSCRIPTEN_KEEPALIVE size_t getNil() {
   return (size_t)&Nil;
 }
-size_t EMSCRIPTEN_KEEPALIVE getTrue() {
+
+EMSCRIPTEN_KEEPALIVE size_t getTrue() {
   return (size_t)&True;
 }
-size_t EMSCRIPTEN_KEEPALIVE getFalse() {
+
+EMSCRIPTEN_KEEPALIVE size_t getFalse() {
   return (size_t)&False;
 }
-size_t EMSCRIPTEN_KEEPALIVE getJsNull() {
+
+EMSCRIPTEN_KEEPALIVE size_t getJsNull() {
   return (size_t)&Json_encodeNull;
 }
 
-size_t EMSCRIPTEN_KEEPALIVE getMaxWriteAddr() {
+EMSCRIPTEN_KEEPALIVE size_t getMaxWriteAddr() {
   return (size_t)gc_state.heap.end;
 }
-size_t EMSCRIPTEN_KEEPALIVE getWriteAddr() {
+
+EMSCRIPTEN_KEEPALIVE size_t getWriteAddr() {
   return (size_t)gc_state.next_alloc;
 }
-void EMSCRIPTEN_KEEPALIVE finishWritingAt(size_t addr) {
+
+EMSCRIPTEN_KEEPALIVE void finishWritingAt(size_t addr) {
   gc_state.next_alloc = (size_t*)addr;
 }
 
-f64 EMSCRIPTEN_KEEPALIVE readF64(size_t addr) {
+EMSCRIPTEN_KEEPALIVE f64 readF64(size_t addr) {
   f64* ptr = (f64*)addr;
   return *ptr;
 }
-void EMSCRIPTEN_KEEPALIVE writeF64(size_t addr, f64 value) {
+
+EMSCRIPTEN_KEEPALIVE void writeF64(size_t addr, f64 value) {
   f64* ptr = (f64*)addr;
   *ptr = value;
 }
 
-size_t EMSCRIPTEN_KEEPALIVE evalClosure(size_t addr) {
-  GC_stack_empty();
-  for (size_t attempts = 0; attempts < 1000; attempts++) {
-    void* result = Utils_apply((Closure*)addr, 0, NULL);  // addr ignored on replay
-    if (result != pGcFull) {
-      GC_stack_empty();
-      return (size_t)result;
-    }
-    GC_collect_full();
-    GC_prep_replay();
-  }
-  assert(0);
+EMSCRIPTEN_KEEPALIVE size_t evalClosure(size_t addr) {
+  Closure* c = (Closure*)addr;
+  void* result = GC_execute(c);
+  return (size_t)result;
 }
 
-void EMSCRIPTEN_KEEPALIVE collectGarbage() {
+EMSCRIPTEN_KEEPALIVE void collectGarbage() {
   GC_collect_full();
 }
 
-GcState gc_state;
-void EMSCRIPTEN_KEEPALIVE debugHeapState() {
+EMSCRIPTEN_KEEPALIVE void debugHeapState() {
   mark(&gc_state, gc_state.heap.start);
   print_heap();
   print_state();
 }
 
-void EMSCRIPTEN_KEEPALIVE debugAddrRange(size_t start, size_t len) {
-  print_heap_range((void*)start, (void*)start + len);
+EMSCRIPTEN_KEEPALIVE void debugAddrRange(size_t start, size_t len) {
+  print_heap_range((void*)start, (void*)(start + len));
 }
 
-void EMSCRIPTEN_KEEPALIVE debugEvaluatorName(size_t addr) {
-  printf("%s\n", Debug_evaluator_name((void*)addr));
+EMSCRIPTEN_KEEPALIVE void debugEvaluatorName(size_t addr) {
+  printf("\nevaluator %zd: %s\n\n", addr, Debug_evaluator_name((void*)addr));
+}
+
+EMSCRIPTEN_KEEPALIVE void debugStackMap() {
+  print_stack_map();
 }

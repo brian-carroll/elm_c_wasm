@@ -80,15 +80,15 @@ static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
   }
   if (c->ctor == JSON_VALUE_WRAP) {
     void* unwrapped = (void*)writeJsonValue(c->values[0], jsShape);
-    Custom* wrapped = GC_malloc(sizeof(Custom) + sizeof(void*));
-    wrapped->header = HEADER_CUSTOM(1);
+    Custom* wrapped = GC_malloc(true, sizeof(Custom) + sizeof(void*));
+    wrapped->header = (Header)HEADER_CUSTOM(1);
     wrapped->ctor = JSON_VALUE_WRAP;
     wrapped->values[0] = unwrapped;
     return (size_t)wrapped;
   }
   if (jsShape == MAYBE_CIRCULAR) {
-    JsRef* jsRef = GC_malloc(sizeof(JsRef));
-    jsRef->header = HEADER_JS_REF;
+    JsRef* jsRef = GC_malloc(true, sizeof(JsRef));
+    jsRef->header = (Header)HEADER_JS_REF;
     jsRef->index = allocateJsRef(value);
     return (size_t)jsRef;
   }
@@ -110,7 +110,7 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
     return 0;
   }
   u32 len = custom_params(obj);
-  void* value;
+  void* value = &Json_encodeNull;
   u32 i;
   for (i = 0; i < len; i += 2) {
     ElmString16* field = obj->values[i];
@@ -141,10 +141,7 @@ static ElmString16 str_b = {
     .header = HEADER_STRING(1),
     .words16 = {'b'},
 };
-static ElmInt two = {
-    .header = HEADER_INT,
-    .value = 2,
-};
+static ElmInt num = {.header = HEADER_INT, .value = 2};
 static Custom object_circular = {
     .header = HEADER_CUSTOM(4),
     .ctor = JSON_VALUE_OBJECT,
@@ -153,7 +150,7 @@ static Custom object_circular = {
             &str_a,
             &object_circular,
             &str_b,
-            &two,
+            &num,
         },
 };
 static Custom array_circular = {
@@ -162,7 +159,7 @@ static Custom array_circular = {
     .values =
         {
             &array_circular,
-            &two,
+            &num,
         },
 };
 

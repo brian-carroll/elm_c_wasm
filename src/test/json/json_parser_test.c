@@ -76,10 +76,10 @@ void* test_Json_parse_null() {
 
 void* parse_number(u16** cursor, u16* end);
 void* test_Json_parse_number() {
-  parse_test(&parse_number, create_string("123.456"), NEW_ELM_FLOAT(123.456), 7);
-  parse_test(&parse_number, create_string("-123.456"), NEW_ELM_FLOAT(-123.456), 8);
-  parse_test(&parse_number, create_string("-123.456e-3"), NEW_ELM_FLOAT(-123.456e-3), 11);
-  parse_test(&parse_number, create_string("-123.456E+1"), NEW_ELM_FLOAT(-1234.56), 11);
+  parse_test(&parse_number, create_string("123.456"), newElmFloat(123.456), 7);
+  parse_test(&parse_number, create_string("-123.456"), newElmFloat(-123.456), 8);
+  parse_test(&parse_number, create_string("-123.456e-3"), newElmFloat(-123.456e-3), 11);
+  parse_test(&parse_number, create_string("-123.456E+1"), newElmFloat(-1234.56), 11);
   parse_test(&parse_number, create_string(""), NULL, 0);
   parse_test(&parse_number, create_string("-+e"), NULL, 0);
   parse_test(&parse_number, create_string("abc"), NULL, 0);
@@ -195,38 +195,38 @@ void* test_Json_parse_array() {
 
   parse_test(&parse_array,
       create_string("[123]"),
-      NEW_CUSTOM(JSON_VALUE_ARRAY, 1, (void*[]){NEW_ELM_FLOAT(123)}),
+      newCustom(JSON_VALUE_ARRAY, 1, (void*[]){newElmFloat(123)}),
       5);
 
   parse_test(&parse_array,
       create_string("[\r\n\tnull\r\n ] "),
-      NEW_CUSTOM(JSON_VALUE_ARRAY, 1, (void*[]){&Json_encodeNull}),
+      newCustom(JSON_VALUE_ARRAY, 1, (void*[]){&Json_encodeNull}),
       12);
 
   parse_test(&parse_array,
       create_string("[ 123,\"hi\" ]"),
-      NEW_CUSTOM(JSON_VALUE_ARRAY,
+      newCustom(JSON_VALUE_ARRAY,
           2,
           ((void*[]){
-              NEW_ELM_FLOAT(123),
+              newElmFloat(123),
               create_string("hi"),
           })),
       12);
 
   parse_test(&parse_array,
       create_string("[123 , \"hi\"]"),
-      NEW_CUSTOM(JSON_VALUE_ARRAY,
+      newCustom(JSON_VALUE_ARRAY,
           2,
           ((void*[]){
-              NEW_ELM_FLOAT(123),
+              newElmFloat(123),
               create_string("hi"),
           })),
       12);
 
-  parse_test(&parse_array, create_string("[]"), NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL), 2);
+  parse_test(&parse_array, create_string("[]"), newCustom(JSON_VALUE_ARRAY, 0, NULL), 2);
 
   parse_test(
-      &parse_array, create_string("[ \r\n\t]"), NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL), 6);
+      &parse_array, create_string("[ \r\n\t]"), newCustom(JSON_VALUE_ARRAY, 0, NULL), 6);
 
   // failure cases
   parse_test(&parse_array, create_string(""), NULL, 0);
@@ -249,31 +249,31 @@ void* test_Json_parse_object() {
 
   parse_test(&parse_object,
       create_string("{\"a\":123}"),
-      NEW_CUSTOM(JSON_VALUE_OBJECT,
+      newCustom(JSON_VALUE_OBJECT,
           2,
           ((void*[]){
               create_string("a"),
-              NEW_ELM_FLOAT(123),
+              newElmFloat(123),
           })),
       9);
 
   parse_test(&parse_object,
       create_string("{ \"a\" : 123 } "),
-      NEW_CUSTOM(JSON_VALUE_OBJECT,
+      newCustom(JSON_VALUE_OBJECT,
           2,
           ((void*[]){
               create_string("a"),
-              NEW_ELM_FLOAT(123),
+              newElmFloat(123),
           })),
       13);
 
   parse_test(&parse_object,
       create_string("{ \"a\":123,\"stuff\":false }"),
-      NEW_CUSTOM(JSON_VALUE_OBJECT,
+      newCustom(JSON_VALUE_OBJECT,
           4,
           ((void*[]){
               create_string("a"),
-              NEW_ELM_FLOAT(123),
+              newElmFloat(123),
               create_string("stuff"),
               &False,
           })),
@@ -281,22 +281,22 @@ void* test_Json_parse_object() {
 
   parse_test(&parse_object,
       create_string("{\"a\":123 , \"stuff\":false}"),
-      NEW_CUSTOM(JSON_VALUE_OBJECT,
+      newCustom(JSON_VALUE_OBJECT,
           4,
           ((void*[]){
               create_string("a"),
-              NEW_ELM_FLOAT(123),
+              newElmFloat(123),
               create_string("stuff"),
               &False,
           })),
       25);
 
   parse_test(
-      &parse_object, create_string("{}"), NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL), 2);
+      &parse_object, create_string("{}"), newCustom(JSON_VALUE_OBJECT, 0, NULL), 2);
 
   parse_test(&parse_object,
       create_string("{ \r\n\t}"),
-      NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL),
+      newCustom(JSON_VALUE_OBJECT, 0, NULL),
       6);
 
   // // failure cases

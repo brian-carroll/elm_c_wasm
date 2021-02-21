@@ -4,25 +4,20 @@
 #define __USE_MINGW_ANSI_STDIO 1
 #include <stdio.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include "../kernel/core/types.h"
 
+#define TEST_CTOR(x) x,
 enum {
-  CTOR_Nothing,
-  CTOR_Just,
-  CTOR_Ok,
-  CTOR_Err,
-  CTOR_Failure,
-  CTOR_Field,
-  CTOR_Index,
-  CTOR_OneOf,
-  CTOR_MockElmArray,
+#include "./test-ctors.inc"
+NUM_TEST_CTORS
 };
-
+#undef TEST_CTOR
 
 // ---------------------------------------------------------
 //
-//             TEST JS IMPORTS & CIRCULARAL VALUES
+//             TEST JS IMPORTS & CIRCULAR VALUES
 //
 // ---------------------------------------------------------
 
@@ -80,7 +75,7 @@ extern int tests_run, tests_failed, assertions_made, verbose;
 char* hex(void* addr, int size);
 char* hex_ptr(void* ptr);
 
-extern char* test_description;
+extern char* current_describe_string;
 extern void* test_heap_ptr;
 
 void describe(char* description, void* (*test)());

@@ -1,44 +1,16 @@
-#include "utils.h"
+#include "core.h"
 
 #include <assert.h>
 #include <string.h>
 
-#include "elm.h"
-#include "gc.h"
-#include "list.h"
-#include "string.h"
-#include "types.h"
-
-#if defined(DEBUG) || defined(DEBUG_LOG)
 #include <stdio.h>
 
-#include "debug.h"
-extern void gc_debug_stack_trace(GcStackMap* sm, Closure* c);
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
 #else
-#define log_error(...)
+#define emscripten_run_script(x)
 #endif
 
-// Initialise a global value by evaluating an Elm expression
-//
-// global_permanent_ptr:  location of a pointer outside the heap
-//           that always points to the current heap location.
-//           GC will update this as it moves the value around.
-// init_func:   a function that evaluates the Elm expression
-//           to initialise the global value
-void Utils_initGlobal(void** global_permanent_ptr, void* (*init_func)()) {
-  GC_register_root(global_permanent_ptr);
-  GC_stack_empty();
-  for (;;) {
-    void* heap_value = init_func();
-    if (heap_value != pGcFull) {
-      *global_permanent_ptr = heap_value;
-      GC_stack_empty();
-      return;
-    }
-    GC_collect_full();
-    GC_prep_replay();
-  }
-}
 
 // Destructure by index
 //    custom, cons, or tuple
@@ -72,7 +44,7 @@ void* Utils_clone(void* x) {
   Header* h = (Header*)x;
   if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 0)) return x;
   size_t n_bytes = SIZE_UNIT * (size_t)h->size;
-  ElmValue* x_new = CAN_THROW(GC_malloc(n_bytes));
+  ElmValue* x_new = GC_malloc(true, n_bytes);
   GC_memcpy(x_new, x, n_bytes);
   return x_new;
 }
@@ -97,26 +69,30 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
     }
   }
 
-  log_error("Failed to find field %d in record fieldgroup at %zx\n",
-      search,
-      (size_t)fieldgroup);
-
-  return 0;
+  return -1;
 }
 
 void* Utils_access_eval(void* args[2]) {
   u32 field = (u32)(size_t)args[0];  // unboxed!
   Record* record = (Record*)args[1];
   u32 index = fieldgroup_search(record->fieldgroup, field);
+
+  if (index == -1) {
+      log_error("Failed to find field %d in record access at %p\n", field, record);
+  }
+
   return record->values[index];
 }
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
   Record* r_new = Utils_clone(r);
-  if (r_new == pGcFull) return pGcFull;
-
   for (u32 i = 0; i < n_updates; ++i) {
     u32 field_pos = fieldgroup_search(r_new->fieldgroup, fields[i]);
+
+    if (field_pos == -1) {
+        log_error("Failed to find field %d in record update at %p\n", fields[i], r_new);
+    }
+
     r_new->values[field_pos] = values[i];
   }
 
@@ -144,78 +120,77 @@ Closure Utils_append = {
 //      FUNCTION APPLICATION
 // -----------------------------------------------------------
 
-void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
+void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
   void** args;
-  Closure* c;
-  void* push = NULL;
-
-  for (;;) {
-    void* replay = GC_apply_replay(&push);
-    if (replay != NULL) {
-      c = replay;
-      if (c->header.tag != Tag_Closure) {
-        return replay;
-      }
-      if (c->n_values < c->max_values) {
-        return replay;
-      }
+  do {
+    Closure* replay = GC_stack_push_frame(c->evaluator);
+    if (replay) {
+      if (replay->header.tag != Tag_Closure) return replay;
+      if (replay->n_values < replay->max_values) return replay;
+      // If we get this far, we are resuming a tail-call thunk
+      assert(c->evaluator == replay->evaluator);
+      args = replay->values;
+    } else if (n_applied >= c->max_values) {
+      // All args in one go (or too many args, expecting a function to be returned)
+      args = applied;
+    } else if (n_applied == 0) {
+      // All args already applied, but result not evaluated yet. A thunk.
+      // Elm syntax can't do this but runtime/kernel can
       args = c->values;
     } else {
-      if (c_old->max_values == n_applied) {
-        // 'saturated' call. No need to allocate a new Closure.
-        c = c_old;
-        args = applied;
-      } else if (n_applied == 0) {
-        // a full closure (thunk)
-        // from JS wrapper (or resumed tailcall? not sure if this happens)
-        c = c_old;
-        args = c_old->values;
-      } else {
-        u16 n_old = c_old->n_values;
-        u16 n_new = n_old + n_applied;
+      // Partial application, need a Closure. 'args' could be any size.
+      u16 n_old = c->n_values;
+      u16 n_new = n_old + n_applied;
 
-        size_t size_old = sizeof(Closure) + n_old * sizeof(void*);
-        size_t size_applied = n_applied * sizeof(void*);
-        size_t size_new = size_old + size_applied;
+      Closure* c_copy = GC_malloc(true, SIZE_CLOSURE(n_new) * SIZE_UNIT);
+      c_copy->header = (Header)HEADER_CLOSURE(n_new);
+      c_copy->n_values = n_new;
+      c_copy->max_values = c->max_values;
+      c_copy->evaluator = c->evaluator;
+      for (u32 i = 0; i < n_old; ++i) {
+        c_copy->values[i] = c->values[i];
+      }
+      for (u32 i = 0; i < n_applied; ++i) {
+        c_copy->values[n_old + i] = applied[i];
+      }
 
-        c = CAN_THROW(GC_malloc(size_new));
-        GC_memcpy(c, c_old, size_old);
-        GC_memcpy(&c->values[n_old], applied, size_applied);
-        c->header = HEADER_CLOSURE(n_new);
-        c->n_values = n_new;
+      if (n_new < c_copy->max_values) {
+        return c_copy;
+      }
+      args = c_copy->values; // enough args => execute
+    }
 
-        if (n_new < c->max_values) {
-          // Partial application (not calling evaluator => no stack push)
-          return c;
-        }
-        args = c->values;
+
+    // Execute! (and let the GC know what the stack is doing)
+    GcStackMapIndex stack_frame = GC_get_stack_frame();
+    void* result = c->evaluator(args);
+
+    if (!result) {
+      printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
+      char label[5] = "arg 0";
+      for (int i=0; i< n_applied; i++) {
+        Debug_pretty(label, args[i]);
+        label[4]++;
       }
     }
-    if (!push) {
-      push = CAN_THROW(GC_stack_push());
-    }
 
-    ElmValue* result = (*c->evaluator)(args);
-    if ((void*)result == pGcFull) {
+
+    GC_stack_pop_frame(c->evaluator, result, stack_frame);
+
+
+    u16 n_total = c->n_values + n_applied;
+    u16 n_done = c->max_values;
+    if (n_total <= n_done) {
       return result;
     }
 
-    void* pop = CAN_THROW(GC_stack_pop(result, push));
-    (void)pop;  // suppress "unused variable" warning
-
-    // In some cases, we may still have args to be applied.
-    // The first few were used to create a Closure
-    // Now we need to apply the rest to that new Closure... etc.
-    u16 n_total = c_old->n_values + n_applied;
-    u16 n_done = c_old->max_values;
-    if (n_total > n_done) {
-      c_old = (Closure*)result;
-      n_applied = n_total - n_done;
-      applied = &args[n_done];
-    } else {
-      return result;
-    }
-  }
+    // We have more args to apply. Go around again.
+    // (The function must have returned another function, since ELm type-checked it)
+    c = (Closure*)result;
+    assert(c->header.tag == Tag_Closure);
+    n_applied = n_total - n_done;
+    applied = &args[n_done];
+  } while (true);
 }
 
 // -----------------------------------------------------------
@@ -223,8 +198,8 @@ void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]) {
 // -----------------------------------------------------------
 
 static ElmValue* eq_stack_push(ElmValue* pa, ElmValue* pb, ElmValue** pstack) {
-  Tuple2* t2 = NEW_TUPLE2(pa, pb);
-  Cons* c = NEW_CONS(t2, *pstack);
+  Tuple2* t2 = newTuple2(pa, pb);
+  Cons* c = newCons(t2, *pstack);
   return (ElmValue*)c;
 }
 
@@ -251,9 +226,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_String: {
       size_t* a_words = (size_t*)pa;
       size_t* b_words = (size_t*)pb;
-      // start at first word that contains characters (index 0 or 1)
-      size_t start = ((void*)pa->elm_string.bytes - (void*)pa) / sizeof(void*);
-      for (size_t i = start; i < pa->header.size; ++i) {
+      for (size_t i = 0; i < pa->header.size; ++i) {
         if (a_words[i] != b_words[i]) return 0;
       }
       return 1;
@@ -295,8 +268,6 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       return 1;
 
     case Tag_Closure:
-      // C doesn't have exceptions, would have to call out to JS.
-      // For now it's a warning rather than error and returns False
       log_error(
           "Warning: Trying to use `(==)` on functions.\n"
           "There is no way to know if functions are \"the same\" in the Elm sense.\n"
@@ -308,10 +279,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     case Tag_JsRef:
       return pa->js_ref.index == pb->js_ref.index;
 
-    case Tag_GcStackEmpty:
-    case Tag_GcStackPush:
-    case Tag_GcStackPop:
-    case Tag_GcStackTailCall:
+    default:
       return 0;
   }
 }
@@ -321,14 +289,14 @@ static void* eq_eval(void* args[2]) {
   ElmValue* stack = nil;
   u32 isEqual = eq_help(args[0], args[1], 0, &stack);
 
-  while (isEqual && stack != nil && stack != pGcFull) {
+  while (isEqual && stack != nil) {
     // eq_help reached max recursion depth. Pick up again where it left off.
     Tuple2* pair = stack->cons.head;
     stack = stack->cons.tail;
     isEqual = eq_help(pair->a, pair->b, 0, &stack);
   }
 
-  return stack == pGcFull ? pGcFull : isEqual ? &True : &False;
+  return isEqual ? &True : &False;
 }
 Closure Utils_equal = {
     .header = HEADER_CLOSURE(0),
@@ -339,9 +307,6 @@ Closure Utils_equal = {
 // INEQUALITY
 static void* eval_notEqual(void* args[2]) {
   void* equal = eq_eval(args);
-  if (equal == pGcFull) {
-    return pGcFull;
-  }
   return equal == &False ? &True : &False;
 }
 Closure Utils_notEqual = {
@@ -355,49 +320,67 @@ Closure Utils_notEqual = {
 // -----------------------------------------------------------
 
 static void* compare_help(ElmValue* x, ElmValue* y) {
-  if (x == y) return &Utils_EQ;
+  if (x == y) return &g_elm_core_Basics_EQ;
 
   switch (x->header.tag) {
     case Tag_Int:
       if (x->elm_int.value == y->elm_int.value)
-        return &Utils_EQ;
+        return &g_elm_core_Basics_EQ;
       else if (x->elm_int.value < y->elm_int.value)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
 
     case Tag_Float:
       if (x->elm_float.value == y->elm_float.value)
-        return &Utils_EQ;
+        return &g_elm_core_Basics_EQ;
       else if (x->elm_float.value < y->elm_float.value)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
 
     case Tag_Char:
       if (x->elm_char.value == y->elm_char.value)
-        return &Utils_EQ;
+        return &g_elm_core_Basics_EQ;
       else if (x->elm_char.value < y->elm_char.value)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
 
-    case Tag_String:
-      // TODO
-      // iterate, decode char, compare, loop
-      // Probably call something from String lib
-      // foldl doesn't have early return so maybe write something that does?
-      return NULL;
+    case Tag_String: {
+      // https://tc39.es/ecma262/#sec-abstract-relational-comparison
+      size_t lx = code_units(&x->elm_string16);
+      size_t ly = code_units(&y->elm_string16);
+      size_t len = lx < ly ? lx : ly;
+      size_t i = 0;
+      u16 cx, cy;
+      for (i = 0; i < len; ++i) {
+        cx = x->elm_string16.words16[i];
+        cy = y->elm_string16.words16[i];
+        if (cx != cy) break;
+      }
+      Custom* result;
+      if (i == len) {
+        if (lx == ly) {
+          result = &g_elm_core_Basics_EQ;
+        } else {
+          result = (lx < ly) ? &g_elm_core_Basics_LT : &g_elm_core_Basics_GT;
+        }
+      } else {
+        result = (cx < cy) ? &g_elm_core_Basics_LT : &g_elm_core_Basics_GT;
+      }
+      return result;
+    }
 
     case Tag_List:
       if (y == pNil)
-        return &Utils_GT;
+        return &g_elm_core_Basics_GT;
       else if (x == pNil)
-        return &Utils_LT;
+        return &g_elm_core_Basics_LT;
       else
         while (1) {
           Custom* order_head = compare_help(x->cons.head, y->cons.head);
-          if (order_head != &Utils_EQ) return order_head;
+          if (order_head != &g_elm_core_Basics_EQ) return order_head;
           x = x->cons.tail;
           y = y->cons.tail;
           if (x == pNil || y == pNil) return compare_help(x, y);
@@ -406,7 +389,7 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
     case Tag_Tuple2: {
       Custom* ord;
       ord = compare_help(x->tuple2.a, y->tuple2.a);
-      if (ord != &Utils_EQ) return ord;
+      if (ord != &g_elm_core_Basics_EQ) return ord;
       ord = compare_help(x->tuple2.b, y->tuple2.b);
       return ord;
     }
@@ -414,15 +397,15 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
     case Tag_Tuple3: {
       Custom* ord;
       ord = compare_help(x->tuple3.a, y->tuple3.a);
-      if (ord != &Utils_EQ) return ord;
+      if (ord != &g_elm_core_Basics_EQ) return ord;
       ord = compare_help(x->tuple3.b, y->tuple3.b);
-      if (ord != &Utils_EQ) return ord;
+      if (ord != &g_elm_core_Basics_EQ) return ord;
       ord = compare_help(x->tuple3.c, y->tuple3.c);
       return ord;
     }
 
     default:
-      return NULL;
+      return NULL; // wtf
   }
 }
 
@@ -440,7 +423,7 @@ Closure Utils_compare = {
 static void* lt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) == &Utils_LT) ? &True : &False;
+  return (compare_help(x, y) == &g_elm_core_Basics_LT) ? &True : &False;
 }
 Closure Utils_lt = {
     .header = HEADER_CLOSURE(0),
@@ -451,7 +434,7 @@ Closure Utils_lt = {
 static void* le_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) != &Utils_GT) ? &True : &False;
+  return (compare_help(x, y) != &g_elm_core_Basics_GT) ? &True : &False;
 }
 Closure Utils_le = {
     .header = HEADER_CLOSURE(0),
@@ -462,7 +445,7 @@ Closure Utils_le = {
 static void* gt_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) == &Utils_GT) ? &True : &False;
+  return (compare_help(x, y) == &g_elm_core_Basics_GT) ? &True : &False;
 }
 Closure Utils_gt = {
     .header = HEADER_CLOSURE(0),
@@ -473,23 +456,10 @@ Closure Utils_gt = {
 static void* ge_eval(void* args[2]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
-  return (compare_help(x, y) != &Utils_LT) ? &True : &False;
+  return (compare_help(x, y) != &g_elm_core_Basics_LT) ? &True : &False;
 }
 Closure Utils_ge = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &ge_eval,
     .max_values = 2,
-};
-
-Custom Utils_LT = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = -1,
-};
-Custom Utils_EQ = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = 0,
-};
-Custom Utils_GT = {
-    .header = HEADER_CUSTOM(0),
-    .ctor = 1,
 };

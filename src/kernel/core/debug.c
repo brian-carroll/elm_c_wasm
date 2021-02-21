@@ -1,13 +1,12 @@
-#include "debug.h"
+#include "core.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "gc-internals.h"
-#include "string.h"
-#include "types.h"
+#include "./gc/internals.h"
+#include "../json/json.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -15,19 +14,16 @@
 #endif
 
 extern GcState gc_state;
+extern char stack_flags[GC_STACK_MAP_SIZE];
+char Debug_unknown_evaluator[] = "(?)";
 
-bool is_marked(void* p) {
-  GcState* state = &gc_state;
-  size_t* pword = (size_t*)p;
-  if (pword < state->heap.start || pword > state->heap.end) return true;
-  size_t slot = pword - state->heap.start;
-  size_t word = slot / GC_WORD_BITS;
-  size_t bit = slot % GC_WORD_BITS;
-  size_t mask = (size_t)1 << bit;
-  size_t masked = state->heap.bitmap[word] & mask;
-  size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
-  return (bool)downshift;
-}
+
+
+// =======================================================================
+//
+//                PRETTY PRINTING - WITH MEMORY ADDRESSES
+//
+// =======================================================================
 
 static void print_indent(int indent) {
   for (int i = 0; i < indent; i++) {
@@ -42,6 +38,10 @@ extern char etext, edata, end;  // memory regions, defined by linker
 #endif
 
 void pretty_print_child(int indent, void* p) {
+  if (indent > 10) {
+    printf("...etc...\n");
+    return;
+  }
   printf(FORMAT_PTR, p);
   for (int i = 0; i < indent; i++) {
     printf(" ");
@@ -50,6 +50,15 @@ void pretty_print_child(int indent, void* p) {
 }
 
 static void Debug_prettyHelp(int indent, void* p) {
+  if (p == NULL) {
+    printf("NULL\n");
+    return;
+  }
+  if (indent > 10) {
+    printf("...etc...\n");
+    return;
+  }
+
   ElmValue* v = p;
 
   int deeper = indent + 2;
@@ -115,8 +124,13 @@ static void Debug_prettyHelp(int indent, void* p) {
         printf("[]\n");
       } else {
         printf("[\n");
+        size_t count = 0;
         for (Cons* cell = p; cell != &Nil; cell = cell->tail) {
           pretty_print_child(deeper, cell->head);
+          if (count++ > 10) {
+            printf("...\n");
+            break;
+          }
         }
         print_indent(FORMAT_PTR_LEN + indent);
         printf("]\n");
@@ -145,10 +159,14 @@ static void Debug_prettyHelp(int indent, void* p) {
       if (ctor < Debug_ctors_size) {
         size_t offset = sizeof("CTOR");
         printf("%s\n", &Debug_ctors[ctor][offset]);
+      } else if (ctor == JSON_VALUE_OBJECT) {
+        printf("(JSON Object)");
+      } else if (ctor == JSON_VALUE_ARRAY) {
+        printf("(JSON Array)");
       } else {
         printf("Custom (ctor %d)\n", ctor);
       }
-      for (int i = 0; i < custom_params(p); i++) {
+      for (int i = 0; i < custom_params(p) && i < 10; i++) {
         pretty_print_child(deeper, v->custom.values[i]);
       }
       break;
@@ -157,7 +175,7 @@ static void Debug_prettyHelp(int indent, void* p) {
       printf("{\n");
       FieldGroup* fg = v->record.fieldgroup;
       u32 n_fields = v->header.size - (sizeof(Record) / SIZE_UNIT);
-      for (int i = 0; i < n_fields; i++) {
+      for (int i = 0; i < n_fields && i < 10; i++) {
         void* child = v->custom.values[i];
         printf(FORMAT_PTR, child);
         print_indent(deeper);
@@ -177,7 +195,7 @@ static void Debug_prettyHelp(int indent, void* p) {
     case Tag_FieldGroup: {
       printf("FieldGroup\n");
       u32 n_fields = v->fieldgroup.size;
-      for (int i = 0; i < n_fields; i++) {
+      for (int i = 0; i < n_fields && i < 10; i++) {
         print_indent(deeper);
         u32 field = v->fieldgroup.fields[i];
         if (field < Debug_fields_size) {
@@ -202,25 +220,13 @@ static void Debug_prettyHelp(int indent, void* p) {
         }
       }
       printf("Closure %s\n", name);
-      for (int i = 0; i < v->closure.n_values; i++) {
+      for (int i = 0; i < v->closure.n_values && i < 10; i++) {
         pretty_print_child(deeper, v->closure.values[i]);
       }
       break;
     }
     case Tag_JsRef:
       printf("External JS object %d\n", v->js_ref.index);
-      break;
-    case Tag_GcStackEmpty:
-      printf("GC marker (Stack Empty)\n");
-      break;
-    case Tag_GcStackPush:
-      printf("GC marker (Stack Push)\n");
-      break;
-    case Tag_GcStackPop:
-      printf("GC marker (Stack Pop)\n");
-      break;
-    case Tag_GcStackTailCall:
-      printf("GC marker (Stack Tail Call)\n");
       break;
     default:
       printf("CORRUPTED!! tag %x size %d\n", v->header.tag, v->header.size);
@@ -238,12 +244,15 @@ void Debug_pretty(const char* label, void* p) {
 }
 
 void print_value(void* p) {
+  if (!p) {
+    printf("NULL");
+    return;
+  }
+  if (!sanity_check(p)) {
+    printf("(corrupt data?)");
+    return;
+  }
   ElmValue* v = p;
-  printf("| " FORMAT_PTR " | " FORMAT_HEX " |  %c   |%5d | ",
-      v,
-      *((size_t*)v),
-      is_marked(v) ? 'X' : ' ',
-      v->header.size);
   switch (v->header.tag) {
     case Tag_Int:
       printf("Int %d", v->elm_int.value);
@@ -268,7 +277,11 @@ void print_value(void* p) {
 #endif
       break;
     case Tag_List:
-      printf("Cons head: %p tail: %p", v->cons.head, v->cons.tail);
+      if (p == pNil) {
+        printf("Nil");
+      } else {
+        printf("Cons head: %p tail: %p", v->cons.head, v->cons.tail);
+      }
       break;
     case Tag_Tuple2:
       printf("Tuple2 a: %p b: %p", v->tuple2.a, v->tuple2.b);
@@ -277,9 +290,22 @@ void print_value(void* p) {
       printf("Tuple3 a: %p b: %p c: %p", v->tuple3.a, v->tuple3.b, v->tuple3.c);
       break;
     case Tag_Custom:
-      printf("Custom ctor: %d ", v->custom.ctor);
-      for (size_t i = 0; i < custom_params(&v->custom); ++i) {
-        printf("%p ", v->custom.values[i]);
+      if (p == pTrue) {
+        printf("True");
+      } else if (p == pFalse) {
+        printf("False");
+      } else if (p == pUnit) {
+        printf("Unit");
+      } else {
+        u32 ctor = v->custom.ctor;
+        if (ctor < Debug_ctors_size) {
+          printf("Custom %s ", Debug_ctors[ctor] + 5);
+        } else {
+          printf("Custom ctor: %d ", ctor);
+        }
+        for (size_t i = 0; i < custom_params(&v->custom); ++i) {
+          printf("%p ", v->custom.values[i]);
+        }
       }
       break;
     case Tag_Record: {
@@ -315,31 +341,47 @@ void print_value(void* p) {
     case Tag_JsRef:
       printf("JsRef %d", v->js_ref.index);
       break;
-    case Tag_GcStackPush:
-      printf(
-          "GcStackPush newer: %p older: %p", v->gc_stackmap.newer, v->gc_stackmap.older);
-      break;
-    case Tag_GcStackPop:
-      printf("GcStackPop newer: %p older: %p replay: %p",
-          v->gc_stackmap.newer,
-          v->gc_stackmap.older,
-          v->gc_stackmap.replay);
-      break;
-    case Tag_GcStackTailCall:
-      printf("GcStackTailCall newer: %p older: %p replay: %p",
-          v->gc_stackmap.newer,
-          v->gc_stackmap.older,
-          v->gc_stackmap.replay);
-      break;
-    case Tag_GcStackEmpty:
-      printf("GcStackEmpty newer: %p", v->gc_stackmap.newer);
-      break;
+    default:
+      printf("<Corrupt data, tag=0x%x>", v->header.tag);
   }
+}
+
+
+// =======================================================================
+//
+//                      GARBAGE COLLECTOR DEBUG
+//
+// =======================================================================
+
+bool is_marked(void* p) {
+  GcState* state = &gc_state;
+  size_t* pword = (size_t*)p;
+  if (pword < state->heap.start || pword > state->heap.end) return true;
+  size_t slot = pword - state->heap.start;
+  size_t word = slot / GC_WORD_BITS;
+  size_t bit = slot % GC_WORD_BITS;
+  size_t mask = (size_t)1 << bit;
+  size_t masked = state->heap.bitmap[word] & mask;
+  size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
+  return (bool)downshift;
+}
+
+void print_value_line(void* p) {
+  ElmValue* v = p;
+  printf("| " FORMAT_PTR " | " FORMAT_HEX " |  %c   |%5d | ",
+      v,
+      *((size_t*)v),
+      is_marked(v) ? 'X' : ' ',
+      v->header.size);
+  print_value(v);
   printf("\n");
 }
 
 void print_heap_range(size_t* start, size_t* end) {
-#ifdef TARGET_64BIT
+#ifdef _WIN32
+  printf("|     Address      |       Hex        | Mark | Size | Value\n");
+  printf("| ---------------- | ---------------- | ---- | ---- | -----\n");
+#elif defined(TARGET_64BIT)
   printf("|    Address     |       Hex        | Mark | Size | Value\n");
   printf("| -------------- | ---------------- | ---- | ---- | -----\n");
 #else
@@ -363,8 +405,8 @@ void print_heap_range(size_t* start, size_t* end) {
         if (p >= end) break;
       }
       ElmValue* v = (ElmValue*)p;
-      print_value(v);
-      if (v->header.size > 0 && v->header.size < 102400) {
+      print_value_line(v);
+      if (sanity_check(v)) {
         next_value += v->header.size;
       } else {
         next_value++;
@@ -386,6 +428,7 @@ void print_value_full(void* p) {
 
 void print_heap() {
   GcState* state = &gc_state;
+  mark(state, state->heap.start);
   print_heap_range(state->heap.start, state->next_alloc);
 }
 
@@ -410,6 +453,29 @@ void print_bitmap() {
   printf("\n");
 }
 
+void print_stack_map() {
+  GcStackMap* sm = &gc_state.stack_map;
+  printf("\n");
+  printf("\nStack map:\n");
+  printf("\n");
+
+  GcStackMapIndex top = sm->replay_until ? sm->replay_until : sm->index;
+  for (u32 i = 0; i < top; ++i) {
+    void* value = stack_values[i];
+    char flag = stack_flags[i];
+    if (flag == 'F') {
+      char* eval_name = value ? Debug_evaluator_name(value) : "NULL";
+      printf("-----------------\n");
+      printf("%2d | %c | " FORMAT_PTR " | %s\n", i, flag, value, eval_name);
+    } else {
+      printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);
+      print_value(value);
+      printf("\n");
+    }
+  }
+}
+
+
 void print_state() {
   GcState* state = &gc_state;
 
@@ -418,31 +484,37 @@ void print_state() {
   size_t system_end = (size_t)state->heap.system_end;
   size_t next_alloc = (size_t)state->next_alloc;
   size_t nursery = (size_t)state->nursery;
-  size_t stack_map_empty = (size_t)state->stack_map_empty;
 
   size_t total = (system_end - start + 512) / 1024;
   size_t available = (end - start + 512) / 1024;
   size_t used = (next_alloc - start + 512) / 1024;
-  size_t stack = (next_alloc - stack_map_empty + 512) / 1024;
   size_t since_gc = (next_alloc - nursery + 512) / 1024;
 
-  printf("start %p\n", state->heap.start);
-  printf("system_end %p      (%zd kB total heap)\n", state->heap.system_end, total);
-  printf("end %p             (%zd kB app heap)\n", state->heap.end, available);
-  printf("next_alloc %p      (%zd kB used)\n", state->next_alloc, used);
-  printf("stack_map_empty %p (%zd kB current call)\n", state->stack_map_empty, stack);
-  printf("nursery %p         (%zd kB since last GC)\n", state->nursery, since_gc);
   printf("\n");
-  printf("offsets %p\n", state->heap.offsets);
-  printf("bitmap %p\n", state->heap.bitmap);
-  printf("roots %p\n", state->roots);
-  printf("stack_map %p\n", state->stack_map);
-  printf("stack_depth %zd\n", state->stack_depth);
-  printf("replay_ptr %p\n", state->replay_ptr);
+  printf("%p start\n", state->heap.start);
+  printf("%p system_end      (%zd kB total heap)\n", state->heap.system_end, total);
+  printf("%p end             (%zd kB app heap)\n", state->heap.end, available);
+  printf("%p next_alloc      (%zd kB used)\n", state->next_alloc, used);
+  printf("%p nursery         (%zd kB since last GC)\n", state->nursery, since_gc);
+  printf("\n");
+  printf("%p offsets\n", state->heap.offsets);
+  printf("%p bitmap\n", state->heap.bitmap);
+  printf("%p roots\n", state->roots);
+  printf("\n");
+  printf("%d stack_index\n", state->stack_map.index);
+  printf("%d replay_until\n", state->stack_map.replay_until);
   printf("\n");
 
   // print_bitmap();
 }
+
+
+// =======================================================================
+//
+//                      C DEBUGGING
+//
+// =======================================================================
+
 
 // Execute the JS `debugger` statement (browser devtools)
 void Debug_pause() {
@@ -453,14 +525,13 @@ void Debug_pause() {
 void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  print_heap();
+  // print_heap();
   print_state();
-  printf("Unit = %p\n", &Unit);
-  printf("True = %p\n", &True);
-  printf("False = %p\n", &False);
-  fprintf(stderr, fmt, args);
+  // fprintf(stderr, fmt, args);
+  printf(fmt, args);
   va_end(args);
   // emscripten_run_script("debugger;");
+  exit(EXIT_FAILURE);
 }
 #else
 void log_error(char* fmt, ...) {
@@ -468,5 +539,281 @@ void log_error(char* fmt, ...) {
   va_start(args, fmt);
   printf(fmt, args);
   va_end(args);
+  exit(EXIT_FAILURE);
 }
 #endif
+
+#if defined(DEBUG) && defined(DEBUG_LOG)
+void log_debug(char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  printf(fmt, args);
+  va_end(args);
+}
+#else
+void log_debug(char* fmt, ...) {}
+#endif
+
+
+
+// ========================================================
+//
+//      Elm functions
+//
+// ========================================================
+
+#define GC_NOT_FULL NULL;
+size_t toString_alloc_chunk_bytes;
+
+struct string_builder {
+  ElmString16* s;
+  u16* cursor;
+  u16* end;
+};
+typedef struct string_builder StringBuilder;
+
+// assumes nothing else gets allocated while stringifying
+static void grow(StringBuilder* sb) {
+  GC_malloc(false, toString_alloc_chunk_bytes);
+  sb->end = GC_malloc(false, 0);
+  sb->s->header.size += toString_alloc_chunk_bytes / SIZE_UNIT;
+  if (toString_alloc_chunk_bytes < 1024) toString_alloc_chunk_bytes *= 2;
+  return;
+}
+
+
+static void ensure_space(size_t need, StringBuilder* sb) {
+  while (sb->end - sb->cursor < need) {
+    grow(sb);
+  }
+}
+
+
+static void copy_ascii(char* src, StringBuilder* sb) {
+  char* from = src;
+  u16* to = sb->cursor;
+
+  for (; *from; to++, from++) {
+    if (to >= sb->end) {
+      grow(sb);
+    }
+    *to = *from;
+  }
+
+  sb->cursor = to;
+}
+
+
+void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
+  ElmValue* v = p;
+  char ascii_buf[25];
+
+  if (!depth) {
+    copy_ascii("...", sb);
+    return;
+  }
+
+  switch (v->header.tag) {
+    case Tag_Int: {
+      snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
+      copy_ascii(ascii_buf, sb);
+      return;
+    }
+    case Tag_Float: {
+      snprintf(ascii_buf, sizeof(ascii_buf), "%.16g", v->elm_float.value);
+      copy_ascii(ascii_buf, sb);
+      return;
+    }
+    case Tag_Char: {
+      u16 lower = v->elm_char.words16[0];
+      u16 upper = v->elm_char.words16[1];
+      ensure_space(upper ? 4 : 3, sb);
+      u16* write = sb->cursor;
+      *write++ = '\'';
+      *write++ = lower;
+      if (upper) *write++ = upper;
+      *write++ = '\'';
+      sb->cursor = write;
+      return;
+    }
+    case Tag_String: {
+      size_t len = code_units(&v->elm_string16);
+      ensure_space(len + 2, sb);
+      u16* write = sb->cursor;
+      *write++ = '"';
+      for (size_t i = 0; i < len; ++i) {
+        *write++ = v->elm_string16.words16[i];
+      }
+      *write++ = '"';
+      sb->cursor = write;
+      return;
+    }
+    case Tag_List: {
+      copy_ascii("[", sb);
+      for (Cons* list = &v->cons; list != pNil; list = list->tail) {
+        Debug_toStringHelp(depth-1, list->head, sb);
+        if (list->tail != pNil) copy_ascii(", ", sb);
+      }
+      copy_ascii("]", sb);
+      return;
+    }
+    case Tag_Tuple2: {
+      Tuple2* t = &v->tuple2;
+      copy_ascii("(", sb);
+      Debug_toStringHelp(depth-1, t->a, sb);
+      copy_ascii(", ", sb);
+      Debug_toStringHelp(depth-1, t->b, sb);
+      copy_ascii(")", sb);
+      return;
+    }
+    case Tag_Tuple3: {
+      Tuple3* t = &v->tuple3;
+      copy_ascii("(", sb);
+      Debug_toStringHelp(depth-1, t->a, sb);
+      copy_ascii(", ", sb);
+      Debug_toStringHelp(depth-1, t->b, sb);
+      copy_ascii(", ", sb);
+      Debug_toStringHelp(depth-1, t->c, sb);
+      copy_ascii(")", sb);
+      return;
+    }
+    case Tag_Custom: {
+      Custom* c = &v->custom;
+      if (c == &True) {
+        copy_ascii("True", sb);
+        return;
+      } else if (c == &False) {
+        copy_ascii("False", sb);
+        return;
+      } else if (c == &Unit) {
+        copy_ascii("()", sb);
+        return;
+      }
+      char* ctor;
+      if (c->ctor < Debug_ctors_size) {
+        ctor = Debug_ctors[c->ctor] + 5;
+      } else if (c->ctor == JSON_VALUE_OBJECT) {
+        ctor = "<JSON Object>";
+      } else if (c->ctor == JSON_VALUE_ARRAY) {
+        ctor = "<JSON Array>";
+      } else {
+        ctor = "<unknown ctor>";
+      }
+      copy_ascii(ctor, sb);
+      copy_ascii(" ", sb);
+      int len = custom_params(c);
+      for (int i = 0; i < len; ++i) {
+        Debug_toStringHelp(depth-1, c->values[i], sb);
+        if (i != len - 1) copy_ascii(" ", sb);
+      }
+      return;
+    }
+    case Tag_Record: {
+      Record* r = &v->record;
+      FieldGroup* fg = r->fieldgroup;
+      u32 size = fg->size;
+      copy_ascii("{", sb);
+      for (int i = 0; i < size; ++i) {
+        char* field = Debug_fields[fg->fields[i]];
+        copy_ascii(field, sb);
+        copy_ascii(": ", sb);
+        Debug_toStringHelp(depth-1, r->values[i], sb);
+        if (i != size - 1) copy_ascii(",", sb);
+      }
+      return;
+    }
+    case Tag_FieldGroup: {
+      copy_ascii("<fieldgroup>", sb);
+      return;
+    }
+    case Tag_Closure: {
+      copy_ascii("<function>", sb);
+      return;
+    }
+    case Tag_JsRef: {
+      copy_ascii("<JavaScript>", sb);
+      return;
+    }
+    default: {
+      copy_ascii("<unknown>", sb);
+      return;
+    }
+  }
+}
+
+void* eval_Debug_toString(void* args[]) {
+  void* value = args[0];
+  toString_alloc_chunk_bytes = 64;
+  size_t len = (toString_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
+  ElmString16* str = newElmString16(len);
+  StringBuilder sb = {
+    .s = str,
+    .cursor = str->words16,
+    .end = str->words16 + len,
+  };
+
+  Debug_toStringHelp(5, value, &sb);
+
+  // Shrink the string
+  ptrdiff_t cursor_addr = (ptrdiff_t)(sb.cursor);
+  ptrdiff_t aligned_cursor_addr = (cursor_addr + SIZE_UNIT - 1) & (-SIZE_UNIT);
+  ptrdiff_t size = (aligned_cursor_addr - (ptrdiff_t)str) / SIZE_UNIT;
+  str->header.size = (u32)size;
+
+  // Give back unused memory to the allocator
+  ptrdiff_t end_addr = (ptrdiff_t)(sb.end);
+  ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
+  GC_malloc(false, negative_alloc);
+
+  return str;
+}
+Closure Debug_toString = {
+  .header = HEADER_CLOSURE(0),
+  .max_values = 1,
+  .evaluator = eval_Debug_toString,
+};
+
+
+void* eval_Debug_log(void* args[]) {
+  ElmString16* label = args[0];
+  void* value = args[1];
+
+  size_t label_len = code_units(label);
+  for (size_t i = 0; i < label_len; ++i) {
+    putchar(label->words16[i]);
+  }
+
+  putchar(':');
+  putchar(' ');
+
+  ElmString16* s = eval_Debug_toString(args + 1);
+  size_t s_len = code_units(s);
+  for (size_t i = 0; i < s_len; ++i) {
+    putchar(s->words16[i]);
+  }
+  putchar('\n');
+
+  return value;
+}
+Closure Debug_log = {
+  .header = HEADER_CLOSURE(0),
+  .max_values = 2,
+  .evaluator = eval_Debug_log,
+};
+
+
+void* eval_Debug_todo(void* args[]) {
+  ElmString16* message = args[0];
+  size_t len = code_units(message);
+  for (size_t i = 0; i < len; ++i) {
+    putchar(message->words16[i]);
+  }
+  putchar('\n');
+  exit(EXIT_FAILURE);
+  return NULL;
+}
+Closure Debug_todo = {
+  .header = HEADER_CLOSURE(0),
+  .max_values = 1,
+  .evaluator = eval_Debug_todo,
+};

@@ -1,24 +1,20 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "gc.h"
-#include "types.h"
-#include "utils.h"
+#include "core.h"
 
 // Allocate an entire list at once, with no recursion overhead
 // First value in the array becomes the head of the list
 void* List_create(size_t len, void* values[]) {
-  void* space = GC_malloc(sizeof(Cons) * len);
-  if (space == pGcFull) return pGcFull;
-  Cons* cells = space;
   Cons* head = &Nil;
   for (size_t i = 0; i < len; ++i) {
-    cells[i] = (Cons){
+    Cons* next = GC_malloc(true, sizeof(Cons));
+    *next = (Cons){
         .header = HEADER_LIST,
         .head = values[len - 1 - i],
         .tail = head,
     };
-    head = &cells[i];
+    head = next;
   }
   return head;
 }
@@ -26,7 +22,7 @@ void* List_create(size_t len, void* values[]) {
 // cons
 
 static void* eval_List_cons(void* args[]) {
-  return NEW_CONS(args[0], args[1]);
+  return newCons(args[0], args[1]);
 }
 Closure List_cons = {
     .header = HEADER_CLOSURE(0),
@@ -43,24 +39,14 @@ void* eval_List_append(void* args[]) {
   if (xs == &Nil) return ys;
   if (ys == &Nil) return xs;
 
-  ptrdiff_t len_x = 0;
-  for (Cons* cell = xs; cell != &Nil; cell = cell->tail) {
-    len_x++;
+  Cons* result = ys;
+  for (Cons* x = xs; x != &Nil; x = x->tail) {
+    result = newCons(NULL, result);
   }
-  Cons* new_cells = GC_malloc(sizeof(Cons) * len_x);
-  if (new_cells == pGcFull) return pGcFull;
-
-  ptrdiff_t i = len_x - 1;
-  for (Cons* old_cell = xs; old_cell != &Nil; old_cell = old_cell->tail) {
-    new_cells[i] = (Cons){
-        .header = HEADER_LIST,
-        .head = old_cell->head,
-        .tail = i ? &new_cells[i - 1] : ys,
-    };
-    i--;
+  for (Cons* x = xs, *r = result; x != &Nil; x = x->tail, r = r->tail) {
+    r->head = x->head;
   }
-
-  return &new_cells[len_x - 1];
+  return result;
 }
 Closure List_append = {
     .header = HEADER_CLOSURE(0),
@@ -75,17 +61,14 @@ static void* eval_List_map2(void* args[]) {
   Cons* xs = args[1];
   Cons* ys = args[2];
 
-  Custom* growingArray = GC_malloc(sizeof(Custom));
-  if (growingArray == pGcFull) return pGcFull;
-  growingArray->header = HEADER_CUSTOM(0);
+  Custom* growingArray = GC_malloc(true, sizeof(Custom));
+  growingArray->header = (Header)HEADER_CUSTOM(0);
 
   ptrdiff_t i = 0;
   const size_t CHUNK = 8;
   for (; xs != &Nil && ys != &Nil; i += 2, xs = xs->tail, ys = ys->tail) {
     if (i % CHUNK == 0) {
-      if (GC_malloc(CHUNK * sizeof(void*)) == pGcFull) {
-        return pGcFull;
-      }
+      GC_malloc(false, CHUNK * sizeof(void*));
       growingArray->header.size += CHUNK;
     }
     growingArray->values[i] = xs->head;
@@ -97,7 +80,7 @@ static void* eval_List_map2(void* args[]) {
     void* y = growingArray->values[i + 1];
     void* x_ = growingArray->values[i];
     void* result = A2(f, x_, y);
-    head = NEW_CONS(result, head);
+    head = newCons(result, head);
   }
   return head;
 }
@@ -105,4 +88,16 @@ Closure List_map2 = {
     .header = HEADER_CLOSURE(0),
     .evaluator = &eval_List_map2,
     .max_values = 3,
+};
+
+// Dummy to get core tests running
+// Possible implementation here https://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.c
+// But it seems to rely on mutation and out-of-order lists which would be bad for our GC
+void* eval_List_sortBy(void* args[]) {
+  return &Nil;
+}
+Closure List_sortBy = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = &eval_List_sortBy,
+    .max_values = 2,
 };

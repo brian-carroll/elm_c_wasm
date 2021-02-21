@@ -3,45 +3,14 @@
 #include <string.h>
 
 #include "../kernel/core/core.h"
-#include "../kernel/core/gc-internals.h"
-#include "gc/replay_test.h"
-#include "gc/stackmap_mark_test.h"
 #include "test.h"
+#include "gc_test.h"
 
-extern GcState gc_state;
+void reset_state(GcState*);
+bool mark_words(GcHeap* heap, void* p_void, size_t size);
+void compact(GcState* state, size_t* compact_start);
+bool sanity_check(void* v);
 
-struct fn {
-  void* evaluator;
-  char* name;
-};
-#define NUM_FUNC_NAMES 5
-struct fn func_map[NUM_FUNC_NAMES];
-
-#define MAX_STACKMAP_NAMES 100
-struct sn {
-  GcStackMap* stackmap;
-  char* name;
-} stackmap_names[MAX_STACKMAP_NAMES];
-
-char* find_stackmap_func_name(GcStackMap* sm) {
-  char* name = "unknown";
-  for (int i = 0; i < MAX_STACKMAP_NAMES; i++) {
-    if (stackmap_names[i].stackmap == sm) {
-      name = stackmap_names[i].name;
-    }
-  }
-  return name;
-}
-
-char* find_closure_func_name(Closure* c) {
-  char* name = "unknown";
-  for (int i = 0; i < NUM_FUNC_NAMES; i++) {
-    if (func_map[i].evaluator == c->evaluator) {
-      name = func_map[i].name;
-    }
-  }
-  return name;
-}
 
 void gc_test_reset() {
   GcState* state = &gc_state;
@@ -50,221 +19,10 @@ void gc_test_reset() {
   for (size_t* p = state->heap.start; p < state->heap.end; p++) {
     *p = 0;
   }
-  GC_stack_empty();
 }
 
-char alive_or_dead_msg[50];
-void* root_mutable_pointer;
+// --------------------------------------------------------------------------------
 
-char* gc_mark_compact_test() {
-  GcState* state = &gc_state;
-  gc_test_reset();
-
-  if (verbose)
-    printf(
-        "\n"
-        "#############################################################################\n"
-        "\n"
-        "gc_mark_compact_test\n"
-        "--------------------\n"
-        "\n");
-
-  void* live[100];
-  void* dead[100];
-  size_t nlive = 0;
-  size_t ndead = 0;
-
-  if (verbose) {
-    printf("GC initial state:\n");
-    print_heap();
-    print_state();
-  }
-
-  // Mock Closures.
-  // We never evaluate these during the test so they can be anything
-  Closure* mock_effect_callback = &Basics_add;  // Basics_add is not really an effect
-                                                // callback. It's just a Closure value.
-  Closure* mock_closure = &Basics_mul;
-
-  live[nlive++] = state->heap.start;  // stack_empty
-
-  // Call the top-level function (an effect callback or incoming port)
-  ElmValue* c1 = (ElmValue*)Utils_clone(mock_effect_callback);
-  live[nlive++] = state->next_alloc;  // the root Cons cell we're about to allocate
-  root_mutable_pointer = c1;
-  GC_register_root(&root_mutable_pointer);  // Effect manager is keeping this Closure
-                                            // alive by connecting it to the GC root.
-  live[nlive++] = c1;
-  if (verbose) {
-    printf("Kernel module registered root:\n  located at %p\n  pointing at %p\n",
-        &root_mutable_pointer,
-        root_mutable_pointer);
-  }
-
-  void* push1 = GC_stack_push();
-  live[nlive++] = push1;
-
-  // The currently-running function allocates some stuff.
-  // This function won't have returned by end of test, so it needs these values.
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-
-  // Push down to level 2. This will complete. Need its return value
-  Closure* c2 = Utils_clone(mock_closure);
-  live[nlive++] = c2;
-  void* push2 = GC_stack_push();
-  live[nlive++] = push2;
-
-  // Temporary values from level 2, not in return value
-  dead[ndead] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ndead++;
-  dead[ndead] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ndead++;
-
-  // 3rd level function call. All dead, since we have the return value of a higher level
-  // call.
-  void* push3 = GC_stack_push();
-  dead[ndead++] = push3;
-  dead[ndead] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ndead++;
-  dead[ndead] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ndead++;
-  ElmInt* ret3 = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  dead[ndead++] = ret3;
-  dead[ndead++] = state->next_alloc;  // the pop we're about to allocate
-  GC_stack_pop((ElmValue*)ret3, push3);
-
-  // return value from level 2. Keep it to provide to level 1 on replay
-  ElmValue* ret2a = (ElmValue*)NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ElmValue* ret2b = (ElmValue*)NEW_CONS(ret2a, &Nil);
-  live[nlive++] = ret2a;
-  live[nlive++] = ret2b;
-  ElmValue* ret2c = (ElmValue*)NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ElmValue* ret2d = (ElmValue*)NEW_CONS(ret2c, ret2b);
-  live[nlive++] = ret2c;
-  live[nlive++] = ret2d;
-
-  // Pop back up to top-level function and allocate a few more things.
-  // We actually have a choice whether these are considered alive or dead.
-  // Implementation treats them as live for consistency and ease of coding
-  live[nlive++] = state->next_alloc;  // the pop we're about to allocate
-  GC_stack_pop(ret2d, push2);
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-
-  // Call a function that makes a tail call
-  void* push_into_tailrec = GC_stack_push();
-  live[nlive++] = push_into_tailrec;
-  dead[ndead] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ndead++;
-  dead[ndead] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  ndead++;
-
-  // Tail call. Has completed when we stop the world => dead
-  Closure* ctail1 = GC_malloc(sizeof(Closure) + 2 * sizeof(void*));
-  ctail1->header = HEADER_CLOSURE(2);
-  ctail1->n_values = 2;
-  ctail1->max_values = 2;
-  ctail1->evaluator = Basics_sub.evaluator;
-  ctail1->values[0] = dead[ndead - 1];
-  ctail1->values[1] = dead[ndead - 2];
-  dead[ndead++] = ctail1;
-  dead[ndead++] = state->next_alloc;  // tailcall we're about to allocate
-  GC_stack_tailcall(ctail1, push_into_tailrec);
-
-  // arguments to the next tail call
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-
-  // Tail call. still evaluating this when we stopped the world => keep closure alive
-  Closure* ctail2 = GC_malloc(sizeof(Closure) + 2 * sizeof(void*));
-  ctail2->header = HEADER_CLOSURE(2);
-  ctail2->n_values = 2;
-  ctail2->max_values = 2;
-  ctail1->evaluator = Basics_sub.evaluator;
-  ctail2->values[0] = live[nlive - 1];
-  ctail2->values[1] = live[nlive - 2];
-  live[nlive++] = ctail2;
-  live[nlive++] = state->next_alloc;  // stack tailcall we're about to allocate
-  GC_stack_tailcall(ctail2, push_into_tailrec);
-
-  // allocated just before we stopped the world
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-  live[nlive] = NEW_ELM_INT(state->stack_depth * 100 + nlive + ndead);
-  nlive++;
-
-  if (verbose) printf("Marking...\n");
-  size_t* ignore_below = state->heap.start;
-  mark(&gc_state, ignore_below);
-  if (verbose) printf("Finished marking...\n");
-
-  if (verbose) {
-    print_heap();
-    print_state();
-  }
-
-  size_t dead_size = 0;
-  for (size_t i = 0; i < ndead; i++) {
-    sprintf(alive_or_dead_msg, "Value #%zd at %p should be dead", i, dead[i]);
-    mu_assert(alive_or_dead_msg, !is_marked(dead[i]));
-    ElmValue* v = (ElmValue*)dead[i];
-    dead_size += v->header.size;
-  }
-
-  size_t live_size = 0;
-  for (size_t i = 0; i < nlive; i++) {
-    sprintf(alive_or_dead_msg, "Value #%zd at %p should be live", i, live[i]);
-    mu_assert(alive_or_dead_msg, is_marked(live[i]));
-    ElmValue* v = (ElmValue*)live[i];
-    live_size += v->header.size;
-  }
-
-  size_t heap_size = state->next_alloc - state->heap.start;
-  mu_assert("Stack map test should account for all allocated values",
-      live_size + dead_size == heap_size);
-
-  if (verbose) printf("\n\nCompacting from %p\n\n", ignore_below);
-  compact(&gc_state, ignore_below);
-  if (verbose) printf("Finished compacting\n");
-
-  if (verbose) printf("\n\nMarking compacted heap...\n\n");
-  mark(&gc_state, ignore_below);
-  if (verbose) printf("\n\nFinished marking...\n\n");
-
-  if (verbose) {
-    printf("\n");
-    // print_heap();
-    // print_state();
-
-    printf("next_alloc-start %zd\n", state->next_alloc - state->heap.start);
-    printf("live_size before compaction %zd\n", live_size);
-    printf("\n");
-  }
-
-  mu_assert("Compacted heap should contain exactly the number of live values",
-      state->next_alloc - state->heap.start == live_size);
-
-  // If 'mark' is able to trace correctly, forwarding addresses are OK
-  size_t n_marked = 0;
-  for (size_t* w = state->heap.start; w < state->next_alloc; w++) {
-    n_marked += is_marked(w);
-  }
-  mu_assert("After compaction and re-marking, all values should be marked",
-      n_marked == live_size);
-
-  return NULL;
-}
 
 char bitmap_msg[100];
 
@@ -274,12 +32,14 @@ char* gc_bitmap_test() {
   gc_test_reset();
 
   for (size_t i = 0; i < 10; i++) {
-    ElmValue *p1, *p2, *p3, *p4;
+    ElmInt* p1 = newElmInt(0x101);
+    ElmInt* p2 = newElmInt(0x102);
+    ElmString16* p3 = newElmString16(sizeof(str) - 1);
+    ElmInt* p4 = newElmInt(0x103);
 
-    p1 = (ElmValue*)NEW_ELM_INT(0x101);
-    p2 = (ElmValue*)NEW_ELM_INT(0x102);
-    p3 = (ElmValue*)NEW_ELM_STRING(sizeof(str), str);
-    p4 = (ElmValue*)NEW_ELM_INT(0x103);
+    for (int c=0; c < sizeof(str); c++) {
+      p3->words16[c] = str[c];
+    }
 
     mark_words(&state->heap, p1, p1->header.size);
     mark_words(&state->heap, p3, p3->header.size);
@@ -293,13 +53,10 @@ char* gc_bitmap_test() {
   if (verbose) {
     printf(
         "\n"
-        "#############################################################################\n"
-        "\n"
-        "gc_bitmap_test\n"
-        "--------------\n"
+        "# gc_bitmap_test\n"
         "\n");
-    print_heap();
-    print_state();
+    // print_heap();
+    // print_state();
     printf("\n");
   }
 
@@ -330,12 +87,15 @@ char* gc_bitmap_test() {
   return NULL;
 }
 
+// --------------------------------------------------------------------------------
+
+
 char gc_bitmap_next_test_str[100];
 
 char* gc_bitmap_next_test() {
   if (verbose) {
     printf("\n");
-    printf("gc_bitmap_next_test\n");
+    printf("## gc_bitmap_next_test\n");
     printf("\n");
   }
   gc_test_reset();
@@ -352,7 +112,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 2);
 
   word = 0;
@@ -362,7 +122,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 4);
 
   word = 1;
@@ -372,7 +132,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 2);
 
   word = 1;
@@ -382,7 +142,7 @@ char* gc_bitmap_next_test() {
       assertion++,
       word,
       mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 4);
 
   word = 0;
@@ -399,11 +159,15 @@ char* gc_bitmap_next_test() {
   assertion++;
 
   sprintf(gc_bitmap_next_test_str, format_str, assertion++, word, mask);
-  bitmap_next_test_wrapper(&word, &mask);
+  bitmap_next(&word, &mask);
   mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 1);
 
   return NULL;
 }
+
+
+// --------------------------------------------------------------------------------
+
 
 char* gc_dead_between_test() {
   gc_test_reset();
@@ -438,260 +202,10 @@ char* gc_dead_between_test() {
   return NULL;
 }
 
-/*
-fibHelp : Int -> Int -> Int -> Int
-fibHelp iters prev1 prev2 =
-    if iters <= 1 then
-        prev1
-    else
-        fibHelp (iters - 1) (prev1 + prev2) prev1
-*/
-ElmInt literal_0;
-ElmInt literal_1;
-ElmInt literal_n;
+// --------------------------------------------------------------------------------
 
-void* fibHelp_tce(void* args[3], void** gc_tce_data) {
-  while (1) {
-    ElmInt* iters = args[0];
-    ElmInt* prev1 = args[1];
-    ElmInt* prev2 = args[2];
+void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes);
 
-    if (A2(&Utils_le, iters, &literal_1) == &True) {
-      return prev1;
-    } else {
-      ElmInt* next_iters = A2(&Basics_sub, iters, &literal_1);
-      ElmInt* next_prev1 = A2(&Basics_add, prev1, prev2);
-      ElmInt* next_prev2 = prev1;
-
-      *gc_tce_data = CAN_THROW(GC_tce_iteration(3));
-
-      // *Mutate* args last, after everything that can throw
-      // Allows us to resume after GC exception
-      args[0] = next_iters;
-      args[1] = next_prev1;
-      args[2] = next_prev2;
-    }
-  }
-}
-
-void* fibHelp_eval(void* args[3]) {
-  return GC_tce_eval(&fibHelp_tce, &fibHelp_eval, 3, args);
-}
-Closure fibHelp = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &fibHelp_eval,
-    .max_values = 3,
-};
-
-/*
-fib : Int -> Int
-fib n =
-    if n <= 0 then
-        0
-    else
-        (fibHelp n) 1 0
-*/
-void* fib_eval(void* args[1]) {
-  ElmInt* n = args[0];
-  if (A2(&Utils_le, n, &literal_0) == &True) {
-    return &literal_0;
-  } else {
-    // Use currying just to execute more branches of GC code
-    Closure* curried = A1(&fibHelp, n);
-    return A2(curried, &literal_1, &literal_0);
-  }
-}
-Closure fib = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = &fib_eval,
-    .max_values = 1,
-};
-
-ElmValue* gc_replay_test_catch() {
-  return A1(&fib, &literal_n);
-}
-
-int sn_idx = 0;
-
-void gc_debug_stack_trace(GcStackMap* p, Closure* c) {
-  char* name = find_closure_func_name(c);
-
-  // if (strcmp(name, "unknown") == 0) {
-  //     printf("can't find name for closure %p at stackmap %p\n",
-  //         c, p
-  //     );
-  // } else {
-  //     printf("Closure %p at stackmap %p is %s\n",
-  //         c, p, name
-  //     );
-  // }
-
-  if (sn_idx < MAX_STACKMAP_NAMES) {
-    stackmap_names[sn_idx].stackmap = p;
-    stackmap_names[sn_idx].name = name;
-    sn_idx++;
-  }
-}
-
-char* gc_replay_test() {
-  GcState* state = &gc_state;
-  if (verbose) {
-    printf(
-        "\n"
-        "##############################################################################\n"
-        "\n"
-        "gc_replay_test\n"
-        "--------------\n"
-        "\n"
-        "- Set up heap to be 'nearly full'\n"
-        "- Call an Elm function that doesn't have enough heap space to finish\n"
-        "- Expect a GC exception to be thrown (interrupting execution and unravelling "
-        "the call stack)\n"
-        "- Collect garbage (mark & compact)\n"
-        "- Expect compacted heap to be consistent ('mark' succeeds)\n"
-        "- Restore the state of the stack with new pointer locations & resume execution\n"
-        "- Expect execution to complete & return the correct result\n"
-        "\n"
-        "fib : Int -> Int\n"
-        "fib n =\n"
-        "    if n <= 0 then\n"
-        "        0\n"
-        "    else\n"
-        "        (fibHelp n) 1 0\n"
-        "\n"
-        "fibHelp : Int -> Int -> Int -> Int\n"
-        "fibHelp iters prev1 prev2 =\n"
-        "    if iters <= 1 then\n"
-        "        prev1\n"
-        "    else\n"
-        "        fibHelp (iters - 1) (prev1 + prev2) prev1\n"
-        "\n");
-  }
-  gc_test_reset();
-
-  func_map[0] = (struct fn){fib.evaluator, "fib"};
-  func_map[1] = (struct fn){fibHelp.evaluator, "fibHelp"};
-  func_map[2] = (struct fn){Utils_le.evaluator, "Utils_le"};
-  func_map[3] = (struct fn){Basics_add.evaluator, "Basics_add"};
-  func_map[4] = (struct fn){Basics_sub.evaluator, "Basics_sub"};
-
-  literal_0 = (ElmInt){.header = HEADER_INT, .value = 0};
-  literal_1 = (ElmInt){.header = HEADER_INT, .value = 1};
-  literal_n = (ElmInt){.header = HEADER_INT, .value = 10};
-
-#ifdef TARGET_64BIT
-  size_t not_quite_enough_space = 220;
-#else
-  size_t not_quite_enough_space = 300;
-#endif
-  size_t* ignore_below = state->heap.end - not_quite_enough_space;
-  state->next_alloc = ignore_below;
-
-  if (verbose)
-    printf("Set allocation pointer to leave only %zu (%zu-bit) words of heap space\n",
-        not_quite_enough_space,
-        (sizeof(void*)) * 8);
-
-  // wrapper function to prevent GC exception exiting the test
-  ElmValue* result = gc_replay_test_catch();
-
-  mu_assert("Expect GC exception when 'fib' called with insufficient heap space",
-      result == pGcFull);
-
-  GC_collect_full();
-  GC_prep_replay();
-
-  ElmValue* result_replay = gc_replay_test_catch();
-
-  if (verbose) {
-    printf("\nFinished replay and 2nd execution run...\n");
-    printf(
-        "Aaaand the %dth Fibonacci number is ...drumroll please...\n", literal_n.value);
-    print_value(result_replay);
-  }
-
-  i32 answers[29] = {
-      0,
-      1,
-      1,
-      2,
-      3,
-      5,
-      8,
-      13,
-      21,
-      34,
-      55,
-      89,
-      144,
-      233,
-      377,
-      610,
-      987,
-      1597,
-      2584,
-      4181,
-      6765,
-      10946,
-      17711,
-      28657,
-      46368,
-      75025,
-      121393,
-      196418,
-      317811,
-  };
-  i32 answer = answers[literal_n.value];
-
-  bool pass = result_replay->elm_int.value == answer;
-
-  if (verbose && !pass) {
-    print_heap();
-    print_state();
-  }
-
-  mu_assert("should return the correct result after resuming", pass);
-
-  return NULL;
-}
-
-static void* gc_stack_empty_survival_root1;
-static void* gc_stack_empty_survival_root2;
-
-char* gc_stack_empty_survival_test() {
-  if (verbose) {
-    printf(
-        "\n"
-        "## gc_stack_empty_survival_test\n"
-        "The 'stack empty' marker can get deleted if we do a collection while no "
-        "functions are running.\n"
-        "Make sure it gets restored.\n"
-        "\n");
-  }
-
-  gc_test_reset();
-
-  // Make sure we're not looking at an overly-simple special case with no roots
-  // (Lots of GC state pointers would hold the same address, confusing matters)
-  GC_register_root(&gc_stack_empty_survival_root1);
-  GC_register_root(&gc_stack_empty_survival_root2);
-  gc_stack_empty_survival_root1 = NEW_ELM_INT(123);
-  gc_stack_empty_survival_root2 = NEW_ELM_INT(456);
-  GC_stack_empty();
-
-  void* push = GC_stack_push();
-  GC_stack_pop(pUnit, push);
-  GC_stack_empty();
-
-  GC_collect_full();
-
-  mu_assert("stack empty marker should survive a GC with no functions running",
-      (size_t*)gc_state.stack_map_empty < gc_state.next_alloc);
-
-  return NULL;
-}
-
-void set_heap_layout(GcHeap* heap, size_t* new_break_ptr);
 char* test_heap_layout() {
   if (verbose) {
     printf(
@@ -703,13 +217,14 @@ char* test_heap_layout() {
   gc_test_reset();
 
   GcHeap* heap = &gc_state.heap;
+  size_t* original_start = heap->start;
+  size_t original_bytes = (heap->system_end - heap->start) * SIZE_UNIT;
 
   for (size_t kb = 16; kb <= 1024; kb *= 2) {
     size_t bytes = kb * 1024;
     size_t words = bytes / sizeof(void*);
-    size_t* new_break_ptr = heap->start + words;
 
-    set_heap_layout(heap, new_break_ptr);
+    set_heap_layout(heap, original_start, bytes);
 
     float percent_bitmap = 100.0 * (heap->system_end - heap->bitmap) / words;
     float percent_offsets = 100.0 * (heap->bitmap - heap->offsets) / words;
@@ -732,26 +247,389 @@ char* test_heap_layout() {
     }
   }
 
+  set_heap_layout(heap, original_start, original_bytes);
   gc_test_reset();
+
   return NULL;
 }
+
+// --------------------------------------------------------------------------------
+
+#define TEST_MEMCPY_BUF_SIZE 10
+
+void test_memcpy_reset(u32* from, u32* to) {
+  for (int i = 0; i < TEST_MEMCPY_BUF_SIZE; ++i) {
+    to[i] = 0;
+    from[i] = i + 1;
+  }
+}
+
+void* test_memcpy() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## test_memcpy\n"
+        "\n");
+  }
+  gc_test_reset();
+
+  // Ensure buffers are 64-bit aligned by declaring them as u64
+  u64 from64[TEST_MEMCPY_BUF_SIZE / 2];
+  u64 to64[TEST_MEMCPY_BUF_SIZE / 2];
+
+  // Now cast to 32-bit values
+  u32* from = (u32*)from64;
+  u32* to = (u32*)to64;
+
+  u32* src;
+  u32* dest;
+  u32 size;
+  char description[100];
+
+  if (verbose) {
+    printf("\n32-bit aligned\n");
+  }
+  src = from + 1;
+  dest = to + 1;
+  assert((size_t)dest % sizeof(u64) == sizeof(u32));
+
+  for (size = 1; size <= 6; ++size) {
+    test_memcpy_reset(from, to);
+    GC_memcpy(dest, src, size * sizeof(u32));
+    int mismatches = 0;
+    for (int i = 0; i < size; ++i) {
+      if (dest[i] != src[i]) mismatches++;
+    }
+    snprintf(description, sizeof(description), "should correctly copy %d 32-bit words, 32-bit aligned", size);
+    mu_assert(description, mismatches == 0);
+  }
+
+
+  if (verbose) {
+    printf("\n64-bit aligned\n");
+  }
+  src = from;
+  dest = to;
+  assert((size_t)dest % sizeof(u64) == 0);
+
+  for (size = 1; size <= 6; ++size) {
+    test_memcpy_reset(from, to);
+    GC_memcpy(dest, src, size * sizeof(u32));
+    int mismatches = 0;
+    for (int i = 0; i < size; ++i) {
+      if (dest[i] != src[i]) mismatches++;
+    }
+    snprintf(description, sizeof(description), "should correctly copy %d 32-bit words, 64-bit aligned", size);
+    mu_assert(description, mismatches == 0);
+  }
+
+ return NULL;
+}
+
+
+// --------------------------------------------------------------------------------
+
+
+/*
+fib : Int -> Int
+fib i =
+    if i <= 1 then
+        1
+    else
+        fib (i-1) + fib (i-2)
+*/
+#define g_elm_core_Basics_le Utils_le
+#define g_elm_core_Basics_sub Basics_sub
+#define g_elm_core_Basics_add Basics_add
+
+ElmInt int_2 = { .header = HEADER_INT, .value = 2 };
+ElmInt int_1 = { .header = HEADER_INT, .value = 1 };
+ElmInt int_n = { .header = HEADER_INT, .value = 6 };
+
+Closure fib;
+void * eval_fib(void * args[]) {
+    void * x_i = args[0];
+    void * if0;
+    if (A2(&g_elm_core_Basics_le, x_i, &int_1) == &True) {
+        if0 = &int_1;
+    } else {
+        void * tmp1 = A2(&g_elm_core_Basics_sub, x_i, &int_2);
+        void * tmp2 = A1(&fib, tmp1);
+        void * tmp3 = A2(&g_elm_core_Basics_sub, x_i, &int_1);
+        void * tmp4 = A1(&fib, tmp3);
+        if0 = A2(&g_elm_core_Basics_add, tmp4, tmp2);
+    };
+    return if0;
+}
+Closure fib = { .header = HEADER_CLOSURE(0), .n_values = 0x0, .max_values = 0x1, .evaluator = &eval_fib };
+
+
+char* gc_replay_test() {
+  GcState* state = &gc_state;
+  if (verbose) {
+    printf(
+        "\n"
+        "## gc_replay_test\n"
+        "\n");
+  }
+  gc_test_reset();
+
+#ifdef TARGET_64BIT
+  size_t not_quite_enough_space = 150/sizeof(void*);
+#else
+  size_t not_quite_enough_space = 150/sizeof(void*);
+#endif
+  size_t* ignore_below = state->heap.end - not_quite_enough_space;
+  state->next_alloc = ignore_below;
+
+  if (verbose) {
+    printf("Set allocation pointer to leave only %zu (%zu-bit) words of heap space\n",
+        not_quite_enough_space,
+        (sizeof(void*)) * 8);
+  }
+
+  // Create a thunk as if entering Wasm from JS
+  void* args[1];
+  args[0] = &int_n;
+  Closure* c = newClosure(1, 1, eval_fib, args);
+  stack_clear();
+  stack_enter(c);
+
+  int n_long_jumps = 0;
+  int out_of_memory = setjmp(gcLongJumpBuf);
+  n_long_jumps++;
+  if (!out_of_memory) {
+    Utils_apply(c, 0, NULL);    
+  }
+
+  mu_expect_equal("Expect GC exception when test function called with insufficient heap space", n_long_jumps, 2);
+  GC_collect_full();
+  ElmInt* result_replay = Utils_apply(stack_values[1], 0, NULL);
+
+
+  if (verbose) {
+    printf("Answer after replay = ");
+    print_value(result_replay);
+    printf("\n");
+  }
+
+  i32 answers[28] = { 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811 };
+  i32 answer = answers[int_n.value];
+
+  bool pass = result_replay->value == answer;
+
+  if (verbose && !pass) {
+    print_heap();
+    print_state();
+  }
+
+  mu_expect_equal("should return the correct result after resuming", result_replay->value, answer);
+
+  return NULL;
+}
+
+// --------------------------------------------------------------------------------
+
+void* eval_trashyFold(void* args[]) {
+  ElmInt* free_var = args[0];
+  ElmInt* a = args[1];
+  Cons* acc = args[2];
+  ElmInt* b = acc->head;
+
+  assert(sanity_check(free_var));
+  assert(sanity_check(a));
+  assert(sanity_check(acc));
+  assert(sanity_check(b));
+
+  ElmInt* c = A2(&Basics_add, a, free_var);
+  assert(sanity_check(c));
+
+  ElmInt* d = A2(&Basics_sub, c, b);
+  assert(sanity_check(d));
+
+  Cons* result = newCons(d, newCons(c, newCons(b, pNil)));
+  assert(sanity_check(result));
+
+  return result;
+}
+Closure trashyFold = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 3,
+    .evaluator = &eval_trashyFold,
+};
+
+void* eval_listNonsense(void* args[]) {
+  Cons* list = args[0];
+  assert(sanity_check(list));
+
+  Cons* acc = newCons(newElmInt(64), &Nil);
+  assert(sanity_check(acc));
+
+  ElmInt* free_var = newElmInt(123);
+  assert(sanity_check(free_var));
+
+  Closure* partial = A1(&trashyFold, free_var);
+  assert(sanity_check(partial));
+
+  Cons* folded = A3(&g_elm_core_List_foldl, partial, acc, list);
+  assert(sanity_check(folded));
+
+  Cons* reversed = A1(&g_elm_core_List_reverse, folded);
+  assert(sanity_check(reversed));
+
+  return reversed;
+}
+Closure listNonsense = {
+  .header = HEADER_CLOSURE(0),
+  .evaluator = eval_listNonsense,
+  .max_values = 1,
+};
+
+char* stackmap_mark_eyeball_test() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## stackmap_mark_eyeball_test\n"
+        "\n");
+  }
+
+  gc_test_reset();
+
+  void* list_elems[3] = {
+    newElmInt(123),
+    newElmInt(999),
+    newElmInt(-7),
+  };
+  Cons* list = List_create(3, list_elems);
+  Closure* c = newClosure(1, 1, eval_listNonsense, ((void*[]){list}));
+
+  stack_clear();
+  stack_enter(c);
+
+  Utils_apply(c, 0, NULL);
+
+  GcState* state = &gc_state;
+  mark(state, state->heap.start);
+  // print_heap();
+  // print_state();
+  // print_stack_map();
+
+  return NULL;
+}
+
+
+// --------------------------------------------------------------------------------
+
+
+void* eval_infinite_loop(void* args[]) {
+  u32 gc_stack_frame = GC_get_stack_frame();
+  Closure* gc_resume = newClosure(1, 1, eval_infinite_loop, args);
+  assert(sanity_check(gc_resume));
+
+  Cons* list = gc_resume->values[0];
+  assert(sanity_check(list));
+
+  tce_loop:
+  list = A1(&listNonsense, list);
+  assert(sanity_check(list));
+  gc_resume = GC_stack_tailcall(
+    gc_stack_frame, gc_resume, 1, ((void * []){ list })
+  );
+  goto tce_loop;
+}
+
+
+void* test_execute(Closure* c, int max_gc_cycles) {
+  stack_clear();
+  stack_enter(c);
+
+  // long jump creates an implicit loop
+  int gc_cycles = 0;
+  int out_of_memory = setjmp(gcLongJumpBuf);
+  if (gc_cycles >= max_gc_cycles) {
+    return NULL;
+  }
+  if (out_of_memory) {
+    GC_collect_full();
+    gc_cycles++;
+  }
+  return Utils_apply(stack_values[1], 0, NULL);
+}
+
+
+char* assertions_test() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## assertions_test\n"
+        "(run for long enough to do a few GCs, try to trigger assertions)\n"
+        "\n");
+  }
+  gc_test_reset();
+
+  void* list_elems[3] = {
+    newElmInt(123),
+    newElmInt(999),
+    newElmInt(-7),
+  };
+  Cons* list = List_create(3, list_elems);
+  Closure* c = newClosure(1, 1, eval_infinite_loop, ((void*[]){list}));
+
+  test_execute(c, 10);
+
+  mu_assert("should complete without triggering any assertions", true);
+  return NULL;
+}
+
+// --------------------------------------------------------------------------------
+
+
+char unknown_function_address[FORMAT_PTR_LEN];
+char * Debug_evaluator_name(void * p) {
+  if (p == eval_fib) {
+    return "fib          ";
+  } else if (p == Utils_le.evaluator) {
+    return "Utils_le     ";
+  } else if (p == Basics_sub.evaluator) {
+    return "Basics_sub   ";
+  } else if (p == Basics_add.evaluator) {
+    return "Basics_add   ";
+  } else if (p == g_elm_core_List_foldl.evaluator) {
+    return "List.foldl   ";
+  } else if (p == g_elm_core_List_reverse.evaluator) {
+    return "List.reverse ";
+  } else if (p == eval_trashyFold) {
+    return "trashyFold   ";
+  } else if (p == eval_listNonsense) {
+    return "listNonsense ";
+  } else if (p == eval_infinite_loop) {
+    return "infinite_loop";
+  } else {
+    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
+    return unknown_function_address;
+  }
+}
+
+
+
 
 char* gc_test() {
   if (verbose)
     printf(
         "##############################################################################\n"
         "\n"
-        "                              Garbage Collector tests\n");
+        "                              Garbage Collector tests\n"
+        "\n"
+        "##############################################################################\n");
 
-  mu_run_test(gc_replay_test);
-  mu_run_test(replay_scenario_tests);
-  mu_run_test(stackmap_mark_test);
   mu_run_test(gc_bitmap_test);
-  mu_run_test(gc_dead_between_test);
-  mu_run_test(gc_mark_compact_test);
   mu_run_test(gc_bitmap_next_test);
-  mu_run_test(gc_stack_empty_survival_test);
+  mu_run_test(gc_dead_between_test);
   mu_run_test(test_heap_layout);
+  mu_run_test(test_memcpy);
+  mu_run_test(gc_replay_test);
+  mu_run_test(stackmap_mark_eyeball_test);
+  mu_run_test(assertions_test);
 
   return NULL;
 }

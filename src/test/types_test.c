@@ -1,7 +1,10 @@
 #include "../kernel/core/types.h"
 #include <string.h>
-#include <unistd.h>
 #include "test.h"
+
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 char* test_wasm_types() {
   if (verbose) {
@@ -77,8 +80,13 @@ char* test_header_layout() {
   }
 
   mu_assert("Header size should be 4 bytes", sizeof(Header) == 4);
+#ifdef _WIN32
+  mu_assert("Tag field should have 5 bits", count_flags(*(u32*)&mask_tag) == 5);
+  mu_assert("Size field should have 27 bits", count_flags(*(u32*)&mask_size) == 27);
+#else
   mu_assert("Tag field should have 4 bits", count_flags(*(u32*)&mask_tag) == 4);
   mu_assert("Size field should have 28 bits", count_flags(*(u32*)&mask_size) == 28);
+#endif
 
   return NULL;
 }
@@ -100,7 +108,7 @@ char* test_nil() {
 
 char* test_cons() {
   if (verbose) printf("\n## test_cons\n");
-  Cons* c = NEW_CONS(&Unit, &Nil);  // [()]
+  Cons* c = newCons(&Unit, &Nil);  // [()]
   if (verbose)
     printf("Cons size=%zd addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
         sizeof(Cons),
@@ -119,7 +127,7 @@ char* test_cons() {
   mu_assert("Cons struct should be the right size for a header and 2 pointers",
       sizeof(Cons) == sizeof(Header) + 2 * sizeof(void*));
 #endif
-  mu_assert("NEW_CONS should insert correct size field", c->header.size == 3);
+  mu_assert("newCons should insert correct size field", c->header.size == 3);
 
   mu_assert("[()] should have 'head' pointing to Unit", c->head == &Unit);
   mu_assert("[()] should have 'tail' pointing to Nil", c->tail == &Nil);
@@ -129,11 +137,11 @@ char* test_cons() {
 
 char* test_tuples() {
   if (verbose) printf("\n## test_tuples\n");
-  ElmInt* i1 = NEW_ELM_INT(1);
-  ElmInt* i2 = NEW_ELM_INT(2);
-  ElmInt* i3 = NEW_ELM_INT(3);
+  ElmInt* i1 = newElmInt(1);
+  ElmInt* i2 = newElmInt(2);
+  ElmInt* i3 = newElmInt(3);
 
-  Tuple2* t2 = NEW_TUPLE2(&i1, &i2);
+  Tuple2* t2 = newTuple2(&i1, &i2);
   if (verbose)
     printf("Tuple2 sizeof=%zd header.size=%d hex=%s\n",
         sizeof(Tuple2),
@@ -148,12 +156,12 @@ char* test_tuples() {
   mu_assert("Tuple2 struct should be the right size for a header and 2 pointers",
       sizeof(Tuple2) == sizeof(Header) + 2 * sizeof(void*));
 #endif
-  mu_assert("NEW_TUPLE2 should insert correct size field", t2->header.size == 3);
+  mu_assert("newTuple2 should insert correct size field", t2->header.size == 3);
   mu_assert("Tuple2 should have correct tag field", t2->header.tag == Tag_Tuple2);
   mu_assert("(1,2) should have 'a' pointing to 1", t2->a == &i1);
   mu_assert("(1,2) should have 'b' pointing to 2", t2->b == &i2);
 
-  Tuple3* t3 = NEW_TUPLE3(&i1, &i2, &i3);
+  Tuple3* t3 = newTuple3(&i1, &i2, &i3);
   if (verbose)
     printf("Tuple3 size=%zd header.size=%d hex=%s\n",
         sizeof(Tuple3),
@@ -169,7 +177,7 @@ char* test_tuples() {
   mu_assert("Tuple3 struct should be the right size for a header and 3 pointers",
       sizeof(Tuple3) == sizeof(Header) + 3 * sizeof(void*));
 #endif
-  mu_assert("NEW_TUPLE3 should insert correct size field", t3->header.size == 4);
+  mu_assert("newTuple3 should insert correct size field", t3->header.size == 4);
   mu_assert("Tuple3 should have correct tag field", t3->header.tag == Tag_Tuple3);
   mu_assert("(1,2,3) should have 'a' pointing to 1", t3->a == &i1);
   mu_assert("(1,2,3) should have 'b' pointing to 2", t3->b == &i2);
@@ -180,7 +188,7 @@ char* test_tuples() {
 
 char* test_int() {
   if (verbose) printf("\n## test_int\n");
-  ElmInt* i = NEW_ELM_INT(123);
+  ElmInt* i = newElmInt(123);
 
   if (verbose)
     printf("ElmInt size=%zd addr=%s tag=%d value=%d\n",
@@ -190,12 +198,12 @@ char* test_int() {
         i->value);
   mu_assert("ElmInt type should be just wide enough for a header and an i32",
       sizeof(ElmInt) == sizeof(Header) + sizeof(i32));
-  mu_assert("NEW_ELM_INT should insert correct tag field", i->header.tag == Tag_Int);
-  mu_assert("NEW_ELM_INT 123 should insert value of 123", i->value == 123);
+  mu_assert("newElmInt should insert correct tag field", i->header.tag == Tag_Int);
+  mu_assert("newElmInt 123 should insert value of 123", i->value == 123);
 #ifdef TARGET_64BIT
-  mu_assert("NEW_ELM_INT should insert correct size field", i->header.size == 1);
+  mu_assert("newElmInt should insert correct size field", i->header.size == 1);
 #else
-  mu_assert("NEW_ELM_INT should insert correct size field", i->header.size == 2);
+  mu_assert("newElmInt should insert correct size field", i->header.size == 2);
 #endif
 
   return NULL;
@@ -203,7 +211,7 @@ char* test_int() {
 
 char* test_float() {
   if (verbose) printf("\n## test_float\n");
-  ElmFloat* f = NEW_ELM_FLOAT(123.456789);
+  ElmFloat* f = newElmFloat(123.456789);
   if (verbose)
     printf("Float size=%zd addr=%s tag=%d value=%f\n",
         sizeof(ElmFloat),
@@ -211,8 +219,8 @@ char* test_float() {
         (int)f->header.tag,
         f->value);
 
-  mu_assert("NEW_ELM_FLOAT should insert correct tag field", f->header.tag == Tag_Float);
-  mu_assert("NEW_ELM_FLOAT should insert correct value", f->value == 123.456789);
+  mu_assert("newElmFloat should insert correct tag field", f->header.tag == Tag_Float);
+  mu_assert("newElmFloat should insert correct value", f->value == 123.456789);
 
   // f64 always gets aligned to 64-bit boundary, even for Wasm target
   mu_assert(
@@ -220,9 +228,9 @@ char* test_float() {
       "padding, and an f64",
       sizeof(ElmFloat) == sizeof(Header) + 4 + sizeof(f64));
 #ifdef TARGET_64BIT
-  mu_assert("NEW_ELM_FLOAT should insert correct size field", f->header.size == 2);
+  mu_assert("newElmFloat should insert correct size field", f->header.size == 2);
 #else
-  mu_assert("NEW_ELM_FLOAT should insert correct size field", f->header.size == 4);
+  mu_assert("newElmFloat should insert correct size field", f->header.size == 4);
 #endif
 
   return NULL;
@@ -230,7 +238,7 @@ char* test_float() {
 
 char* test_char() {
   if (verbose) printf("\n## test_char\n");
-  ElmChar* ch = NEW_ELM_CHAR('A');
+  ElmChar* ch = newElmChar('A');
   if (verbose)
     printf("Char size=%zd addr=%s tag=%d value=%c\n",
         sizeof(ElmChar),
@@ -243,27 +251,27 @@ char* test_char() {
   mu_assert("ElmChar should have correct tag field", ch->header.tag == Tag_Char);
   mu_assert("ElmChar 'A' should have correct value", ch->value == 'A');
 #ifdef TARGET_64BIT
-  mu_assert("NEW_ELM_CHAR should insert correct size field", ch->header.size == 1);
+  mu_assert("newElmChar should insert correct size field", ch->header.size == 1);
 #else
-  mu_assert("NEW_ELM_CHAR should insert correct size field", ch->header.size == 2);
+  mu_assert("newElmChar should insert correct size field", ch->header.size == 2);
 #endif
 
   return NULL;
 }
 
 char* test_strings() {
-  ElmString* str0 = NEW_ELM_STRING(0, "");
-  ElmString* str1 = NEW_ELM_STRING(1, "1");
-  ElmString* str2 = NEW_ELM_STRING(2, "12");
-  ElmString* str3 = NEW_ELM_STRING(3, "123");
-  ElmString* str4 = NEW_ELM_STRING(4, "1234");
-  ElmString* str5 = NEW_ELM_STRING(5, "12345");
-  ElmString* str7 = NEW_ELM_STRING(7, "1234567");
-  ElmString* str8 = NEW_ELM_STRING(8, "12345678");
-  ElmString* str9 = NEW_ELM_STRING(9, "123456789");
+  ElmString* str0 = newElmString(0, "");
+  ElmString* str1 = newElmString(1, "1");
+  ElmString* str2 = newElmString(2, "12");
+  ElmString* str3 = newElmString(3, "123");
+  ElmString* str4 = newElmString(4, "1234");
+  ElmString* str5 = newElmString(5, "12345");
+  ElmString* str7 = newElmString(7, "1234567");
+  ElmString* str8 = newElmString(8, "12345678");
+  ElmString* str9 = newElmString(9, "123456789");
   char s[] = "The quick brown fox jumped over the lazy dog, yeah.";
   size_t n = strlen(s);
-  ElmString* strN = NEW_ELM_STRING(n, s);
+  ElmString* strN = newElmString(n, s);
 
   if (verbose) {
     printf("\n");
@@ -299,7 +307,7 @@ char* test_strings() {
       1 + ((n + 3) / 4));
 #endif
 
-  mu_assert("NEW_ELM_STRING should insert the correct type tag",
+  mu_assert("newElmString should insert the correct type tag",
       str9->header.tag == Tag_String);
 
   return NULL;
@@ -308,7 +316,7 @@ char* test_strings() {
 char* test_custom() {
   u8 memory[sizeof(Custom) + 2 * sizeof(void*)];
   Custom* c = (Custom*)memory;
-  c->header = HEADER_CUSTOM(2);
+  c->header = (Header)HEADER_CUSTOM(2);
   c->ctor = 1;
   c->values[0] = &Unit;
   c->values[1] = &Unit;
@@ -343,7 +351,7 @@ char* test_record() {
 
   u8 mem_r[sizeof(Record) + 2 * sizeof(void*)];
   Record* r = (Record*)mem_r;
-  r->header = HEADER_RECORD(2);
+  r->header = (Header)HEADER_RECORD(2);
   r->fieldgroup = fg;
   r->values[0] = &Unit;
   r->values[1] = &Nil;
@@ -361,12 +369,12 @@ char* test_record() {
   }
 
 #ifdef TARGET_64BIT
-  mu_assert(
+  mu_expect_equal(
       "Record struct with no fields should be the right size for a header, 4 bytes of "
       "padding, and 1 pointer",
-      sizeof(Record) == sizeof(Header) + 4 + sizeof(void*));
-  mu_assert("HEADER_RECORD macro should insert correct size field",
-      r->header.size == 4);  // 0.5 + 0.5 + 1 + 2
+      sizeof(Record), sizeof(Header) + 4 + sizeof(void*));
+  mu_expect_equal("HEADER_RECORD macro should insert correct size field",
+      r->header.size, 4);  // 0.5 + 0.5 + 1 + 2
 #else
   mu_assert(
       "Record struct with 2 fields should be the right size for a header and a pointer",
@@ -374,8 +382,8 @@ char* test_record() {
   mu_assert("HEADER_RECORD macro should insert correct size field",
       r->header.size == 4);  // 4*1
 #endif
-  mu_assert(
-      "HEADER_RECORD macro should insert correct tag field", r->header.tag == Tag_Record);
+  mu_expect_equal(
+      "HEADER_RECORD macro should insert correct tag field", r->header.tag, Tag_Record);
 
   return NULL;
 }
@@ -387,7 +395,7 @@ void* dummy_evaluator(void** args) {
 char* test_closure() {
   u8 mem_c[sizeof(Closure) + 2 * sizeof(void*)];
   Closure* c = (Closure*)mem_c;
-  c->header = HEADER_CLOSURE(2);
+  c->header = (Header)HEADER_CLOSURE(2);
   c->evaluator = &dummy_evaluator;
   c->max_values = 3;
   c->n_values = 2;

@@ -1,72 +1,63 @@
-#include "types.h"
+#include "core.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "gc.h"
-
-// see also NEW_CONS in header file
-Cons* ctorCons(void* head, void* tail) {
-  Cons* p = CAN_THROW(GC_malloc(sizeof(Cons)));
-  p->header = HEADER_LIST;
+Cons* newCons(void* head, void* tail) {
+  Cons* p = GC_malloc(true, sizeof(Cons));
+  p->header = (Header)HEADER_LIST;
   p->head = head;
   p->tail = tail;
   return p;
 };
 
-// see also NEW_TUPLE2 in header file
-Tuple2* ctorTuple2(void* a, void* b) {
-  Tuple2* p = CAN_THROW(GC_malloc(sizeof(Tuple2)));
-  p->header = HEADER_TUPLE2;
+Tuple2* newTuple2(void* a, void* b) {
+  Tuple2* p = GC_malloc(true, sizeof(Tuple2));
+  p->header = (Header)HEADER_TUPLE2;
   p->a = a;
   p->b = b;
   return p;
 };
 
-// see also NEW_TUPLE3 in header file
-Tuple3* ctorTuple3(void* a, void* b, void* c) {
-  Tuple3* p = CAN_THROW(GC_malloc(sizeof(Tuple3)));
-  p->header = HEADER_TUPLE3;
+Tuple3* newTuple3(void* a, void* b, void* c) {
+  Tuple3* p = GC_malloc(true, sizeof(Tuple3));
+  p->header = (Header)HEADER_TUPLE3;
   p->a = a;
   p->b = b;
   p->c = c;
   return p;
 };
 
-// see also NEW_ELM_INT in header file
-ElmInt* ctorElmInt(i32 value) {
-  ElmInt* p = CAN_THROW(GC_malloc(sizeof(ElmInt)));
-  p->header = HEADER_INT;
+ElmInt* newElmInt(i32 value) {
+  ElmInt* p = GC_malloc(true, sizeof(ElmInt));
+  p->header = (Header)HEADER_INT;
   p->value = value;
   return p;
 };
 
-// see also NEW_ELM_FLOAT in header file
-ElmFloat* ctorElmFloat(f64 value) {
-  ElmFloat* p = CAN_THROW(GC_malloc(sizeof(ElmFloat)));
-  p->header = HEADER_FLOAT;
+ElmFloat* newElmFloat(f64 value) {
+  ElmFloat* p = GC_malloc(true, sizeof(ElmFloat));
+  p->header = (Header)HEADER_FLOAT;
   p->value = value;
   return p;
 };
 
-// see also NEW_ELM_CHAR in header file
-ElmChar* ctorElmChar(u32 value) {
-  ElmChar* p = CAN_THROW(GC_malloc(sizeof(ElmChar)));
-  p->header = HEADER_CHAR;
+ElmChar* newElmChar(u32 value) {
+  ElmChar* p = GC_malloc(true, sizeof(ElmChar));
+  p->header = (Header)HEADER_CHAR;
   p->value = value;
   return p;
 };
 
 // Strings are padded to the next 32/64-bit boundary.
 
-// see also NEW_ELM_STRING in header file
-ElmString* ctorElmString(size_t payload_bytes, char* str) {
+ElmString* newElmString(size_t payload_bytes, char* str) {
   size_t used_bytes = sizeof(Header) + payload_bytes +
                       (STRING_ENCODING == UTF8);  // 1 byte for padding size
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
-  ElmString* p = CAN_THROW(GC_malloc(aligned_bytes));
+  ElmString* p = GC_malloc(true, aligned_bytes);
   size_t* words = (size_t*)p;  // the ElmString as an array of words
 
 #if STRING_ENCODING == UTF16
@@ -112,13 +103,12 @@ ElmString* ctorElmString(size_t payload_bytes, char* str) {
   return p;
 }
 
-// see also NEW_ELM_STRING16 in header file
-ElmString16* ctorElmString16(size_t len16) {
+ElmString16* newElmString16(size_t len16) {
   size_t used_bytes = sizeof(Header) + len16 * sizeof(u16);
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
-  ElmString16* p = CAN_THROW(GC_malloc(aligned_bytes));
+  ElmString16* p = GC_malloc(true, aligned_bytes);
 
   if (aligned_bytes != used_bytes) {
     size_t* words = (size_t*)p;
@@ -134,9 +124,10 @@ ElmString16* ctorElmString16(size_t len16) {
   return p;
 }
 
-Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
-  Custom* c = CAN_THROW(GC_malloc(sizeof(Custom) + n_children * sizeof(void*)));
-  c->header = HEADER_CUSTOM(n_children);
+Custom* newCustom(u32 ctor, u32 n_children, void* children[]) {
+  Custom* c = GC_malloc(true, sizeof(Custom) + n_children * sizeof(void*));
+
+  c->header = (Header)HEADER_CUSTOM(n_children);
   c->ctor = ctor;
   if (children != NULL) {
     for (size_t i = 0; i < n_children; ++i) {
@@ -146,19 +137,19 @@ Custom* ctorCustom(u32 ctor, u32 n_children, void* children[]) {
   return c;
 }
 
-Record* ctorRecord(FieldGroup* fg, u32 n_children, void* children[]) {
-  Record* r = CAN_THROW(GC_malloc(sizeof(Record) + n_children * sizeof(void*)));
-  r->header = HEADER_RECORD(n_children);
+Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]) {
+  Record* r = GC_malloc(true, sizeof(Record) + n_children * sizeof(void*));
+  r->header = (Header)HEADER_RECORD(n_children);
   r->fieldgroup = fg;
   for (size_t i = 0; i < n_children; ++i) {
     r->values[i] = children[i];
   }
   return r;
 }
-Closure* ctorClosure(
+Closure* newClosure(
     u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
-  Closure* c = CAN_THROW(GC_malloc(sizeof(Closure) + n_values * sizeof(void*)));
-  c->header = HEADER_CLOSURE(n_values);
+  Closure* c = GC_malloc(true, sizeof(Closure) + n_values * sizeof(void*));
+  c->header = (Header)HEADER_CLOSURE(n_values);
   c->n_values = n_values;
   c->max_values = max_values;
   c->evaluator = evaluator;
@@ -171,19 +162,15 @@ Closure* ctorClosure(
 }
 
 u32 custom_params(Custom* c) {
-  u32 total_size = c->header.size * SIZE_UNIT;
-  u32 before_pointers = sizeof(Header) + sizeof(u32);
-  return (total_size - before_pointers) / sizeof(void*);
+  return c->header.size - (sizeof(Custom) / SIZE_UNIT);
 }
 
 Cons Nil = {.header = HEADER_LIST, .head = NULL, .tail = NULL};
 Custom Unit = {.header = HEADER_CUSTOM(0), .ctor = 0};
 Custom True = {.header = HEADER_CUSTOM(0), .ctor = 1};
 Custom False = {.header = HEADER_CUSTOM(0), .ctor = 0};
-Custom GcFull = {.header = HEADER_CUSTOM(0), .ctor = 0};
 
 void* pNil = &Nil;
 void* pUnit = &Unit;
 void* pTrue = &True;
 void* pFalse = &False;
-void* pGcFull = &GcFull;

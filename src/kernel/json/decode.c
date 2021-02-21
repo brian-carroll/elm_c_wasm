@@ -31,7 +31,7 @@ enum JsonFields {
 };
 
 static void* eval_Json_succeed(void* args[]) {
-  return NEW_CUSTOM(DECODER_SUCCEED, 1, args);
+  return newCustom(DECODER_SUCCEED, 1, args);
 }
 Closure Json_succeed = {
     .header = HEADER_CLOSURE(0),
@@ -40,7 +40,7 @@ Closure Json_succeed = {
 };
 
 static void* eval_Json_fail(void* args[]) {
-  return NEW_CUSTOM(DECODER_FAIL, 1, args);
+  return newCustom(DECODER_FAIL, 1, args);
 }
 Closure Json_fail = {
     .header = HEADER_CLOSURE(0),
@@ -71,7 +71,7 @@ Custom Json_decodeString = {
 
 static void* eval_Json_decodeList(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(DECODER_LIST, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_LIST, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
 Closure Json_decodeList = {
     .header = HEADER_CLOSURE(0),
@@ -81,7 +81,7 @@ Closure Json_decodeList = {
 
 static void* eval_Json_decodeArray(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(DECODER_ARRAY, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_ARRAY, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
 Closure Json_decodeArray = {
     .header = HEADER_CLOSURE(0),
@@ -91,7 +91,7 @@ Closure Json_decodeArray = {
 
 static void* eval_Json_decodeNull(void* args[]) {
   void* value = args[0];
-  return NEW_CUSTOM(
+  return newCustom(
       DECODER_NULL, 3, ((void*[]){&Json_encodeNull, &Json_encodeNull, value}));
 }
 Closure Json_decodeNull = {
@@ -103,7 +103,7 @@ Closure Json_decodeNull = {
 static void* eval_Json_decodeField(void* args[]) {
   void* field = args[0];
   void* decoder = args[1];
-  return NEW_CUSTOM(DECODER_FIELD,
+  return newCustom(DECODER_FIELD,
       4,
       ((void*[]){
           /*a*/ &Json_encodeNull,
@@ -121,7 +121,7 @@ Closure Json_decodeField = {
 static void* eval_Json_decodeIndex(void* args[]) {
   void* index = args[0];
   void* decoder = args[1];
-  return NEW_CUSTOM(DECODER_INDEX,
+  return newCustom(DECODER_INDEX,
       5,
       ((void*[]){
           /*a*/ &Json_encodeNull,
@@ -139,7 +139,7 @@ Closure Json_decodeIndex = {
 
 static void* eval_Json_decodeKeyValuePairs(void* args[]) {
   void* decoder = args[0];
-  return NEW_CUSTOM(DECODER_KEY_VALUE, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_KEY_VALUE, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
 Closure Json_decodeKeyValuePairs = {
     .header = HEADER_CLOSURE(0),
@@ -150,7 +150,7 @@ Closure Json_decodeKeyValuePairs = {
 static void* eval_Json_andThen(void* args[]) {
   void* callback = args[0];
   void* decoder = args[1];
-  return NEW_CUSTOM(DECODER_AND_THEN,
+  return newCustom(DECODER_AND_THEN,
       8,
       ((void*[]){
           /*a*/ &Json_encodeNull,
@@ -171,7 +171,7 @@ Closure Json_andThen = {
 
 static void* eval_Json_oneOf(void* args[]) {
   void* decoders = args[0];
-  return NEW_CUSTOM(DECODER_ONE_OF,
+  return newCustom(DECODER_ONE_OF,
       7,
       ((void*[]){
           /*a*/ &Json_encodeNull,
@@ -198,8 +198,8 @@ Closure Json_oneOf = {
 static void* eval_Json_mapMany(void* args[]) {
   size_t n_decoders = (size_t)args[0];
   Closure* f = args[1];
-  Custom* decoders = NEW_CUSTOM(JSON_VALUE_ARRAY, (u32)n_decoders, &args[2]);
-  return NEW_CUSTOM(DECODER_MAP,
+  Custom* decoders = newCustom(JSON_VALUE_ARRAY, (u32)n_decoders, &args[2]);
+  return newCustom(DECODER_MAP,
       7,
       ((void*[]){
           /*a*/ &Json_encodeNull,
@@ -403,7 +403,7 @@ ElmString16 str_invalid_json = {
 };
 
 void* Json_expecting(ElmString16* type, void* value) {
-  ElmString16* s = CAN_THROW(eval_String_append((void*[]){&str_err_expecting, type}));
+  ElmString16* s = eval_String_append((void*[]){&str_err_expecting, type});
   return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, WRAP(value)));
 }
 
@@ -417,21 +417,21 @@ void* eval_Json_array_get(void* args[]) {
 
 Custom* Json_runArrayDecoder(Custom* decoder, Custom* value, bool as_list) {
   u32 len = custom_params(value);
-  Custom* array = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  Custom* array = newCustom(JSON_VALUE_ARRAY, len, NULL);
   for (u32 i = 0; i < len; i++) {
-    Custom* result = CAN_THROW(Json_runHelp(decoder, value->values[i]));
+    Custom* result = Json_runHelp(decoder, value->values[i]);
     if (RESULT_IS_OK(result) == &False) {
       return TAIL_RESULT_ERR(
-          A2(&g_elm_json_Json_Decode_Index, NEW_ELM_INT(i), result->values[0]));
+          A2(&g_elm_json_Json_Decode_Index, newElmInt(i), result->values[0]));
     }
     array->values[i] = result->values[0];
   }
 
   void* elm_value = as_list
-                        ? CAN_THROW(List_create(len, array->values))
+                        ? List_create(len, array->values)
                         : A2(&g_elm_core_Array_initialize,
-                              NEW_ELM_INT(len),
-                              NEW_CLOSURE(1, 2, eval_Json_array_get, (void*[]){array}));
+                              newElmInt(len),
+                              newClosure(1, 2, eval_Json_array_get, (void*[]){array}));
 
   return TAIL_RESULT_OK(elm_value);
 }
@@ -448,7 +448,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       if (value->header.tag == Tag_Float) {
         f64 f = value->elm_float.value;
         if ((i32)0x80000000 <= f && f <= 0x7fffffff && floor(f) == f) {
-          return TAIL_RESULT_OK(NEW_ELM_INT((i32)f));
+          return TAIL_RESULT_OK(newElmInt((i32)f));
         }
       }
       return Json_expecting(&str_err_Int, value);
@@ -555,7 +555,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
                 A2(&String_append,
                     &str_err_Index_but_only_see,
                     A2(&String_append,
-                        A1(&String_fromNumber, NEW_ELM_INT(len)),
+                        A1(&String_fromNumber, newElmInt(len)),
                         &str_err_Index_entries))));
         return Json_expecting(msg, value);
       }
@@ -589,7 +589,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
           return TAIL_RESULT_ERR(
               A2(&g_elm_json_Json_Decode_Field, key, result->values[0]));
         }
-        keyValuePairs = NEW_CONS(NEW_TUPLE2(key, result->values[0]), keyValuePairs);
+        keyValuePairs = newCons(newTuple2(key, result->values[0]), keyValuePairs);
       }
       return TAIL_RESULT_OK(keyValuePairs);
     }
@@ -624,7 +624,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
         if (RESULT_IS_OK(result) == &True) {
           return result;
         }
-        errors = NEW_CONS(result->values[0], errors);
+        errors = newCons(result->values[0], errors);
       }
       return TAIL_RESULT_ERR(
           A1(&g_elm_json_Json_Decode_OneOf, A1(&g_elm_core_List_reverse, errors)));
@@ -649,7 +649,7 @@ static void* eval_runOnString(void* args[]) {
   Custom* decoder = args[0];
   ElmString16* string = args[1];
 
-  ElmValue* json = CAN_THROW(parse_json(string));
+  ElmValue* json = parse_json(string);
   if (json == NULL) {
     return TAIL_RESULT_ERR(
         A2(&g_elm_json_Json_Decode_Failure, &str_invalid_json, WRAP(string)));

@@ -13,13 +13,5 @@ function cleanup() {
 trap cleanup EXIT
 
 
-# Run tests for native and wasm concurrently
-
-(make dist/bin/test ; ./dist/bin/test --all) &
-job_bin=$!
-
-(make www ; node ./dist/www/test.js --all) &
-job_www=$!
-
-wait $job_bin
-wait $job_www
+# Build and run tests for native and wasm, using as many parallel jobs as possible
+make -j check

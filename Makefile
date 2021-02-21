@@ -1,3 +1,4 @@
+MAKEFLAGS := --jobs=$(shell nproc)
 CFLAGS=-Wall
 
 ROOT := .
@@ -5,35 +6,30 @@ SRC := $(ROOT)/src
 KERNEL := $(ROOT)/src/kernel
 TEST := $(ROOT)/src/test
 
+BUILD := $(ROOT)/build
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
 
-KSOURCES := $(shell find $(KERNEL) -name '*.c')
-KHEADERS := $(shell find $(KERNEL) -name '*.h')
-TSOURCES := $(shell find $(TEST) -name '*.c' | grep -v wrapper)
-THEADERS := $(shell find $(TEST) -name '*.h')
-SOURCES := $(KSOURCES) $(TSOURCES)
-HEADERS := $(KHEADERS) $(THEADERS)
+OBJ := core.o elm-test.o json.o wrapper.o test.o
+BIN_OBJ := $(patsubst %,build/bin/%,$(OBJ))
+WASM_OBJ := $(patsubst %,build/wasm/%,$(OBJ))
 
-DATA_TSV := $(shell find $(SRC) -name '*.tsv')
-DATA_INC := $(DATA_TSV:.tsv=.inc)
-
-.PHONY: all check check-bin check-node debug verbose dist www www-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
+.PHONY: all check check-bin check-wasm debug verbose dist wasm wasm-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
 	@:
 
-check: check-bin check-node
+check: check-bin check-wasm
 	@:
 
 check-bin: $(DIST)/bin/test
-	@echo "\n\nRunning tests with binary executable"
+	@echo "\n\nRunning tests with binary executable\n"
 	$(DIST)/bin/test --all
 
-check-node: $(DIST)/www/test.html
-	@echo "\n\nRunning tests with Node.js WebAssembly"
-	node $(DIST)/www/test.js --all
+check-wasm: $(DIST)/wasm/test.js
+	@echo "\n\nRunning tests with Node.js WebAssembly\n"
+	node $(DIST)/wasm/test.js --all
 
 debug: CFLAGS = -Wall -ggdb -DDEBUG -DDEBUG_LOG
 debug: $(DIST)/bin/test
@@ -42,35 +38,33 @@ debug: $(DIST)/bin/test
 verbose: $(DIST)/bin/test
 	$(DIST)/bin/test -v
 
-dist: clean check www
+dist: clean check wasm
 	@:
 
-www: $(DIST)/www/test.html
+wasm: $(DIST)/wasm/test.js
 	@:
 
-www-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
-www-debug: www
+wasm-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
+wasm-debug: wasm
 	@:
 
-www-release: CFLAGS = -Wall -Oz
-www-release: www
+wasm-release: CFLAGS = -Wall -Oz
+wasm-release: wasm
 	@:
 
 gc-size:
-	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/www/gc.js
-	/bin/ls -lh $(DIST)/www/gc.wasm
+	emcc -Wall -O3 -DGC_SIZE_CHECK -s WASM=1 $(SRC)/kernel/gc*.c $(SRC)/kernel/types.c -o $(DIST)/wasm/gc.js
+	/bin/ls -lh $(DIST)/wasm/gc.wasm
 
 clean:
 	@echo 'Deleting generated files'
-	@find $(DIST) -type f ! -name '.gitkeep' -exec rm {} \;
-	@rm -f $(DATA_INC)
+	@find $(DIST) -type f ! -exec rm {} \;
+	@find $(BUILD) -type f ! -exec rm {} \;
+	@mkdir -p $(BUILD)/bin $(BUILD)/wasm $(BUILD)/exe
 	@rm -f $(KERNEL)/wrapper/wrapper.js
 
 watch:
 	(while true ; do make build.log; sleep 1; done) | grep -v make
-
-build.log: $(SOURCES) $(HEADERS)
-	make check-bin | tee build.log
 
 benchmark:
 	cd $(ROOT)/demos/2019-08-benchmark && make clean && make
@@ -85,15 +79,15 @@ todo:
 	cd $(ROOT)/demos/todo-mvc && make clean && make
 
 gh-pages: CFLAGS=-Wall -O3
-gh-pages: www codegen todo
-	mkdir -p $(DEPLOY)/unit-tests/dist/www
+gh-pages: wasm codegen todo
+	mkdir -p $(DEPLOY)/unit-tests/dist/wasm
 	mkdir -p $(DEPLOY)/wrapper/dist
 	mkdir -p $(DEPLOY)/code-gen/dist
 	mkdir -p $(DEPLOY)/todo-mvc/dist
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
 	cp $(ROOT)/favicon.png $(DEPLOY)/unit-tests/
-	cp $(DIST)/www/test.js $(DEPLOY)/unit-tests/dist/www
-	cp $(DIST)/www/test.wasm $(DEPLOY)/unit-tests/dist/www
+	cp $(DIST)/wasm/test.js $(DEPLOY)/unit-tests/dist/wasm
+	cp $(DIST)/wasm/test.wasm $(DEPLOY)/unit-tests/dist/wasm
 	cp $(ROOT)/demos/index.html $(DEPLOY)
 	cp $(ROOT)/demos/favicon.png $(DEPLOY)
 	cp $(ROOT)/demos/2019-12-code-gen/index.html $(DEPLOY)/code-gen/index.html
@@ -112,26 +106,60 @@ gh-pages: www codegen todo
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 # https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
 
+#----------------------------------------------
+# Linux binary
+#----------------------------------------------
 
-# ../src/test/gc/stackmap_data/full_completion.tsv.inc: ../src/test/gc/stackmap_data/full_completion.tsv
-$(SRC)/%.inc : $(SRC)/%.tsv
-	@cd $$(dirname $@) ; xxd -i $$(basename $<) $$(basename $@)
+$(BUILD)/bin/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/gc/*.c $(KERNEL)/core/gc/*.h
+	gcc -ggdb $(CFLAGS) -c $(KERNEL)/core/core.c -o $@
 
-# Binary & Wasm
+$(BUILD)/bin/elm-test.o: $(KERNEL)/elm-test/*.c
+	gcc -ggdb $(CFLAGS) -c $(KERNEL)/elm-test/elm-test.c -o $@
 
-$(DIST)/bin/test: $(SOURCES) $(HEADERS) $(DATA_INC)
-	@echo Building tests as native binary...
+$(BUILD)/bin/json.o: $(KERNEL)/json/*.c $(KERNEL)/json/*.h
+	gcc -ggdb $(CFLAGS) -c $(KERNEL)/json/json.c -o $@
+
+$(BUILD)/bin/wrapper.o: $(KERNEL)/wrapper/*.c $(KERNEL)/wrapper/*.h
+	gcc -ggdb $(CFLAGS) -c $(KERNEL)/wrapper/wrapper.c -o $@
+
+$(BUILD)/bin/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c
+	gcc -ggdb $(CFLAGS) -c $(TEST)/test.c -o $@
+
+
+$(DIST)/bin/test: $(BIN_OBJ)
 	@mkdir -p $(DIST)/bin
-	@gcc -ggdb $(CFLAGS) $(SOURCES) -o $@ -lm
+	gcc -ggdb $(CFLAGS) $^ -o $@ -lm
 
-$(DIST)/www/test.html: $(SOURCES) $(HEADERS) $(DATA_INC) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
-	@echo Building tests as WebAssembly module...
-	@mkdir -p $(DIST)/www
-	@emcc $(CFLAGS) $(SOURCES) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
+
+#----------------------------------------------
+# WebAssembly module
+#----------------------------------------------
+
+$(BUILD)/wasm/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/gc/*.c $(KERNEL)/core/gc/*.h
+	emcc $(CFLAGS) -c $(KERNEL)/core/core.c -o $@
+
+$(BUILD)/wasm/elm-test.o: $(KERNEL)/elm-test/*.c
+	emcc $(CFLAGS) -c $(KERNEL)/elm-test/elm-test.c -o $@
+
+$(BUILD)/wasm/json.o: $(KERNEL)/json/*.c $(KERNEL)/json/*.h
+	emcc $(CFLAGS) -c $(KERNEL)/json/json.c -o $@
+
+$(BUILD)/wasm/wrapper.o: $(KERNEL)/wrapper/*.c $(KERNEL)/wrapper/*.h
+	emcc $(CFLAGS) -c $(KERNEL)/wrapper/wrapper.c -o $@
+
+$(BUILD)/wasm/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c
+	emcc $(CFLAGS) -c $(TEST)/test.c -o $@
+
 
 $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
 	@echo Compiling wrapper from TypeScript
 	npx tsc -p .
+
+
+$(DIST)/wasm/test.js: $(WASM_OBJ) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
+	@mkdir -p $(DIST)/wasm
+	emcc $(CFLAGS) $(WASM_OBJ) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
+
 
 # handle any other arguments to 'make' by passing them to the executable
 # 'make gv' compiles the 'test' executable and runs 'test -gv'

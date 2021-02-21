@@ -12,10 +12,12 @@ mergeInto(LibraryManager.library, {
   },
 
   markJsRef: function (jsRefId) {
-    return wasmWrapper.markJsRef(jsRefId);
+    // The C main can do a GC, but wasmWrapper is not ready at that point
+    wasmWrapper && wasmWrapper.markJsRef(jsRefId);
   },
 
   sweepJsRefs: function (isFullGc) {
-    return wasmWrapper.sweepJsRefs(isFullGc);
+    // The C main can do a GC, but wasmWrapper is not ready at that point
+    wasmWrapper && wasmWrapper.sweepJsRefs(isFullGc);
   }
 });

@@ -79,7 +79,7 @@ void* parse_number(u16** cursor, u16* end) {
   if (!success) return NULL;
 
   *cursor += d;
-  return NEW_ELM_FLOAT(f);
+  return newElmFloat(f);
 }
 
 void* parse_string(u16** cursor, u16* end) {
@@ -91,8 +91,8 @@ void* parse_string(u16** cursor, u16* end) {
   from++;
 
   size_t alloc_chunk_bytes = 4 * SIZE_UNIT;  // Grow the output string in chunks this big
-  ElmString16* str = NEW_ELM_STRING16(alloc_chunk_bytes / 2);
-  u16* str_end = (u16*)GC_malloc(0);
+  ElmString16* str = newElmString16(alloc_chunk_bytes / 2);
+  u16* str_end = GC_malloc(false, 0);
 
   for (to = str->words16;; to++, from++) {
     if (from >= end) return NULL;
@@ -100,9 +100,9 @@ void* parse_string(u16** cursor, u16* end) {
 
     if (to >= str_end) {
       // Grow output string as needed, taking advantage of GC 'bump allocation'
-      CAN_THROW(GC_malloc(alloc_chunk_bytes));
+      GC_malloc(false, alloc_chunk_bytes);
       str->header.size += alloc_chunk_bytes / SIZE_UNIT;
-      str_end = (u16*)GC_malloc(0);
+      str_end = GC_malloc(false, 0);
       if (alloc_chunk_bytes < 1024) alloc_chunk_bytes *= 2;
     }
 
@@ -187,7 +187,7 @@ void* parse_array(u16** cursor, u16* end) {
 
   if (*c == ']') {
     *cursor = ++c;
-    return NEW_CUSTOM(JSON_VALUE_ARRAY, 0, NULL);
+    return newCustom(JSON_VALUE_ARRAY, 0, NULL);
   }
 
   // gather the values into a List
@@ -195,11 +195,11 @@ void* parse_array(u16** cursor, u16* end) {
   size_t len = 0;
   for (;;) {
     // parse value
-    void* value = CAN_THROW(parse_recurse(&c, end));
+    void* value = parse_recurse(&c, end);
     if (c >= end || value == NULL) return NULL;
 
     // store value
-    rev_values = NEW_CONS(value, rev_values);
+    rev_values = newCons(value, rev_values);
     len++;
 
     // separator/end
@@ -218,7 +218,7 @@ void* parse_array(u16** cursor, u16* end) {
   }
 
   // reverse the list into an array
-  Custom* array = NEW_CUSTOM(JSON_VALUE_ARRAY, len, NULL);
+  Custom* array = newCustom(JSON_VALUE_ARRAY, len, NULL);
   for (size_t i = len - 1; rev_values != &Nil; rev_values = rev_values->tail, i--) {
     array->values[i] = rev_values->head;
   }
@@ -239,7 +239,7 @@ void* parse_object(u16** cursor, u16* end) {
 
   if (*c == '}') {
     *cursor = ++c;
-    return NEW_CUSTOM(JSON_VALUE_OBJECT, 0, NULL);
+    return newCustom(JSON_VALUE_OBJECT, 0, NULL);
   }
 
   // temporary list-like structure for key-value pairs [field, value, last_pair]
@@ -247,7 +247,7 @@ void* parse_object(u16** cursor, u16* end) {
   size_t n_pairs = 0;
   for (;;) {
     // field
-    ElmString16* field = CAN_THROW(parse_string(&c, end));
+    ElmString16* field = parse_string(&c, end);
     if (c >= end || field == NULL) return NULL;
 
     // colon
@@ -259,11 +259,11 @@ void* parse_object(u16** cursor, u16* end) {
     if (c >= end) return NULL;
 
     // value
-    void* value = CAN_THROW(parse_recurse(&c, end));
+    void* value = parse_recurse(&c, end);
     if (c >= end || value == NULL) return NULL;
 
     // store pair
-    rev_pairs = NEW_TUPLE3(field, value, rev_pairs);
+    rev_pairs = newTuple3(field, value, rev_pairs);
     n_pairs++;
 
     // end of pair
@@ -282,7 +282,7 @@ void* parse_object(u16** cursor, u16* end) {
   }
 
   // reverse the list into an object
-  Custom* object = NEW_CUSTOM(JSON_VALUE_OBJECT, 2 * n_pairs, NULL);
+  Custom* object = newCustom(JSON_VALUE_OBJECT, 2 * n_pairs, NULL);
   for (size_t i = n_pairs - 1; rev_pairs != NULL; rev_pairs = rev_pairs->c, i--) {
     object->values[2 * i] = rev_pairs->a;
     object->values[2 * i + 1] = rev_pairs->b;
@@ -302,20 +302,20 @@ void* parse_recurse(u16** cursor, u16* end) {
       return parse_bool(cursor, end);
 
     case '"':
-      return CAN_THROW(parse_string(cursor, end));
+      return parse_string(cursor, end);
 
     case '[':
-      return CAN_THROW(parse_array(cursor, end));
+      return parse_array(cursor, end);
 
     case '{':
-      return CAN_THROW(parse_object(cursor, end));
+      return parse_object(cursor, end);
 
     default:
-      return CAN_THROW(parse_number(cursor, end));
+      return parse_number(cursor, end);
   }
 }
 
-ElmValue* parse_json(ElmString16* json) {
+void* parse_json(ElmString16* json) {
   u16* cursor = json->words16;
   u16* end = json->words16 + code_units(json);
   skip_whitespace(&cursor, end);
