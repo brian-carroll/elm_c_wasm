@@ -1,5 +1,30 @@
 # Virtual DOM
 
+## development approach
+
+- Cachegrind
+  - Get a test setup to look at SOA vs AOS and so on
+- Simplified example for development, just like in TS
+- Bucket Array
+  - This is going to be my main data structure so make a library out of it
+  - Abstract out the content type (not so easy in C!)
+  - What's in it?
+    - An area for the data. Big array.
+    - A "push" pointer
+    - A bucket capacity (explicit? implicit?)
+
+```c
+#define BUCKET_SIZE 1024
+struct bucket_array {
+  void* items[BUCKET_SIZE];
+  size_t current_item;
+  struct bucket_array *next_bucket;
+};
+
+```
+
+
+
 ### Interface to elm/browser
 
 `_Browser_element` calls `__Platform_initialize` with a callback called stepperBuilder that uses a few VirtualDom functions.
