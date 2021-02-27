@@ -24,6 +24,19 @@ struct bucket_array {
 ```
 
 
+### SOA for VDOM?
+Might not be the best.
+- SOA is optimal for cases where you only operate on one or two fields at a time
+- But for vdom diff, typically both vdom's match, in which case we end up comparing all fields anyway.
+- SOA gives savings in the case of mismatching tags for example. Avoids loading other fields of the old vdom node.
+  - Meh. Not worth code complexity.
+- SOA wants indices rather than pointers
+  - View code needs references to pieces of UI to manipulate. Don't really want lots of conversions from pointers to indices, or (bucket, index) pairs.
+  - Could actually return an `Int` to the app, with an index in it!
+
+### group nodes/facts by type?
+OK but we don't really have any operations that get better.
+
 
 ### Interface to elm/browser
 
