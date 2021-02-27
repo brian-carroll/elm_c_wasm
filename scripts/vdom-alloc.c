@@ -2,7 +2,7 @@
 #include "../src/kernel/kernel.h"
 
 enum vdom_ctor {
-  VDOM_NODE,           // values: tag, facts, children
+  VDOM_NODE = 1,       // values: tag, facts, children
   VDOM_NODE_KEYED,     // values: tag, keys, facts, children
   VDOM_NODE_NS,        // values: namespace, tag, facts, children
   VDOM_NODE_NS_KEYED,  // values: namespace, tag, keys, facts, children
@@ -10,11 +10,11 @@ enum vdom_ctor {
   VDOM_NODE_TAGGER,    // values: tagger, child
   VDOM_NODE_THUNK,     // values: thunk, refs, node
   // ------------
-  VDOM_FACT_EVENT,     // value : handler
-  VDOM_FACT_STYLE,     // value : String
-  VDOM_FACT_PROP,      // value : Json
-  VDOM_FACT_ATTR,      // value : String
-  VDOM_FACT_ATTR_NS,   // value : (String, String)
+  VDOM_FACT_EVENT,    // value : handler
+  VDOM_FACT_STYLE,    // value : String
+  VDOM_FACT_PROP,     // value : Json
+  VDOM_FACT_ATTR,     // value : String
+  VDOM_FACT_ATTR_NS,  // value : (String, String)
 };
 
 struct vdom_node {
@@ -80,17 +80,6 @@ static clear_dead_batches(struct vdom_chunk* chunk) {
 #endif
 
 
-static void next_generation() {
-  VdomFlags generation = state.generation ? (VdomFlags)(-1) : 0;
-  for (struct vdom_chunk* chunk = state.first_chunk; chunk->next; chunk = chunk->next) {
-    chunk->live_flags &= (chunk->generation_flags ^ generation);
-    clear_dead_batches(chunk);
-  }
-  state.generation = !state.generation;
-  state.vdom_old = state.vdom_current;
-}
-
-
 void init_vdom_allocator() {
   struct vdom_chunk* first_chunk = GC_get_memory_from_system(GC_SYSTEM_MEM_CHUNK);
   first_chunk->next = NULL;
@@ -102,18 +91,29 @@ void init_vdom_allocator() {
       .current_chunk = first_chunk,
       .vdom_old = NULL,
       .vdom_current = NULL,
-      .next_node = first_chunk->words[VDOM_CHUNK_WORDS - 1],
-      .next_fact = first_chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS - 1],
-      .bottom_node = first_chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS],
-      .bottom_fact = first_chunk->words[VDOM_CHUNK_WORDS - 2 * VDOM_BATCH_WORDS],
+      .next_node = &first_chunk->words[VDOM_CHUNK_WORDS - 1],
+      .next_fact = &first_chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS - 1],
+      .bottom_node = &first_chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS],
+      .bottom_fact = &first_chunk->words[VDOM_CHUNK_WORDS - 2 * VDOM_BATCH_WORDS],
       .generation = 0,
   };
 }
 
 
+static void next_generation() {
+  VdomFlags generation = state.generation ? (VdomFlags)(-1) : 0;
+  for (struct vdom_chunk* chunk = state.first_chunk; chunk->next; chunk = chunk->next) {
+    chunk->live_flags &= (chunk->generation_flags ^ generation);
+    clear_dead_batches(chunk);
+  }
+  state.generation = !state.generation;
+  state.vdom_old = state.vdom_current;
+}
+
+
 void start_new_batch(size_t** top, size_t** bottom) {
   struct vdom_chunk* chunk = state.current_chunk;
-  VdomFlags bit = 1 << 63;
+  VdomFlags bit = 1 << (VDOM_BATCH_PER_CHUNK - 1);
   size_t* found = NULL;
   for (size_t i = VDOM_CHUNK_WORDS - 1; bit; i -= VDOM_BATCH_WORDS, bit >>= 1) {
     if (chunk->live_flags & bit) continue;
@@ -141,25 +141,21 @@ size_t* start_new_fact_batch() {
 }
 
 
-size_t* allocate_node(size_t words) {
+void* allocate_node(size_t words) {
   size_t* allocated = state.next_node;
   state.next_node -= words;
   if (state.next_node < state.bottom_node) {
     allocated = start_new_node_batch();
-    state.bottom_node = 123;
-    state.next_node = allocated;  // something something I dunno
   }
   return allocated;
 }
 
 
-size_t* allocate_fact() {
+void* allocate_fact() {
   size_t* allocated = state.next_fact;
   state.next_fact -= 3;
   if (state.next_fact < state.bottom_fact) {
     allocated = start_new_fact_batch();
-    state.bottom_fact = 123;
-    state.next_fact = allocated;  // something something I dunno
   }
   return allocated;
 }
@@ -186,7 +182,7 @@ size_t prepend_list_or_start_new_batch(Cons* list) {
   size_t n = 0;
   for (; list != pNil; list = list->tail) {
     n++;
-    *state.next_node-- = list->head;
+    *state.next_node-- = (size_t)list->head;
     if (state.next_node < state.bottom_node) {
       start_new_node_batch();
       return -1;
@@ -213,7 +209,7 @@ static void* eval_VirtualDom_node(void* args[]) {
       continue;
     }
 
-    *state.next_node-- = (size_t*)tag;
+    *state.next_node-- = (size_t)tag;
     struct vdom_node* node = (struct vdom_node*)state.next_node--;
 
     *node = (struct vdom_node){
@@ -251,9 +247,62 @@ Closure VirtualDom_style = {
     .max_values = 2,
 };
 
+static char* stringify_vdom_ctor(u8 ctor) {
+  switch (ctor) {
+    case VDOM_NODE:
+      return "VDOM_NODE";
+    case VDOM_NODE_KEYED:
+      return "VDOM_NODE_KEYED";
+    case VDOM_NODE_NS:
+      return "VDOM_NODE_NS";
+    case VDOM_NODE_NS_KEYED:
+      return "VDOM_NODE_NS_KEYED";
+    case VDOM_NODE_TEXT:
+      return "VDOM_NODE_TEXT";
+    case VDOM_NODE_TAGGER:
+      return "VDOM_NODE_TAGGER";
+    case VDOM_NODE_THUNK:
+      return "VDOM_NODE_THUNK";
+    case VDOM_FACT_EVENT:
+      return "VDOM_FACT_EVENT";
+    case VDOM_FACT_STYLE:
+      return "VDOM_FACT_STYLE";
+    case VDOM_FACT_PROP:
+      return "VDOM_FACT_PROP";
+    case VDOM_FACT_ATTR:
+      return "VDOM_FACT_ATTR";
+    case VDOM_FACT_ATTR_NS:
+      return "VDOM_FACT_ATTR_NS";
+    default:
+      return "(unknown ctor)";
+  }
+}
 
-void main() {
+static void print_vdom_fact(struct vdom_fact* fact) {}
+
+static void print_vdom_node(struct vdom_node* node) {}
+
+static void print_vdom_batch(void* batch) {}
+
+static void print_vdom_chunk(struct vdom_chunk* chunk) {}
+
+static void print_vdom_state() {}
+
+
+int main() {
   const size_t N_FLAG_BITS = sizeof(VdomFlags) * 8;
   assert(N_FLAG_BITS == VDOM_BATCH_PER_CHUNK);
 
+
+  /*
+
+  Visualisation
+
+  Memory hierarchy stuff
+  - chunks
+    - batches (live/dead, old/new)
+
+
+
+  */
 }

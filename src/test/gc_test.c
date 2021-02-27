@@ -584,32 +584,6 @@ char* assertions_test() {
 // --------------------------------------------------------------------------------
 
 
-char unknown_function_address[FORMAT_PTR_LEN];
-char * Debug_evaluator_name(void * p) {
-  if (p == eval_fib) {
-    return "fib          ";
-  } else if (p == Utils_le.evaluator) {
-    return "Utils_le     ";
-  } else if (p == Basics_sub.evaluator) {
-    return "Basics_sub   ";
-  } else if (p == Basics_add.evaluator) {
-    return "Basics_add   ";
-  } else if (p == g_elm_core_List_foldl.evaluator) {
-    return "List.foldl   ";
-  } else if (p == g_elm_core_List_reverse.evaluator) {
-    return "List.reverse ";
-  } else if (p == eval_trashyFold) {
-    return "trashyFold   ";
-  } else if (p == eval_listNonsense) {
-    return "listNonsense ";
-  } else if (p == eval_infinite_loop) {
-    return "infinite_loop";
-  } else {
-    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
-    return unknown_function_address;
-  }
-}
-
 
 
 

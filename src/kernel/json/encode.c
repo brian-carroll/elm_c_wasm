@@ -49,7 +49,7 @@ Closure Json_emptyArray = {
 };
 
 
-Custom emptyObject = {
+Custom Json_emptyObjVal = {
     .header = HEADER_CUSTOM(0),
     .ctor = JSON_VALUE_OBJECT,
 };
