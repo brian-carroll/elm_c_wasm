@@ -58,6 +58,7 @@ void compact(GcState* state, size_t* compact_start);
 
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
+void* GC_get_memory_from_system(size_t bytes);
 
 void stack_clear();
 void stack_enter(Closure* c);

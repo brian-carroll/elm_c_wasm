@@ -33,7 +33,7 @@ void reset_state(GcState* state) {
 
 #ifdef _WIN32
 
-void* get_memory_from_system(size_t bytes) {
+void* GC_get_memory_from_system(size_t bytes) {
   // https://docs.microsoft.com/en-us/windows/win32/api/heapapi/
   assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
   HANDLE hHeap = GetProcessHeap();
@@ -46,7 +46,7 @@ void* get_memory_from_system(size_t bytes) {
 
 #else
 
-void* get_memory_from_system(size_t bytes) {
+void* GC_get_memory_from_system(size_t bytes) {
   // mmap can map files into memory but apparently everyone
   // uses it just for plain old memory allocation too.
   assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
@@ -100,7 +100,7 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
 // Call exactly once on program startup
 int init_heap(GcHeap* heap) {
   size_t bytes = GC_INITIAL_HEAP_MB * MB;
-  void* start = get_memory_from_system(bytes);
+  void* start = GC_get_memory_from_system(bytes);
 
   set_heap_layout(heap, start, bytes);
 
