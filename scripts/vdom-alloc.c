@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <string.h>
 #include "../src/kernel/core/gc/internals.h"
 #include "../src/kernel/kernel.h"
 
@@ -48,13 +50,13 @@ struct vdom_chunk {
 };
 
 struct vdom_state {
-  struct vdom_chunk* first_chunk;
-  struct vdom_chunk* current_chunk;
   struct vdom_node* vdom_old;
   struct vdom_node* vdom_current;
+  struct vdom_chunk* first_chunk;
+  struct vdom_chunk* current_chunk;
   size_t* next_node;
-  size_t* next_fact;
   size_t* bottom_node;
+  size_t* next_fact;
   size_t* bottom_fact;
   bool generation;
 };
@@ -66,12 +68,9 @@ static struct vdom_state state;
 static clear_dead_batches(struct vdom_chunk* chunk) {
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
-    if (chunk->live_flags & bit) {
-      continue;
-    } else {
-      for (size_t j = i; j < i + VDOM_BATCH_WORDS; ++j) {
-        chunk->words[j] = 0;
-      }
+    if (chunk->live_flags & bit) continue;
+    for (size_t j = i; j < i + VDOM_BATCH_WORDS; ++j) {
+      chunk->words[j] = 0;
     }
   }
 }
@@ -81,20 +80,20 @@ static clear_dead_batches(struct vdom_chunk* chunk) {
 
 
 void init_vdom_allocator() {
-  struct vdom_chunk* first_chunk = GC_get_memory_from_system(GC_SYSTEM_MEM_CHUNK);
-  first_chunk->next = NULL;
-  first_chunk->live_flags = 0;
-  first_chunk->generation_flags = 0;
+  struct vdom_chunk* chunk = GC_get_memory_from_system(GC_SYSTEM_MEM_CHUNK);
+  chunk->next = NULL;
+  chunk->live_flags = 0;
+  chunk->generation_flags = 0;
 
   state = (struct vdom_state){
-      .first_chunk = first_chunk,
-      .current_chunk = first_chunk,
+      .first_chunk = chunk,
+      .current_chunk = chunk,
       .vdom_old = NULL,
       .vdom_current = NULL,
-      .next_node = &first_chunk->words[VDOM_CHUNK_WORDS - 1],
-      .next_fact = &first_chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS - 1],
-      .bottom_node = &first_chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS],
-      .bottom_fact = &first_chunk->words[VDOM_CHUNK_WORDS - 2 * VDOM_BATCH_WORDS],
+      .next_node = &chunk->words[VDOM_CHUNK_WORDS - 1],
+      .bottom_node = &chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS],
+      .next_fact = &chunk->words[VDOM_CHUNK_WORDS - VDOM_BATCH_WORDS - 1],
+      .bottom_fact = &chunk->words[VDOM_CHUNK_WORDS - 2 * VDOM_BATCH_WORDS],
       .generation = 0,
   };
 }
@@ -102,9 +101,9 @@ void init_vdom_allocator() {
 
 static void next_generation() {
   VdomFlags generation = state.generation ? (VdomFlags)(-1) : 0;
-  for (struct vdom_chunk* chunk = state.first_chunk; chunk->next; chunk = chunk->next) {
-    chunk->live_flags &= (chunk->generation_flags ^ generation);
-    clear_dead_batches(chunk);
+  for (struct vdom_chunk* c = state.first_chunk; c; c = c->next) {
+    c->live_flags &= (c->generation_flags ^ generation);
+    clear_dead_batches(c);
   }
   state.generation = !state.generation;
   state.vdom_old = state.vdom_current;
@@ -278,31 +277,62 @@ static char* stringify_vdom_ctor(u8 ctor) {
   }
 }
 
-static void print_vdom_fact(struct vdom_fact* fact) {}
+// static void print_vdom_fact(struct vdom_fact* fact) {}
 
-static void print_vdom_node(struct vdom_node* node) {}
+// static void print_vdom_node(struct vdom_node* node) {}
 
-static void print_vdom_batch(void* batch) {}
+// static void print_vdom_batch(void* batch) {}
 
-static void print_vdom_chunk(struct vdom_chunk* chunk) {}
+static void print_vdom_chunk(struct vdom_chunk* chunk) {
+  printf("chunk at %p\n", chunk);
+  printf("  next             %p\n", chunk->next);
+  printf("  live_flags       0x%04x\n", chunk->live_flags);
+  printf("  generation_flags 0x%04x\n", chunk->generation_flags);
 
-static void print_vdom_state() {}
+  VdomFlags bit = 1;
+  for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
+    bool live = chunk->live_flags & bit;
+    printf("  Batch at %p live=%x generation=%x\n",
+        &chunk->words[i],
+        live,
+        chunk->generation_flags & bit);
+    if (!live) continue;
+    for (size_t j = i; j < i + VDOM_BATCH_WORDS; ++j) {
+      size_t* value = &chunk->words[j];
+      printf("    %p %zx\n", value, *value);
+    }
+  }
+}
+
+static void print_vdom_state() {
+  printf("\n");
+  printf("vdom_old\t%p\n", state.vdom_old);
+  printf("vdom_current\t%p\n", state.vdom_current);
+  printf("first_chunk\t%p\n", state.first_chunk);
+  printf("current_chunk\t%p\n", state.current_chunk);
+  printf("next_node\t%p\n", state.next_node);
+  printf("bottom_node\t%p\n", state.bottom_node);
+  printf("next_fact\t%p\n", state.next_fact);
+  printf("bottom_fact\t%p\n", state.bottom_fact);
+  printf("generation\t%d\n", state.generation);
+  printf("\n");
+
+  for (struct vdom_chunk* c = state.first_chunk; c; c = c->next) {
+    print_vdom_chunk(c);
+  }
+}
 
 
 int main() {
   const size_t N_FLAG_BITS = sizeof(VdomFlags) * 8;
   assert(N_FLAG_BITS == VDOM_BATCH_PER_CHUNK);
 
+  int maybe_exit = GC_init();
+  if (maybe_exit) return maybe_exit;
 
-  /*
+  init_vdom_allocator();
 
-  Visualisation
+  print_vdom_state();
 
-  Memory hierarchy stuff
-  - chunks
-    - batches (live/dead, old/new)
-
-
-
-  */
+  return 0;
 }
