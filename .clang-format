@@ -1,6 +1,6 @@
 {
   BasedOnStyle: Chromium,
-  ColumnLimit: 90,
+  ColumnLimit: 120,
   AllowShortIfStatementsOnASingleLine: true,
   AllowAllParametersOfDeclarationOnNextLine: true,
   BinPackArguments: false,

@@ -39,8 +39,7 @@ struct vdom_fact {
 
 typedef u16 VdomFlags;  // number of bits must be at least VDOM_BATCH_PER_CHUNK
 
-#define VDOM_CHUNK_WORDS \
-  ((GC_SYSTEM_MEM_CHUNK - 2 * sizeof(VdomFlags) - 2 * sizeof(void*)) / sizeof(size_t))
+#define VDOM_CHUNK_WORDS ((GC_SYSTEM_MEM_CHUNK - 2 * sizeof(VdomFlags) - 2 * sizeof(void*)) / sizeof(size_t))
 
 struct vdom_chunk {
   struct vdom_chunk* next;
@@ -82,7 +81,7 @@ static clear_dead_batches(struct vdom_chunk* chunk) {
 void init_vdom_allocator() {
   struct vdom_chunk* chunk = GC_get_memory_from_system(GC_SYSTEM_MEM_CHUNK);
   chunk->next = NULL;
-  chunk->live_flags = 0;
+  chunk->live_flags = 3 << (VDOM_BATCH_PER_CHUNK - 2);
   chunk->generation_flags = 0;
 
   state = (struct vdom_state){
@@ -117,6 +116,7 @@ void start_new_batch(size_t** top, size_t** bottom) {
   for (size_t i = VDOM_CHUNK_WORDS - 1; bit; i -= VDOM_BATCH_WORDS, bit >>= 1) {
     if (chunk->live_flags & bit) continue;
     found = &chunk->words[i];
+    chunk->live_flags |= bit;
     break;
   }
   assert(found);  // TODO
@@ -141,20 +141,24 @@ size_t* start_new_fact_batch() {
 
 
 void* allocate_node(size_t words) {
-  size_t* allocated = state.next_node;
-  state.next_node -= words;
+  size_t* allocated = state.next_node - (words - 1);
+  state.next_node = allocated - 1;
   if (state.next_node < state.bottom_node) {
-    allocated = start_new_node_batch();
+    state.next_node = start_new_node_batch();
+    allocated = state.next_node - (words - 1);
+    state.next_node = allocated - 1;
   }
   return allocated;
 }
 
-
 void* allocate_fact() {
-  size_t* allocated = state.next_fact;
-  state.next_fact -= 3;
+  size_t words = 3;
+  size_t* allocated = state.next_fact - (words - 1);
+  state.next_fact = allocated - 1;
   if (state.next_fact < state.bottom_fact) {
-    allocated = start_new_fact_batch();
+    state.next_fact = start_new_fact_batch();
+    allocated = state.next_fact - (words - 1);
+    state.next_fact = allocated - 1;
   }
   return allocated;
 }
@@ -162,7 +166,9 @@ void* allocate_fact() {
 
 static void* eval_VirtualDom_text(void* args[]) {
   ElmString16* string = args[0];
+  printf("before allocate_node, next_node = %p\n", state.next_node);
   struct vdom_node* node = allocate_node(2);
+  printf("after allocate_node, next_node = %p, node=%p, node->values=%p\n", state.next_node, node, node->values);
   node->ctor = VDOM_NODE_TEXT;
   node->n_extras = 1;
   node->n_facts = 0;
@@ -246,6 +252,13 @@ Closure VirtualDom_style = {
     .max_values = 2,
 };
 
+/* ==============================================================================
+
+                                  TEST CODE
+
+============================================================================== */
+
+
 static char* stringify_vdom_ctor(u8 ctor) {
   switch (ctor) {
     case VDOM_NODE:
@@ -277,11 +290,76 @@ static char* stringify_vdom_ctor(u8 ctor) {
   }
 }
 
-// static void print_vdom_fact(struct vdom_fact* fact) {}
 
-// static void print_vdom_node(struct vdom_node* node) {}
+static void print_string(ElmString16* s) {
+  for (int i = 0; i < code_units(s); ++i) {
+    putchar(s->words16[i]);
+  }
+}
 
-// static void print_vdom_batch(void* batch) {}
+static void print_fact_as_html(struct vdom_fact* fact) {
+  assert(fact);
+  assert(fact->ctor == VDOM_FACT_STYLE);
+  printf(" style=\"");
+  print_string(fact->key);
+  printf(": ");
+  print_string(fact->value);
+  printf(";\"");
+}
+
+static void print_node_as_html(struct vdom_node* node) {
+  assert(node);
+  switch (node->ctor) {
+    case VDOM_NODE: {
+      ElmString16* tag = node->values[0];
+      printf("<");
+      print_string(tag);
+      int i = node->n_extras;
+      for (; i < node->n_extras + node->n_facts; ++i) {
+        print_fact_as_html(node->values[i]);
+      }
+      printf(">\n");
+      int total = node->n_extras + node->n_facts + node->n_children;
+      for (; i < total; ++i) {
+        print_node_as_html(node->values[i]);
+      }
+      printf("</");
+      print_string(tag);
+      printf(">");
+    }
+    case VDOM_NODE_TEXT: {
+      ElmString16* text = node->values[0];
+      print_string(text);
+    }
+    default:
+      assert(false);
+  }
+}
+
+static void print_vdom_fact(struct vdom_fact* fact) {
+  assert(fact);
+  printf("%p %s ", fact, stringify_vdom_ctor(fact->ctor));
+  print_string(fact->key);
+  printf(" ");
+  print_string(fact->value);
+  printf("\n");
+}
+
+
+static void print_vdom_node(struct vdom_node* node) {
+  assert(node);
+  printf("%p %s n_extras=%d n_facts=%d n_children=%d",
+      node,
+      stringify_vdom_ctor(node->ctor),
+      node->n_extras,
+      node->n_facts,
+      node->n_children);
+  int n_values = node->n_extras + node->n_facts + node->n_children;
+  for (int i = 0; i < n_values; ++i) {
+    printf(" %p", node->values[i]);
+  }
+  printf("\n");
+}
 
 static void print_vdom_chunk(struct vdom_chunk* chunk) {
   printf("chunk at %p\n", chunk);
@@ -292,14 +370,14 @@ static void print_vdom_chunk(struct vdom_chunk* chunk) {
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
     bool live = chunk->live_flags & bit;
-    printf("  Batch at %p live=%x generation=%x\n",
-        &chunk->words[i],
-        live,
-        chunk->generation_flags & bit);
+    printf("  Batch at %p live=%x generation=%x\n", &chunk->words[i], live, chunk->generation_flags & bit);
     if (!live) continue;
-    for (size_t j = i; j < i + VDOM_BATCH_WORDS; ++j) {
-      size_t* value = &chunk->words[j];
-      printf("    %p %zx\n", value, *value);
+    bool skip = true;
+    for (size_t j = i; j < i + VDOM_BATCH_WORDS && j < VDOM_CHUNK_WORDS; ++j) {
+      size_t* p = &chunk->words[j];
+      if (*p) skip = false;
+      if (skip) continue;
+      printf("    %p %012zx\n", p, *p);
     }
   }
 }
@@ -322,6 +400,92 @@ static void print_vdom_state() {
   }
 }
 
+ElmString16 str_ul = {.header = HEADER_STRING(2), .words16 = {'u', 'l'}};
+ElmString16 str_li = {.header = HEADER_STRING(2), .words16 = {'u', 'l'}};
+ElmString16 str_color = {.header = HEADER_STRING(5), .words16 = {'c', 'o', 'l', 'o', 'r'}};
+ElmString16 str_red = {.header = HEADER_STRING(3), .words16 = {'r', 'e', 'd'}};
+ElmString16 str_blue = {.header = HEADER_STRING(4), .words16 = {'b', 'l', 'u', 'e'}};
+ElmString16 str_padding = {.header = HEADER_STRING(7), .words16 = {'p', 'a', 'd', 'd', 'i', 'n', 'g'}};
+ElmString16 str_10px = {.header = HEADER_STRING(4), .words16 = {'1', '0', 'p', 'x'}};
+ElmString16 str_hello = {.header = HEADER_STRING(5), .words16 = {'h', 'e', 'l', 'l', 'o'}};
+ElmString16 str_there = {.header = HEADER_STRING(5), .words16 = {'t', 'h', 'e', 'r', 'e'}};
+ElmString16 str_margin = {.header = HEADER_STRING(6), .words16 = {'m', 'a', 'r', 'g', 'i', 'n'}};
+ElmString16 str_auto = {.header = HEADER_STRING(4), .words16 = {'a', 'u', 't', 'o'}};
+ElmString16 str_float = {.header = HEADER_STRING(5), .words16 = {'f', 'l', 'o', 'a', 't'}};
+ElmString16 str_left = {.header = HEADER_STRING(4), .words16 = {'l', 'e', 'f', 't'}};
+ElmString16 str_right = {.header = HEADER_STRING(5), .words16 = {'r', 'i', 'g', 'h', 't'}};
+ElmString16 str_world = {.header = HEADER_STRING(5), .words16 = {'w', 'o', 'r', 'l', 'd'}};
+ElmString16 str_people = {.header = HEADER_STRING(6), .words16 = {'p', 'e', 'o', 'p', 'l', 'e'}};
+ElmString16 str_whats = {.header = HEADER_STRING(6), .words16 = {'w', 'h', 'a', 't', '\'', 's'}};
+ElmString16 str_up = {.header = HEADER_STRING(3), .words16 = {'u', 'p', '?'}};
+
+void print_string_addresses() {
+  printf("%p str_ul\n", &str_ul);
+  printf("%p str_li\n", &str_li);
+  printf("%p str_color\n", &str_color);
+  printf("%p str_red\n", &str_red);
+  printf("%p str_blue\n", &str_blue);
+  printf("%p str_padding\n", &str_padding);
+  printf("%p str_10px\n", &str_10px);
+  printf("%p str_hello\n", &str_hello);
+  printf("%p str_there\n", &str_there);
+  printf("%p str_margin\n", &str_margin);
+  printf("%p str_auto\n", &str_auto);
+  printf("%p str_float\n", &str_float);
+  printf("%p str_left\n", &str_left);
+  printf("%p str_right\n", &str_right);
+  printf("%p str_world\n", &str_world);
+  printf("%p str_people\n", &str_people);
+  printf("%p str_whats\n", &str_whats);
+  printf("%p str_up\n", &str_up);
+}
+
+
+static void* view() {
+  return A3(&VirtualDom_node,
+      &str_ul,
+      pNil,
+      List_create(3,
+          ((void*[]){
+              A3(&VirtualDom_node,
+                  &str_li,
+                  List_create(2,
+                      ((void*[]){
+                          A2(&VirtualDom_style, &str_color, &str_red),
+                          A2(&VirtualDom_style, &str_padding, &str_10px),
+                      })),
+                  List_create(2,
+                      ((void*[]){
+                          A1(&VirtualDom_text, &str_hello),
+                          A1(&VirtualDom_text, &str_there),
+                      }))),
+              A3(&VirtualDom_node,
+                  &str_li,
+                  List_create(2,
+                      ((void*[]){
+                          A2(&VirtualDom_style, &str_margin, &str_auto),
+                          A2(&VirtualDom_style, &str_float, &str_left),
+                      })),
+                  List_create(2,
+                      ((void*[]){
+                          A1(&VirtualDom_text, &str_world),
+                          A1(&VirtualDom_text, &str_people),
+                      }))),
+              A3(&VirtualDom_node,
+                  &str_li,
+                  List_create(2,
+                      ((void*[]){
+                          A2(&VirtualDom_style, &str_color, &str_blue),
+                          A2(&VirtualDom_style, &str_float, &str_right),
+                      })),
+                  List_create(2,
+                      ((void*[]){
+                          A1(&VirtualDom_text, &str_whats),
+                          A1(&VirtualDom_text, &str_up),
+                      }))),
+          })));
+}
+
 
 int main() {
   const size_t N_FLAG_BITS = sizeof(VdomFlags) * 8;
@@ -333,6 +497,15 @@ int main() {
   init_vdom_allocator();
 
   print_vdom_state();
+
+  state.vdom_current = view();
+
+
+  print_string_addresses();
+  print_heap();
+  print_vdom_state();
+
+  print_vdom_node(state.vdom_current);
 
   return 0;
 }

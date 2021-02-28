@@ -47,6 +47,8 @@ size_t child_count(ElmValue* v) {
 
 bool sanity_check(void* p) {
   if (!p) return true;
+  GcHeap* heap = &gc_state.heap;
+  if (IS_OUTSIDE_HEAP(p)) return true;
   Header h = *(Header*)p;
   switch (h.tag) {
     case Tag_Int:
