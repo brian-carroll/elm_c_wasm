@@ -39,13 +39,17 @@ struct vdom_fact {
 
 typedef u16 VdomFlags;  // number of bits must be at least VDOM_BATCH_PER_CHUNK
 
-#define VDOM_CHUNK_WORDS ((GC_SYSTEM_MEM_CHUNK - 2 * sizeof(VdomFlags) - 2 * sizeof(void*)) / sizeof(size_t))
-
-struct vdom_chunk {
+struct vdom_chunk_metadata {
   struct vdom_chunk* next;
   VdomFlags live_flags;
   VdomFlags generation_flags;
+};
+
+#define VDOM_CHUNK_WORDS ((GC_SYSTEM_MEM_CHUNK - sizeof(struct vdom_chunk_metadata)) / sizeof(size_t))
+
+struct vdom_chunk {
   size_t words[VDOM_CHUNK_WORDS];
+  struct vdom_chunk_metadata meta;
 };
 
 struct vdom_state {
@@ -67,7 +71,7 @@ static struct vdom_state state;
 static clear_dead_batches(struct vdom_chunk* chunk) {
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
-    if (chunk->live_flags & bit) continue;
+    if (chunk->meta.live_flags & bit) continue;
     for (size_t j = i; j < i + VDOM_BATCH_WORDS; ++j) {
       chunk->words[j] = 0;
     }
@@ -80,9 +84,9 @@ static clear_dead_batches(struct vdom_chunk* chunk) {
 
 void init_vdom_allocator() {
   struct vdom_chunk* chunk = GC_get_memory_from_system(GC_SYSTEM_MEM_CHUNK);
-  chunk->next = NULL;
-  chunk->live_flags = 3 << (VDOM_BATCH_PER_CHUNK - 2);
-  chunk->generation_flags = 0;
+  chunk->meta.next = NULL;
+  chunk->meta.live_flags = 3 << (VDOM_BATCH_PER_CHUNK - 2);
+  chunk->meta.generation_flags = 0;
 
   state = (struct vdom_state){
       .first_chunk = chunk,
@@ -100,8 +104,8 @@ void init_vdom_allocator() {
 
 static void next_generation() {
   VdomFlags generation = state.generation ? (VdomFlags)(-1) : 0;
-  for (struct vdom_chunk* c = state.first_chunk; c; c = c->next) {
-    c->live_flags &= (c->generation_flags ^ generation);
+  for (struct vdom_chunk* c = state.first_chunk; c; c = c->meta.next) {
+    c->meta.live_flags &= (c->meta.generation_flags ^ generation);
     clear_dead_batches(c);
   }
   state.generation = !state.generation;
@@ -114,9 +118,9 @@ void start_new_batch(size_t** top, size_t** bottom) {
   VdomFlags bit = 1 << (VDOM_BATCH_PER_CHUNK - 1);
   size_t* found = NULL;
   for (size_t i = VDOM_CHUNK_WORDS - 1; bit; i -= VDOM_BATCH_WORDS, bit >>= 1) {
-    if (chunk->live_flags & bit) continue;
+    if (chunk->meta.live_flags & bit) continue;
     found = &chunk->words[i];
-    chunk->live_flags |= bit;
+    chunk->meta.live_flags |= bit;
     break;
   }
   assert(found);  // TODO
@@ -314,25 +318,29 @@ static void print_node_as_html(struct vdom_node* node) {
       ElmString16* tag = node->values[0];
       printf("<");
       print_string(tag);
-      int i = node->n_extras;
-      for (; i < node->n_extras + node->n_facts; ++i) {
+      int last_fact = node->n_extras + node->n_facts - 1;
+      for (int i = last_fact; i >= node->n_extras; --i) {
         print_fact_as_html(node->values[i]);
       }
       printf(">\n");
-      int total = node->n_extras + node->n_facts + node->n_children;
-      for (; i < total; ++i) {
+      int last_child = node->n_extras + node->n_facts + node->n_children - 1;
+      for (int i = last_child; i > last_fact; --i) {
         print_node_as_html(node->values[i]);
       }
       printf("</");
       print_string(tag);
-      printf(">");
+      printf(">\n");
+      break;
     }
     case VDOM_NODE_TEXT: {
       ElmString16* text = node->values[0];
       print_string(text);
+      printf("\n");
+      break;
     }
     default:
       assert(false);
+      break;
   }
 }
 
@@ -363,14 +371,14 @@ static void print_vdom_node(struct vdom_node* node) {
 
 static void print_vdom_chunk(struct vdom_chunk* chunk) {
   printf("chunk at %p\n", chunk);
-  printf("  next             %p\n", chunk->next);
-  printf("  live_flags       0x%04x\n", chunk->live_flags);
-  printf("  generation_flags 0x%04x\n", chunk->generation_flags);
+  printf("  next             %p\n", chunk->meta.next);
+  printf("  live_flags       0x%04x\n", chunk->meta.live_flags);
+  printf("  generation_flags 0x%04x\n", chunk->meta.generation_flags);
 
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
-    bool live = chunk->live_flags & bit;
-    printf("  Batch at %p live=%x generation=%x\n", &chunk->words[i], live, chunk->generation_flags & bit);
+    bool live = chunk->meta.live_flags & bit;
+    printf("  Batch at %p live=%x generation=%x\n", &chunk->words[i], live, chunk->meta.generation_flags & bit);
     if (!live) continue;
     bool skip = true;
     for (size_t j = i; j < i + VDOM_BATCH_WORDS && j < VDOM_CHUNK_WORDS; ++j) {
@@ -395,13 +403,13 @@ static void print_vdom_state() {
   printf("generation\t%d\n", state.generation);
   printf("\n");
 
-  for (struct vdom_chunk* c = state.first_chunk; c; c = c->next) {
+  for (struct vdom_chunk* c = state.first_chunk; c; c = c->meta.next) {
     print_vdom_chunk(c);
   }
 }
 
 ElmString16 str_ul = {.header = HEADER_STRING(2), .words16 = {'u', 'l'}};
-ElmString16 str_li = {.header = HEADER_STRING(2), .words16 = {'u', 'l'}};
+ElmString16 str_li = {.header = HEADER_STRING(2), .words16 = {'l', 'i'}};
 ElmString16 str_color = {.header = HEADER_STRING(5), .words16 = {'c', 'o', 'l', 'o', 'r'}};
 ElmString16 str_red = {.header = HEADER_STRING(3), .words16 = {'r', 'e', 'd'}};
 ElmString16 str_blue = {.header = HEADER_STRING(4), .words16 = {'b', 'l', 'u', 'e'}};
@@ -506,6 +514,7 @@ int main() {
   print_vdom_state();
 
   print_vdom_node(state.vdom_current);
+  print_node_as_html(state.vdom_current);
 
   return 0;
 }
