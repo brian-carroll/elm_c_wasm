@@ -170,9 +170,7 @@ void* allocate_fact() {
 
 static void* eval_VirtualDom_text(void* args[]) {
   ElmString16* string = args[0];
-  printf("before allocate_node, next_node = %p\n", state.next_node);
   struct vdom_node* node = allocate_node(2);
-  printf("after allocate_node, next_node = %p, node=%p, node->values=%p\n", state.next_node, node, node->values);
   node->ctor = VDOM_NODE_TEXT;
   node->n_extras = 1;
   node->n_facts = 0;
@@ -266,29 +264,29 @@ Closure VirtualDom_style = {
 static char* stringify_vdom_ctor(u8 ctor) {
   switch (ctor) {
     case VDOM_NODE:
-      return "VDOM_NODE";
+      return "VDOM_NODE         ";
     case VDOM_NODE_KEYED:
-      return "VDOM_NODE_KEYED";
+      return "VDOM_NODE_KEYED   ";
     case VDOM_NODE_NS:
-      return "VDOM_NODE_NS";
+      return "VDOM_NODE_NS      ";
     case VDOM_NODE_NS_KEYED:
       return "VDOM_NODE_NS_KEYED";
     case VDOM_NODE_TEXT:
-      return "VDOM_NODE_TEXT";
+      return "VDOM_NODE_TEXT    ";
     case VDOM_NODE_TAGGER:
-      return "VDOM_NODE_TAGGER";
+      return "VDOM_NODE_TAGGER  ";
     case VDOM_NODE_THUNK:
-      return "VDOM_NODE_THUNK";
+      return "VDOM_NODE_THUNK   ";
     case VDOM_FACT_EVENT:
-      return "VDOM_FACT_EVENT";
+      return "VDOM_FACT_EVENT   ";
     case VDOM_FACT_STYLE:
-      return "VDOM_FACT_STYLE";
+      return "VDOM_FACT_STYLE   ";
     case VDOM_FACT_PROP:
-      return "VDOM_FACT_PROP";
+      return "VDOM_FACT_PROP    ";
     case VDOM_FACT_ATTR:
-      return "VDOM_FACT_ATTR";
+      return "VDOM_FACT_ATTR    ";
     case VDOM_FACT_ATTR_NS:
-      return "VDOM_FACT_ATTR_NS";
+      return "VDOM_FACT_ATTR_NS ";
     default:
       return "(unknown ctor)";
   }
@@ -344,9 +342,9 @@ static void print_node_as_html(struct vdom_node* node) {
   }
 }
 
-static void print_vdom_fact(struct vdom_fact* fact) {
+static void print_vdom_fact_header(struct vdom_fact* fact) {
   assert(fact);
-  printf("%p %s ", fact, stringify_vdom_ctor(fact->ctor));
+  printf("    %p " FORMAT_HEX " %s ", fact, *(size_t*)fact, stringify_vdom_ctor(fact->ctor));
   print_string(fact->key);
   printf(" ");
   print_string(fact->value);
@@ -354,10 +352,11 @@ static void print_vdom_fact(struct vdom_fact* fact) {
 }
 
 
-static void print_vdom_node(struct vdom_node* node) {
+static void print_vdom_node_header(struct vdom_node* node) {
   assert(node);
-  printf("%p %s n_extras=%d n_facts=%d n_children=%d",
+  printf("    %p " FORMAT_HEX " %s n_extras=%d n_facts=%d n_children=%d",
       node,
+      *(size_t*)node,
       stringify_vdom_ctor(node->ctor),
       node->n_extras,
       node->n_facts,
@@ -367,6 +366,11 @@ static void print_vdom_node(struct vdom_node* node) {
     printf(" %p", node->values[i]);
   }
   printf("\n");
+}
+
+
+static void print_addr_and_value(size_t* p) {
+  printf("    %p " FORMAT_HEX "\n", p, *p);
 }
 
 static void print_vdom_chunk(struct vdom_chunk* chunk) {
@@ -385,7 +389,39 @@ static void print_vdom_chunk(struct vdom_chunk* chunk) {
       size_t* p = &chunk->words[j];
       if (*p) skip = false;
       if (skip) continue;
-      printf("    %p %012zx\n", p, *p);
+      u8 ctor = *(u8*)p;
+      switch (ctor) {
+        case VDOM_NODE:
+        case VDOM_NODE_KEYED:
+        case VDOM_NODE_NS:
+        case VDOM_NODE_NS_KEYED:
+        case VDOM_NODE_TEXT:
+        case VDOM_NODE_TAGGER:
+        case VDOM_NODE_THUNK: {
+          struct vdom_node* node = (struct vdom_node*)p;
+          size_t n_values = node->n_extras + node->n_facts + node->n_children;
+          print_vdom_node_header(node);
+          for (size_t k = 0; k < n_values; ++k) {
+            print_addr_and_value(&node->values[k]);
+          }
+          j += n_values;
+          break;
+        }
+        case VDOM_FACT_EVENT:
+        case VDOM_FACT_STYLE:
+        case VDOM_FACT_PROP:
+        case VDOM_FACT_ATTR:
+        case VDOM_FACT_ATTR_NS: {
+          print_vdom_fact_header((struct vdom_fact*)p);
+          print_addr_and_value(p + 1);
+          print_addr_and_value(p + 2);
+          j += 2;
+          break;
+        }
+        default:
+          // assert(false);
+          break;
+      }
     }
   }
 }
@@ -503,17 +539,15 @@ int main() {
   if (maybe_exit) return maybe_exit;
 
   init_vdom_allocator();
-
+  print_string_addresses();
   print_vdom_state();
 
   state.vdom_current = view();
 
 
-  print_string_addresses();
   print_heap();
   print_vdom_state();
 
-  print_vdom_node(state.vdom_current);
   print_node_as_html(state.vdom_current);
 
   return 0;
