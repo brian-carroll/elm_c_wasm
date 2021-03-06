@@ -154,10 +154,12 @@ Closure g_elm_core_Array_initialize = {
 FieldGroup* Wrapper_appFieldGroups[] = {NULL};
 void** Wrapper_mainsArray[] = {NULL};
 
-EvalFunction eval_fib;
-EvalFunction eval_trashyFold;
-EvalFunction eval_listNonsense;
-EvalFunction eval_infinite_loop;
+#ifndef GC_TEST_H
+void* eval_fib(void* args[]) { return NULL; }
+void* eval_trashyFold(void* args[]) { return NULL; }
+void* eval_listNonsense(void* args[]) { return NULL; }
+void* eval_infinite_loop(void* args[]) { return NULL; }
+#endif
 
 char unknown_function_address[FORMAT_PTR_LEN];
 char * Debug_evaluator_name(void * p) {

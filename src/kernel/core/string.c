@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>  // sprintf
+#include <stdio.h>  // snprintf
 #include <stdlib.h>
 #include <string.h>
 

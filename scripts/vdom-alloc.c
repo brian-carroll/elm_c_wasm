@@ -68,11 +68,11 @@ static struct vdom_state state;
 
 
 #ifdef DEBUG
-static clear_dead_batches(struct vdom_chunk* chunk) {
+static void clear_dead_batches(struct vdom_chunk* chunk) {
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
     if (chunk->meta.live_flags & bit) continue;
-    for (size_t j = i; j < i + VDOM_BATCH_WORDS; ++j) {
+    for (size_t j = i; j < i + VDOM_BATCH_WORDS && j < VDOM_CHUNK_WORDS; ++j) {
       chunk->words[j] = 0;
     }
   }
@@ -116,36 +116,42 @@ static void next_generation() {
 
 void start_new_batch(size_t** top, size_t** bottom) {
   struct vdom_chunk* chunk = state.current_chunk;
+
   VdomFlags bit = 1 << (VDOM_BATCH_PER_CHUNK - 1);
-  size_t* found = NULL;
-  for (size_t i = VDOM_CHUNK_WORDS - 1; bit; i -= VDOM_BATCH_WORDS, bit >>= 1) {
-    if (chunk->meta.live_flags & bit) continue;
-    found = &chunk->words[i];
-    chunk->meta.live_flags |= bit;
-    if (state.generation) {
-      chunk->meta.generation_flags |= bit;
-    } else {
-      chunk->meta.generation_flags &= ~bit;
-    }
-    break;
+  size_t i = (VDOM_BATCH_PER_CHUNK - 1) * VDOM_BATCH_WORDS;
+
+  for (; chunk->meta.live_flags & bit; bit >>= 1, i -= VDOM_BATCH_WORDS)
+    ;
+  assert(bit);  // TODO, allocate new chunk
+  size_t* found = &chunk->words[i];
+  chunk->meta.live_flags |= bit;
+  if (state.generation) {
+    chunk->meta.generation_flags |= bit;
+  } else {
+    chunk->meta.generation_flags &= ~bit;
   }
-  assert(found);  // TODO
-  *top = found;
-  *bottom = found - VDOM_BATCH_WORDS;
-  if (*bottom < chunk->words) {
-    *bottom = chunk->words;
+  *bottom = found;
+  *top = found + VDOM_BATCH_WORDS - 1;
+
+  size_t* max_addr = &chunk->words[VDOM_CHUNK_WORDS - 1];
+  if (*top > max_addr) {
+    *top = max_addr;
   }
 }
 
 
 size_t* start_new_node_batch() {
+  printf("start_new_node_batch: switching from %p ", state.bottom_node);
   start_new_batch(&state.next_node, &state.bottom_node);
+  printf("to %p\n", state.bottom_node);
   return state.next_node;
 }
 
 
 size_t* start_new_fact_batch() {
+  printf("start_new_fact_batch: switching from %p ", state.bottom_fact);
   start_new_batch(&state.next_fact, &state.bottom_fact);
+  printf("to %p\n", state.bottom_fact);
   return state.next_fact;
 }
 
@@ -191,12 +197,15 @@ Closure VirtualDom_text = {
 };
 
 
+// need a fancier version to "organize" facts
 size_t prepend_list_or_start_new_batch(Cons* list) {
   size_t n = 0;
   for (; list != pNil; list = list->tail) {
     n++;
-    *state.next_node-- = (size_t)list->head;
+    *state.next_node = (size_t)list->head;
+    state.next_node--;
     if (state.next_node < state.bottom_node) {
+      printf("prepend_list_or_start_new_batch: overflowed at %p\n", state.bottom_node);
       start_new_node_batch();
       return -1;
     }
@@ -214,10 +223,12 @@ static void* eval_VirtualDom_node(void* args[]) {
     size_t n_children = prepend_list_or_start_new_batch(kidList);
     if (n_children == -1) continue;
 
+    // This needs to get more complicated than prepend_list_or_start_new_batch (organize facts)
     size_t n_facts = prepend_list_or_start_new_batch(factList);
     if (n_facts == -1) continue;
 
     if (state.next_node - 2 < state.bottom_node) {
+      printf("eval_VirtualDom_node: overflowed at %p\n", state.bottom_node);
       start_new_node_batch();
       continue;
     }
@@ -243,9 +254,30 @@ Closure VirtualDom_node = {
 };
 
 
+/*
+
+Rules for organize facts:
+  - if you get the same key twice, last one wins (including style!)
+  - class is special, join them all with spaces (prop and attr)
+  - props other than className get Json_unwrap
+
+Implementation:
+  - have a separate batch for classnames
+    - join them when creating patches, no need on creation
+  - put Json_unwrap in the property function (if not className)
+  - do a linear key search before inserting
+    - or use a hashmap? so that generic prop will work
+    - maybe detect this as a special case with IS_OUTSIDE_HEAP?
+      - if anything is outside heap, do a slow path
+      - otherwise pointer compare will do (common case)
+      - could actually set a "slow facts" flag on the node? (steal a bit from ctor)
+
+*/
 void* eval_VirtualDom_style(void* args[]) {
   ElmString16* key = args[0];
   ElmString16* value = args[1];
+  assert(key->header.tag == Tag_String);
+  assert(value->header.tag == Tag_String);
   struct vdom_fact* fact = allocate_fact();
   *fact = (struct vdom_fact){
       .ctor = VDOM_FACT_STYLE,
@@ -298,8 +330,31 @@ static char* stringify_vdom_ctor(u8 ctor) {
   }
 }
 
+bool is_constant_string(ElmString16* s);
+
+extern GcState gc_state;
+bool is_valid_pointer(void* p) {
+  if (is_constant_string(p)) {
+    return true;
+  }
+
+  for (struct vdom_chunk* c = state.first_chunk; c; c = c->meta.next) {
+    if (p > c->words && p < &c->words[VDOM_CHUNK_WORDS]) {
+      return true;
+    }
+  }
+
+  GcHeap *heap = &gc_state.heap;
+  if (!IS_OUTSIDE_HEAP(p)) {
+    return true;
+  }
+
+  return false;
+}
 
 static void print_string(ElmString16* s) {
+  assert(is_valid_pointer(s));
+  assert(s->header.tag == Tag_String);
   for (int i = 0; i < code_units(s); ++i) {
     putchar(s->words16[i]);
   }
@@ -388,12 +443,23 @@ static void print_vdom_chunk(struct vdom_chunk* chunk) {
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
     bool live = chunk->meta.live_flags & bit;
-    printf("  Batch at %p live=%x generation=%x\n", &chunk->words[i], live, !!(chunk->meta.generation_flags & bit));
+    printf("  Batch at %p (%04x) live=%x generation=%x\n",
+        &chunk->words[i],
+        bit,
+        live,
+        !!(chunk->meta.generation_flags & bit));
     bool skip = true;
     for (size_t j = i; j < i + VDOM_BATCH_WORDS && j < VDOM_CHUNK_WORDS; ++j) {
       size_t* p = &chunk->words[j];
       if (*p) skip = false;
       if (skip) continue;
+
+      void* maybe_garbage = (void*)(*p);
+      if (is_valid_pointer(maybe_garbage)) {
+        printf("    %p " FORMAT_HEX " (garbage)\n", p, *(size_t*)p);
+        continue;
+      }
+
       u8 ctor = *(u8*)p;
       switch (ctor) {
         case VDOM_NODE:
@@ -424,7 +490,9 @@ static void print_vdom_chunk(struct vdom_chunk* chunk) {
           break;
         }
         default:
-          // assert(false);
+          printf("unknown ctor at %p\n", p);
+          fflush(0);
+          assert(false);
           break;
       }
     }
@@ -467,12 +535,44 @@ ElmString16 str_world = {.header = HEADER_STRING(5), .words16 = {'w', 'o', 'r', 
 ElmString16 str_people = {.header = HEADER_STRING(6), .words16 = {'p', 'e', 'o', 'p', 'l', 'e'}};
 ElmString16 str_whats = {.header = HEADER_STRING(6), .words16 = {'w', 'h', 'a', 't', '\'', 's'}};
 ElmString16 str_up = {.header = HEADER_STRING(3), .words16 = {'u', 'p', '?'}};
-
 ElmString16 str_div = {.header = HEADER_STRING(3), .words16 = {'d', 'i', 'v'}};
 ElmString16 str_p = {.header = HEADER_STRING(1), .words16 = {'p'}};
 ElmString16 str_brian = {.header = HEADER_STRING(5), .words16 = {'B', 'r', 'i', 'a', 'n'}};
 ElmString16 str_display = {.header = HEADER_STRING(7), .words16 = {'d', 'i', 's', 'p', 'l', 'a', 'y'}};
 ElmString16 str_flex = {.header = HEADER_STRING(4), .words16 = {'f', 'l', 'e', 'x'}};
+
+ElmString16* constant_strings[] = {
+  &str_ul,
+  &str_li,
+  &str_color,
+  &str_red,
+  &str_blue,
+  &str_padding,
+  &str_10px,
+  &str_hello,
+  &str_there,
+  &str_margin,
+  &str_auto,
+  &str_float,
+  &str_left,
+  &str_right,
+  &str_world,
+  &str_people,
+  &str_whats,
+  &str_up,
+  &str_div,
+  &str_p,
+  &str_brian,
+  &str_display,
+  &str_flex,
+};
+
+bool is_constant_string(ElmString16* s) {
+  for (int i = 0; i < sizeof(constant_strings)/sizeof(void*); ++i) {
+    if (s == constant_strings[i]) return true;
+  }
+  return false;
+}
 
 
 void print_string_addresses() {
@@ -556,6 +656,21 @@ static void* view2() {
 }
 
 
+static void* view3(int len) {
+  Cons* childList = pNil;
+  for (int i = 0; i < len; ++i) {
+    ElmInt* num = newElmInt(i);
+    ElmString16* num_str = A1(&String_fromNumber, num);
+    void* text = A1(&VirtualDom_text, num_str);
+    void* fact = A2(&VirtualDom_style, &str_margin, num_str);
+    void* child = A3(&VirtualDom_node, &str_li, newCons(fact, pNil), newCons(text, pNil));
+    childList = newCons(child, childList);
+  }
+
+  return A3(&VirtualDom_node, &str_ul, pNil, childList);
+}
+
+
 int main() {
   const size_t N_FLAG_BITS = sizeof(VdomFlags) * 8;
   assert(N_FLAG_BITS == VDOM_BATCH_PER_CHUNK);
@@ -574,13 +689,40 @@ int main() {
   printf("\nAFTER FIRST VIEW\n\n");
   print_vdom_state();
 
+  printf("\nSWITCH TO GENERATION 1\n\n");
   next_generation();
-  printf("\nAFTER NEXT GENERATION\n\n");
   print_vdom_state();
 
   state.vdom_current = view2();
 
   printf("\nAFTER SECOND VIEW\n\n");
+  print_vdom_state();
+
+  printf("\nSWITCH TO GENERATION 0\n\n");
+  next_generation();
+  print_vdom_state();
+
+  state.vdom_current = view2();
+
+  printf("\nAFTER THIRD VIEW\n\n");
+  print_vdom_state();
+
+  printf("\nSWITCH TO GENERATION 1\n\n");
+  next_generation();
+  print_vdom_state();
+
+  state.vdom_current = view1();
+
+  printf("\nAFTER FOURTH VIEW\n\n");
+  print_vdom_state();
+
+  printf("\nSWITCH TO GENERATION 0\n\n");
+  next_generation();
+  print_vdom_state();
+
+  state.vdom_current = view3(100);
+
+  printf("\nAFTER BIG VIEW\n\n");
   print_vdom_state();
 
   print_heap();

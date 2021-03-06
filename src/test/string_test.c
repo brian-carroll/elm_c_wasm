@@ -534,6 +534,9 @@ void* test_String_endsWith() {
 }
 
 void* test_String_fromNumber() {
+  expect_string("fromNumber 0",
+      "0",
+      A1(&String_fromNumber, newElmInt(0)));
   expect_string("fromNumber 2147483647",
       "2147483647",
       A1(&String_fromNumber, newElmInt(2147483647)));
