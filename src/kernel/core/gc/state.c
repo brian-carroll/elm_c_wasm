@@ -34,14 +34,13 @@ void reset_state(GcState* state) {
 #ifdef _WIN32
 
 void* GC_get_memory_from_system(size_t bytes) {
-  // https://docs.microsoft.com/en-us/windows/win32/api/heapapi/
-  assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  HANDLE hHeap = GetProcessHeap();
-  DWORD  dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
-  void* unaligned = HeapAlloc(hHeap, dwFlags, bytes + GC_BLOCK_BYTES);
-  size_t unaligned_addr = (size_t)unaligned;
-  size_t aligned_addr = (unaligned_addr + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
-  return (void*)aligned_addr;
+  assert(bytes % GC_SYSTEM_ALLOC_BYTES == 0);
+  void* lpAddress = NULL; // starting address
+  size_t dwSize = bytes;
+  DWORD  flAllocationType = MEM_RESERVE | MEM_COMMIT;
+  DWORD  flProtect = PAGE_READWRITE;
+  void* allocated = VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
+  return allocated;
 }
 
 #else
@@ -49,7 +48,7 @@ void* GC_get_memory_from_system(size_t bytes) {
 void* GC_get_memory_from_system(size_t bytes) {
   // mmap can map files into memory but apparently everyone
   // uses it just for plain old memory allocation too.
-  assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
+  assert(bytes % GC_SYSTEM_ALLOC_BYTES == 0);
   void *addr = NULL; // requested starting address
   size_t length = bytes;
   int prot = PROT_READ | PROT_WRITE;
