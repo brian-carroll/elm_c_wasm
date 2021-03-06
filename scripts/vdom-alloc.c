@@ -33,30 +33,30 @@ struct vdom_fact {
   void* value;
 };
 
-#define VDOM_BATCH_BYTES 4096
-#define VDOM_BATCH_PER_CHUNK (GC_SYSTEM_MEM_CHUNK / VDOM_BATCH_BYTES)
-#define VDOM_BATCH_WORDS (VDOM_BATCH_BYTES / sizeof(size_t))
+#define VDOM_BUCKET_BYTES 4096
+#define VDOM_BUCKETS_PER_PAGE (GC_WASM_PAGE_BYTES / VDOM_BUCKET_BYTES)
+#define VDOM_BUCKET_WORDS (VDOM_BUCKET_BYTES / sizeof(size_t))
 
-typedef u16 VdomFlags;  // number of bits must be at least VDOM_BATCH_PER_CHUNK
+typedef u16 VdomFlags;  // number of bits must be at least VDOM_BUCKETS_PER_PAGE
 
-struct vdom_chunk_metadata {
-  struct vdom_chunk* next;
+struct vdom_page_metadata {
+  struct vdom_page* next;
   VdomFlags live_flags;
   VdomFlags generation_flags;
 };
 
-#define VDOM_CHUNK_WORDS ((GC_SYSTEM_MEM_CHUNK - sizeof(struct vdom_chunk_metadata)) / sizeof(size_t))
+#define VDOM_PAGE_WORDS ((GC_WASM_PAGE_BYTES - sizeof(struct vdom_page_metadata)) / sizeof(size_t))
 
-struct vdom_chunk {
-  size_t words[VDOM_CHUNK_WORDS];
-  struct vdom_chunk_metadata meta;
+struct vdom_page {
+  size_t words[VDOM_PAGE_WORDS];
+  struct vdom_page_metadata meta;
 };
 
 struct vdom_state {
   struct vdom_node* vdom_old;
   struct vdom_node* vdom_current;
-  struct vdom_chunk* first_chunk;
-  struct vdom_chunk* current_chunk;
+  struct vdom_page* first_page;
+  struct vdom_page* current_page;
   size_t* next_node;
   size_t* bottom_node;
   size_t* next_fact;
@@ -68,34 +68,34 @@ static struct vdom_state state;
 
 
 #ifdef DEBUG
-static void clear_dead_batches(struct vdom_chunk* chunk) {
+static void clear_dead_buckets(struct vdom_page* page) {
   VdomFlags bit = 1;
-  for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
-    if (chunk->meta.live_flags & bit) continue;
-    for (size_t j = i; j < i + VDOM_BATCH_WORDS && j < VDOM_CHUNK_WORDS; ++j) {
-      chunk->words[j] = 0;
+  for (size_t i = 0; i < VDOM_PAGE_WORDS; i += VDOM_BUCKET_WORDS, bit <<= 1) {
+    if (page->meta.live_flags & bit) continue;
+    for (size_t j = i; j < i + VDOM_BUCKET_WORDS && j < VDOM_PAGE_WORDS; ++j) {
+      page->words[j] = 0;
     }
   }
 }
 #else
-#define clear_dead_batches(x)
+#define clear_dead_buckets(x)
 #endif
 
 
-size_t* start_new_node_batch();
-size_t* start_new_fact_batch();
+size_t* start_new_node_bucket();
+size_t* start_new_fact_bucket();
 
 
 void init_vdom_allocator() {
-  struct vdom_chunk* chunk = GC_get_memory_from_system(GC_SYSTEM_MEM_CHUNK);
-  chunk->meta.next = NULL;
-  chunk->meta.live_flags = 0;
-  chunk->meta.generation_flags = 0;
+  struct vdom_page* page = GC_get_memory_from_system(GC_WASM_PAGE_BYTES);
+  page->meta.next = NULL;
+  page->meta.live_flags = 0;
+  page->meta.generation_flags = 0;
 
-  state.first_chunk = chunk;
-  state.current_chunk = chunk;
-  start_new_node_batch();
-  start_new_fact_batch();
+  state.first_page = page;
+  state.current_page = page;
+  start_new_node_bucket();
+  start_new_fact_bucket();
 }
 
 
@@ -105,52 +105,52 @@ static void next_generation() {
   state.vdom_current = NULL;
 
   VdomFlags generation = state.generation ? (VdomFlags)(-1) : 0;
-  for (struct vdom_chunk* c = state.first_chunk; c; c = c->meta.next) {
+  for (struct vdom_page* c = state.first_page; c; c = c->meta.next) {
     c->meta.live_flags &= (c->meta.generation_flags ^ generation);
-    clear_dead_batches(c);
+    clear_dead_buckets(c);
   }
-  start_new_node_batch();
-  start_new_fact_batch();
+  start_new_node_bucket();
+  start_new_fact_bucket();
 }
 
 
-void start_new_batch(size_t** top, size_t** bottom) {
-  struct vdom_chunk* chunk = state.current_chunk;
+void start_new_bucket(size_t** top, size_t** bottom) {
+  struct vdom_page* page = state.current_page;
 
-  VdomFlags bit = 1 << (VDOM_BATCH_PER_CHUNK - 1);
-  size_t i = (VDOM_BATCH_PER_CHUNK - 1) * VDOM_BATCH_WORDS;
+  VdomFlags bit = 1 << (VDOM_BUCKETS_PER_PAGE - 1);
+  size_t i = (VDOM_BUCKETS_PER_PAGE - 1) * VDOM_BUCKET_WORDS;
 
-  for (; chunk->meta.live_flags & bit; bit >>= 1, i -= VDOM_BATCH_WORDS)
+  for (; page->meta.live_flags & bit; bit >>= 1, i -= VDOM_BUCKET_WORDS)
     ;
-  assert(bit);  // TODO, allocate new chunk
-  size_t* found = &chunk->words[i];
-  chunk->meta.live_flags |= bit;
+  assert(bit);  // TODO, allocate new page
+  size_t* found = &page->words[i];
+  page->meta.live_flags |= bit;
   if (state.generation) {
-    chunk->meta.generation_flags |= bit;
+    page->meta.generation_flags |= bit;
   } else {
-    chunk->meta.generation_flags &= ~bit;
+    page->meta.generation_flags &= ~bit;
   }
   *bottom = found;
-  *top = found + VDOM_BATCH_WORDS - 1;
+  *top = found + VDOM_BUCKET_WORDS - 1;
 
-  size_t* max_addr = &chunk->words[VDOM_CHUNK_WORDS - 1];
+  size_t* max_addr = &page->words[VDOM_PAGE_WORDS - 1];
   if (*top > max_addr) {
     *top = max_addr;
   }
 }
 
 
-size_t* start_new_node_batch() {
-  printf("start_new_node_batch: switching from %p ", state.bottom_node);
-  start_new_batch(&state.next_node, &state.bottom_node);
+size_t* start_new_node_bucket() {
+  printf("start_new_node_bucket: switching from %p ", state.bottom_node);
+  start_new_bucket(&state.next_node, &state.bottom_node);
   printf("to %p\n", state.bottom_node);
   return state.next_node;
 }
 
 
-size_t* start_new_fact_batch() {
-  printf("start_new_fact_batch: switching from %p ", state.bottom_fact);
-  start_new_batch(&state.next_fact, &state.bottom_fact);
+size_t* start_new_fact_bucket() {
+  printf("start_new_fact_bucket: switching from %p ", state.bottom_fact);
+  start_new_bucket(&state.next_fact, &state.bottom_fact);
   printf("to %p\n", state.bottom_fact);
   return state.next_fact;
 }
@@ -160,7 +160,7 @@ void* allocate_node(size_t words) {
   size_t* allocated = state.next_node - (words - 1);
   state.next_node = allocated - 1;
   if (state.next_node < state.bottom_node) {
-    state.next_node = start_new_node_batch();
+    state.next_node = start_new_node_bucket();
     allocated = state.next_node - (words - 1);
     state.next_node = allocated - 1;
   }
@@ -172,7 +172,7 @@ void* allocate_fact() {
   size_t* allocated = state.next_fact - (words - 1);
   state.next_fact = allocated - 1;
   if (state.next_fact < state.bottom_fact) {
-    state.next_fact = start_new_fact_batch();
+    state.next_fact = start_new_fact_bucket();
     allocated = state.next_fact - (words - 1);
     state.next_fact = allocated - 1;
   }
@@ -198,15 +198,15 @@ Closure VirtualDom_text = {
 
 
 // need a fancier version to "organize" facts
-size_t prepend_list_or_start_new_batch(Cons* list) {
+size_t prepend_list_or_start_new_bucket(Cons* list) {
   size_t n = 0;
   for (; list != pNil; list = list->tail) {
     n++;
     *state.next_node = (size_t)list->head;
     state.next_node--;
     if (state.next_node < state.bottom_node) {
-      printf("prepend_list_or_start_new_batch: overflowed at %p\n", state.bottom_node);
-      start_new_node_batch();
+      printf("prepend_list_or_start_new_bucket: overflowed at %p\n", state.bottom_node);
+      start_new_node_bucket();
       return -1;
     }
   }
@@ -220,16 +220,16 @@ static void* eval_VirtualDom_node(void* args[]) {
   Cons* kidList = args[2];
 
   for (size_t attempts = 0; attempts < 2; ++attempts) {
-    size_t n_children = prepend_list_or_start_new_batch(kidList);
+    size_t n_children = prepend_list_or_start_new_bucket(kidList);
     if (n_children == -1) continue;
 
-    // This needs to get more complicated than prepend_list_or_start_new_batch (organize facts)
-    size_t n_facts = prepend_list_or_start_new_batch(factList);
+    // This needs to get more complicated than prepend_list_or_start_new_bucket (organize facts)
+    size_t n_facts = prepend_list_or_start_new_bucket(factList);
     if (n_facts == -1) continue;
 
     if (state.next_node - 2 < state.bottom_node) {
       printf("eval_VirtualDom_node: overflowed at %p\n", state.bottom_node);
-      start_new_node_batch();
+      start_new_node_bucket();
       continue;
     }
 
@@ -262,7 +262,7 @@ Rules for organize facts:
   - props other than className get Json_unwrap
 
 Implementation:
-  - have a separate batch for classnames
+  - have a separate bucket for classnames
     - join them when creating patches, no need on creation
   - put Json_unwrap in the property function (if not className)
   - do a linear key search before inserting
@@ -338,8 +338,9 @@ bool is_valid_pointer(void* p) {
     return true;
   }
 
-  for (struct vdom_chunk* c = state.first_chunk; c; c = c->meta.next) {
-    if (p > c->words && p < &c->words[VDOM_CHUNK_WORDS]) {
+  size_t* word = p;
+  for (struct vdom_page* c = state.first_page; c; c = c->meta.next) {
+    if (word > c->words && word < &c->words[VDOM_PAGE_WORDS]) {
       return true;
     }
   }
@@ -434,23 +435,23 @@ static void print_addr_and_value(void* p) {
   printf("    %p " FORMAT_HEX "\n", p, *(size_t*)p);
 }
 
-static void print_vdom_chunk(struct vdom_chunk* chunk) {
-  printf("chunk at %p\n", chunk);
-  printf("  next             %p\n", chunk->meta.next);
-  printf("  live_flags       0x%04x\n", chunk->meta.live_flags);
-  printf("  generation_flags 0x%04x\n", chunk->meta.generation_flags);
+static void print_vdom_page(struct vdom_page* page) {
+  printf("Page at %p\n", page);
+  printf("  next             %p\n", page->meta.next);
+  printf("  live_flags       0x%04x\n", page->meta.live_flags);
+  printf("  generation_flags 0x%04x\n", page->meta.generation_flags);
 
   VdomFlags bit = 1;
-  for (size_t i = 0; i < VDOM_CHUNK_WORDS; i += VDOM_BATCH_WORDS, bit <<= 1) {
-    bool live = chunk->meta.live_flags & bit;
-    printf("  Batch at %p (%04x) live=%x generation=%x\n",
-        &chunk->words[i],
+  for (size_t i = 0; i < VDOM_PAGE_WORDS; i += VDOM_BUCKET_WORDS, bit <<= 1) {
+    bool live = page->meta.live_flags & bit;
+    printf("  Bucket at %p (%04x) live=%x generation=%x\n",
+        &page->words[i],
         bit,
         live,
-        !!(chunk->meta.generation_flags & bit));
+        !!(page->meta.generation_flags & bit));
     bool skip = true;
-    for (size_t j = i; j < i + VDOM_BATCH_WORDS && j < VDOM_CHUNK_WORDS; ++j) {
-      size_t* p = &chunk->words[j];
+    for (size_t j = i; j < i + VDOM_BUCKET_WORDS && j < VDOM_PAGE_WORDS; ++j) {
+      size_t* p = &page->words[j];
       if (*p) skip = false;
       if (skip) continue;
 
@@ -501,19 +502,19 @@ static void print_vdom_chunk(struct vdom_chunk* chunk) {
 
 static void print_vdom_state() {
   printf("\n");
-  printf("vdom_old\t%p\n", state.vdom_old);
-  printf("vdom_current\t%p\n", state.vdom_current);
-  printf("first_chunk\t%p\n", state.first_chunk);
-  printf("current_chunk\t%p\n", state.current_chunk);
-  printf("next_node\t%p\n", state.next_node);
-  printf("bottom_node\t%p\n", state.bottom_node);
-  printf("next_fact\t%p\n", state.next_fact);
-  printf("bottom_fact\t%p\n", state.bottom_fact);
-  printf("generation\t%d\n", state.generation);
+  printf("vdom_old      %p\n", state.vdom_old);
+  printf("vdom_current  %p\n", state.vdom_current);
+  printf("first_page    %p\n", state.first_page);
+  printf("current_page  %p\n", state.current_page);
+  printf("next_node     %p\n", state.next_node);
+  printf("bottom_node   %p\n", state.bottom_node);
+  printf("next_fact     %p\n", state.next_fact);
+  printf("bottom_fact   %p\n", state.bottom_fact);
+  printf("generation    %d\n", state.generation);
   printf("\n");
 
-  for (struct vdom_chunk* c = state.first_chunk; c; c = c->meta.next) {
-    print_vdom_chunk(c);
+  for (struct vdom_page* c = state.first_page; c; c = c->meta.next) {
+    print_vdom_page(c);
   }
 }
 
@@ -673,7 +674,7 @@ static void* view3(int len) {
 
 int main() {
   const size_t N_FLAG_BITS = sizeof(VdomFlags) * 8;
-  assert(N_FLAG_BITS == VDOM_BATCH_PER_CHUNK);
+  assert(N_FLAG_BITS == VDOM_BUCKETS_PER_PAGE);
 
   int maybe_exit = GC_init();
   if (maybe_exit) return maybe_exit;
