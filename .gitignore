@@ -39,3 +39,6 @@ src/*.txt
 
 # Generated report
 opt.md
+
+# RemedyBG debugger
+*.rdbg
