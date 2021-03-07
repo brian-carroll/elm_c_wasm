@@ -19,8 +19,9 @@ enum vdom_ctor {
   VDOM_FACT_ATTR_NS,  // value: (String, String)
   // ------------
   VDOM_PATCH_PUSH = 16,       // number: child_index
-  VDOM_PATCH_POP,             // number: nLevels
+  VDOM_PATCH_POP,             // (no data)
   VDOM_PATCH_LINK,            // values: vdom_patch
+  VDOM_PATCH_NO_OP,           // (no data)
   VDOM_PATCH_END,             // (no data)
   VDOM_PATCH_REDRAW,          // values: vdom_node
   VDOM_PATCH_SET_EVENT,       // number: 2, values: key, value
@@ -409,6 +410,7 @@ bool strings_match(ElmString16* x, ElmString16* y) {
 
 /**
  * Diff "facts" (props, attributes, event handlers, etc.)
+ *
  * Number of facts is almost always 0 or 1. The highest in practice is maybe 5.
  * For very small numbers like this, linear array search is fast and simple.
  * Generally you don't see divs with 100 attributes and even that would be OK.
@@ -529,31 +531,76 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
   }
 }
 
+static void diffNodes(struct vdom_node* old, struct vdom_node* new);
 
-static void diffNodes(struct vdom_node* curr, struct vdom_node* next) {
-  if (curr->ctor != next->ctor) {
-    patch_redraw(next);
+static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParent) {
+  u8 nOld = oldParent->n_children;
+  u8 nNew = newParent->n_children;
+  u8 nMin = (nOld < nNew) ? nOld : nNew;
+  void** oldChildren = oldParent->values + oldParent->n_extras + oldParent->n_facts;
+  void** newChildren = newParent->values + oldParent->n_extras + oldParent->n_facts;
+  struct vdom_patch* push = allocate_patch(1);
+  struct vdom_patch* pop = NULL;
+  for (u8 i = 0; i < nMin; ++i) {
+    push->ctor = VDOM_PATCH_PUSH;
+    push->number = i;
+    size_t* beforeChild = state.next_patch;
+
+    diffNodes(oldChildren[i], newChildren[i]);
+
+    size_t* afterChild = state.next_patch;
+    if (afterChild != beforeChild) {
+      pop = allocate_patch(1);
+      pop->ctor = VDOM_PATCH_POP;
+      pop->number = 0;
+      push = allocate_patch(1);
+    }
+  }
+  if (!pop) {
+    push->ctor = VDOM_PATCH_NO_OP;
+  }
+  if (nNew > nOld) {
+    u8 nAppend = nNew - nOld;
+    struct vdom_patch* patch = allocate_patch(1 + nAppend);
+    patch->ctor = VDOM_PATCH_APPEND;
+    patch->number = nAppend;
+    for (u8 i = nOld; i < nNew; ++i) {
+      patch->values[i] = newChildren[i];
+    }
+  }
+  if (nOld > nNew) {
+    u8 nRemove = nOld - nNew;
+    struct vdom_patch* patch = allocate_patch(1 + nRemove);
+    patch->ctor = VDOM_PATCH_REMOVE_LAST;
+    patch->number = nRemove;
+    for (u8 i = nNew; i < nOld; ++i) {
+      patch->values[i] = oldChildren[i];
+    }
+  }
+}
+
+static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
+  if (old->ctor != new->ctor) {
+    patch_redraw(new);
     return;
   }
-  switch (next->ctor) {
+  switch (new->ctor) {
     case VDOM_NODE: {
-      ElmString16* currTag = curr->values[0];
-      ElmString16* nextTag = next->values[0];
+      ElmString16* currTag = old->values[0];
+      ElmString16* nextTag = new->values[0];
       if (!strings_match(currTag, nextTag)) {
-        patch_redraw(next);
+        patch_redraw(new);
         return;
       }
-      diffFacts(curr, next);
-      // for .. facts diffFacts
-      // for .. children diffNodes
-
+      diffFacts(old, new);
+      diffChildren(old, new);
       return;
     }
     case VDOM_NODE_TEXT: {
-      ElmString16* currText = curr->values[0];
-      ElmString16* nextText = next->values[0];
+      ElmString16* currText = old->values[0];
+      ElmString16* nextText = new->values[0];
       if (!strings_match(currText, nextText)) {
-        patch_redraw(next);
+        patch_redraw(new);
       }
       return;
     }
