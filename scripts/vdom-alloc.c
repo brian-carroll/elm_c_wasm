@@ -122,8 +122,8 @@ static void clear_dead_buckets(struct vdom_page* page) {
 #endif
 
 
-size_t* start_new_node_bucket();
-size_t* start_new_fact_bucket();
+static size_t* start_new_node_bucket();
+static size_t* start_new_fact_bucket();
 
 
 void init_vdom_allocator() {
@@ -154,7 +154,7 @@ static void next_generation() {
 }
 
 
-void start_new_bucket(size_t** top, size_t** bottom) {
+static void start_new_bucket(size_t** top, size_t** bottom) {
   struct vdom_page* page = state.current_page;
 
   VdomFlags bit = 1 << (VDOM_BUCKETS_PER_PAGE - 1);
@@ -180,7 +180,7 @@ void start_new_bucket(size_t** top, size_t** bottom) {
 }
 
 
-size_t* start_new_node_bucket() {
+static size_t* start_new_node_bucket() {
   printf("start_new_node_bucket: switching from %p ", state.bottom_node);
   start_new_bucket(&state.next_node, &state.bottom_node);
   printf("to %p\n", state.bottom_node);
@@ -188,7 +188,7 @@ size_t* start_new_node_bucket() {
 }
 
 
-size_t* start_new_fact_bucket() {
+static size_t* start_new_fact_bucket() {
   printf("start_new_fact_bucket: switching from %p ", state.bottom_fact);
   start_new_bucket(&state.next_fact, &state.bottom_fact);
   printf("to %p\n", state.bottom_fact);
@@ -196,7 +196,7 @@ size_t* start_new_fact_bucket() {
 }
 
 
-size_t* start_new_patch_bucket() {
+static size_t* start_new_patch_bucket() {
   printf("start_new_patch_bucket: switching from %p ", state.next_patch);
   start_new_bucket(&state.top_patch, &state.next_patch);
   printf("to %p\n", state.next_patch);
@@ -206,7 +206,7 @@ size_t* start_new_patch_bucket() {
 
 // Allocate from top down
 // because allocation order is usually the opposite of diff traversal order
-void* allocate_node(size_t words) {
+static void* allocate_node(size_t words) {
   size_t* allocated = state.next_node - (words - 1);
   state.next_node = allocated - 1;
   if (state.next_node < state.bottom_node) {
@@ -220,7 +220,7 @@ void* allocate_node(size_t words) {
 
 // Allocate from top down
 // because allocation order is usually the opposite of diff traversal order
-void* allocate_fact() {
+static void* allocate_fact() {
   size_t words = 3;
   size_t* allocated = state.next_fact - (words - 1);
   state.next_fact = allocated - 1;
@@ -234,7 +234,7 @@ void* allocate_fact() {
 
 
 // Allocate forwards
-void* allocate_patch(size_t words) {
+static void* allocate_patch(size_t words) {
   size_t* allocated = state.next_patch;
   if (allocated + words + 2 >= state.top_patch) {
     struct vdom_patch* link = (struct vdom_patch*)state.next_patch;
@@ -272,7 +272,7 @@ Closure VirtualDom_text = {
 
 
 // need a fancier version to "organize" facts
-size_t prepend_list_or_start_new_bucket(Cons* list) {
+static size_t prepend_list_or_start_new_bucket(Cons* list) {
   size_t n = 0;
   for (; list != pNil; list = list->tail) {
     n++;
@@ -370,20 +370,9 @@ Closure VirtualDom_style = {
 
                                   DIFF
 
-                           size     number           values
-  VDOM_PATCH_PUSH = 16,     1+0  | child_index |
-  VDOM_PATCH_POP,           1+0  | nLevels     |
-  VDOM_PATCH_REDRAW,        1+1  | 1           | vdom_node
-  VDOM_PATCH_FACTS,         1+n  | n           | replacement_facts[]
-  VDOM_PATCH_TEXT,          1+1  | 1           | replacement_string_ptr
-  // VDOM_PATCH_THUNK,      1+n  | n           | sub_patches[]
-  VDOM_PATCH_TAGGER,        1+2  | 2           | tagger, eventNode??
-  VDOM_PATCH_REMOVE_LAST,   1+0  | n           |
-  VDOM_PATCH_APPEND,        1+n  | n           | kids
-
 ============================================================================== */
 
-void patch_redraw(struct vdom_node* node) {
+static void patch_redraw(struct vdom_node* node) {
   struct vdom_patch* patch = allocate_patch(2);
   patch->ctor = VDOM_PATCH_REDRAW;
   patch->number = 1;
@@ -391,7 +380,7 @@ void patch_redraw(struct vdom_node* node) {
 }
 
 
-bool strings_match(ElmString16* x, ElmString16* y) {
+static bool strings_match(ElmString16* x, ElmString16* y) {
   if (x == y) return true;
 
   GcHeap* heap = &gc_state.heap;
@@ -617,7 +606,7 @@ static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
 
 
 // Browser package calls a JS function, which delegates to this
-void* eval_VirtualDom_diff(void* args[]) {
+static void* eval_VirtualDom_diff(void* args[]) {
   struct vdom_node* currNode = args[0];
   struct vdom_node* nextNode = args[1];
   struct vdom_patch* first_patch = (struct vdom_patch*)state.next_patch;
