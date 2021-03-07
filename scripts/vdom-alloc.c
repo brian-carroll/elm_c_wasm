@@ -1,6 +1,6 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdarg.h>
 #include "../src/kernel/core/gc/internals.h"
 #include "../src/kernel/kernel.h"
 
@@ -72,9 +72,10 @@ struct vdom_patch {
 typedef u16 VdomFlags;  // number of bits must be at least VDOM_BUCKETS_PER_PAGE
 
 struct vdom_page_metadata {
-  struct vdom_page* next;
   VdomFlags live_flags;
   VdomFlags generation_flags;
+  VdomFlags patch_flags;
+  struct vdom_page* next;
 };
 
 #define VDOM_PAGE_WORDS ((GC_WASM_PAGE_BYTES - sizeof(struct vdom_page_metadata)) / sizeof(size_t))
@@ -148,6 +149,8 @@ static void next_generation() {
   VdomFlags generation = state.generation ? (VdomFlags)(-1) : 0;
   for (struct vdom_page* c = state.first_page; c; c = c->meta.next) {
     c->meta.live_flags &= (c->meta.generation_flags ^ generation);
+    c->meta.live_flags &= ~c->meta.patch_flags;
+    c->meta.patch_flags = 0;
     clear_dead_buckets(c);
   }
   start_new_node_bucket();
@@ -155,7 +158,7 @@ static void next_generation() {
 }
 
 
-static void start_new_bucket(size_t** top, size_t** bottom) {
+static void start_new_bucket(size_t** top, size_t** bottom, bool is_patch_bucket) {
   struct vdom_page* page = state.current_page;
 
   VdomFlags bit = 1 << (VDOM_BUCKETS_PER_PAGE - 1);
@@ -166,6 +169,9 @@ static void start_new_bucket(size_t** top, size_t** bottom) {
   assert(bit);  // TODO, allocate new page
   size_t* found = &page->words[i];
   page->meta.live_flags |= bit;
+  if (is_patch_bucket) {
+    page->meta.patch_flags |= bit;
+  }
   if (state.generation) {
     page->meta.generation_flags |= bit;
   } else {
@@ -183,7 +189,7 @@ static void start_new_bucket(size_t** top, size_t** bottom) {
 
 static size_t* start_new_node_bucket() {
   printf("start_new_node_bucket: switching from %p ", state.bottom_node);
-  start_new_bucket(&state.next_node, &state.bottom_node);
+  start_new_bucket(&state.next_node, &state.bottom_node, false);
   printf("to %p\n", state.bottom_node);
   return state.next_node;
 }
@@ -191,7 +197,7 @@ static size_t* start_new_node_bucket() {
 
 static size_t* start_new_fact_bucket() {
   printf("start_new_fact_bucket: switching from %p ", state.bottom_fact);
-  start_new_bucket(&state.next_fact, &state.bottom_fact);
+  start_new_bucket(&state.next_fact, &state.bottom_fact, false);
   printf("to %p\n", state.bottom_fact);
   return state.next_fact;
 }
@@ -199,7 +205,7 @@ static size_t* start_new_fact_bucket() {
 
 static size_t* start_new_patch_bucket() {
   printf("start_new_patch_bucket: switching from %p ", state.next_patch);
-  start_new_bucket(&state.top_patch, &state.next_patch);
+  start_new_bucket(&state.top_patch, &state.next_patch, true);
   printf("to %p\n", state.next_patch);
   return state.next_patch;
 }
@@ -378,6 +384,8 @@ Closure VirtualDom_style = {
 static struct vdom_patch* create_patch(u8 ctor, u32 nValues, ...) {
   va_list args;
   struct vdom_patch* patch = allocate_patch(1 + nValues);
+  patch->ctor = ctor;
+  patch->number = nValues;
   va_start(args, nValues);
   for (u32 i = 0; i < nValues; i++) {
     patch->values[i] = va_arg(args, void*);
@@ -555,8 +563,9 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
   }
 }
 
+
 static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
-  if (old->ctor != new->ctor) {
+  if (!old || (old->ctor != new->ctor)) {
     create_patch(VDOM_PATCH_REDRAW, 1, new);
     return;
   }
@@ -596,6 +605,7 @@ static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
 static void* eval_VirtualDom_diff(void* args[]) {
   struct vdom_node* currNode = args[0];
   struct vdom_node* nextNode = args[1];
+  start_new_patch_bucket();
   struct vdom_patch* first_patch = (struct vdom_patch*)state.next_patch;
 
   diffNodes(currNode, nextNode);
@@ -623,30 +633,42 @@ Closure VirtualDom_diff = {
 
 static char* stringify_vdom_ctor(u8 ctor) {
   switch (ctor) {
-    case VDOM_NODE:
-      return "VDOM_NODE         ";
-    case VDOM_NODE_KEYED:
-      return "VDOM_NODE_KEYED   ";
-    case VDOM_NODE_NS:
-      return "VDOM_NODE_NS      ";
-    case VDOM_NODE_NS_KEYED:
-      return "VDOM_NODE_NS_KEYED";
-    case VDOM_NODE_TEXT:
-      return "VDOM_NODE_TEXT    ";
-    case VDOM_NODE_TAGGER:
-      return "VDOM_NODE_TAGGER  ";
-    case VDOM_NODE_THUNK:
-      return "VDOM_NODE_THUNK   ";
-    case VDOM_FACT_EVENT:
-      return "VDOM_FACT_EVENT   ";
-    case VDOM_FACT_STYLE:
-      return "VDOM_FACT_STYLE   ";
-    case VDOM_FACT_PROP:
-      return "VDOM_FACT_PROP    ";
-    case VDOM_FACT_ATTR:
-      return "VDOM_FACT_ATTR    ";
-    case VDOM_FACT_ATTR_NS:
-      return "VDOM_FACT_ATTR_NS ";
+    // clang-format off
+    case VDOM_NODE:                 return "VDOM_NODE         ";
+    case VDOM_NODE_KEYED:           return "VDOM_NODE_KEYED   ";
+    case VDOM_NODE_NS:              return "VDOM_NODE_NS      ";
+    case VDOM_NODE_NS_KEYED:        return "VDOM_NODE_NS_KEYED";
+    case VDOM_NODE_TEXT:            return "VDOM_NODE_TEXT    ";
+    case VDOM_NODE_TAGGER:          return "VDOM_NODE_TAGGER  ";
+    case VDOM_NODE_THUNK:           return "VDOM_NODE_THUNK   ";
+    case VDOM_FACT_EVENT:           return "VDOM_FACT_EVENT  ";
+    case VDOM_FACT_STYLE:           return "VDOM_FACT_STYLE  ";
+    case VDOM_FACT_PROP:            return "VDOM_FACT_PROP   ";
+    case VDOM_FACT_ATTR:            return "VDOM_FACT_ATTR   ";
+    case VDOM_FACT_ATTR_NS:         return "VDOM_FACT_ATTR_NS";
+    case VDOM_PATCH_PUSH:           return "VDOM_PATCH_PUSH          ";
+    case VDOM_PATCH_POP:            return "VDOM_PATCH_POP           ";
+    case VDOM_PATCH_LINK:           return "VDOM_PATCH_LINK          ";
+    case VDOM_PATCH_NO_OP:          return "VDOM_PATCH_NO_OP         ";
+    case VDOM_PATCH_END:            return "VDOM_PATCH_END           ";
+    case VDOM_PATCH_REDRAW:         return "VDOM_PATCH_REDRAW        ";
+    case VDOM_PATCH_SET_EVENT:      return "VDOM_PATCH_SET_EVENT     ";
+    case VDOM_PATCH_SET_STYLE:      return "VDOM_PATCH_SET_STYLE     ";
+    case VDOM_PATCH_SET_PROP:       return "VDOM_PATCH_SET_PROP      ";
+    case VDOM_PATCH_SET_ATTR:       return "VDOM_PATCH_SET_ATTR      ";
+    case VDOM_PATCH_SET_ATTR_NS:    return "VDOM_PATCH_SET_ATTR_NS   ";
+    case VDOM_PATCH_REMOVE_EVENT:   return "VDOM_PATCH_REMOVE_EVENT  ";
+    case VDOM_PATCH_REMOVE_STYLE:   return "VDOM_PATCH_REMOVE_STYLE  ";
+    case VDOM_PATCH_REMOVE_PROP:    return "VDOM_PATCH_REMOVE_PROP   ";
+    case VDOM_PATCH_REMOVE_ATTR:    return "VDOM_PATCH_REMOVE_ATTR   ";
+    case VDOM_PATCH_REMOVE_ATTR_NS: return "VDOM_PATCH_REMOVE_ATTR_NS";
+    case VDOM_PATCH_TEXT:           return "VDOM_PATCH_TEXT          ";
+    case VDOM_PATCH_TAGGER:         return "VDOM_PATCH_TAGGER        ";
+    case VDOM_PATCH_REMOVE_LAST:    return "VDOM_PATCH_REMOVE_LAST   ";
+    case VDOM_PATCH_APPEND:         return "VDOM_PATCH_APPEND        ";
+    case VDOM_PATCH_REMOVE:         return "VDOM_PATCH_REMOVE        ";
+    case VDOM_PATCH_REORDER:        return "VDOM_PATCH_REORDER       ";
+    // clang-format on
     default:
       return "(unknown ctor)";
   }
@@ -753,6 +775,27 @@ static void print_vdom_node_header(struct vdom_node* node) {
 }
 
 
+static u32 print_vdom_patch_header(struct vdom_patch* patch) {
+  assert(patch);
+  printf("    %p " FORMAT_HEX " %s number=%d", patch, *(size_t*)patch, stringify_vdom_ctor(patch->ctor), patch->number);
+  u32 n_values;
+  switch (patch->ctor) {
+    case VDOM_PATCH_PUSH:
+    case VDOM_PATCH_REMOVE_LAST:
+      n_values = 0;
+      break;
+    default:
+      n_values = patch->number;
+      break;
+  }
+  for (int i = 0; i < n_values; ++i) {
+    printf(" %p", patch->values[i]);
+  }
+  printf("\n");
+  return n_values;
+}
+
+
 static void print_addr_and_value(void* p) {
   printf("    %p " FORMAT_HEX "\n", p, *(size_t*)p);
 }
@@ -762,15 +805,14 @@ static void print_vdom_page(struct vdom_page* page) {
   printf("  next             %p\n", page->meta.next);
   printf("  live_flags       0x%04x\n", page->meta.live_flags);
   printf("  generation_flags 0x%04x\n", page->meta.generation_flags);
+  printf("  patch_flags      0x%04x\n", page->meta.patch_flags);
 
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_PAGE_WORDS; i += VDOM_BUCKET_WORDS, bit <<= 1) {
-    bool live = page->meta.live_flags & bit;
-    printf("  Bucket at %p (%04x) live=%x generation=%x\n",
-        &page->words[i],
-        bit,
-        live,
-        !!(page->meta.generation_flags & bit));
+    bool live = !!(page->meta.live_flags & bit);
+    bool gen = !!(page->meta.generation_flags & bit);
+    bool patches = !!(page->meta.patch_flags & bit);
+    printf("  Bucket at %p (%04x) live=%x generation=%x patches=%x\n", &page->words[i], bit, live, gen, patches);
     bool skip = true;
     for (size_t j = i; j < i + VDOM_BUCKET_WORDS && j < VDOM_PAGE_WORDS; ++j) {
       size_t* p = &page->words[j];
@@ -785,6 +827,8 @@ static void print_vdom_page(struct vdom_page* page) {
 
       u8 ctor = *(u8*)p;
       switch (ctor) {
+        case 0:
+          continue;
         case VDOM_NODE:
         case VDOM_NODE_KEYED:
         case VDOM_NODE_NS:
@@ -812,8 +856,38 @@ static void print_vdom_page(struct vdom_page* page) {
           j += 2;
           break;
         }
+        case VDOM_PATCH_PUSH:
+        case VDOM_PATCH_POP:
+        case VDOM_PATCH_LINK:
+        case VDOM_PATCH_NO_OP:
+        case VDOM_PATCH_END:
+        case VDOM_PATCH_REDRAW:
+        case VDOM_PATCH_SET_EVENT:
+        case VDOM_PATCH_SET_STYLE:
+        case VDOM_PATCH_SET_PROP:
+        case VDOM_PATCH_SET_ATTR:
+        case VDOM_PATCH_SET_ATTR_NS:
+        case VDOM_PATCH_REMOVE_EVENT:
+        case VDOM_PATCH_REMOVE_STYLE:
+        case VDOM_PATCH_REMOVE_PROP:
+        case VDOM_PATCH_REMOVE_ATTR:
+        case VDOM_PATCH_REMOVE_ATTR_NS:
+        case VDOM_PATCH_TEXT:
+        case VDOM_PATCH_TAGGER:
+        case VDOM_PATCH_REMOVE_LAST:
+        case VDOM_PATCH_APPEND:
+        case VDOM_PATCH_REMOVE:
+        case VDOM_PATCH_REORDER: {
+          struct vdom_patch* patch = (struct vdom_patch*)p;
+          u32 n_values = print_vdom_patch_header(patch);
+          for (size_t k = 0; k < n_values; ++k) {
+            print_addr_and_value(&patch->values[k]);
+          }
+          j += n_values;
+          break;
+        }
         default:
-          printf("unknown ctor at %p\n", p);
+          printf("unknown ctor %d at %p\n", ctor, p);
           fflush(0);
           assert(false);
           break;
@@ -832,6 +906,8 @@ static void print_vdom_state() {
   printf("bottom_node   %p\n", state.bottom_node);
   printf("next_fact     %p\n", state.next_fact);
   printf("bottom_fact   %p\n", state.bottom_fact);
+  printf("next_patch    %p\n", state.next_patch);
+  printf("top_patch     %p\n", state.top_patch);
   printf("generation    %d\n", state.generation);
   printf("\n");
 
@@ -1008,50 +1084,57 @@ int main() {
   print_vdom_state();
 
   state.vdom_current = view1();
+  A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
 
   printf("\nAFTER FIRST VIEW\n\n");
   print_vdom_state();
 
-  printf("\nSWITCH TO GENERATION 1\n\n");
-  next_generation();
-  print_vdom_state();
+  // printf("\nSWITCH TO GENERATION 1\n\n");
+  // next_generation();
+  // print_vdom_state();
 
-  state.vdom_current = view2();
+  // state.vdom_current = view2();
+  // A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
 
-  printf("\nAFTER SECOND VIEW\n\n");
-  print_vdom_state();
+  // printf("\nAFTER SECOND VIEW\n\n");
+  // print_vdom_state();
 
-  printf("\nSWITCH TO GENERATION 0\n\n");
-  next_generation();
-  print_vdom_state();
+  // printf("\nSWITCH TO GENERATION 0\n\n");
+  // next_generation();
+  // print_vdom_state();
 
-  state.vdom_current = view2();
+  // state.vdom_current = view2();
+  // A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
 
-  printf("\nAFTER THIRD VIEW\n\n");
-  print_vdom_state();
+  // printf("\nAFTER THIRD VIEW\n\n");
+  // print_vdom_state();
 
-  printf("\nSWITCH TO GENERATION 1\n\n");
-  next_generation();
-  print_vdom_state();
+  // printf("\nSWITCH TO GENERATION 1\n\n");
+  // next_generation();
+  // print_vdom_state();
 
-  state.vdom_current = view1();
+  // state.vdom_current = view1();
+  // A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
 
-  printf("\nAFTER FOURTH VIEW\n\n");
-  print_vdom_state();
+  // printf("\nAFTER FOURTH VIEW\n\n");
+  // print_vdom_state();
 
-  printf("\nSWITCH TO GENERATION 0\n\n");
-  next_generation();
-  print_vdom_state();
+  // printf("\nSWITCH TO GENERATION 0\n\n");
+  // next_generation();
+  // print_vdom_state();
 
-  state.vdom_current = view3(100);
+  // state.vdom_current = view3(100);
+  // A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
 
-  printf("\nAFTER BIG VIEW\n\n");
-  print_vdom_state();
+  // printf("\nAFTER BIG VIEW\n\n");
+  // print_vdom_state();
 
   print_heap();
 
-  printf("\n\nvdom_old:\n\n");
-  print_node_as_html(state.vdom_old);
+  if (state.vdom_old) {
+    printf("\n\nvdom_old:\n\n");
+    print_node_as_html(state.vdom_old);
+  }
 
   printf("\n\nvdom_current:\n\n");
   print_node_as_html(state.vdom_current);
