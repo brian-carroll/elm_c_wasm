@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include "../src/kernel/core/gc/internals.h"
 #include "../src/kernel/kernel.h"
 
@@ -205,7 +206,8 @@ static size_t* start_new_patch_bucket() {
 
 
 // Allocate from top down
-// because allocation order is usually the opposite of diff traversal order
+// Tends to make diffing very cache-friendly, since
+// allocation order is usually the opposite of traversal order
 static void* allocate_node(size_t words) {
   size_t* allocated = state.next_node - (words - 1);
   state.next_node = allocated - 1;
@@ -219,7 +221,8 @@ static void* allocate_node(size_t words) {
 
 
 // Allocate from top down
-// because allocation order is usually the opposite of diff traversal order
+// Tends to make diffing very cache-friendly, since
+// allocation order is usually the opposite of traversal order
 static void* allocate_fact() {
   size_t words = 3;
   size_t* allocated = state.next_fact - (words - 1);
@@ -372,11 +375,15 @@ Closure VirtualDom_style = {
 
 ============================================================================== */
 
-static void patch_redraw(struct vdom_node* node) {
-  struct vdom_patch* patch = allocate_patch(2);
-  patch->ctor = VDOM_PATCH_REDRAW;
-  patch->number = 1;
-  patch->values[0] = node;
+static struct vdom_patch* create_patch(u8 ctor, u32 nValues, ...) {
+  va_list args;
+  struct vdom_patch* patch = allocate_patch(1 + nValues);
+  va_start(args, nValues);
+  for (u32 i = 0; i < nValues; i++) {
+    patch->values[i] = va_arg(args, void*);
+  }
+  va_end(args);
+  return patch;
 }
 
 
@@ -431,16 +438,11 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
       continue;  // key and value match => no patch needed
     }
 
-    struct vdom_patch* setPatch;
     if (newFact->ctor == VDOM_FACT_ATTR_NS) {
-      setPatch = allocate_patch(4);
-      setPatch->ctor = VDOM_PATCH_SET_ATTR_NS;
-      setPatch->number = 3;
-      setPatch->values[0] = newFact->key;
       Tuple2* pair = newFact->value;
       ElmString16* namespace = pair->a;
-      setPatch->values[1] = namespace;
-      setPatch->values[2] = pair->b;
+      void* value = pair->b;
+      create_patch(VDOM_PATCH_SET_ATTR_NS, 3, namespace, newFact->key, value);
     } else {
       u8 ctor;
       switch (newFact->ctor) {
@@ -457,11 +459,7 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
           ctor = VDOM_PATCH_SET_ATTR;
           break;
       }
-      setPatch = allocate_patch(3);
-      setPatch->ctor = ctor;
-      setPatch->number = 2;
-      setPatch->values[0] = newFact->key;
-      setPatch->values[1] = newFact->value;
+      create_patch(ctor, 2, newFact->key, newFact->value);
     }
   }
 
@@ -483,15 +481,10 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
     if (found) {
       continue;
     }
-    struct vdom_patch* removePatch;
     if (oldFact->ctor == VDOM_FACT_ATTR_NS) {
-      removePatch = allocate_patch(3);
-      removePatch->ctor = VDOM_PATCH_REMOVE_ATTR_NS;
-      removePatch->number = 2;
-      removePatch->values[0] = oldFact->key;
       Tuple2* pair = oldFact->value;
       ElmString16* namespace = pair->a;
-      removePatch->values[1] = namespace;
+      create_patch(VDOM_PATCH_REMOVE_ATTR_NS, 2, oldFact->key, namespace);
     } else {
       u8 ctor;
       switch (oldFact->ctor) {
@@ -512,10 +505,7 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
           break;
       }
       assert(ctor);
-      removePatch = allocate_patch(2);
-      removePatch->ctor = ctor;
-      removePatch->number = 1;
-      removePatch->values[0] = oldFact->key;
+      create_patch(ctor, 1, oldFact->key);
     }
   }
 }
@@ -528,10 +518,9 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
   u8 nMin = (nOld < nNew) ? nOld : nNew;
   void** oldChildren = oldParent->values + oldParent->n_extras + oldParent->n_facts;
   void** newChildren = newParent->values + oldParent->n_extras + oldParent->n_facts;
-  struct vdom_patch* push = allocate_patch(1);
+  struct vdom_patch* push = create_patch(VDOM_PATCH_PUSH, 0);
   struct vdom_patch* pop = NULL;
   for (u8 i = 0; i < nMin; ++i) {
-    push->ctor = VDOM_PATCH_PUSH;
     push->number = i;
     size_t* beforeChild = state.next_patch;
 
@@ -539,10 +528,8 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
 
     size_t* afterChild = state.next_patch;
     if (afterChild != beforeChild) {
-      pop = allocate_patch(1);
-      pop->ctor = VDOM_PATCH_POP;
-      pop->number = 0;
-      push = allocate_patch(1);
+      pop = create_patch(VDOM_PATCH_POP, 0);
+      push = create_patch(VDOM_PATCH_PUSH, 0);
     }
   }
   if (!pop) {
@@ -570,7 +557,7 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
 
 static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
   if (old->ctor != new->ctor) {
-    patch_redraw(new);
+    create_patch(VDOM_PATCH_REDRAW, 1, new);
     return;
   }
   switch (new->ctor) {
@@ -578,7 +565,7 @@ static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
       ElmString16* currTag = old->values[0];
       ElmString16* nextTag = new->values[0];
       if (!strings_match(currTag, nextTag)) {
-        patch_redraw(new);
+        create_patch(VDOM_PATCH_REDRAW, 1, new);
         return;
       }
       diffFacts(old, new);
@@ -589,7 +576,7 @@ static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
       ElmString16* currText = old->values[0];
       ElmString16* nextText = new->values[0];
       if (!strings_match(currText, nextText)) {
-        patch_redraw(new);
+        create_patch(VDOM_PATCH_REDRAW, 1, new);
       }
       return;
     }
