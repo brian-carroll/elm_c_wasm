@@ -12,11 +12,35 @@ enum vdom_ctor {
   VDOM_NODE_TAGGER,    // values: tagger, child
   VDOM_NODE_THUNK,     // values: thunk, refs, node
   // ------------
-  VDOM_FACT_EVENT,    // value : handler
-  VDOM_FACT_STYLE,    // value : String
-  VDOM_FACT_PROP,     // value : Json
-  VDOM_FACT_ATTR,     // value : String
-  VDOM_FACT_ATTR_NS,  // value : (String, String)
+  VDOM_FACT_EVENT,    // value: handler
+  VDOM_FACT_STYLE,    // value: String
+  VDOM_FACT_PROP,     // value: Json
+  VDOM_FACT_ATTR,     // value: String
+  VDOM_FACT_ATTR_NS,  // value: (String, String)
+  // ------------
+  VDOM_PATCH_PUSH = 16,       // number: child_index
+  VDOM_PATCH_POP,             // number: nLevels
+  VDOM_PATCH_LINK,            // values: vdom_patch
+  VDOM_PATCH_END,             // (no data)
+  VDOM_PATCH_REDRAW,          // values: vdom_node
+  VDOM_PATCH_SET_EVENT,       // number: 2, values: key, value
+  VDOM_PATCH_SET_STYLE,       // number: 2, values: key, value
+  VDOM_PATCH_SET_PROP,        // number: 2, values: key, value
+  VDOM_PATCH_SET_ATTR,        // number: 2, values: key, value
+  VDOM_PATCH_SET_ATTR_NS,     // number: 3, values: namespace, key, value
+  VDOM_PATCH_REMOVE_EVENT,    // number: 1, values: key
+  VDOM_PATCH_REMOVE_STYLE,    // number: 1, values: key
+  VDOM_PATCH_REMOVE_PROP,     // number: 1, values: key
+  VDOM_PATCH_REMOVE_ATTR,     // number: 1, values: key
+  VDOM_PATCH_REMOVE_ATTR_NS,  // number: 2, values: namespace, key
+  VDOM_PATCH_TEXT,            // values: replacement_string_ptr
+  // VDOM_PATCH_THUNK,        // values: sub_patches[]
+  VDOM_PATCH_TAGGER,       // values: tagger, eventNode??
+  VDOM_PATCH_REMOVE_LAST,  // number: num_to_remove
+  VDOM_PATCH_APPEND,       // number: nKids, values: kids
+  VDOM_PATCH_REMOVE,       // (keyed only)
+  VDOM_PATCH_REORDER,      // (keyed only) patches, inserts, endInserts
+  // VDOM_PATCH_CUSTOM,       // ? no idea what this is
 };
 
 struct vdom_node {
@@ -31,6 +55,12 @@ struct vdom_fact {
   u8 ctor;
   ElmString16* key;
   void* value;
+};
+
+struct vdom_patch {
+  u8 ctor;
+  u32 number : 24;
+  void* values[];
 };
 
 #define VDOM_BUCKET_BYTES 4096
@@ -61,10 +91,19 @@ struct vdom_state {
   size_t* bottom_node;
   size_t* next_fact;
   size_t* bottom_fact;
+  size_t* next_patch;
+  size_t* top_patch;
   bool generation;
 };
 
 static struct vdom_state state;
+
+
+/* ==============================================================================
+
+                            MEMORY ALLOCATION
+
+============================================================================== */
 
 
 #ifdef DEBUG
@@ -156,6 +195,16 @@ size_t* start_new_fact_bucket() {
 }
 
 
+size_t* start_new_patch_bucket() {
+  printf("start_new_patch_bucket: switching from %p ", state.next_patch);
+  start_new_bucket(&state.top_patch, &state.next_patch);
+  printf("to %p\n", state.next_patch);
+  return state.next_patch;
+}
+
+
+// Allocate from top down
+// because allocation order is usually the opposite of diff traversal order
 void* allocate_node(size_t words) {
   size_t* allocated = state.next_node - (words - 1);
   state.next_node = allocated - 1;
@@ -167,6 +216,9 @@ void* allocate_node(size_t words) {
   return allocated;
 }
 
+
+// Allocate from top down
+// because allocation order is usually the opposite of diff traversal order
 void* allocate_fact() {
   size_t words = 3;
   size_t* allocated = state.next_fact - (words - 1);
@@ -179,6 +231,27 @@ void* allocate_fact() {
   return allocated;
 }
 
+
+// Allocate forwards
+void* allocate_patch(size_t words) {
+  size_t* allocated = state.next_patch;
+  if (allocated + words + 2 >= state.top_patch) {
+    struct vdom_patch* link = (struct vdom_patch*)state.next_patch;
+    link->ctor = VDOM_PATCH_LINK;
+    link->number = 1;
+    allocated = start_new_patch_bucket();
+    link->values[0] = allocated;
+  }
+  state.next_patch += words;
+  return allocated;
+}
+
+
+/* ==============================================================================
+
+                            EXTERNAL API
+
+============================================================================== */
 
 static void* eval_VirtualDom_text(void* args[]) {
   ElmString16* string = args[0];
@@ -294,6 +367,232 @@ Closure VirtualDom_style = {
 
 /* ==============================================================================
 
+                                  DIFF
+
+                           size     number           values
+  VDOM_PATCH_PUSH = 16,     1+0  | child_index |
+  VDOM_PATCH_POP,           1+0  | nLevels     |
+  VDOM_PATCH_REDRAW,        1+1  | 1           | vdom_node
+  VDOM_PATCH_FACTS,         1+n  | n           | replacement_facts[]
+  VDOM_PATCH_TEXT,          1+1  | 1           | replacement_string_ptr
+  // VDOM_PATCH_THUNK,      1+n  | n           | sub_patches[]
+  VDOM_PATCH_TAGGER,        1+2  | 2           | tagger, eventNode??
+  VDOM_PATCH_REMOVE_LAST,   1+0  | n           |
+  VDOM_PATCH_APPEND,        1+n  | n           | kids
+
+============================================================================== */
+
+void patch_redraw(struct vdom_node* node) {
+  struct vdom_patch* patch = allocate_patch(2);
+  patch->ctor = VDOM_PATCH_REDRAW;
+  patch->number = 1;
+  patch->values[0] = node;
+}
+
+
+bool strings_match(ElmString16* x, ElmString16* y) {
+  if (x == y) return true;
+
+  GcHeap* heap = &gc_state.heap;
+  if (IS_OUTSIDE_HEAP(x) && IS_OUTSIDE_HEAP(y)) {
+    return false;
+  }
+
+  size_t* x_words = (size_t*)x;
+  size_t* y_words = (size_t*)y;
+  for (size_t i = 0; i < x->header.size; ++i) {
+    if (x_words[i] != y_words[i]) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Diff "facts" (props, attributes, event handlers, etc.)
+ * Number of facts is almost always 0 or 1. The highest in practice is maybe 5.
+ * For very small numbers like this, linear array search is fast and simple.
+ * Generally you don't see divs with 100 attributes and even that would be OK.
+ */
+static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
+  u8 nOld = oldNode->n_facts;
+  u8 nNew = newNode->n_facts;
+  void** oldFacts = oldNode->values + oldNode->n_extras;
+  void** newFacts = newNode->values + newNode->n_extras;
+
+  // Set facts
+  for (u8 n = 0; n < nNew; ++n) {
+    struct vdom_fact* newFact = newFacts[n];
+    struct vdom_fact* oldFact = NULL;
+
+    // Search for a matching key, starting in the same position.
+    u8 o = n;
+    for (u8 i = 0; i < nOld; ++i) {
+      struct vdom_fact* f = oldFacts[o];
+      if (f->ctor == newFact->ctor && strings_match(f->key, newFact->key)) {
+        oldFact = f;
+        break;
+      }
+      ++o;
+      if (o == nOld) o = 0;
+    }
+
+    if (oldFact && strings_match(oldFact->value, newFact->value)) {
+      continue;  // key and value match => no patch needed
+    }
+
+    struct vdom_patch* setPatch;
+    if (newFact->ctor == VDOM_FACT_ATTR_NS) {
+      setPatch = allocate_patch(4);
+      setPatch->ctor = VDOM_PATCH_SET_ATTR_NS;
+      setPatch->number = 3;
+      setPatch->values[0] = newFact->key;
+      Tuple2* pair = newFact->value;
+      ElmString16* namespace = pair->a;
+      setPatch->values[1] = namespace;
+      setPatch->values[2] = pair->b;
+    } else {
+      u8 ctor;
+      switch (newFact->ctor) {
+        case VDOM_FACT_EVENT:
+          ctor = VDOM_PATCH_SET_EVENT;
+          break;
+        case VDOM_FACT_STYLE:
+          ctor = VDOM_PATCH_SET_STYLE;
+          break;
+        case VDOM_FACT_PROP:
+          ctor = VDOM_PATCH_SET_PROP;
+          break;
+        case VDOM_FACT_ATTR:
+          ctor = VDOM_PATCH_SET_ATTR;
+          break;
+      }
+      setPatch = allocate_patch(3);
+      setPatch->ctor = ctor;
+      setPatch->number = 2;
+      setPatch->values[0] = newFact->key;
+      setPatch->values[1] = newFact->value;
+    }
+  }
+
+  // Remove facts
+  for (u8 o = 0; o < nOld; ++o) {
+    struct vdom_fact* oldFact = oldFacts[o];
+    bool found = false;
+    // Search for a matching key, starting in the same position.
+    u8 n = o;
+    for (u8 i = 0; i < nNew; ++i) {
+      struct vdom_fact* f = newFacts[n];
+      if (f->ctor == oldFact->ctor && strings_match(f->key, oldFact->key)) {
+        found = true;
+        break;
+      }
+      ++n;
+      if (n == nNew) n = 0;
+    }
+    if (found) {
+      continue;
+    }
+    struct vdom_patch* removePatch;
+    if (oldFact->ctor == VDOM_FACT_ATTR_NS) {
+      removePatch = allocate_patch(3);
+      removePatch->ctor = VDOM_PATCH_REMOVE_ATTR_NS;
+      removePatch->number = 2;
+      removePatch->values[0] = oldFact->key;
+      Tuple2* pair = oldFact->value;
+      ElmString16* namespace = pair->a;
+      removePatch->values[1] = namespace;
+    } else {
+      u8 ctor;
+      switch (oldFact->ctor) {
+        case VDOM_FACT_EVENT:
+          ctor = VDOM_PATCH_REMOVE_EVENT;
+          break;
+        case VDOM_FACT_STYLE:
+          ctor = VDOM_PATCH_REMOVE_STYLE;
+          break;
+        case VDOM_FACT_PROP:
+          ctor = VDOM_PATCH_REMOVE_PROP;
+          break;
+        case VDOM_FACT_ATTR:
+          ctor = VDOM_PATCH_REMOVE_ATTR;
+          break;
+        default:
+          ctor = 0;
+          break;
+      }
+      assert(ctor);
+      removePatch = allocate_patch(2);
+      removePatch->ctor = ctor;
+      removePatch->number = 1;
+      removePatch->values[0] = oldFact->key;
+    }
+  }
+}
+
+
+static void diffNodes(struct vdom_node* curr, struct vdom_node* next) {
+  if (curr->ctor != next->ctor) {
+    patch_redraw(next);
+    return;
+  }
+  switch (next->ctor) {
+    case VDOM_NODE: {
+      ElmString16* currTag = curr->values[0];
+      ElmString16* nextTag = next->values[0];
+      if (!strings_match(currTag, nextTag)) {
+        patch_redraw(next);
+        return;
+      }
+      diffFacts(curr, next);
+      // for .. facts diffFacts
+      // for .. children diffNodes
+
+      return;
+    }
+    case VDOM_NODE_TEXT: {
+      ElmString16* currText = curr->values[0];
+      ElmString16* nextText = next->values[0];
+      if (!strings_match(currText, nextText)) {
+        patch_redraw(next);
+      }
+      return;
+    }
+    case VDOM_NODE_KEYED:
+    case VDOM_NODE_NS:
+    case VDOM_NODE_NS_KEYED:
+    case VDOM_NODE_TAGGER:
+    case VDOM_NODE_THUNK:
+    default:
+      assert(false);
+      break;
+  }
+}
+
+
+// Browser package calls a JS function, which delegates to this
+void* eval_VirtualDom_diff(void* args[]) {
+  struct vdom_node* currNode = args[0];
+  struct vdom_node* nextNode = args[1];
+  struct vdom_patch* first_patch = (struct vdom_patch*)state.next_patch;
+
+  diffNodes(currNode, nextNode);
+
+  // Mark the end of the patches. (We have at least 2 words of space)
+  struct vdom_patch* end_marker = (struct vdom_patch*)state.next_patch;
+  end_marker->ctor = VDOM_PATCH_END;
+  end_marker->number = 0;
+
+  return first_patch;
+}
+Closure VirtualDom_diff = {
+    .header = HEADER_CLOSURE(2),
+    .max_values = 2,
+    .evaluator = eval_VirtualDom_diff,
+};
+
+
+/* ==============================================================================
+
                                   TEST CODE
 
 ============================================================================== */
@@ -345,7 +644,7 @@ bool is_valid_pointer(void* p) {
     }
   }
 
-  GcHeap *heap = &gc_state.heap;
+  GcHeap* heap = &gc_state.heap;
   if (!IS_OUTSIDE_HEAP(p)) {
     return true;
   }
@@ -543,33 +842,33 @@ ElmString16 str_display = {.header = HEADER_STRING(7), .words16 = {'d', 'i', 's'
 ElmString16 str_flex = {.header = HEADER_STRING(4), .words16 = {'f', 'l', 'e', 'x'}};
 
 ElmString16* constant_strings[] = {
-  &str_ul,
-  &str_li,
-  &str_color,
-  &str_red,
-  &str_blue,
-  &str_padding,
-  &str_10px,
-  &str_hello,
-  &str_there,
-  &str_margin,
-  &str_auto,
-  &str_float,
-  &str_left,
-  &str_right,
-  &str_world,
-  &str_people,
-  &str_whats,
-  &str_up,
-  &str_div,
-  &str_p,
-  &str_brian,
-  &str_display,
-  &str_flex,
+    &str_ul,
+    &str_li,
+    &str_color,
+    &str_red,
+    &str_blue,
+    &str_padding,
+    &str_10px,
+    &str_hello,
+    &str_there,
+    &str_margin,
+    &str_auto,
+    &str_float,
+    &str_left,
+    &str_right,
+    &str_world,
+    &str_people,
+    &str_whats,
+    &str_up,
+    &str_div,
+    &str_p,
+    &str_brian,
+    &str_display,
+    &str_flex,
 };
 
 bool is_constant_string(ElmString16* s) {
-  for (int i = 0; i < sizeof(constant_strings)/sizeof(void*); ++i) {
+  for (int i = 0; i < sizeof(constant_strings) / sizeof(void*); ++i) {
     if (s == constant_strings[i]) return true;
   }
   return false;
