@@ -101,6 +101,9 @@ struct vdom_state {
 
 static struct vdom_state state;
 
+static char* stringify_vdom_ctor(u8 ctor);
+static void print_vdom_node_header(struct vdom_node* node);
+static void print_addr_and_value(void* p);
 
 /* ==============================================================================
 
@@ -422,8 +425,8 @@ static bool strings_match(ElmString16* x, ElmString16* y) {
 static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
   u8 nOld = oldNode->n_facts;
   u8 nNew = newNode->n_facts;
-  void** oldFacts = oldNode->values + oldNode->n_extras;
-  void** newFacts = newNode->values + newNode->n_extras;
+  struct vdom_fact** oldFacts = (struct vdom_fact**)oldNode->values + oldNode->n_extras;
+  struct vdom_fact** newFacts = (struct vdom_fact**)newNode->values + newNode->n_extras;
 
   // Set facts
   for (u8 n = 0; n < nNew; ++n) {
@@ -524,15 +527,18 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
   u8 nOld = oldParent->n_children;
   u8 nNew = newParent->n_children;
   u8 nMin = (nOld < nNew) ? nOld : nNew;
-  void** oldChildren = oldParent->values + oldParent->n_extras + oldParent->n_facts;
-  void** newChildren = newParent->values + oldParent->n_extras + oldParent->n_facts;
+  struct vdom_node** oldChildren = (struct vdom_node**)oldParent->values + oldParent->n_extras + oldParent->n_facts;
+  struct vdom_node** newChildren = (struct vdom_node**)newParent->values + newParent->n_extras + newParent->n_facts;
   struct vdom_patch* push = create_patch(VDOM_PATCH_PUSH, 0);
   struct vdom_patch* pop = NULL;
+
   for (u8 i = 0; i < nMin; ++i) {
     push->number = i;
     size_t* beforeChild = state.next_patch;
 
-    diffNodes(oldChildren[i], newChildren[i]);
+    struct vdom_node* oldChild = oldChildren[i];
+    struct vdom_node* newChild = newChildren[i];
+    diffNodes(oldChild, newChild);
 
     size_t* afterChild = state.next_patch;
     if (afterChild != beforeChild) {
@@ -634,40 +640,40 @@ Closure VirtualDom_diff = {
 static char* stringify_vdom_ctor(u8 ctor) {
   switch (ctor) {
     // clang-format off
-    case VDOM_NODE:                 return "VDOM_NODE         ";
-    case VDOM_NODE_KEYED:           return "VDOM_NODE_KEYED   ";
-    case VDOM_NODE_NS:              return "VDOM_NODE_NS      ";
+    case VDOM_NODE:                 return "VDOM_NODE";
+    case VDOM_NODE_KEYED:           return "VDOM_NODE_KEYED";
+    case VDOM_NODE_NS:              return "VDOM_NODE_NS";
     case VDOM_NODE_NS_KEYED:        return "VDOM_NODE_NS_KEYED";
-    case VDOM_NODE_TEXT:            return "VDOM_NODE_TEXT    ";
-    case VDOM_NODE_TAGGER:          return "VDOM_NODE_TAGGER  ";
-    case VDOM_NODE_THUNK:           return "VDOM_NODE_THUNK   ";
-    case VDOM_FACT_EVENT:           return "VDOM_FACT_EVENT  ";
-    case VDOM_FACT_STYLE:           return "VDOM_FACT_STYLE  ";
-    case VDOM_FACT_PROP:            return "VDOM_FACT_PROP   ";
-    case VDOM_FACT_ATTR:            return "VDOM_FACT_ATTR   ";
+    case VDOM_NODE_TEXT:            return "VDOM_NODE_TEXT";
+    case VDOM_NODE_TAGGER:          return "VDOM_NODE_TAGGER";
+    case VDOM_NODE_THUNK:           return "VDOM_NODE_THUNK";
+    case VDOM_FACT_EVENT:           return "VDOM_FACT_EVENT";
+    case VDOM_FACT_STYLE:           return "VDOM_FACT_STYLE";
+    case VDOM_FACT_PROP:            return "VDOM_FACT_PROP";
+    case VDOM_FACT_ATTR:            return "VDOM_FACT_ATTR";
     case VDOM_FACT_ATTR_NS:         return "VDOM_FACT_ATTR_NS";
-    case VDOM_PATCH_PUSH:           return "VDOM_PATCH_PUSH          ";
-    case VDOM_PATCH_POP:            return "VDOM_PATCH_POP           ";
-    case VDOM_PATCH_LINK:           return "VDOM_PATCH_LINK          ";
-    case VDOM_PATCH_NO_OP:          return "VDOM_PATCH_NO_OP         ";
-    case VDOM_PATCH_END:            return "VDOM_PATCH_END           ";
-    case VDOM_PATCH_REDRAW:         return "VDOM_PATCH_REDRAW        ";
-    case VDOM_PATCH_SET_EVENT:      return "VDOM_PATCH_SET_EVENT     ";
-    case VDOM_PATCH_SET_STYLE:      return "VDOM_PATCH_SET_STYLE     ";
-    case VDOM_PATCH_SET_PROP:       return "VDOM_PATCH_SET_PROP      ";
-    case VDOM_PATCH_SET_ATTR:       return "VDOM_PATCH_SET_ATTR      ";
-    case VDOM_PATCH_SET_ATTR_NS:    return "VDOM_PATCH_SET_ATTR_NS   ";
-    case VDOM_PATCH_REMOVE_EVENT:   return "VDOM_PATCH_REMOVE_EVENT  ";
-    case VDOM_PATCH_REMOVE_STYLE:   return "VDOM_PATCH_REMOVE_STYLE  ";
-    case VDOM_PATCH_REMOVE_PROP:    return "VDOM_PATCH_REMOVE_PROP   ";
-    case VDOM_PATCH_REMOVE_ATTR:    return "VDOM_PATCH_REMOVE_ATTR   ";
+    case VDOM_PATCH_PUSH:           return "VDOM_PATCH_PUSH";
+    case VDOM_PATCH_POP:            return "VDOM_PATCH_POP";
+    case VDOM_PATCH_LINK:           return "VDOM_PATCH_LINK";
+    case VDOM_PATCH_NO_OP:          return "VDOM_PATCH_NO_OP";
+    case VDOM_PATCH_END:            return "VDOM_PATCH_END";
+    case VDOM_PATCH_REDRAW:         return "VDOM_PATCH_REDRAW";
+    case VDOM_PATCH_SET_EVENT:      return "VDOM_PATCH_SET_EVENT";
+    case VDOM_PATCH_SET_STYLE:      return "VDOM_PATCH_SET_STYLE";
+    case VDOM_PATCH_SET_PROP:       return "VDOM_PATCH_SET_PROP";
+    case VDOM_PATCH_SET_ATTR:       return "VDOM_PATCH_SET_ATTR";
+    case VDOM_PATCH_SET_ATTR_NS:    return "VDOM_PATCH_SET_ATTR_NS";
+    case VDOM_PATCH_REMOVE_EVENT:   return "VDOM_PATCH_REMOVE_EVENT";
+    case VDOM_PATCH_REMOVE_STYLE:   return "VDOM_PATCH_REMOVE_STYLE";
+    case VDOM_PATCH_REMOVE_PROP:    return "VDOM_PATCH_REMOVE_PROP";
+    case VDOM_PATCH_REMOVE_ATTR:    return "VDOM_PATCH_REMOVE_ATTR";
     case VDOM_PATCH_REMOVE_ATTR_NS: return "VDOM_PATCH_REMOVE_ATTR_NS";
-    case VDOM_PATCH_TEXT:           return "VDOM_PATCH_TEXT          ";
-    case VDOM_PATCH_TAGGER:         return "VDOM_PATCH_TAGGER        ";
-    case VDOM_PATCH_REMOVE_LAST:    return "VDOM_PATCH_REMOVE_LAST   ";
-    case VDOM_PATCH_APPEND:         return "VDOM_PATCH_APPEND        ";
-    case VDOM_PATCH_REMOVE:         return "VDOM_PATCH_REMOVE        ";
-    case VDOM_PATCH_REORDER:        return "VDOM_PATCH_REORDER       ";
+    case VDOM_PATCH_TEXT:           return "VDOM_PATCH_TEXT";
+    case VDOM_PATCH_TAGGER:         return "VDOM_PATCH_TAGGER";
+    case VDOM_PATCH_REMOVE_LAST:    return "VDOM_PATCH_REMOVE_LAST";
+    case VDOM_PATCH_APPEND:         return "VDOM_PATCH_APPEND";
+    case VDOM_PATCH_REMOVE:         return "VDOM_PATCH_REMOVE";
+    case VDOM_PATCH_REORDER:        return "VDOM_PATCH_REORDER";
     // clang-format on
     default:
       return "(unknown ctor)";
@@ -759,14 +765,17 @@ static void print_vdom_fact_header(struct vdom_fact* fact) {
 
 
 static void print_vdom_node_header(struct vdom_node* node) {
-  assert(node);
-  printf("    %p " FORMAT_HEX " %s n_extras=%d n_facts=%d n_children=%d",
-      node,
-      *(size_t*)node,
-      stringify_vdom_ctor(node->ctor),
-      node->n_extras,
-      node->n_facts,
-      node->n_children);
+  if (!node) {
+    printf("(nil)\n");
+    return;
+  }
+  printf("    %p " FORMAT_HEX " %s ", node, *(size_t*)node, stringify_vdom_ctor(node->ctor));
+  if (node->ctor == VDOM_NODE) {
+    printf("<");
+    print_string(node->values[0]);
+    printf("> ");
+  }
+  printf("n_extras=%d n_facts=%d n_children=%d", node->n_extras, node->n_facts, node->n_children);
   int n_values = node->n_extras + node->n_facts + node->n_children;
   for (int i = 0; i < n_values; ++i) {
     printf(" %p", node->values[i]);
@@ -1080,17 +1089,17 @@ int main() {
   init_vdom_allocator();
   print_string_addresses();
 
-  printf("\nBEFORE ANY VIEW\n\n");
-  print_vdom_state();
+  // printf("\nBEFORE ANY VIEW\n\n");
+  // print_vdom_state();
 
   state.vdom_current = view1();
   A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
 
-  printf("\nAFTER FIRST VIEW\n\n");
-  print_vdom_state();
+  // printf("\nAFTER FIRST VIEW\n\n");
+  // print_vdom_state();
 
   // printf("\nSWITCH TO GENERATION 1\n\n");
-  // next_generation();
+  next_generation();
   // print_vdom_state();
 
   // state.vdom_current = view2();
@@ -1123,12 +1132,13 @@ int main() {
   // next_generation();
   // print_vdom_state();
 
-  // state.vdom_current = view3(100);
-  // A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
+  state.vdom_current = view3(100);
+  A2(&VirtualDom_diff, state.vdom_old, state.vdom_current);
 
-  // printf("\nAFTER BIG VIEW\n\n");
-  // print_vdom_state();
+  printf("\nAFTER BIG VIEW\n\n");
+  print_vdom_state();
 
+  printf("\n\n\n");
   print_heap();
 
   if (state.vdom_old) {
