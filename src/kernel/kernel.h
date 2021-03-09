@@ -8,3 +8,4 @@
 #include "json/json.h"
 #include "wrapper/wrapper.h"
 #include "elm-test/elm-test.h"
+#include "virtual-dom/virtual-dom.h"

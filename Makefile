@@ -10,7 +10,7 @@ BUILD := $(ROOT)/build
 DIST := $(ROOT)/dist
 DEPLOY := $(ROOT)/../gh-pages
 
-OBJ := core.o elm-test.o json.o wrapper.o test.o
+OBJ := core.o elm-test.o json.o virtual-dom.o wrapper.o test.o
 BIN_OBJ := $(patsubst %,build/bin/%,$(OBJ))
 WASM_OBJ := $(patsubst %,build/wasm/%,$(OBJ))
 
@@ -119,6 +119,9 @@ $(BUILD)/bin/elm-test.o: $(KERNEL)/elm-test/*.c
 $(BUILD)/bin/json.o: $(KERNEL)/json/*.c $(KERNEL)/json/*.h
 	gcc -ggdb $(CFLAGS) -c $(KERNEL)/json/json.c -o $@
 
+$(BUILD)/bin/virtual-dom.o: $(KERNEL)/virtual-dom/*.c $(KERNEL)/virtual-dom/*.h
+	gcc -ggdb $(CFLAGS) -c $(KERNEL)/virtual-dom/virtual-dom.c -o $@
+
 $(BUILD)/bin/wrapper.o: $(KERNEL)/wrapper/*.c $(KERNEL)/wrapper/*.h
 	gcc -ggdb $(CFLAGS) -c $(KERNEL)/wrapper/wrapper.c -o $@
 
@@ -143,6 +146,9 @@ $(BUILD)/wasm/elm-test.o: $(KERNEL)/elm-test/*.c
 
 $(BUILD)/wasm/json.o: $(KERNEL)/json/*.c $(KERNEL)/json/*.h
 	emcc $(CFLAGS) -c $(KERNEL)/json/json.c -o $@
+
+$(BUILD)/wasm/virtual-dom.o: $(KERNEL)/virtual-dom/*.c $(KERNEL)/virtual-dom/*.h
+	emcc $(CFLAGS) -c $(KERNEL)/virtual-dom/virtual-dom.c -o $@
 
 $(BUILD)/wasm/wrapper.o: $(KERNEL)/wrapper/*.c $(KERNEL)/wrapper/*.h
 	emcc $(CFLAGS) -c $(KERNEL)/wrapper/wrapper.c -o $@
