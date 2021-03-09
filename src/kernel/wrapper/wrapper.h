@@ -14,5 +14,6 @@ extern ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr);
 extern ptrdiff_t getJsRefValue(u32 jsRefId);
 extern void markJsRef(u32 jsRefId);
 extern void sweepJsRefs(bool isFullGc);
+extern void VirtualDom_applyPatches(size_t patchesStartAddr);
 
 #endif

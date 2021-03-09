@@ -467,6 +467,11 @@ char* virtual_dom_test() {
     printf("-----------\n");
   }
 
+
+  VirtualDom_applyPatches(0x12345);
+  return NULL;
+
+
   const size_t N_FLAG_BITS = sizeof(VdomFlags) * 8;
   assert(N_FLAG_BITS == VDOM_BUCKETS_PER_PAGE);
 
@@ -520,7 +525,9 @@ char* virtual_dom_test() {
   // print_vdom_state();
 
   vdom_state.vdom_current = view3(100);
-  A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  void* patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+
+  VirtualDom_applyPatches((size_t)patches);
 
   printf("\nAFTER BIG VIEW\n\n");
   print_vdom_state();

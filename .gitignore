@@ -42,3 +42,4 @@ opt.md
 
 # RemedyBG debugger
 *.rdbg
+*.js.map

@@ -1,4 +1,8 @@
 var wasmWrapper;
+var VirtualDom_applyPatches;
+if (typeof document === 'undefined') {
+  require('jsdom');
+}
 Module = {
   arguments: typeof process !== 'undefined'
     ? process.argv.slice(2)

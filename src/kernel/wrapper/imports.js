@@ -19,5 +19,9 @@ mergeInto(LibraryManager.library, {
   sweepJsRefs: function (isFullGc) {
     // The C main can do a GC, but wasmWrapper is not ready at that point
     wasmWrapper && wasmWrapper.sweepJsRefs(isFullGc);
+  },
+
+  VirtualDom_applyPatches: function (patchesStartAddr) {
+    VirtualDom_applyPatches(patchesStartAddr);
   }
 });

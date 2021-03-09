@@ -128,6 +128,11 @@ ptrdiff_t getJsRefValue(u32 jsRefId) {
   return writeJsonValue(jsHeap[jsRefId].value, NOT_CIRCULAR);
 }
 
+void VirtualDom_applyPatches(size_t patchesStartAddr) {
+  printf("fake C version of VirtualDom_applyPatches: 0x%zx\n", patchesStartAddr);
+}
+
+
 // ---------------------------------------------------
 // Test values
 // Circular values must be outside the GC-managed heap
