@@ -162,7 +162,7 @@ $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
 	npx tsc -p .
 
 
-$(DIST)/wasm/test.js: $(WASM_OBJ) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
+$(DIST)/wasm/test.js: $(WASM_OBJ) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/virtual-dom/virtual-dom.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@mkdir -p $(DIST)/wasm
 	emcc $(CFLAGS) $(WASM_OBJ) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --pre-js $(KERNEL)/virtual-dom/virtual-dom.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
 

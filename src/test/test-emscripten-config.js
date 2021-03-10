@@ -1,12 +1,21 @@
 var wasmWrapper;
 var VirtualDom_applyPatches;
 if (typeof document === 'undefined') {
-  require('jsdom');
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM(`
+    <html>
+      <body>
+        <div id="main"></div>
+      </body>
+    </html>`
+  );
+  global.window = dom.window;
+  global.document = window.document;
 }
 Module = {
   arguments: typeof process !== 'undefined'
     ? process.argv.slice(2)
-    : new URL(window.location).searchParams.get('argv') || '',
+    : (new URL(window.location).searchParams.get('argv') || '').split(' '),
   postRun: [],
   preRun: function () {
     const wasmBuffer = Module.HEAPU32.buffer;
