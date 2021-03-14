@@ -13,7 +13,6 @@ struct vdom_state vdom_state;
 ============================================================================== */
 
 
-#ifdef DEBUG
 static void clear_dead_buckets(struct vdom_page* page) {
   VdomFlags bit = 1;
   for (size_t i = 0; i < VDOM_PAGE_WORDS; i += VDOM_BUCKET_WORDS, bit <<= 1) {
@@ -23,9 +22,6 @@ static void clear_dead_buckets(struct vdom_page* page) {
     }
   }
 }
-#else
-#define clear_dead_buckets(x)
-#endif
 
 
 static size_t* start_new_node_bucket();
@@ -317,9 +313,13 @@ static bool strings_match(ElmString16* x, ElmString16* y) {
 
   GcHeap* heap = &gc_state.heap;
   if (IS_OUTSIDE_HEAP(x) && IS_OUTSIDE_HEAP(y)) {
+    // Both are string literals (like "div" or "color").
+    // Constants are deduped by the compiler, so different addresses => different values.
     return false;
   }
 
+  // At least one string is dynamically allocated. Need slower full check.
+  // Compare in 32-bit chunks for efficiency. Header contains length.
   size_t* x_words = (size_t*)x;
   size_t* y_words = (size_t*)y;
   for (size_t i = 0; i < x->header.size; ++i) {

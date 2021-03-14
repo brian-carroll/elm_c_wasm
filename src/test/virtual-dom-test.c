@@ -83,10 +83,13 @@ bool is_valid_pointer(void* p) {
 }
 
 static void print_string(ElmString16* s) {
-  assert(is_valid_pointer(s));
-  assert(s->header.tag == Tag_String);
-  for (int i = 0; i < code_units(s); ++i) {
-    putchar(s->words16[i]);
+  if (is_valid_pointer(s) && s->header.tag == Tag_String) {
+    for (int i = 0; i < code_units(s); ++i) {
+      putchar(s->words16[i]);
+    }
+  } else {
+    printf("[invalid pointer 0x%zx]", (size_t)s);
+    mu_assert("should not find any invalid String pointers", false);
   }
 }
 
@@ -521,16 +524,16 @@ char* virtual_dom_test() {
 
 
 
-  // printf("\nCALL SAME VIEW AGAIN\n\n");
-  // next_generation();
-  // vdom_state.vdom_current = view2();
-  // patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
-  // VirtualDom_applyPatches((size_t)patches);
-  // printf("\n---------------------------\n\n");
-  // printf("WASM STATE AFTER SECOND DIFF\n\n");
-  // print_vdom_state();
-  // print_node_as_html(vdom_state.vdom_current);
-  // printf("\n---------------------------\n\n");
+  printf("\nCALL SAME VIEW AGAIN\n\n");
+  next_generation();
+  vdom_state.vdom_current = view2();
+  patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  VirtualDom_applyPatches((size_t)patches);
+  printf("\n---------------------------\n\n");
+  printf("WASM STATE AFTER SECOND DIFF\n\n");
+  print_vdom_state();
+  print_node_as_html(vdom_state.vdom_current);
+  printf("\n---------------------------\n\n");
 
 
 
