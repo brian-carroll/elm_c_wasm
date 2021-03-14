@@ -273,6 +273,25 @@ Closure VirtualDom_style = {
     .max_values = 2,
 };
 
+void* eval_VirtualDom_attribute(void* args[]) {
+  ElmString16* key = args[0];
+  ElmString16* value = args[1];
+  assert(key->header.tag == Tag_String);
+  assert(value->header.tag == Tag_String);
+  struct vdom_fact* fact = allocate_fact();
+  *fact = (struct vdom_fact){
+      .ctor = VDOM_FACT_ATTR,
+      .key = key,
+      .value = value,
+  };
+  return fact;
+}
+Closure VirtualDom_attribute = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = eval_VirtualDom_attribute,
+    .max_values = 2,
+};
+
 /* ==============================================================================
 
                                   DIFF

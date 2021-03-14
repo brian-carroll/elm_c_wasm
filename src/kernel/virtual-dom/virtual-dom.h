@@ -25,7 +25,7 @@ enum vdom_ctor {
   VDOM_FACT_ATTR,     // value: String
   VDOM_FACT_ATTR_NS,  // value: (String, String)
   // ------------
-  VDOM_PATCH_PUSH = 16,       // number: child_index
+  VDOM_PATCH_PUSH,       // number: child_index
   VDOM_PATCH_POP,             // (no data)
   VDOM_PATCH_LINK,            // values: vdom_patch
   VDOM_PATCH_NO_OP,           // (no data)
@@ -60,7 +60,7 @@ struct vdom_node {
 };
 
 struct vdom_fact {
-  u8 ctor;
+  size_t ctor;
   ElmString16* key;
   void* value;
 };
@@ -115,6 +115,7 @@ struct vdom_state {
 extern Closure VirtualDom_text;
 extern Closure VirtualDom_node;
 extern Closure VirtualDom_style;
+extern Closure VirtualDom_attribute;
 extern Closure VirtualDom_diff;
 
 

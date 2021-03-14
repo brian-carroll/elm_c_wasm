@@ -31,6 +31,7 @@
     "jasmine": "^3.5.0",
     "jasmine-console-reporter": "^3.1.0",
     "jsdom": "^16.5.0",
+    "prettier": "^2.2.1",
     "ts-node": "^9.1.1",
     "typescript": "^3.6.4"
   }

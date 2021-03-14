@@ -201,6 +201,7 @@ static void print_vdom_page(struct vdom_page* page) {
     bool gen = !!(page->meta.generation_flags & bit);
     bool patches = !!(page->meta.patch_flags & bit);
     printf("  Bucket at %p (%04x) live=%x generation=%x patches=%x\n", &page->words[i], bit, live, gen, patches);
+
     bool skip = true;
     for (size_t j = i; j < i + VDOM_BUCKET_WORDS && j < VDOM_PAGE_WORDS; ++j) {
       size_t* p = &page->words[j];
@@ -327,6 +328,8 @@ ElmString16 str_p = {.header = HEADER_STRING(1), .words16 = {'p'}};
 ElmString16 str_brian = {.header = HEADER_STRING(5), .words16 = {'B', 'r', 'i', 'a', 'n'}};
 ElmString16 str_display = {.header = HEADER_STRING(7), .words16 = {'d', 'i', 's', 'p', 'l', 'a', 'y'}};
 ElmString16 str_flex = {.header = HEADER_STRING(4), .words16 = {'f', 'l', 'e', 'x'}};
+ElmString16 str_id = {.header = HEADER_STRING(2), .words16 = {'i', 'd'}};
+ElmString16 str_main = {.header = HEADER_STRING(4), .words16 = {'m', 'a', 'i', 'n'}};
 
 ElmString16* constant_strings[] = {
     &str_ul,
@@ -352,6 +355,8 @@ ElmString16* constant_strings[] = {
     &str_brian,
     &str_display,
     &str_flex,
+    &str_id,
+    &str_main,
 };
 
 bool is_constant_string(ElmString16* s) {
@@ -386,8 +391,17 @@ void print_string_addresses() {
   printf("%p str_brian\n", &str_brian);
   printf("%p str_display\n", &str_display);
   printf("%p str_flex\n", &str_flex);
+  printf("%p str_id\n", &str_id);
+  printf("%p str_main\n", &str_main);
 }
 
+// Manually "virtualize" the initial DOM node
+static void* view0() {
+  return A3(&VirtualDom_node,
+      &str_div,
+      newCons(A2(&VirtualDom_attribute, &str_id, &str_main) , pNil),
+      pNil);
+}
 
 static void* view1() {
   return A3(&VirtualDom_node,
@@ -467,11 +481,6 @@ char* virtual_dom_test() {
     printf("-----------\n");
   }
 
-
-  VirtualDom_applyPatches(0x12345);
-  return NULL;
-
-
   const size_t N_FLAG_BITS = sizeof(VdomFlags) * 8;
   assert(N_FLAG_BITS == VDOM_BUCKETS_PER_PAGE);
 
@@ -481,17 +490,62 @@ char* virtual_dom_test() {
   init_vdom_allocator();
   print_string_addresses();
 
-  // printf("\nBEFORE ANY VIEW\n\n");
-  // print_vdom_state();
+  vdom_state.vdom_current = view0();
+  printf("\nINITIAL VIRTUALIZED VIEW\n\n");
+  print_vdom_state();
 
+
+  printf("\nFIRST DIFF\n\n");
+  next_generation();
   vdom_state.vdom_current = view1();
-  A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  void* patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  VirtualDom_applyPatches((size_t)patches);
+
+  printf("\n---------------------------\n\n");
+  printf("WASM STATE AFTER FIRST DIFF\n\n");
+  print_vdom_state();
+  print_node_as_html(vdom_state.vdom_current);
+  printf("\n---------------------------\n\n");
+
+
+  printf("\nSECOND DIFF\n\n");
+  next_generation();
+  vdom_state.vdom_current = view2();
+  patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  VirtualDom_applyPatches((size_t)patches);
+  printf("\n---------------------------\n\n");
+  printf("WASM STATE AFTER SECOND DIFF\n\n");
+  print_vdom_state();
+  print_node_as_html(vdom_state.vdom_current);
+  printf("\n---------------------------\n\n");
+
+
+
+  // printf("\nCALL SAME VIEW AGAIN\n\n");
+  // next_generation();
+  // vdom_state.vdom_current = view2();
+  // patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  // VirtualDom_applyPatches((size_t)patches);
+  // printf("\n---------------------------\n\n");
+  // printf("WASM STATE AFTER SECOND DIFF\n\n");
+  // print_vdom_state();
+  // print_node_as_html(vdom_state.vdom_current);
+  // printf("\n---------------------------\n\n");
+
+
+
+
+
+
+
+
+
 
   // printf("\nAFTER FIRST VIEW\n\n");
   // print_vdom_state();
 
   // printf("\nSWITCH TO GENERATION 1\n\n");
-  next_generation();
+  // next_generation();
   // print_vdom_state();
 
   // vdom_state.vdom_current = view2();
@@ -524,24 +578,28 @@ char* virtual_dom_test() {
   // next_generation();
   // print_vdom_state();
 
-  vdom_state.vdom_current = view3(100);
-  void* patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  // vdom_state.vdom_current = view3(100);
+  // patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
 
-  VirtualDom_applyPatches((size_t)patches);
+  // print_vdom_page(vdom_state.first_page);
+  // fflush(0);
 
-  printf("\nAFTER BIG VIEW\n\n");
-  print_vdom_state();
+  // VirtualDom_applyPatches((size_t)patches);
 
-  printf("\n\n\n");
-  print_heap();
 
-  if (vdom_state.vdom_old) {
-    printf("\n\nvdom_old:\n\n");
-    print_node_as_html(vdom_state.vdom_old);
-  }
+  // printf("\nAFTER BIG VIEW\n\n");
+  // print_vdom_state();
 
-  printf("\n\nvdom_current:\n\n");
-  print_node_as_html(vdom_state.vdom_current);
+  // printf("\n\n\n");
+  // print_heap();
+
+  // if (vdom_state.vdom_old) {
+  //   printf("\n\nvdom_old:\n\n");
+  //   print_node_as_html(vdom_state.vdom_old);
+  // }
+
+  // printf("\n\nvdom_current:\n\n");
+  // print_node_as_html(vdom_state.vdom_current);
 
   return NULL;
 }

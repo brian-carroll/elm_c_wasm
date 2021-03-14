@@ -158,9 +158,10 @@ $(BUILD)/wasm/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c
 
 
 $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
-	@echo Compiling wrapper from TypeScript
-	npx tsc -p .
+	npx tsc $<
 
+$(KERNEL)/virtual-dom/virtual-dom.js: $(KERNEL)/virtual-dom/virtual-dom.ts
+	npx tsc $<
 
 $(DIST)/wasm/test.js: $(WASM_OBJ) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/virtual-dom/virtual-dom.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
 	@mkdir -p $(DIST)/wasm
