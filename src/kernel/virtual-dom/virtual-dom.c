@@ -307,6 +307,16 @@ static struct vdom_patch* create_patch(u8 ctor, u32 nValues, ...) {
   return patch;
 }
 
+static struct vdom_patch* create_patch_from_array(u8 ctor, u32 nValues, void* values[]) {
+  struct vdom_patch* patch = allocate_patch(1 + nValues);
+  patch->ctor = ctor;
+  patch->number = nValues;
+  for (u32 i = 0; i < nValues; i++) {
+    patch->values[i] = values[i];
+  }
+  return patch;
+}
+
 
 static bool strings_match(ElmString16* x, ElmString16* y) {
   if (x == y) return true;
@@ -464,22 +474,11 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
     push->ctor = VDOM_PATCH_NO_OP;
   }
   if (nNew > nOld) {
-    u8 nAppend = nNew - nOld;
-    struct vdom_patch* patch = allocate_patch(1 + nAppend);
-    patch->ctor = VDOM_PATCH_APPEND;
-    patch->number = nAppend;
-    for (u8 i = nOld; i < nNew; ++i) {
-      patch->values[i] = newChildren[i];
-    }
+    create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)&newChildren[nOld]);
   }
   if (nOld > nNew) {
-    u8 nRemove = nOld - nNew;
-    struct vdom_patch* patch = allocate_patch(1 + nRemove);
-    patch->ctor = VDOM_PATCH_REMOVE_LAST;
-    patch->number = nRemove;
-    for (u8 i = nNew; i < nOld; ++i) {
-      patch->values[i] = oldChildren[i];
-    }
+    struct vdom_patch* patch = create_patch(VDOM_PATCH_REMOVE_LAST, 0);
+    patch->number = nOld - nNew;
   }
 }
 

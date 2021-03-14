@@ -128,8 +128,11 @@ var VirtualDom_applyPatches = function (patchesStartAddr: number) {
   if (!rootDomNode) throw new Error('VirtualDom cannot render. Root DOM node is '+ rootDomNode);
   mem32 = Module.HEAPU32; // TODO: delete
   mem16 = Module.HEAPU16; // TODO: delete
-  const patch = readPatch(patchesStartAddr);
-  applyPatch(rootDomNode, patch);
+  let addr = patchesStartAddr;
+  do {
+    const patch = readPatch(addr);
+    addr = applyPatch(rootDomNode, patch);
+  } while (addr);
   console.log('rendered DOM:\n' + htmlString(rootDomNode));
 };
 
@@ -163,23 +166,30 @@ function readPatch(addr: number): Patch {
   return patch;
 }
 
-function applyPatch(node: Node, patch: Patch): void {
+function applyPatch(node: Node, patch: Patch): number {
   switch (patch.ctor) {
     case VDOM_PATCH_PUSH: {
       const elem = node as Element;
       const nextPatch = readPatch(patch.next);
-      applyPatch(elem.children[patch.number], nextPatch);
-      break;
+      return applyPatch(elem.children[patch.number], nextPatch);
     }
     case VDOM_PATCH_REDRAW: {
       redraw(node, patch.values[0]);
-      break;
+      return patch.next;
     }
+
     case VDOM_PATCH_NO_OP:
-      break;
-    case VDOM_PATCH_POP:
-    case VDOM_PATCH_LINK:
+      return patch.next;
+
     case VDOM_PATCH_END:
+      return 0;
+
+    case VDOM_PATCH_POP:
+      return patch.next;
+
+    case VDOM_PATCH_LINK:
+      return patch.values[0];
+
     case VDOM_PATCH_SET_EVENT:
     case VDOM_PATCH_SET_STYLE:
     case VDOM_PATCH_SET_PROP:
