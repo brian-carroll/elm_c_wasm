@@ -453,11 +453,10 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
   u8 nMin = (nOld < nNew) ? nOld : nNew;
   struct vdom_node** oldChildren = (struct vdom_node**)oldParent->values + oldParent->n_extras + oldParent->n_facts;
   struct vdom_node** newChildren = (struct vdom_node**)newParent->values + newParent->n_extras + newParent->n_facts;
-  struct vdom_patch* push = create_patch(VDOM_PATCH_PUSH, 0);
+  struct vdom_patch* push = allocate_patch(1);
   struct vdom_patch* pop = NULL;
 
   for (u8 i = 0; i < nMin; ++i) {
-    push->number = i;
     size_t* beforeChild = vdom_state.next_patch;
 
     struct vdom_node* oldChild = oldChildren[i];
@@ -466,16 +465,20 @@ static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParen
 
     size_t* afterChild = vdom_state.next_patch;
     if (afterChild != beforeChild) {
+      push->ctor = VDOM_PATCH_PUSH;
+      push->number = nOld - 1 - i;
       pop = create_patch(VDOM_PATCH_POP, 0);
-      push = create_patch(VDOM_PATCH_PUSH, 0);
+      push = allocate_patch(1);
     }
   }
-  if (!pop) {
-    push->ctor = VDOM_PATCH_NO_OP;
-  }
+
+  // Deallocate the last push. We always allocate one too many.
+  vdom_state.next_patch = push;
+
   if (nNew > nOld) {
     create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)&newChildren[nOld]);
   }
+
   if (nOld > nNew) {
     struct vdom_patch* patch = create_patch(VDOM_PATCH_REMOVE_LAST, 0);
     patch->number = nOld - nNew;

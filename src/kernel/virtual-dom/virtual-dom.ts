@@ -171,7 +171,8 @@ function applyPatch(node: Node, patch: Patch): number {
     case VDOM_PATCH_PUSH: {
       const elem = node as Element;
       const nextPatch = readPatch(patch.next);
-      return applyPatch(elem.children[patch.number], nextPatch);
+      const childNode = elem.childNodes[patch.number];
+      return applyPatch(childNode, nextPatch);
     }
     case VDOM_PATCH_REDRAW: {
       redraw(node, patch.values[0]);
@@ -214,6 +215,13 @@ function applyPatch(node: Node, patch: Patch): number {
 
 function redraw(dom: Node, vdom_node_addr: number) {
   const newNode = createNode(vdom_node_addr);
+
+  console.log('redraw', {
+    dom: htmlString(dom),
+    vdom_node_addr: hex(vdom_node_addr),
+    newNode: htmlString(newNode),
+  })
+
   const parent = dom.parentElement;
   parent?.replaceChild(newNode, dom);
   if (dom === rootDomNode) {

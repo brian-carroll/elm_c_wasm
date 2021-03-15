@@ -1,6 +1,6 @@
+#include <stdio.h>
 #include "../kernel/kernel.h"
 #include "test.h"
-#include <stdio.h>
 
 extern struct vdom_state vdom_state;
 
@@ -219,8 +219,6 @@ static void print_vdom_page(struct vdom_page* page) {
 
       u8 ctor = *(u8*)p;
       switch (ctor) {
-        case 0:
-          continue;
         case VDOM_NODE:
         case VDOM_NODE_KEYED:
         case VDOM_NODE_NS:
@@ -248,11 +246,13 @@ static void print_vdom_page(struct vdom_page* page) {
           j += 2;
           break;
         }
+        case VDOM_PATCH_END:
+          j = i + VDOM_BUCKET_WORDS;
+          break;
         case VDOM_PATCH_PUSH:
         case VDOM_PATCH_POP:
         case VDOM_PATCH_LINK:
         case VDOM_PATCH_NO_OP:
-        case VDOM_PATCH_END:
         case VDOM_PATCH_REDRAW:
         case VDOM_PATCH_SET_EVENT:
         case VDOM_PATCH_SET_STYLE:
@@ -400,10 +400,7 @@ void print_string_addresses() {
 
 // Manually "virtualize" the initial DOM node
 static void* view0() {
-  return A3(&VirtualDom_node,
-      &str_div,
-      newCons(A2(&VirtualDom_attribute, &str_id, &str_main) , pNil),
-      pNil);
+  return A3(&VirtualDom_node, &str_div, newCons(A2(&VirtualDom_attribute, &str_id, &str_main), pNil), pNil);
 }
 
 static void* view1() {
@@ -452,11 +449,15 @@ static void* view1() {
 }
 
 
-static void* view2() {
+static void* view2(ElmString16* p1text, ElmString16* p2text) {
   return A3(&VirtualDom_node,
       &str_div,
       newCons(A2(&VirtualDom_style, &str_display, &str_flex), pNil),
-      newCons(A3(&VirtualDom_node, &str_p, pNil, newCons(A1(&VirtualDom_text, &str_brian), pNil)), pNil));
+      List_create(2,
+          ((void*[]){
+              A3(&VirtualDom_node, &str_p, pNil, newCons(A1(&VirtualDom_text, p1text), pNil)),
+              A3(&VirtualDom_node, &str_p, pNil, newCons(A1(&VirtualDom_text, p2text), pNil)),
+          })));
 }
 
 
@@ -504,44 +505,31 @@ char* virtual_dom_test() {
   void* patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
   VirtualDom_applyPatches((size_t)patches);
 
-  printf("\n---------------------------\n\n");
-  printf("WASM STATE AFTER FIRST DIFF\n\n");
-  print_vdom_state();
-  print_node_as_html(vdom_state.vdom_current);
-  printf("\n---------------------------\n\n");
-
 
   printf("\nSECOND DIFF\n\n");
   next_generation();
-  vdom_state.vdom_current = view2();
+  vdom_state.vdom_current = view2(&str_hello, &str_world);
   patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
   VirtualDom_applyPatches((size_t)patches);
-  printf("\n---------------------------\n\n");
-  printf("WASM STATE AFTER SECOND DIFF\n\n");
-  print_vdom_state();
-  print_node_as_html(vdom_state.vdom_current);
-  printf("\n---------------------------\n\n");
 
 
 
   printf("\nCALL SAME VIEW AGAIN\n\n");
   next_generation();
-  vdom_state.vdom_current = view2();
+  vdom_state.vdom_current = view2(&str_hello, &str_world);
   patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
   VirtualDom_applyPatches((size_t)patches);
-  printf("\n---------------------------\n\n");
-  printf("WASM STATE AFTER SECOND DIFF\n\n");
+
+
+
+  printf("\nTEXT CHANGES\n\n");
+  next_generation();
+  vdom_state.vdom_current = view2(&str_whats, &str_up);
+  patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+
   print_vdom_state();
-  print_node_as_html(vdom_state.vdom_current);
-  printf("\n---------------------------\n\n");
 
-
-
-
-
-
-
-
+  VirtualDom_applyPatches((size_t)patches);
 
 
   // printf("\nAFTER FIRST VIEW\n\n");
