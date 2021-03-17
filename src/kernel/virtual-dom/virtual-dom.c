@@ -447,22 +447,18 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
 
 static void diffNodes(struct vdom_node* old, struct vdom_node* new);
 
-static void diffChildren(struct vdom_node* oldParent, struct vdom_node* newParent) {
-  u8 nOld = oldParent->n_children;
-  u8 nNew = newParent->n_children;
+static void diffChildren(struct vdom_node* old, struct vdom_node* new) {
+  u8 nOld = old->n_children;
+  u8 nNew = new->n_children;
   u8 nMin = (nOld < nNew) ? nOld : nNew;
-  struct vdom_node** oldChildren = (struct vdom_node**)oldParent->values + oldParent->n_extras + oldParent->n_facts;
-  struct vdom_node** newChildren = (struct vdom_node**)newParent->values + newParent->n_extras + newParent->n_facts;
+  struct vdom_node** oldChildren = (struct vdom_node**)old->values + old->n_extras + old->n_facts;
+  struct vdom_node** newChildren = (struct vdom_node**)new->values + new->n_extras + new->n_facts;
   struct vdom_patch* push = allocate_patch(1);
   struct vdom_patch* pop = NULL;
 
   for (u8 i = 0; i < nMin; ++i) {
     size_t* beforeChild = vdom_state.next_patch;
-
-    struct vdom_node* oldChild = oldChildren[i];
-    struct vdom_node* newChild = newChildren[i];
-    diffNodes(oldChild, newChild);
-
+    diffNodes(oldChildren[i], newChildren[i]);
     size_t* afterChild = vdom_state.next_patch;
     if (afterChild != beforeChild) {
       push->ctor = VDOM_PATCH_PUSH;
