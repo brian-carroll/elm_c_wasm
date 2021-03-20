@@ -1,3 +1,82 @@
+# Multi-region heap / arbitrary layout
+
+- It's a lot nicer than expanding when running on the OS
+- Seems more robust and general and stuff
+- But am I stretching a Wasm thing too much into an OS thing?
+
+## Allocate
+- when next_alloc hits top of region, maybe we start a new region
+- do a mark first and if we're >75% live data then start new region
+
+## Mark
+- `mark_words`
+  - needs to figure out what region it's in to look at the right bitmap
+- `mark_trace`
+  - could use all regions offset areas for its stack?
+  - Basically an outer loop to start a new stack in another region
+  - Once that stack is depleted, go back down to the other one
+- `mark`
+  - when clearing mark bits, needs to loop over all regions
+
+## Compact
+- `calc_offsets`
+  - needs an outer loop over region
+- `forwarding_address`
+  - needs to account for region when looking up an offset
+- `compact`
+  - finding next live/dead patch needs an outer loop over regions
+  - main loop needs to keep track of two regions, `from` and `to`
+
+
+# Linear memory layout
+
+## Non-Wasm platforms
+- Linux
+  - just use old-school brk, sbrk
+  - or give mmap a requested starting address at system_end
+  - assert that the actual allocated address matches
+- Windows
+  - set requested starting address to system_end
+  - assert that the actual allocated address matches
+
+## Growing stuff
+- growing the heap
+  - ask system for more overall memory
+  - move the vdom region
+  - update GC heap state
+- growing the vdom
+  - ask system for more overall memory
+  - write a new vdom page
+
+## Moving the VDOM
+- nodes
+  - facts and children are internal => add an offset to each address
+  - extras can be heap values => no change
+- facts
+  - keys are Strings => address doesn't change
+  - values are on heap => address doesn't change
+- patches
+  - never alive when we're moving the vdom
+- page metadata
+  - doesn't change, just copy to new address
+
+
+- per-bucket copying
+  - for each bucket
+    - if it's patches, skip
+    - if it's facts, blindly copy N words
+    - if it's nodes
+      - loop over nodes, calculating size to step
+      - how do you know where to start? skip zeros (rely on that)
+        - don't want to start at root, it may not be allocated in order
+      - break on LINK or END
+
+- tree-based copying
+  - copy node tree
+    - start at root node
+    - traverse the tree
+
+
 # Virtual DOM
 
 ## development approach
