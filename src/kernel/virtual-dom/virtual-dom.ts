@@ -209,6 +209,7 @@ function applyPatch(node: Node, patch: Patch): number {
     case VDOM_PATCH_REORDER:
       throw new Error('TODO: patch type ' + vdom_ctor_names[patch.ctor]);
     default:
+      console.error('Error in ', patch);
       throw new Error(`Unknown virtual DOM patch type ${patch.ctor}`);
   }
 }

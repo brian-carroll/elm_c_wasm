@@ -1,6 +1,6 @@
-#include <stdarg.h> // varargs
-#include <stdio.h>
 #include "virtual-dom.h"
+#include <stdarg.h>  // varargs
+#include <stdio.h>
 
 
 struct vdom_state vdom_state;
@@ -445,6 +445,7 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
   }
 }
 
+/*
 static void diffNodes(struct vdom_node* old, struct vdom_node* new);
 
 static void diffChildren(struct vdom_node* old, struct vdom_node* new) {
@@ -455,6 +456,13 @@ static void diffChildren(struct vdom_node* old, struct vdom_node* new) {
   struct vdom_node** newChildren = (struct vdom_node**)new->values + new->n_extras + new->n_facts;
   struct vdom_patch* push = allocate_patch(1);
   struct vdom_patch* pop = NULL;
+
+  if (nNew > nOld) {
+    create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)&newChildren[nOld]);
+  } else if (nOld > nNew) {
+    struct vdom_patch* patch = create_patch(VDOM_PATCH_REMOVE_LAST, 0);
+    patch->number = nOld - nNew;
+  }
 
   for (u8 i = 0; i < nMin; ++i) {
     size_t* beforeChild = vdom_state.next_patch;
@@ -470,52 +478,127 @@ static void diffChildren(struct vdom_node* old, struct vdom_node* new) {
 
   // Deallocate the last push. We always allocate one too many.
   vdom_state.next_patch = push;
-
-  if (nNew > nOld) {
-    create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)&newChildren[nOld]);
-  }
-
-  if (nOld > nNew) {
-    struct vdom_patch* patch = create_patch(VDOM_PATCH_REMOVE_LAST, 0);
-    patch->number = nOld - nNew;
-  }
 }
+*/
 
+static void diffNodes(struct vdom_node* oldRoot, struct vdom_node* newRoot) {
+  struct vdom_node* old_stack[1024];
+  struct vdom_node* new_stack[1024];
+  u16 idx_stack[1024];
+  u16 depth_stack[1024];
 
-static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
-  if (!old || (old->ctor != new->ctor)) {
-    create_patch(VDOM_PATCH_REDRAW, 1, new);
-    return;
-  }
-  switch (new->ctor) {
-    case VDOM_NODE: {
-      ElmString16* currTag = old->values[0];
-      ElmString16* nextTag = new->values[0];
-      if (!strings_match(currTag, nextTag)) {
-        create_patch(VDOM_PATCH_REDRAW, 1, new);
-        return;
-      }
-      diffFacts(old, new);
-      diffChildren(old, new);
-      return;
+  old_stack[0] = oldRoot;
+  new_stack[0] = newRoot;
+  idx_stack[0] = 0;
+  depth_stack[0] = 0;
+  int stack_next = 1;
+
+  printf("entering diffNodes: next_patch=%p oldRoot=%p newRoot=%p\n", vdom_state.next_patch, oldRoot, newRoot);
+
+  while (stack_next > 0 && stack_next < 1024) {
+    struct vdom_node* old;
+    struct vdom_node* new;
+    struct vdom_patch* push;
+
+    printf("\n");
+    printf("while loop\n");
+    printf("old_stack"); for (int i=0; i < stack_next; i++) { printf(" %p", old_stack[i]); } printf("\n");
+    printf("new_stack"); for (int i=0; i < stack_next; i++) { printf(" %p", new_stack[i]); } printf("\n");
+    printf("idx_stack"); for (int i=0; i < stack_next; i++) { printf(" %d", idx_stack[i]); } printf("\n");
+    printf("depth_stack"); for (int i=0; i < stack_next; i++) { printf(" %d", depth_stack[i]); } printf("\n");
+
+    // pop a node off the stack
+    stack_next--;
+    old = old_stack[stack_next];
+    new = new_stack[stack_next];
+
+    if (new == newRoot) {
+      push = NULL;
+    } else {
+      push = allocate_patch(1);
+      push->ctor = VDOM_PATCH_PUSH;
+      push->number = idx_stack[stack_next];
+      printf("allocated push %p next_patch=%p\n", push, vdom_state.next_patch);
     }
-    case VDOM_NODE_TEXT: {
-      ElmString16* currText = old->values[0];
-      ElmString16* nextText = new->values[0];
-      if (!strings_match(currText, nextText)) {
-        create_patch(VDOM_PATCH_REDRAW, 1, new);
+    size_t* cursorBefore = vdom_state.next_patch;
+
+    if (!old || (old->ctor != new->ctor)) {
+      create_patch(VDOM_PATCH_REDRAW, 1, new);
+    } else {
+      printf("before switch: %p\n", vdom_state.next_patch);
+      switch (new->ctor) {
+        case VDOM_NODE: {
+          ElmString16* currTag = old->values[0];
+          ElmString16* nextTag = new->values[0];
+          if (!strings_match(currTag, nextTag)) {
+            create_patch(VDOM_PATCH_REDRAW, 1, new);
+            break;
+          }
+          diffFacts(old, new);
+
+          {
+            u8 nOld = old->n_children;
+            u8 nNew = new->n_children;
+            u8 nMin = (nOld < nNew) ? nOld : nNew;
+            struct vdom_node** oldChildren = (struct vdom_node**)old->values + old->n_extras + old->n_facts;
+            struct vdom_node** newChildren = (struct vdom_node**)new->values + new->n_extras + new->n_facts;
+
+            if (nNew > nOld) {
+              create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)&newChildren[nOld]);
+            } else if (nOld > nNew) {
+              struct vdom_patch* patch = create_patch(VDOM_PATCH_REMOVE_LAST, 0);
+              patch->number = nOld - nNew;
+            }
+
+            for (u8 i = 0; i < nMin; ++i) {
+              old_stack[stack_next] = oldChildren[i];
+              new_stack[stack_next] = newChildren[i];
+              idx_stack[stack_next] = i;
+              stack_next++;
+            }
+          }
+          break;
+        }
+        case VDOM_NODE_TEXT: {
+          ElmString16* currText = old->values[0];
+          ElmString16* nextText = new->values[0];
+          if (!strings_match(currText, nextText)) {
+            create_patch(VDOM_PATCH_REDRAW, 1, new);
+          }
+          break;
+        }
+        case VDOM_NODE_KEYED:
+        case VDOM_NODE_NS:
+        case VDOM_NODE_NS_KEYED:
+        case VDOM_NODE_TAGGER:
+        case VDOM_NODE_THUNK:
+        default:
+          assert(false);
+          break;
+      } // switch
+    } // if ctor mismatch
+
+    printf("checking for push %p\n", push);
+
+    if (push) {
+      size_t* cursorAfter = vdom_state.next_patch;
+      if (cursorAfter == cursorBefore) {
+        vdom_state.next_patch = (size_t*)push;
+      } else {
+        create_patch(VDOM_PATCH_POP, 0); // Too soon!! Need to do the children first!
+        /*
+        so how do I know when to do the pop?
+        Maybe another stack array for the depth
+        check if that number goes down or up and by how much, then pop that many times
+
+        record stack_next at the top of the loop
+        check where it is now
+        if it's the same then we need a pop
+        number = this depth minus the depth we're going to
+        */
       }
-      return;
     }
-    case VDOM_NODE_KEYED:
-    case VDOM_NODE_NS:
-    case VDOM_NODE_NS_KEYED:
-    case VDOM_NODE_TAGGER:
-    case VDOM_NODE_THUNK:
-    default:
-      assert(false);
-      break;
-  }
+  } // while stack
 }
 
 

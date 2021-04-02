@@ -281,7 +281,7 @@ static void print_vdom_page(struct vdom_page* page) {
         default:
           printf("unknown ctor %d at %p\n", ctor, p);
           fflush(0);
-          assert(false);
+          // assert(false);
           break;
       }
     }
