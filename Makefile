@@ -1,5 +1,5 @@
 MAKEFLAGS := --jobs=$(shell nproc)
-CFLAGS=-Wall
+CFLAGS=-Wall -DDEBUG
 
 ROOT := .
 SRC := $(ROOT)/src
@@ -14,7 +14,7 @@ OBJ := core.o elm-test.o json.o virtual-dom.o wrapper.o test.o
 BIN_OBJ := $(patsubst %,build/bin/%,$(OBJ))
 WASM_OBJ := $(patsubst %,build/wasm/%,$(OBJ))
 
-.PHONY: all check check-bin check-wasm debug verbose dist wasm wasm-debug gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
+.PHONY: all check check-bin check-wasm wasm gc-size clean watch build.log benchmark wrapper codegen todo gh-pages
 
 # 'all' = default for `make` with no arguments
 all: $(DIST)/bin/test
@@ -29,23 +29,9 @@ check-bin: $(DIST)/bin/test
 
 check-wasm: $(DIST)/wasm/test.js
 	@echo "\n\nRunning tests with Node.js WebAssembly\n"
-	node $(DIST)/wasm/test.js --all
-
-debug: CFLAGS = -Wall -ggdb -DDEBUG -DDEBUG_LOG
-debug: $(DIST)/bin/test
-	@:
-
-verbose: $(DIST)/bin/test
-	$(DIST)/bin/test -v
-
-dist: clean check wasm
-	@:
+	node $(DIST)/wasm/test.js $(ARGS)
 
 wasm: $(DIST)/wasm/test.js
-	@:
-
-wasm-debug: CFLAGS = -Wall -O0 -DDEBUG -DDEBUG_LOG
-wasm-debug: wasm
 	@:
 
 wasm-release: CFLAGS = -Wall -Oz
