@@ -599,7 +599,7 @@ typedef struct {
 ```
 
 ## Non-TEA crazy edge cases
-App devs can do stupid things that nonetheless have to work in the language semantics.
+App devs can do crazy things that nonetheless have to work in the language semantics.
 
 ### Creating Vdom nodes from the update function
 In case someone calls `div` from `update`, we have to make sure that the Vdom functions are using the main heap allocator during that time.
@@ -609,8 +609,14 @@ Vdom constructors need to have an extra `if` even for normal use, which is unfor
 ### Passing Vdom nodes into update via event handlers
 When someone gives us a Closure for event handling, we need to trace it for Vdom nodes and copy them to the main heap if we see them.
 
-> This made me give up on strictly keeping all Vdom values in the Vdom arena. Either we allow them in the heap or we have some other place. But we then have to compact that area during main heap compaction anyway...
-> Also it's hard to get away with using indices instead of pointers, since we have to pass Vdom to lists at least.
+## Managing pointers from main heap to vdom
+- Maintain some buckets in the vdom region for this kind of thing
+- During main GC compaction, check if pointer is in vdom area. If so, copy it to a new bucket.
+  - This can only really be done on a major GC. In a minor GC we can't drop a bucket.
+- Internal vdom references
+  - We don't want refs from both vdom and heap! Lifetime too complex.
+  - When diffing event handlers, just make copies into this vdom heap bucket. The copy's lifetime is determined by the GC
+  - Internal vdom links will be within the vdom area with that lifetime
 
 
 # Memory management with regions
