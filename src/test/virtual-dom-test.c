@@ -518,6 +518,7 @@ char* virtual_dom_test() {
   next_generation();
   vdom_state.vdom_current = view2(&str_hello, &str_world);
   patches = A2(&VirtualDom_diff, vdom_state.vdom_old, vdom_state.vdom_current);
+  print_vdom_state();
   VirtualDom_applyPatches((size_t)patches);
 
 

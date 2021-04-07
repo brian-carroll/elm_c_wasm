@@ -233,10 +233,27 @@ Closure VirtualDom_node = {
 
 /*
 
+Example facts
+  attributes:
+    width, height
+  props:
+    boolean: checked, hidden, disabled
+    string: id, src, alt, type_, value, href
+  class:
+    className prop
+    class attribute
+
+Diffing classes:
+  Three approaches
+    - join strings
+    - split strings
+    - keep it simple, pay a perf penalty for changing how you specify the classes
+
+
 Rules for organize facts:
   - if you get the same key twice, last one wins (including style!)
   - class is special, join them all with spaces (prop and attr)
-  - props other than className get Json_unwrap
+  - prop values get Json_unwrap
 
 Implementation:
   - have a separate bucket for classnames
@@ -343,8 +360,7 @@ static bool strings_match(ElmString16* x, ElmString16* y) {
  * Diff "facts" (props, attributes, event handlers, etc.)
  *
  * Number of facts is almost always 0 or 1. The highest in practice is maybe 5.
- * For very small numbers like this, linear array search is fast and simple.
- * Generally you don't see divs with 100 attributes and even that would be OK.
+ * When N is so small, linear array search is faster than hashmap. Big-O for large N isn't relevant.
  */
 static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
   u8 nOld = oldNode->n_facts;
@@ -448,37 +464,40 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
 static void diffNodes(struct vdom_node* old, struct vdom_node* new);
 
 static void diffChildren(struct vdom_node* old, struct vdom_node* new) {
-  u8 nOld = old->n_children;
-  u8 nNew = new->n_children;
-  u8 nMin = (nOld < nNew) ? nOld : nNew;
+  i32 nOld = old->n_children;
+  i32 nNew = new->n_children;
+  i32 nMin = (nOld < nNew) ? nOld : nNew;
   struct vdom_node** oldChildren = (struct vdom_node**)old->values + old->n_extras + old->n_facts;
   struct vdom_node** newChildren = (struct vdom_node**)new->values + new->n_extras + new->n_facts;
   struct vdom_patch* push = allocate_patch(1);
   struct vdom_patch* pop = NULL;
 
+  if (nNew > nOld) {
+    create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)newChildren);
+    newChildren += nNew - nOld;
+  }
+
+  if (nOld > nNew) {
+    struct vdom_patch* patch = create_patch(VDOM_PATCH_REMOVE_LAST, 0);
+    patch->number = nOld - nNew;
+    oldChildren += nOld - nNew;
+  }
+
+  // increasing index => increasing address (inverse DOM order, but that's for JS to worry about)
   for (u8 i = 0; i < nMin; ++i) {
     size_t* beforeChild = vdom_state.next_patch;
     diffNodes(oldChildren[i], newChildren[i]);
     size_t* afterChild = vdom_state.next_patch;
     if (afterChild != beforeChild) {
       push->ctor = VDOM_PATCH_PUSH;
-      push->number = nOld - 1 - i;
+      push->number = nMin - 1 - i; // DOM child index
       pop = create_patch(VDOM_PATCH_POP, 0);
       push = allocate_patch(1);
     }
   }
 
   // Deallocate the last push. We always allocate one too many.
-  vdom_state.next_patch = push;
-
-  if (nNew > nOld) {
-    create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)&newChildren[nOld]);
-  }
-
-  if (nOld > nNew) {
-    struct vdom_patch* patch = create_patch(VDOM_PATCH_REMOVE_LAST, 0);
-    patch->number = nOld - nNew;
-  }
+  vdom_state.next_patch = (size_t*)push;
 }
 
 
