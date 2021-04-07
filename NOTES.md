@@ -1,3 +1,643 @@
+# Multi-region heap / arbitrary layout
+
+- It's a lot nicer than expanding when running on the OS
+- Seems more robust and general and stuff
+- **But am I stretching a Wasm thing too much into an OS thing?**
+  - Yeah kinda. See next section on Linear memory layout
+
+## Allocate
+- when next_alloc hits top of region, maybe we start a new region
+- do a mark first and if we're >75% live data then start new region
+
+## Mark
+- `mark_words`
+  - needs to figure out what region it's in to look at the right bitmap
+- `mark_trace`
+  - could use all regions offset areas for its stack?
+  - Basically an outer loop to start a new stack in another region
+  - Once that stack is depleted, go back down to the other one
+- `mark`
+  - when clearing mark bits, needs to loop over all regions
+
+## Compact
+- `calc_offsets`
+  - needs an outer loop over region
+- `forwarding_address`
+  - needs to account for region when looking up an offset
+- `compact`
+  - finding next live/dead patch needs an outer loop over regions
+  - main loop needs to keep track of two regions, `from` and `to`
+
+
+# Linear memory layout
+
+## Non-Wasm platforms
+- Linux
+  - just use old-school brk, sbrk
+  - or give mmap a requested starting address at system_end
+  - assert that the actual allocated address matches
+- Windows
+  - set requested starting address to system_end
+  - assert that the actual allocated address matches
+
+## Growing stuff
+- growing the heap
+  - ask system for more overall memory
+  - move the vdom region
+  - update GC heap state
+- growing the vdom
+  - ask system for more overall memory
+  - write a new vdom page
+
+## Moving the VDOM
+- nodes
+  - facts and children are internal => add an offset to each address
+  - extras can be heap values => no change
+- facts
+  - keys are Strings => address doesn't change
+  - values are on heap => address doesn't change
+- patches
+  - never alive when we're moving the vdom
+- page metadata
+  - doesn't change, just copy to new address
+
+
+- per-bucket copying
+  - for each bucket
+    - if it's patches, skip
+    - if it's facts, blindly copy N words
+    - if it's nodes
+      - loop over nodes, calculating size to step
+      - how do you know where to start? skip zeros (rely on that)
+        - don't want to start at root, it may not be allocated in order
+      - break on LINK or END
+
+- tree-based copying
+  - copy node tree
+    - start at root node
+    - traverse the tree
+
+
+# Virtual DOM
+
+## development approach
+
+- Cachegrind
+  - Get a test setup to look at SOA vs AOS and so on
+- Simplified example for development, just like in TS
+- Bucket Array
+  - This is going to be my main data structure so make a library out of it
+  - Abstract out the content type (not so easy in C!)
+  - What's in it?
+    - An area for the data. Big array.
+    - A "push" pointer
+    - A bucket capacity (explicit? implicit?)
+
+```c
+#define BUCKET_SIZE 1024
+struct bucket_array {
+  void* items[BUCKET_SIZE];
+  size_t current_item;
+  struct bucket_array *next_bucket;
+};
+
+```
+
+
+### SOA for VDOM?
+Might not be the best.
+- SOA is optimal for cases where you only operate on one or two fields at a time
+- But for vdom diff, typically both vdom's match, in which case we end up comparing all fields anyway.
+- SOA gives savings in the case of mismatching tags for example. Avoids loading other fields of the old vdom node.
+  - Meh. Not worth code complexity.
+- SOA wants indices rather than pointers
+  - View code needs references to pieces of UI to manipulate. Don't really want lots of conversions from pointers to indices, or (bucket, index) pairs.
+  - Could actually return an `Int` to the app, with an index in it!
+
+### group nodes/facts by type?
+OK but we don't really have any operations that get better.
+
+
+### Interface to elm/browser
+
+`_Browser_element` calls `__Platform_initialize` with a callback called stepperBuilder that uses a few VirtualDom functions.
+
+initial setup:
+
+```js
+var currNode = _VirtualDom_virtualize(domNode);
+```
+
+(single underscore!?)
+Takes the real DOM node from user args
+
+Elm event loop:
+
+```js
+var nextNode = view(model);
+var patches = __VirtualDom_diff(currNode, nextNode);
+domNode = __VirtualDom_applyPatches(domNode, currNode, patches, sendToApp);
+currNode = nextNode;
+```
+
+domNode: real DOM
+currNode, nextNode: virtual DOM
+
+I need to override `__VirtualDom_diff` and `__VirtualDom_applyPatches` with my own definitions
+`patches` can be a Wasm address
+`__VirtualDom_diff` should be a Wasm export.
+currNode and nextNode would in theory be addresses? but GC moving and stuff
+
+```
+_VirtualDom_virtualize
+
+  _VirtualDom_text
+
+_VirtualDom_diff
+
+  _VirtualDom_diffHelp
+    _VirtualDom_dekey
+    _VirtualDom_pushPatch
+    _VirtualDom_pairwiseRefEqual
+    _VirtualDom_diffNodes
+    _VirtualDom_diffKids
+    _VirtualDom_diffKeyedKids
+      _VirtualDom_insertNode
+      _VirtualDom_removeNode
+    _VirtualDom_diffFacts
+      _VirtualDom_equalEvents
+
+_VirtualDom_applyPatches
+  _VirtualDom_addDomNodes
+    _VirtualDom_addDomNodesHelp
+  _VirtualDom_applyPatchesHelp
+    _VirtualDom_applyPatch
+      _VirtualDom_render
+      _VirtualDom_applyPatchRedraw
+      _VirtualDom_applyPatchReorder
+        _VirtualDom_applyPatchReorderEndInsertsHelp
+      _VirtualDom_applyFacts
+        _VirtualDom_applyAttrs
+        _VirtualDom_applyAttrsNS
+        _VirtualDom_applyStyles
+        _VirtualDom_applyEvents
+          _VirtualDom_toHandlerInt
+          _VirtualDom_makeCallback
+
+_5_: keyed diff stuff
+_VirtualDom_applyPatchReorderEndInsertsHelp
+_VirtualDom_applyPatchReorder
+_VirtualDom_removeNode
+_VirtualDom_insertNode (_VirtualDom_diffKeyedKids)
+```
+
+## Data-oriented design for virtual DOM
+
+- Assume memory access pattern is the perf bottleneck
+- Avoid cache misses
+
+What are the _most common_ data access patterns?
+
+diffing:
+
+- most of vdom has not changed most of the time!
+- normally comparing two _identical structures_,
+  generated by the same code in the same order, etc
+- example common pattern
+
+```elm
+  div []
+    [ ul []
+      [ li [] [text "hi"]
+      , li [] [text "hi"]
+      , li [] [text "hi"]
+      ]
+    ]
+```
+
+- So data is _likely_ to be allocated depth-first
+- But unfortunately we're traversing it top-down
+- Maybe allocating it in reverse is not a bad idea!!
+
+applying patches:
+
+- visiting one real DOM node at a time
+- once we have it, want to keep it in cache
+- most diffs are props
+
+### JS-like data structures
+
+```c
+typedef struct {
+  VDOM_BASE_FIELDS
+  ElmString16* text;
+} VdomText;
+
+typedef struct {
+  VDOM_BASE_FIELDS
+  ElmString16* tag;
+  VdomFact* facts;
+  VdomNode* kids;
+  ElmString16* namespace;
+} VdomNode;
+
+typedef struct {
+  Header header;
+  u32 ctor;
+  ElmString16* key;
+  void* value;
+  ElmString16* namespaces[]; // 0 or 1 element
+} VdomFact;
+
+typedef struct {
+  VDOM_BASE_FIELDS
+  Closure* tagger;
+  VdomNode* node;
+} VdomTagger;
+
+typedef struct {
+  VDOM_BASE_FIELDS
+  VdomNode* node;
+  void* refs[];
+} VdomThunk;
+
+typedef struct {
+  VDOM_BASE_FIELDS
+  Cons* facts;
+  void* model;
+  void* render;
+  void* diff;
+} VdomCustom;
+
+typedef struct {
+  Header header;
+  u8 ctor : 4;
+  u32 index : 28;
+  void* data;
+} VdomPatch;
+```
+
+### SOA/layout ideas
+
+- There are lots of strings so we probably need a strings section of the Vdom
+- Could make Vdom a structure of arrays, including a string array and a random shit array
+- Use growable arrays. We could start off the next Vdom with the same sizes as the previous one
+- The _whole Vdom_ could look like a single Elm value to the GC
+- Use indices instead of pointers for easy moving around
+  - no adjustment on resizing the growable array
+  - easy to move the whole thing
+  - maybe use 24 bits and get 8 back for other stuff
+- If current `update` bumps into the previous Vdom then move the whole Vdom (memcpy)
+  - It will naturally migrate up to where that tends not to happen
+- Vdom structure should probably have an array of pointers to main heap
+  - Faster marking
+  - a layer of indirection could be handy when moving stuff
+
+### Allocating in reverse
+
+- Tricky when the API is linked-list based!
+- Hardware is just as good at spotting downward patterns though
+
+### Database-style normalization
+
+Exercise recommended by the [Data Oriented Design book](https://www.dataorienteddesign.com/dodbook/node3.html)
+
+text nodes
+
+| col   | type      |
+| ----- | --------- |
+| value | string ID |
+
+nodes
+
+| col                | type            |
+| ------------------ | --------------- |
+| tag                | string ID       |
+| namespace          | string ID       |
+| nFacts / nChildren | int (10,22)     |
+| facts              | Fact mapping ID |
+| children           | Node mapping ID |
+
+keyed nodes
+
+| col                | type            |
+| ------------------ | --------------- |
+| tag                | string ID       |
+| namespace          | string ID       |
+| nFacts / nChildren | int (10,22)     |
+| keys               | string ID       |
+| facts              | Fact mapping ID |
+| children           | Node mapping ID |
+
+node-node mapping table
+node-fact mapping table
+
+tagger nodes
+
+| col    | type         |
+| ------ | ------------ |
+| node   | node ID      |
+| tagger | Elm value ID |
+
+thunk nodes
+
+| col    | type         |
+| ------ | ------------ |
+| nRefs  | int          |
+| refs   | Elm value ID |
+| tagger | Elm value ID |
+| node   | node ID      |
+
+events (`on`) & properties
+
+| col     | type         |
+| ------- | ------------ |
+| key     | string ID    |
+| handler | Elm value ID |
+
+style & attr
+
+| col   | type      |
+| ----- | --------- |
+| key   | string ID |
+| value | string ID |
+
+attrNS
+
+| col   | type      |
+| ----- | --------- |
+| key   | string ID |
+| value | string ID |
+| NS    | string ID |
+
+### converting lists to arrays
+
+The developer API for Vdom is list-based but a list only contains _pointers_, not the values themselves! The actual Vdom values can all be allocated in their own heap region, without the lists. Can easily compress the list into a C-like array.
+
+### Normalized-ish data-oriented structure, round 2
+
+Maybe there's no point in splitting up all the different bits.
+From a cache perspective we are only going to traverse in top-down tree order.
+We're never going to iterate over all divs or all event handlers
+This also means we can't really help instruction cache using loops
+As soon as we load the instructions for doing event handlers, we generally find we only have one of them! So we do it, and then jump to some other routine.
+
+So just chuck everything in together in tree order
+Maybe allocate in reverse
+Have an array of pointers to non-Vdom values
+Use relative pointers generally
+Try to put variable-length stuff at the end of the struct, maybe with a few indices into it.
+
+**BUT** we do actually lose some space due to all the header type tags and stuff.
+
+```c
+typedef struct {
+  void* heap_refs;
+  VdomValue* tree;
+} Vdom;
+
+```
+
+"custom" nodes exist in the source but not used anywhere in Elm core
+
+text nodes
+
+| col         | type            |
+| ----------- | --------------- |
+| type & size | enum & int      |
+| value       | Elm value index |
+
+nodes
+
+| col                | type            |
+| ------------------ | --------------- |
+| type & size        | enum & int      |
+| tag                | Elm value index |
+| namespace          | Elm value index |
+| nFacts             | int             |
+| factsAndChildren[] | Vdom indices    |
+
+keyed nodes
+
+| col                    | type                     |
+| ---------------------- | ------------------------ |
+| type & size            | enum & int               |
+| tag                    | Elm value index          |
+| namespace              | Elm value index          |
+| nFacts                 | int                      |
+| factsKeysAndChildren[] | Elm value & Vdom indices |
+
+tagger nodes
+
+| col         | type            |
+| ----------- | --------------- |
+| type & size | enum & int      |
+| tagger      | Elm value index |
+| node        | Vdom index      |
+
+thunk nodes
+
+| col         | type              |
+| ----------- | ----------------- |
+| type & size | enum & int        |
+| node        | Vdom index        |
+| thunk       | Elm value index   |
+| refs[]      | Elm value indices |
+
+events (`on`)
+
+| col         | type            |
+| ----------- | --------------- |
+| type & size | enum & int      |
+| key         | Elm value index |
+| handler     | Elm value index |
+
+style & attr & properties
+
+| col         | type            |
+| ----------- | --------------- |
+| type & size | enum & int      |
+| key         | Elm value index |
+| value       | Elm value index |
+
+attrNS
+
+| col       | type            |
+| --------- | --------------- |
+| key       | Elm value index |
+| value     | Elm value index |
+| namespace | Elm value index |
+
+### example memory layout
+
+```elm
+ul []
+  [ li [style "color" "red"] [text "hello"]
+  , li [style "margin" "auto"] [text "world"]
+  ]
+```
+
+Execution order
+
+- style "margin" "auto"
+- list create
+- text "world"
+- list create
+- li create
+- style "color" "red"
+- list create
+- text "hello"
+- list create
+- li create
+- list create
+- ul create
+
+Removing the lists
+
+- style "margin" "auto"
+- text "world"
+- li
+- style "color" "red"
+- text "hello"
+- li
+- ul
+
+### allocate forwards
+
+| idx | field               | type            | value     | diff order |
+| --- | ------------------- | --------------- | --------- | ---------- |
+| 0   | type (size)         |                 | style (3) | 3          |
+| 1   | key                 | Elm value index | "margin"  |            |
+| 2   | value               | Elm value index | "auto"    |            |
+| 3   | type (size)         |                 | text (2)  | 4          |
+| 4   | value               | Elm value index | "world"   |            |
+| 5   | type (size)         |                 | node (6)  |            |
+| 6   | tag                 | Elm value index | "li"      | 2          |
+| 7   | namespace           | Elm value index | -1        |            |
+| 8   | nFacts              | int             | 1         |            |
+| 9   | factsAndChildren[0] | Vdom index      | 0         |            |
+| 10  | factsAndChildren[1] | Vdom index      | 3         |            |
+| 11  | type (size)         |                 | style (3) | 6          |
+| 12  | key                 | Elm value index | "color"   |            |
+| 13  | value               | Elm value index | "red"     |            |
+| 14  | type (size)         |                 | text (2)  | 7          |
+| 15  | value               | Elm value index | "hello"   |            |
+| 16  | type (size)         |                 | node (6)  | 5          |
+| 17  | tag                 | Elm value index | "li"      |            |
+| 18  | namespace           | Elm value index | -1        |            |
+| 19  | nFacts              | int             | 1         |            |
+| 20  | factsAndChildren[0] | Vdom index      | 11        |            |
+| 21  | factsAndChildren[1] | Vdom index      | 14        |            |
+| 22  | type (size)         |                 | node (6)  |            |
+| 23  | tag                 | Elm value index | "ul"      | 1          |
+| 24  | namespace           | Elm value index | -1        |            |
+| 25  | nFacts              | int             | 0         |            |
+| 26  | factsAndChildren[0] | Vdom index      | 5         |            |
+| 27  | factsAndChildren[1] | Vdom index      | 16        |            |
+
+### allocate backwards, diff forwards
+
+oh actually yeah, this is better
+order of args is unfortunate...
+could choose to evaluate args backwards in the language implementation generally...
+or store facts in a different region
+
+| idx | field               | type            | value     | diff order |
+| --- | ------------------- | --------------- | --------- | ---------- |
+| 0   | type (size)         |                 | node (6)  | 1          |
+| 1   | tag                 | Elm value index | "ul"      |            |
+| 2   | namespace           | Elm value index | -1        |            |
+| 3   | nFacts              | int             | 0         |            |
+| 4   | factsAndChildren[0] | Vdom index      | 6         |            |
+| 5   | factsAndChildren[1] | Vdom index      | 17        |            |
+| 6   | type (size)         |                 | node (6)  | 2          |
+| 7   | tag                 | Elm value index | "li"      |            |
+| 8   | namespace           | Elm value index | -1        |            |
+| 9   | nFacts              | int             | 1         |            |
+| 10  | factsAndChildren[0] | Vdom index      | 12        |            |
+| 11  | factsAndChildren[1] | Vdom index      | 14        |            |
+| 12  | type (size)         |                 | text (2)  | 4          |
+| 13  | value               | Elm value index | "hello"   |            |
+| 14  | type (size)         |                 | style (3) | 3          |
+| 15  | key                 | Elm value index | "color"   |            |
+| 16  | value               | Elm value index | "red"     |            |
+| 17  | type (size)         |                 | node (6)  | 5          |
+| 18  | tag                 | Elm value index | "li"      |            |
+| 19  | namespace           | Elm value index | -1        |            |
+| 20  | nFacts              | int             | 1         |            |
+| 21  | factsAndChildren[0] | Vdom index      | 23        |            |
+| 22  | factsAndChildren[1] | Vdom index      | 25        |            |
+| 23  | type (size)         |                 | text (2)  | 7          |
+| 24  | value               | Elm value index | "world"   |            |
+| 25  | type (size)         |                 | style (3) | 6          |
+| 26  | key                 | Elm value index | "margin"  |            |
+| 27  | value               | Elm value index | "auto"    |            |
+
+## More GC thoughts for Vdom region
+
+The different arrays in the Vdom could move around relative to each other
+as they grow...
+But we need some simple mental model of it
+I know exactly how many things I have, and each is contiguous,
+so mark/sweep stuff is really easy
+But in this system, allocation is the issue, we're not bumping anymore
+
+```c
+typedef struct {
+  u32 nodes_alloc;
+  u32 nodes_size;
+  u32* nodes;
+
+  u32 facts_alloc;
+  u32 facts_size;
+  u32* facts;
+
+  u32 heap_refs_alloc;
+  u32 heap_refs_size;
+  void** heap_refs;
+} Vdom;
+```
+
+## Non-TEA crazy edge cases
+App devs can do crazy things that nonetheless have to work in the language semantics.
+
+### Creating Vdom nodes from the update function
+In case someone calls `div` from `update`, we have to make sure that the Vdom functions are using the main heap allocator during that time.
+Need to structure it to be swappable.
+Vdom constructors need to have an extra `if` even for normal use, which is unfortunate.
+
+### Passing Vdom nodes into update via event handlers
+When someone gives us a Closure for event handling, we need to trace it for Vdom nodes and copy them to the main heap if we see them.
+
+## Managing pointers from main heap to vdom
+- Maintain some buckets in the vdom region for this kind of thing
+- During main GC compaction, check if pointer is in vdom area. If so, copy it to a new bucket.
+  - This can only really be done on a major GC. In a minor GC we can't drop a bucket.
+- Internal vdom references
+  - We don't want refs from both vdom and heap! Lifetime too complex.
+  - When diffing event handlers, just make copies into this vdom heap bucket. The copy's lifetime is determined by the GC
+  - Internal vdom links will be within the vdom area with that lifetime
+
+
+# Memory management with regions
+
+![Diagrams of Virtual DOM heap with allocation "buckets"](./docs/images/vdom-heap-regions.png)
+
+- At start of `view` we can allocate 4 buckets:
+  - Nodes, Facts, patches, Elm
+- The Elm bucket is for Lists and Strings and JSON values that get allocated during view creation (not constants)
+- 3 different allocator functions
+  - The Node and Fact allocators are accessed from the Vdom library only.
+  - They pass some ID to a common allocator saying who they are.
+- Elm core lib allocator gets switched out for this new one during `view`
+
+## Top level memory manager
+- when main heap runs out of room, we have two choices
+  - if there's some free buckets at the bottom of vdom, take them now and request more memory later
+  - get more memory and move the whole vdom area up
+
+
+=======
 # Build system
 
 ## Port to Windows
@@ -259,14 +899,16 @@ Closure* entry;
 - Encoder function has to be in JS
 
 - execution
+
   - program loads
   - JS wrapper reads the Program closure out of Wasm
   - Program closure contains an unevaluated call to `_Browser_application` or simliar
-  - The argument to  `_Browser_application` is also an unevaluated call to the generated TEA record transformer in JS
+  - The argument to `_Browser_application` is also an unevaluated call to the generated TEA record transformer in JS
 
 - Limitation to accept: I still have just as many 'border crossings' but now one of them works properly. Two separate problems.
 
 - How does `update` work now?
+
   - Read out the Program from Wasm to JS
   - It is a kernel Closure with one arg, the TEA record, containing functions
   - Those functions turn into wasmCallbacks
@@ -306,9 +948,10 @@ Closure* entry;
 - receives JS msg and (dummy) model
 - writes directly to Wasm memory
 - calls the Wasm update with written Msg and model GC root addr
-- Wasm side dereferences the GC root and 
+- Wasm side dereferences the GC root and
 
 - If we're playing games with the model, we need to transform all TEA functions that use it!
+
   - `subscriptions`, `init`, `view`
   - At a minimum, they need to dereference things
 
@@ -329,6 +972,7 @@ Closure* entry;
   - Elm app subs. args: Wasm model, return Sub Msg
 
 GC root
+
 - easiest if there's just one: an array of app data (JS fake model is its index)
 - The entry for each app is a tuple/custom of
   - model
@@ -436,7 +1080,7 @@ What's the minimum imaginable?
     - get_index
     - get_json_string or get_value?
 
-```
+````
 
 Assume we have inifinite memory and there are no GC issues
 
@@ -496,14 +1140,15 @@ Import one particular JS function and call it synchronously
 - converts decoder thunks and whatnot
 - Writes the result back
 - So it's a synchronous thunk evaluator. Just readWasmValue and write back the result.
-```js
+​```js
 var wasmWrapper;
 const imports = {
   evaluateInJs: addr => wasmWrapper.writeWasmValue(
     wasmWrapper.readWasmValue(addr)
   )
 }
-```
+````
+
 - I will currently use it only for Json.Decode.decodeString but it's a general thing.
 - The simplest way to fit it into the current architecture is to write C kernel for all the JS stuff. They can mostly be the same as what the compiler would have generated. But `decodeString` and maybe some other stuff call out to `evaluateInJs`.
 - the wrapper needs to assign an ID to `decodeString` even though we're now generating it in C `kernelFuncRecord`
@@ -513,9 +1158,10 @@ const imports = {
 ### Compiling synchronous JS calls
 
 Random list of considerations:
+
 - writing everything in C
   - every Closure we generate needs an enum entry JS_Json_thing
-  - if I manually write all the Closures then how do I force the compiler to add *all* the enum entries? Even unused.
+  - if I manually write all the Closures then how do I force the compiler to add _all_ the enum entries? Even unused.
   - just have a set of predefined ones? Or make it part of adding that kernel? it's a bit yuck
   - if they are `extern` then they are not compile-time known, so need to be initialised.
 - generating most stuff as normal
@@ -529,7 +1175,6 @@ Random list of considerations:
       - instead of just having a `Set` of modules, make a full `case`. Look at name as well as home.
       - for the C-implemented stuff, don't generate any code.
         - So the compiler has special info about what exists in Json lib, which is not core. Well sort-of not core! It's already pretty special TBH. Used for flags and ports and things.
-
 
 ## Fully general solution (incl. circular structures)
 
@@ -549,33 +1194,32 @@ Or redesign Lists and Tuples to be the same as Custom, get rid of the index func
 ### Actual JSON decoding
 
 To decode a value, get a JsRef to it
-  - how does the wrapper know what to pass to Wasm as a Json.Value?
-  - where can Values come from?
-    - HTML events
-    - ports
-    - Cmds
-  - need to catch this kind of `Value`s on the way from runtime to Wasm
-    - wrap it in a some WasmJsRef() constructor
-    - don't run the wrapper conversion on it
-    - instead, push it onto the JsRef array
-OK so if I can figure all that out, then what?
+
+- how does the wrapper know what to pass to Wasm as a Json.Value?
+- where can Values come from?
+  - HTML events
+  - ports
+  - Cmds
+- need to catch this kind of `Value`s on the way from runtime to Wasm - wrap it in a some WasmJsRef() constructor - don't run the wrapper conversion on it - instead, push it onto the JsRef array
+  OK so if I can figure all that out, then what?
 
 * Decoding a string
 
 call out to JSON.parse, then decode a Value. Cos the value is harder
 
-* Decoding a value
+- Decoding a value
 
 Somehow get a JsRef in Wasm containing an index into a JS value store
 Json.Decode doesn't say "what are you?". It says "you should be a string", and produces either Ok or Error
 Need something like `_Json_runHelp` on the JS side.
 
-Main difference:  the return value gets encoded to binary Elm, wrapped in Ok/Error
+Main difference: the return value gets encoded to binary Elm, wrapped in Ok/Error
 Nested decoder functions are all Wasm callbacks
 Equivalent data structures are defined on both sides (just like the other Elm structures!!)
 You build up a decoder in Wasm, then call out to JS to execute it
 
 What do we actually gain by building the data structure in C?
+
 - Constructor functions are all in C
 - No back-and-forth just to create the decoder, only to run it
   - Could also reduce for run by just returning a dummy WasmRef
@@ -609,10 +1253,10 @@ Need to be able to create FieldGroups dynamically if we don't find them.
 But this means they end up in the heap, which means they need to become first-class citizens and get a header with a tag.
 Good job we already have one handy, Tag_Unused
 TODO
+
 - Change Tag_Unused to Tag_FieldGroup
 - Make sure GC `child_count` gets the right answer (0)
 - Make sure that equality still works OK on records
-
 
 # Ports bug (FIXED)
 
@@ -627,27 +1271,29 @@ Probably need to do the same for (other) Effect Managers. Am I doing that alread
 Naming issue:
 The array of JS values currently assumes they are all following the kernel naming convention but ports follow the Globals naming convention. Need to change how that Set works.
 
-
 # JS arrays passed into Wasm!
+
 Some core packages are using their own weird JS data structures
 that contain arrays. `Json` is one of them.
 It's probably best to leave JSON decoding in JS.
-  - It can handle non-serialisable objects
-  - It handles JS edge cases like NaN, Int vs Float ranges, etc.
-  - There's a lot of code. The C version would be buggy!
-How to model JS arrays using what we have already?
+
+- It can handle non-serialisable objects
+- It handles JS edge cases like NaN, Int vs Float ranges, etc.
+- There's a lot of code. The C version would be buggy!
+  How to model JS arrays using what we have already?
 
 Feck, they also have numeric $ constructors
 $: 13
 encode as -14 => Uint32Array 4294967282
 read back 4294967282, this should go into the ctors enum object
 {
-  4294967282: 13,
+4294967282: 13,
 }
 
 Don't really need the 13 as a key
 
 - `Record`
+
   - This is how the wrapper currently treats them, with 0 fieldgroup (coerced into the ArrayBuffer from `undefined`.)
   - Special case:
     - Reading. Detect NULL pointer in FG and decode to array instead of object
@@ -656,6 +1302,7 @@ Don't really need the 13 as a key
     - we have NULL pointer in C. Shouldn't matter because no code should touch it. But I have _some_ out of bounds issue somewhere and I can't eliminate this if it's still hanging around.
 
 - `Custom`
+
   - Naturally looks like an array
   - Special cases:
     - Writing: type detection & Custom writer
@@ -676,7 +1323,6 @@ Don't really need the 13 as a key
   - Downsides:
     - A bit too clever
     - Array constructor function needs to be curried, but also needs to be of arbitrary length... agh, need a few of them
-
 
 # Elm code layer within the core?
 
@@ -933,8 +1579,8 @@ function getKernelFnArity(index) {
 
 This will work for initialisation.
 For actual application, could just apply each arg one at a time! That works in all cases.
-Or make a special case again for \_VirtualDom_node
-Or wrap \_VirtualDom_node
+Or make a special case again for `_VirtualDom_node`
+Or wrap `_VirtualDom_node`
 
 ```js
 function wrap_VirtualDom_node(one, two, three) {
@@ -1865,4 +2511,3 @@ Why do I care? Stack is no faster than heap to access, but heap involves more ma
 
 If I'm doing this, then the stack version of the object needs to be completely stand-alone and independent of the GC header. In other words String length can't be just in GC header, has to be in the String object itself so that it can exist in the stack.
 Or I suppose you could put useless GC headers in the stack.
- 
