@@ -309,7 +309,9 @@ void print_value(void* p) {
       }
       break;
     case Tag_Record: {
-      printf("Record fieldgroup: %p values: ", v->record.fieldgroup);
+      printf("Record (");
+      print_value(v->record.fieldgroup);
+      printf(") values: ");
       size_t header_kids = (size_t)(v->header.size) - (sizeof(Record) / sizeof(void*));
       for (size_t i = 0; i < header_kids; ++i) {
         printf("%p ", v->record.values[i]);
@@ -317,7 +319,13 @@ void print_value(void* p) {
       break;
     }
     case Tag_FieldGroup: {
-      printf("Fieldgroup");
+      printf("Fieldgroup ");
+      FieldGroup* fg = &v->fieldgroup;
+      for (u32 i = 0; i < fg->size; ++i) {
+        u32 fieldId = fg->fields[i];
+        char* fieldName = Debug_fields[fieldId];
+        printf("%s ", &fieldName[6]);
+      }
       break;
     }
     case Tag_Closure: {
