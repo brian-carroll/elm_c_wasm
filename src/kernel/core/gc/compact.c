@@ -62,15 +62,12 @@ void compact(GcState* state, size_t* compact_start) {
   size_t* compact_end = state->next_alloc;
 
   // Find starting point in bitmap
-  size_t heap_index = (size_t)(compact_start - heap->start);
-  size_t bm_word = heap_index / GC_WORD_BITS;
-  size_t bm_bit = heap_index % GC_WORD_BITS;
-  size_t bm_mask = (size_t)1 << bm_bit;
+  GcBitmapIter bm_iter = ptr_to_bitmap_iter(heap, compact_start);
 
   // Find first garbage patch
   size_t* first_move_to = compact_start;
-  while ((heap->bitmap[bm_word] & bm_mask) && (first_move_to < compact_end)) {
-    bitmap_next(&bm_word, &bm_mask);
+  while (bitmap_is_live_at(heap, bm_iter) && (first_move_to < compact_end)) {
+    bitmap_next(&bm_iter);
     first_move_to++;
   }
   if (first_move_to >= compact_end) return;
@@ -85,8 +82,8 @@ void compact(GcState* state, size_t* compact_start) {
   size_t* from = to;
   while (from < compact_end) {
     // Next live patch (bitmap only)
-    while (!(heap->bitmap[bm_word] & bm_mask) && (from < compact_end)) {
-      bitmap_next(&bm_word, &bm_mask);
+    while (!bitmap_is_live_at(heap, bm_iter) && (from < compact_end)) {
+      bitmap_next(&bm_iter);
       garbage_so_far++;
       from++;
     }
@@ -94,8 +91,8 @@ void compact(GcState* state, size_t* compact_start) {
 
     // Next garbage patch (bitmap only)
     size_t* next_garbage = from;
-    while ((heap->bitmap[bm_word] & bm_mask) && (next_garbage < compact_end)) {
-      bitmap_next(&bm_word, &bm_mask);
+    while (bitmap_is_live_at(heap, bm_iter) && (next_garbage < compact_end)) {
+      bitmap_next(&bm_iter);
       next_garbage++;
     }
 

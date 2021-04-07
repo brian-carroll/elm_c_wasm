@@ -1,8 +1,8 @@
 #include "internals.h"
 
 #ifdef _WIN32
-#include <windows.h>
 #include <heapapi.h>
+#include <windows.h>
 #else
 #include <sys/mman.h>
 #endif
@@ -127,25 +127,19 @@ void bitmap_reset(GcHeap* heap) {
 
 // Count garbage words between two heap pointers, using the bitmap
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
-  size_t first_index = (size_t)(first - heap->start);
-  size_t first_word = first_index / GC_WORD_BITS;
-  size_t first_mask = (size_t)1 << (first_index % GC_WORD_BITS);
-
-  size_t last_index = (size_t)(last - heap->start);
-  size_t last_word = last_index / GC_WORD_BITS;
-  size_t last_mask = (size_t)1 << (last_index % GC_WORD_BITS);
+  GcBitmapIter first_iter = ptr_to_bitmap_iter(heap, first);
+  GcBitmapIter last_iter = ptr_to_bitmap_iter(heap, last);
 
   size_t count = 0;
-  size_t word = first_word;
-  size_t mask = first_mask;
+  GcBitmapIter iter = first_iter;
 
-  while (word < last_word) {
-    if ((heap->bitmap[word] & mask) == 0) count++;
-    bitmap_next(&word, &mask);
+  while (iter.index < last_iter.index) {
+    if (!bitmap_is_live_at(heap, iter)) count++;
+    bitmap_next(&iter);
   }
-  while (mask < last_mask) {
-    if ((heap->bitmap[word] & mask) == 0) count++;
-    mask <<= 1;
+  while (iter.mask < last_iter.mask) {
+    if (!bitmap_is_live_at(heap, iter)) count++;
+    iter.mask <<= 1;
   }
   return count;
 }
@@ -162,10 +156,34 @@ size_t make_bitmask(size_t first_bit, size_t last_bit) {
 
 
 // advance to the next bit in the bitmap (for loops)
-void bitmap_next(size_t* word, size_t* mask) {
-  *mask <<= 1;
-  if (*mask == 0) {
-    *word = *word + 1;
-    *mask = 1;
+void bitmap_next(GcBitmapIter* iter) {
+  iter->mask <<= 1;
+  if (iter->mask == 0) {
+    iter->index++;
+    iter->mask = 1;
   }
+}
+
+
+GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr) {
+  size_t heap_index = ptr - heap->start;
+  GcBitmapIter iter = {
+      .index = heap_index / GC_WORD_BITS,
+      .mask = (size_t)1 << (heap_index % GC_WORD_BITS),
+  };
+  return iter;
+}
+
+
+size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
+  size_t* ptr = heap->start + (iter.index * GC_WORD_BITS);
+  for (size_t mask = iter.mask; mask; mask >>= 1) {
+    ptr++;
+  }
+  return ptr;
+}
+
+
+size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter) {
+  return heap->bitmap[iter.index] & iter.mask;
 }

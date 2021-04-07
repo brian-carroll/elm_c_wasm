@@ -1,3 +1,91 @@
+# Non-moving GC
+
+Getting tired of this replay GC, it's so damn confusing, I've been fighting it for literally years now.
+
+Try mark/sweep with an allocator.
+Simplest allocator is "next fit", just scroll up through the bitmap to find enough space. It's a bit fragmenty but we can do some compaction too.
+
+Do a compaction at the end (or beginning) of `execute`
+  - only if it did a GC?
+Use some heuristics?
+- Count number of wrap-arounds?
+- Count number of patches skipped because too small?
+
+Consequences of out-of-order heap for compaction
+- when I move an upward-pointing pointer, I don't know what to set it to!
+- well that's not true, it's deterministic from the mark bits
+- might need to do "offset calculation" pass before "move" pass
+  - already doing this!
+
+## bonus
+recursion modulo cons, and maybe other tricks!
+
+
+## TODO
+- GC_malloc does a check to see if next_alloc > end
+- if so
+  - do mark cycle
+  - if nursery is > 75% full after marking
+    - get more system memory
+    - redo heap layout (what happens to the mark bits?!)
+    - allocate
+  - else
+    - sweep (write zeros)
+    - set next_alloc to lowest garbage address
+
+What's the check when reusing swept space?
+- look at how many words we need
+- find the next gap in the bitmap that has enough space
+  - use an algo that happens to be trivial in the "top-of-heap" case?
+  - or have some mode-switch to optimise that case?
+
+- should we have a high-water-mark?
+  - highest address allocated
+  - if it's below next_alloc then we can just use next_alloc without bitmap check
+  - meh probably not worth it, certainly to start!
+
+Find space
+```c
+size_t target_space = 3;
+
+for (int attempts = 0; attempts < 2; ++attempts) {
+  size_t bm_word = state->alloc_idx;
+  size_t bm_mask = state->alloc_mask;
+  size_t* after_alloc = state->next_alloc; // next heap slot after allocated space
+
+  size_t max_word = state->heap.offsets - state->heap.bitmap;
+  size_t found_space = 0;
+
+  while (after_alloc < heap->end) {
+    size_t is_live = heap->bitmap[bm_word] & bm_mask;
+    if (is_live) {
+      found_space = 0;
+      found_word = bm_word;
+    } else {
+      found_space++;
+      if (found_space == target_space) {
+        break;
+      }
+    }
+    after_alloc++;
+    bitmap_next(&bm_word, &bm_mask);
+  }
+
+  if (found_space == target_space) {
+    state->alloc_idx = bm_word;
+    state->alloc_mask = bm_mask;
+    state->alloc_next = after_alloc;
+    return (after_alloc - target_space);
+  }
+
+  collect(); // will change state, grow heap, etc.
+}
+
+assert(false);
+return NULL;
+```
+
+
 # Multi-region heap / arbitrary layout
 
 - It's a lot nicer than expanding when running on the OS

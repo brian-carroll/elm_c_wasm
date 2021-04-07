@@ -42,6 +42,11 @@ typedef struct {
 } GcStackMap;
 
 typedef struct {
+  size_t index;
+  size_t mask;
+} GcBitmapIter;
+
+typedef struct {
   GcHeap heap;
   size_t* next_alloc;
   size_t* nursery;
@@ -64,9 +69,12 @@ void stack_enter(Closure* c);
 void stack_prepare_for_replay();
 
 void bitmap_reset(GcHeap*);
-void bitmap_next(size_t* word, size_t* mask);
+void bitmap_next(GcBitmapIter* iter);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
 size_t make_bitmask(size_t first_bit, size_t last_bit);
+GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr);
+size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter);
+size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter);
 
 size_t child_count(ElmValue* v);
 bool sanity_check(void* v);

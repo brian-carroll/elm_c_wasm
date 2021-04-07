@@ -100,67 +100,66 @@ char* gc_bitmap_next_test() {
   }
   gc_test_reset();
 
-  size_t word;
-  size_t mask;
+  GcBitmapIter iter;
 
   int assertion = 1;
 
-  word = 0;
-  mask = 1;
+  iter.index = 0;
+  iter.mask = 1;
   sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
-      word,
-      mask);
-  bitmap_next(&word, &mask);
-  mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 2);
+      iter.index,
+      iter.mask);
+  bitmap_next(&iter);
+  mu_assert(gc_bitmap_next_test_str, iter.index == 0 && iter.mask == 2);
 
-  word = 0;
-  mask = 2;
+  iter.index = 0;
+  iter.mask = 2;
   sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
-      word,
-      mask);
-  bitmap_next(&word, &mask);
-  mu_assert(gc_bitmap_next_test_str, word == 0 && mask == 4);
+      iter.index,
+      iter.mask);
+  bitmap_next(&iter);
+  mu_assert(gc_bitmap_next_test_str, iter.index == 0 && iter.mask == 4);
 
-  word = 1;
-  mask = 1;
+  iter.index = 1;
+  iter.mask = 1;
   sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
-      word,
-      mask);
-  bitmap_next(&word, &mask);
-  mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 2);
+      iter.index,
+      iter.mask);
+  bitmap_next(&iter);
+  mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 2);
 
-  word = 1;
-  mask = 2;
+  iter.index = 1;
+  iter.mask = 2;
   sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
-      word,
-      mask);
-  bitmap_next(&word, &mask);
-  mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 4);
+      iter.index,
+      iter.mask);
+  bitmap_next(&iter);
+  mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 4);
 
-  word = 0;
+  iter.index = 0;
   char* format_str;
 #ifdef TARGET_64BIT
-  mask = 0x8000000000000000;
+  iter.mask = 0x8000000000000000;
   format_str = "bitmap_next assertion %d from word %zd mask %016zx";
 #else
-  mask = 0x80000000;
+  iter.mask = 0x80000000;
   format_str = "bitmap_next assertion %d from word %zd mask %08zx";
 #endif
 
-  mu_assert("bitmap_next: highest bit is correctly set in test", (mask << 1) == 0);
+  mu_assert("bitmap_next: highest bit is correctly set in test", (iter.mask << 1) == 0);
   assertion++;
 
-  sprintf(gc_bitmap_next_test_str, format_str, assertion++, word, mask);
-  bitmap_next(&word, &mask);
-  mu_assert(gc_bitmap_next_test_str, word == 1 && mask == 1);
+  sprintf(gc_bitmap_next_test_str, format_str, assertion++, iter.index, iter.mask);
+  bitmap_next(&iter);
+  mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 1);
 
   return NULL;
 }
