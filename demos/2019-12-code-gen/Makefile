@@ -2,9 +2,6 @@
 
 KERNELS := $(shell find ../../src/kernel -name '*.c')
 
-# I know, I know, sorry...
-ELM_TO_C := $(HOME)/Code/wasm/compiler/.stack-work/install/x86_64-linux/lts-13.28/8.6.5/bin/elm
-
 .PHONY: all clean
 
 all: dist/elm.wasm
@@ -14,7 +11,7 @@ clean:
 
 build/elm/elm.c: src/Main.elm
 	@mkdir -p build/elm
-	$(ELM_TO_C) make src/Main.elm --output build/elm/elm.c
+	elm make src/Main.elm --output build/elm/elm.c
 
 build/emscripten/elm.wasm: build-wasm.sh $(KERNELS) build/elm/elm.c
 	@dos2unix -q build-wasm.sh
