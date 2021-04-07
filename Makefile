@@ -1,5 +1,6 @@
 MAKEFLAGS := --jobs=$(shell nproc)
 CFLAGS=-Wall -DDEBUG
+ARGS=-a
 
 ROOT := .
 SRC := $(ROOT)/src
@@ -25,7 +26,7 @@ check: check-bin check-wasm
 
 check-bin: $(DIST)/bin/test
 	@echo "\n\nRunning tests with binary executable\n"
-	$(DIST)/bin/test --all
+	$(DIST)/bin/test $(ARGS)
 
 check-wasm: $(DIST)/wasm/test.js
 	@echo "\n\nRunning tests with Node.js WebAssembly\n"
