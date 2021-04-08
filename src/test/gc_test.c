@@ -256,7 +256,7 @@ char* test_heap_layout() {
 
 #define TEST_MEMCPY_BUF_SIZE 10
 
-void test_memcpy_reset(u32* from, u32* to) {
+void test_memcpy_reset(size_t* from, size_t* to) {
   for (int i = 0; i < TEST_MEMCPY_BUF_SIZE; ++i) {
     to[i] = 0;
     from[i] = i + 1;
@@ -276,33 +276,34 @@ void* test_memcpy() {
   u64 from64[TEST_MEMCPY_BUF_SIZE / 2];
   u64 to64[TEST_MEMCPY_BUF_SIZE / 2];
 
-  // Now cast to 32-bit values
-  u32* from = (u32*)from64;
-  u32* to = (u32*)to64;
+  // Now cast to word-sized values
+  size_t* from = (size_t*)from64;
+  size_t* to = (size_t*)to64;
 
-  u32* src;
-  u32* dest;
-  u32 size;
+  size_t* src;
+  size_t* dest;
+  size_t size;
   char description[100];
 
+#ifndef TARGET_64BIT
   if (verbose) {
     printf("\n32-bit aligned\n");
   }
   src = from + 1;
   dest = to + 1;
-  assert((size_t)dest % sizeof(u64) == sizeof(u32));
+  assert((size_t)dest % sizeof(u64) == sizeof(size_t));
 
   for (size = 1; size <= 6; ++size) {
     test_memcpy_reset(from, to);
-    GC_memcpy(dest, src, size * sizeof(u32));
+    GC_memcpy(dest, src, size);
     int mismatches = 0;
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description, sizeof(description), "should correctly copy %d 32-bit words, 32-bit aligned", size);
+    snprintf(description, sizeof(description), "should correctly copy %zd 32-bit words, 32-bit aligned", size);
     mu_assert(description, mismatches == 0);
   }
-
+#endif
 
   if (verbose) {
     printf("\n64-bit aligned\n");
@@ -313,12 +314,12 @@ void* test_memcpy() {
 
   for (size = 1; size <= 6; ++size) {
     test_memcpy_reset(from, to);
-    GC_memcpy(dest, src, size * sizeof(u32));
+    GC_memcpy(dest, src, size);
     int mismatches = 0;
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description, sizeof(description), "should correctly copy %d 32-bit words, 64-bit aligned", size);
+    snprintf(description, sizeof(description), "should correctly copy %zd 32-bit words, 64-bit aligned", size);
     mu_assert(description, mismatches == 0);
   }
 

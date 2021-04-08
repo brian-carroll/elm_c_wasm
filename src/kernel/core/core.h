@@ -135,7 +135,7 @@ void* GC_execute(Closure* c);
 
 // allocate
 void* GC_allocate(bool push_to_stack, ptrdiff_t words);
-void* GC_memcpy(void* dest, void* src, size_t bytes);
+void* GC_memcpy(void* dest, void* src, size_t words);
 
 
 typedef u32 GcStackMapIndex;

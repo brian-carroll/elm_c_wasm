@@ -73,7 +73,7 @@ void* eval_Json_addField(void* args[]) {
   u32 new_size = old_size + 2;
 
   Custom* new_object = GC_allocate(true, new_size);
-  GC_memcpy(new_object, old_object, old_size * SIZE_UNIT);
+  GC_memcpy(new_object, old_object, old_size);
   new_object->header.size = new_size;
   new_object->values[old_params] = key;
   new_object->values[old_params + 1] = wrappedValue->values[0];
@@ -97,7 +97,7 @@ void* eval_Json_addEntry(void* args[]) {
   u32 new_size = old_size + 1;
 
   Custom* new_array = GC_allocate(true, new_size);
-  GC_memcpy(new_array, old_array, old_size * SIZE_UNIT);
+  GC_memcpy(new_array, old_array, old_size);
   new_array->header.size = new_size;
 
   Custom* wrappedEntry = A1(func, entry);

@@ -30,8 +30,8 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t words) {
 }
 
 
-void* GC_memcpy(void* vdest, void* vsrc, size_t bytes) {
-  assert(bytes % sizeof(u16) == 0);
+void* GC_memcpy(void* vdest, void* vsrc, size_t words) {
+  size_t bytes = words * sizeof(void*);
 
   u8* dest = vdest;
   u8* src = vsrc;

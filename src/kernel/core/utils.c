@@ -43,9 +43,8 @@ void* Utils_destruct_index(ElmValue* v, size_t index) {
 void* Utils_clone(void* x) {
   Header* h = (Header*)x;
   if (h == pNil || (h->tag == Tag_Custom && custom_params(x) == 0)) return x;
-  size_t n_bytes = SIZE_UNIT * (size_t)h->size;
   ElmValue* x_new = GC_allocate(true, h->size);
-  GC_memcpy(x_new, x, n_bytes);
+  GC_memcpy(x_new, x, h->size);
   return x_new;
 }
 
