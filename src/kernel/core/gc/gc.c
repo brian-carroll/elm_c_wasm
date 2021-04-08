@@ -56,6 +56,7 @@
 #include "../core.h"
 
 #include "allocate.c"
+#include "bitmap.c"
 #include "compact.c"
 #include "header.c"
 #include "mark.c"
