@@ -117,12 +117,22 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
    ==================================================== */
 
+static size_t percent_full(GcState* state) {
+  GcHeap* heap = &state->heap;
+  size_t available_words = heap->end - heap->start;
+  size_t used_words = state->next_alloc - heap->start;
+  size_t percent = (100 * used_words) / available_words;
+  return percent;
+}
+
+
 static void collect(GcState* state, size_t* ignore_below) {
   mark(state, ignore_below);
   compact(state, ignore_below);
   stack_prepare_for_replay();
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
+  printf("After GC, heap is %zd%% full\n", percent_full(state));
 }
 
 void GC_collect_full() {
