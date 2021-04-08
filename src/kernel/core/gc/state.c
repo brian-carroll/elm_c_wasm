@@ -4,7 +4,7 @@
 #include <heapapi.h>
 #include <windows.h>
 #else
-#include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 
@@ -33,34 +33,44 @@ void reset_state(GcState* state) {
 
 #ifdef _WIN32
 
-void* get_memory_from_system(size_t bytes) {
+static HANDLE hHeap;
+static const DWORD dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
+static void* system_block;
+
+void* get_initial_memory(size_t bytes) {
   // https://docs.microsoft.com/en-us/windows/win32/api/heapapi/
   assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  HANDLE hHeap = GetProcessHeap();
-  DWORD  dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
-  void* unaligned = HeapAlloc(hHeap, dwFlags, bytes + GC_BLOCK_BYTES);
-  size_t unaligned_addr = (size_t)unaligned;
+  hHeap = GetProcessHeap();
+  system_block = HeapAlloc(hHeap, dwFlags, bytes + GC_BLOCK_BYTES);
+  size_t unaligned_addr = (size_t)system_block;
   size_t aligned_addr = (unaligned_addr + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
   return (void*)aligned_addr;
 }
 
-#else
-
-void* get_memory_from_system(size_t bytes) {
-  // mmap can map files into memory but apparently everyone
-  // uses it just for plain old memory allocation too.
-  assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  void *addr = NULL; // requested starting address
-  size_t length = bytes;
-  int prot = PROT_READ | PROT_WRITE;
-  int flags = MAP_PRIVATE | MAP_ANONYMOUS; // MAP_ANONYMOUS = memory not backed by a file
-  int fd = -1; // file descriptor for file-backed memory, or -1
-  off_t offset = 0; // file offset for the memory block to start at
-
-  void* allocated = mmap(addr, length, prot, flags, fd, offset);
-  return allocated;
+void grow_memory(void* start, size_t new_total_bytes) {
+  assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
+  size_t alignment_bytes = (size_t)start - (size_t)system_block;
+  size_t new_system_bytes = new_total_bytes + alignment_bytes;
+  void* result = HeapReAlloc(hHeap, dwFlags, system_block, new_system_bytes);
+  assert(result == system_block);
 }
 
+#else
+
+void* get_initial_memory(size_t bytes) {
+  size_t initial_break = (size_t)sbrk(0);
+  size_t aligned_break = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
+  size_t new_break = aligned_break + bytes;
+  int result = brk((void*)new_break);
+  assert(result == 0);
+  return (void*)aligned_break;
+}
+
+void grow_memory(void* start, size_t new_total_bytes) {
+  void* new_break = start + new_total_bytes;
+  int result = brk(new_break);
+  assert(result == 0);
+}
 
 #endif
 
@@ -100,7 +110,7 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
 // Call exactly once on program startup
 int init_heap(GcHeap* heap) {
   size_t bytes = GC_INITIAL_HEAP_MB * MB;
-  void* start = get_memory_from_system(bytes);
+  void* start = get_initial_memory(bytes);
 
   set_heap_layout(heap, start, bytes);
 
