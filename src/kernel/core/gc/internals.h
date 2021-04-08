@@ -38,7 +38,6 @@ typedef struct {
 typedef struct {
   GcStackMapIndex frame;
   GcStackMapIndex index;
-  GcStackMapIndex replay_until;  
 } GcStackMap;
 
 typedef struct {
@@ -66,7 +65,6 @@ int init_heap(GcHeap* heap);
 
 void stack_clear();
 void stack_enter(Closure* c);
-void stack_prepare_for_replay();
 
 void bitmap_reset(GcHeap*);
 void bitmap_next(GcBitmapIter* iter);
@@ -78,7 +76,5 @@ size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter);
 
 size_t child_count(ElmValue* v);
 bool sanity_check(void* v);
-
-void* malloc_replay(ptrdiff_t bytes);
 
 #endif

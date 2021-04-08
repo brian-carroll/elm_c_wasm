@@ -44,7 +44,6 @@ char stack_flags[GC_STACK_MAP_SIZE];  // flag which values are returns or alloca
 void stack_clear() {
   GcStackMap* sm = &gc_state.stack_map;
 
-  sm->replay_until = 0;
   sm->frame = 0;
   sm->index = 0;
 
@@ -63,14 +62,6 @@ void stack_enter(Closure* c) {
   sm->index = 2;
 }
 
-
-void stack_prepare_for_replay() {
-  GcStackMap* sm = &gc_state.stack_map;
-  sm->replay_until = sm->index;
-  sm->index = 2;
-}
-
-
 // Get current stack index (before doing a call or tail call)
 GcStackMapIndex GC_get_stack_frame() {
   return gc_state.stack_map.frame;
@@ -80,10 +71,6 @@ GcStackMapIndex GC_get_stack_frame() {
 // Push a newly constructed value onto the stack
 void GC_stack_push_value(void* value) {
   GcStackMap* sm = &gc_state.stack_map;
-  if (sm->replay_until) {
-    return;
-  }
-
   stack_values[sm->index] = value;
   stack_flags[sm->index] = 'A';
   sm->index++;
@@ -91,79 +78,24 @@ void GC_stack_push_value(void* value) {
 }
 
 
-// Push a new frame onto the stack or get a replay value
-void* GC_stack_push_frame(EvalFunction evaluator) {
+// Push a new frame onto the stack
+void GC_stack_push_frame(EvalFunction evaluator) {
   GcStackMap* sm = &gc_state.stack_map;
 
-  // normal execution mode
-  if (!sm->replay_until) {
-    GcStackMapIndex i = sm->index;
-    sm->frame = i;
-    stack_flags[i] = 'F';
-    stack_values[i] = evaluator;
-    sm->index++;
+  GcStackMapIndex i = sm->index;
+  sm->frame = i;
+  stack_flags[i] = 'F';
+  stack_values[i] = evaluator;
+  sm->index++;
 #if GC_STACK_VERBOSE
     printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
 #endif
-    return NULL;  // no replay value
-  }
-
-  // replay mode
-  void* ret;
-  char flag = stack_flags[sm->index];
-  if (flag == 'R') {
-    // Call had completed before GC. We have a saved return value.
-    ElmValue* value = stack_values[sm->index];
-#if GC_STACK_VERBOSE
-    printf("Replaying returned value at index %d = %p\n", sm->index, value);
-#endif
-    sm->index++;
-    ret = value;
-  } else {
-    // Call was interrupted by GC. Resume executing.
-    assert(flag == 'F');
-#if GC_STACK_VERBOSE
-    if (stack_values[sm->index] != evaluator) {
-      printf("mismatching evaluator, expected %s got %s\n",
-        Debug_evaluator_name(stack_values[sm->index]),
-        Debug_evaluator_name(evaluator)
-      );
-      print_heap();
-      print_stack_map();
-      print_state();
-      fflush(NULL);
-    }
-#endif
-
-    assert(stack_values[sm->index] == evaluator);
-
-#if GC_STACK_VERBOSE
-    printf("Resuming call at stack frame %d = %s\n", sm->index, Debug_evaluator_name(evaluator));
-#endif
-
-    sm->frame = sm->index; 
-    sm->index++;
-    ret = NULL;  // Return no replay value so that we'll execute the call
-  }
-
-  // maybe exit replay mode
-  if (sm->index >= sm->replay_until) {
-    sm->replay_until = 0;
-#if GC_STACK_VERBOSE
-    printf("Exiting replay mode at stack index=%d, in a call to %s", sm->index, Debug_evaluator_name(evaluator));
-    if (ret) printf(" with recorded return value %p", ret);
-    printf("\n");
-#endif
-  }
-
-  return ret;
 }
 
 
 // Track when a function returns
 void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex frame) {
   GcStackMap* sm = &gc_state.stack_map;
-  assert(!sm->replay_until);
   assert(sanity_check(result));
   assert(stack_values[frame] == evaluator);
   assert(stack_flags[frame] == 'F');
@@ -190,7 +122,6 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
 Closure* GC_stack_tailcall(
     GcStackMapIndex frame, Closure* old, u32 n_explicit_args, void* explicit_args[]) {
   GcStackMap* sm = &gc_state.stack_map;
-  assert(!sm->replay_until);
   assert(stack_flags[frame] == 'F');
 
   sm->frame = frame;
@@ -220,51 +151,4 @@ Closure* GC_stack_tailcall(
   assert(sanity_check(new));
 
   return new;
-}
-
-
-// Handle allocations for replay mode
-void* malloc_replay(ptrdiff_t bytes) {
-  GcStackMap* sm = &gc_state.stack_map;
-
-  u32 requested_words = bytes / sizeof(void*);
-  assert(bytes % sizeof(void*) == 0);
-  char flag = stack_flags[sm->index];
-  assert(flag == 'A' || flag == 'R'); // 'R' is a valid case: final call on partially-applied function
-
-  ElmValue* saved = stack_values[sm->index];
-  u32 saved_words = saved->header.size;
-
-#if GC_STACK_VERBOSE
-  if (requested_words != saved_words) {
-    printf("requested_words (%d) != saved_words (%d) at index %d\n", requested_words, saved_words, sm->index);
-    print_heap_range((size_t*)saved - 8, (size_t*)saved + 8);
-    print_stack_map();
-    print_state();
-    fflush(0);
-  }
-
-  printf("Replaying allocation at index %d %p : ", sm->index, saved);
-  print_value(saved);
-  printf("\n");
-  fflush(0);
-#endif
-
-  assert(requested_words == saved_words);
-
-  sm->index++;
-
-  if (sm->index >= sm->replay_until) {
-    sm->replay_until = 0;
-
-#if GC_STACK_VERBOSE
-    printf(
-        "Exiting replay mode at stack_index=%d, after substituting an allocation in %s"
-        " with recorded value %p\n", sm->index,
-        Debug_evaluator_name(stack_values[sm->frame]),
-        saved);
-#endif
-  }
-
-  return saved;
 }

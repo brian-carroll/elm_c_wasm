@@ -145,7 +145,7 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex pu
 GcStackMapIndex GC_get_stack_frame();
 Closure* GC_stack_tailcall(
     GcStackMapIndex push, Closure* old, u32 n_explicit_args, void* explicit_args[]);
-void* GC_stack_push_frame(EvalFunction evaluator);
+void GC_stack_push_frame(EvalFunction evaluator);
 
 // =========================================
 

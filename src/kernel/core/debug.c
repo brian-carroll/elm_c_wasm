@@ -467,7 +467,7 @@ void print_stack_map() {
   printf("\nStack map:\n");
   printf("\n");
 
-  GcStackMapIndex top = sm->replay_until ? sm->replay_until : sm->index;
+  GcStackMapIndex top = sm->index;
   for (u32 i = 0; i < top; ++i) {
     void* value = stack_values[i];
     char flag = stack_flags[i];
@@ -510,7 +510,6 @@ void print_state() {
   printf("%p roots\n", state->roots);
   printf("\n");
   printf("%d stack_index\n", state->stack_map.index);
-  printf("%d replay_until\n", state->stack_map.replay_until);
   printf("\n");
 
   // print_bitmap();

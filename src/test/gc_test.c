@@ -364,70 +364,6 @@ void * eval_fib(void * args[]) {
 Closure fib = { .header = HEADER_CLOSURE(0), .n_values = 0x0, .max_values = 0x1, .evaluator = &eval_fib };
 
 
-char* gc_replay_test() {
-  GcState* state = &gc_state;
-  if (verbose) {
-    printf(
-        "\n"
-        "## gc_replay_test\n"
-        "\n");
-  }
-  gc_test_reset();
-
-#ifdef TARGET_64BIT
-  size_t not_quite_enough_space = 150/sizeof(void*);
-#else
-  size_t not_quite_enough_space = 150/sizeof(void*);
-#endif
-  size_t* ignore_below = state->heap.end - not_quite_enough_space;
-  state->next_alloc = ignore_below;
-
-  if (verbose) {
-    printf("Set allocation pointer to leave only %zu (%zu-bit) words of heap space\n",
-        not_quite_enough_space,
-        (sizeof(void*)) * 8);
-  }
-
-  // Create a thunk as if entering Wasm from JS
-  void* args[1];
-  args[0] = &int_n;
-  Closure* c = newClosure(1, 1, eval_fib, args);
-  stack_clear();
-  stack_enter(c);
-
-  int n_long_jumps = 0;
-  int out_of_memory = setjmp(gcLongJumpBuf);
-  n_long_jumps++;
-  if (!out_of_memory) {
-    Utils_apply(c, 0, NULL);    
-  }
-
-  mu_expect_equal("Expect GC exception when test function called with insufficient heap space", n_long_jumps, 2);
-  GC_collect_full();
-  ElmInt* result_replay = Utils_apply(stack_values[1], 0, NULL);
-
-
-  if (verbose) {
-    printf("Answer after replay = ");
-    print_value(result_replay);
-    printf("\n");
-  }
-
-  i32 answers[28] = { 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811 };
-  i32 answer = answers[int_n.value];
-
-  bool pass = result_replay->value == answer;
-
-  if (verbose && !pass) {
-    print_heap();
-    print_state();
-  }
-
-  mu_expect_equal("should return the correct result after resuming", result_replay->value, answer);
-
-  return NULL;
-}
-
 // --------------------------------------------------------------------------------
 
 void* eval_trashyFold(void* args[]) {
@@ -627,7 +563,6 @@ char* gc_test() {
   mu_run_test(gc_dead_between_test);
   mu_run_test(test_heap_layout);
   mu_run_test(test_memcpy);
-  mu_run_test(gc_replay_test);
   mu_run_test(stackmap_mark_eyeball_test);
   mu_run_test(assertions_test);
 
