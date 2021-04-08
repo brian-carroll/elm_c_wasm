@@ -75,8 +75,8 @@ static void* eval_JsArray_initializeFromList(void* args[]) {
     ls = ls->tail;
   }
   result->header.size = SIZE_CUSTOM(i); // Array logic depends on this
-  ptrdiff_t reclaim = (i - max_len) * (ptrdiff_t)sizeof(void*);
-  GC_malloc(false, reclaim); // waste not, want not :)
+  ptrdiff_t reclaim = i - max_len;
+  GC_allocate(false, reclaim); // return unused memory to the GC
 
   return newTuple2(result, ls);
 }
@@ -127,7 +127,7 @@ static void* eval_JsArray_push(void* args[]) {
   size_t len = custom_params(array);
 
   Custom* result = Utils_clone(array);
-  GC_malloc(false, sizeof(void*));
+  GC_allocate(false, 1);
   result->header.size += 1;
   result->values[len] = value;
   return result;

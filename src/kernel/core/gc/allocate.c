@@ -11,13 +11,11 @@
   Allocate memory on the heap
   Same interface as malloc in stdlib.h
 */
-void* GC_malloc(bool push_to_stack, ptrdiff_t bytes) {
+void* GC_allocate(bool push_to_stack, ptrdiff_t words) {
   GcState* state = &gc_state;
   if (state->stack_map.replay_until) {
-    return malloc_replay(bytes);
+    return malloc_replay(words * SIZE_UNIT);
   }
-  ptrdiff_t words = bytes / sizeof(void*);
-  assert(bytes % sizeof(void*) == 0);
   size_t* old_heap = state->next_alloc;
   size_t* new_heap = old_heap + words;
 

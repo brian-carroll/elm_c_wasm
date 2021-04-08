@@ -219,7 +219,7 @@ static void* eval_String_join(void* args[]) {
   ElmString16* s = strs->head;
   u32 result_len = code_units(s);
   Header h = HEADER_STRING(result_len);
-  ElmString16* result = GC_malloc(true, h.size * SIZE_UNIT);
+  ElmString16* result = GC_allocate(true, h.size);
   result->header = h;
   memcpy(result->words16, s->words16, result_len * 2);
 
@@ -232,7 +232,7 @@ static void* eval_String_join(void* args[]) {
 
     result_len += sep_len + len;
     h = (Header)HEADER_STRING(result_len);
-    GC_malloc(false, (h.size - result->header.size) * SIZE_UNIT);
+    GC_allocate(false, (h.size - result->header.size));
     result->header = h;
 
     memcpy(to, sep->words16, sep_len * 2);

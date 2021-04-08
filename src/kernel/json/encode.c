@@ -72,7 +72,7 @@ void* eval_Json_addField(void* args[]) {
   u32 old_size = old_object->header.size;
   u32 new_size = old_size + 2;
 
-  Custom* new_object = GC_malloc(true, new_size * SIZE_UNIT);
+  Custom* new_object = GC_allocate(true, new_size);
   GC_memcpy(new_object, old_object, old_size * SIZE_UNIT);
   new_object->header.size = new_size;
   new_object->values[old_params] = key;
@@ -96,7 +96,7 @@ void* eval_Json_addEntry(void* args[]) {
   u32 old_size = old_array->header.size;
   u32 new_size = old_size + 1;
 
-  Custom* new_array = GC_malloc(true, new_size * SIZE_UNIT);
+  Custom* new_array = GC_allocate(true, new_size);
   GC_memcpy(new_array, old_array, old_size * SIZE_UNIT);
   new_array->header.size = new_size;
 
@@ -112,7 +112,7 @@ Closure Json_addEntry = {
 };
 
 
-size_t stringify_alloc_chunk_bytes;
+size_t stringify_alloc_chunk_words;
 
 
 void* eval_Json_encode(void* args[]) {
@@ -120,8 +120,8 @@ void* eval_Json_encode(void* args[]) {
   Custom* wrapped = args[1];
   void* value = wrapped->values[0];
 
-  stringify_alloc_chunk_bytes = 64;
-  size_t len = (stringify_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
+  stringify_alloc_chunk_words = 16;
+  size_t len = (stringify_alloc_chunk_words - 1) * SIZE_UNIT / sizeof(u16);
   ElmString16* str = newElmString16(len);
   StringBuilder sb = {
     .s = str,
@@ -140,7 +140,8 @@ void* eval_Json_encode(void* args[]) {
   // Give back unused memory to the allocator
   ptrdiff_t end_addr = (ptrdiff_t)(sb.end);
   ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
-  GC_malloc(false, negative_alloc);
+
+  GC_allocate(false, negative_alloc / SIZE_UNIT);
 
   return str;
 }

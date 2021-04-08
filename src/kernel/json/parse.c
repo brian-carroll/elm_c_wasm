@@ -90,9 +90,9 @@ void* parse_string(u16** cursor, u16* end) {
   if (*from != '"') return NULL;
   from++;
 
-  size_t alloc_chunk_bytes = 4 * SIZE_UNIT;  // Grow the output string in chunks this big
-  ElmString16* str = newElmString16(alloc_chunk_bytes / 2);
-  u16* str_end = GC_malloc(false, 0);
+  size_t alloc_chunk_words = 4;  // Grow the output string in chunks this big
+  ElmString16* str = newElmString16(alloc_chunk_words / 2);
+  u16* str_end = GC_allocate(false, 0);
 
   for (to = str->words16;; to++, from++) {
     if (from >= end) return NULL;
@@ -100,10 +100,10 @@ void* parse_string(u16** cursor, u16* end) {
 
     if (to >= str_end) {
       // Grow output string as needed, taking advantage of GC 'bump allocation'
-      GC_malloc(false, alloc_chunk_bytes);
-      str->header.size += alloc_chunk_bytes / SIZE_UNIT;
-      str_end = GC_malloc(false, 0);
-      if (alloc_chunk_bytes < 1024) alloc_chunk_bytes *= 2;
+      GC_allocate(false, alloc_chunk_words);
+      str->header.size += alloc_chunk_words;
+      str_end = GC_allocate(false, 0);
+      if (alloc_chunk_words < 256) alloc_chunk_words *= 2;
     }
 
     if (*from == '\\') {

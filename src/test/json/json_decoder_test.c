@@ -97,7 +97,7 @@ Custom* err(Custom* error) {
 }
 
 JsRef* newJsRef(u32 index) {
-  JsRef* jsRef = GC_malloc(true, sizeof(JsRef));
+  JsRef* jsRef = GC_allocate(true, SIZE_JS_REF);
   *jsRef = (JsRef){
       .header = HEADER_JS_REF,
       .index = index,

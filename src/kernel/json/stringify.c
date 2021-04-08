@@ -8,10 +8,10 @@
 
 // assumes nothing else gets allocated while stringifying
 static void grow(StringBuilder* sb) {
-  GC_malloc(false, stringify_alloc_chunk_bytes);
-  sb->end = GC_malloc(false, 0);
-  sb->s->header.size += stringify_alloc_chunk_bytes / SIZE_UNIT;
-  if (stringify_alloc_chunk_bytes < 1024) stringify_alloc_chunk_bytes *= 2;
+  GC_allocate(false, stringify_alloc_chunk_words);
+  sb->end = GC_allocate(false, 0);
+  sb->s->header.size += stringify_alloc_chunk_words;
+  if (stringify_alloc_chunk_words < 256) stringify_alloc_chunk_words *= 2;
   return;
 }
 

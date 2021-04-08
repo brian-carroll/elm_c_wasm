@@ -134,7 +134,7 @@ void GC_collect_nursery();
 void* GC_execute(Closure* c);
 
 // allocate
-void* GC_malloc(bool push_to_stack, ptrdiff_t bytes);
+void* GC_allocate(bool push_to_stack, ptrdiff_t words);
 void* GC_memcpy(void* dest, void* src, size_t bytes);
 
 

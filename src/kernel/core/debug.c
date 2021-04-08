@@ -571,7 +571,7 @@ void log_debug(char* fmt, ...) {}
 // ========================================================
 
 #define GC_NOT_FULL NULL;
-size_t toString_alloc_chunk_bytes;
+size_t toString_alloc_chunk_words;
 
 struct string_builder {
   ElmString16* s;
@@ -582,10 +582,10 @@ typedef struct string_builder StringBuilder;
 
 // assumes nothing else gets allocated while stringifying
 static void grow(StringBuilder* sb) {
-  GC_malloc(false, toString_alloc_chunk_bytes);
-  sb->end = GC_malloc(false, 0);
-  sb->s->header.size += toString_alloc_chunk_bytes / SIZE_UNIT;
-  if (toString_alloc_chunk_bytes < 1024) toString_alloc_chunk_bytes *= 2;
+  GC_allocate(false, toString_alloc_chunk_words);
+  sb->end = GC_allocate(false, 0);
+  sb->s->header.size += toString_alloc_chunk_words;
+  if (toString_alloc_chunk_words < 256) toString_alloc_chunk_words *= 2;
   return;
 }
 
@@ -751,8 +751,8 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
 
 void* eval_Debug_toString(void* args[]) {
   void* value = args[0];
-  toString_alloc_chunk_bytes = 64;
-  size_t len = (toString_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
+  toString_alloc_chunk_words = 16;
+  size_t len = (toString_alloc_chunk_words - 1) * SIZE_UNIT / sizeof(u16);
   ElmString16* str = newElmString16(len);
   StringBuilder sb = {
     .s = str,
@@ -771,7 +771,7 @@ void* eval_Debug_toString(void* args[]) {
   // Give back unused memory to the allocator
   ptrdiff_t end_addr = (ptrdiff_t)(sb.end);
   ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
-  GC_malloc(false, negative_alloc);
+  GC_allocate(false, negative_alloc / SIZE_UNIT);
 
   return str;
 }

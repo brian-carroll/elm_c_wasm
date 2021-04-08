@@ -8,7 +8,7 @@
 void* List_create(size_t len, void* values[]) {
   Cons* head = &Nil;
   for (size_t i = 0; i < len; ++i) {
-    Cons* next = GC_malloc(true, sizeof(Cons));
+    Cons* next = GC_allocate(true, SIZE_LIST);
     *next = (Cons){
         .header = HEADER_LIST,
         .head = values[len - 1 - i],
@@ -61,14 +61,14 @@ static void* eval_List_map2(void* args[]) {
   Cons* xs = args[1];
   Cons* ys = args[2];
 
-  Custom* growingArray = GC_malloc(true, sizeof(Custom));
+  Custom* growingArray = GC_allocate(true, SIZE_CUSTOM(0));
   growingArray->header = (Header)HEADER_CUSTOM(0);
 
   ptrdiff_t i = 0;
   const size_t CHUNK = 8;
   for (; xs != &Nil && ys != &Nil; i += 2, xs = xs->tail, ys = ys->tail) {
     if (i % CHUNK == 0) {
-      GC_malloc(false, CHUNK * sizeof(void*));
+      GC_allocate(false, CHUNK);
       growingArray->header.size += CHUNK;
     }
     growingArray->values[i] = xs->head;

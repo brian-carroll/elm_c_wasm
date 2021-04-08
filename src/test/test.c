@@ -58,7 +58,7 @@ void* test_heap_ptr;
 void describe(char* description, void* (*test)()) {
   tests_run++;
   current_describe_string = description;
-  test_heap_ptr = GC_malloc(false, 0);
+  test_heap_ptr = GC_allocate(false, 0);
   if (verbose) {
     printf("\n%s\n", description);
   }
@@ -68,7 +68,7 @@ void describe(char* description, void* (*test)()) {
 void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
   tests_run++;
   current_describe_string = description;
-  test_heap_ptr = GC_malloc(false, 0);
+  test_heap_ptr = GC_allocate(false, 0);
   if (verbose) {
     printf("\n%s\n", description);
   }
@@ -81,7 +81,7 @@ void* expect_equal(char* expect_description, void* left, void* right) {
     if (!verbose) {
       printf("\n%s\n", current_describe_string);
     }
-    print_heap_range(test_heap_ptr, GC_malloc(false, 0));
+    print_heap_range(test_heap_ptr, GC_allocate(false, 0));
     printf("FAIL: %s\n", expect_description);
     Debug_pretty("Left", left);
     Debug_pretty("Right", right);

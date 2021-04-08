@@ -4,7 +4,7 @@
 #include <string.h>
 
 Cons* newCons(void* head, void* tail) {
-  Cons* p = GC_malloc(true, sizeof(Cons));
+  Cons* p = GC_allocate(true, SIZE_LIST);
   p->header = (Header)HEADER_LIST;
   p->head = head;
   p->tail = tail;
@@ -12,7 +12,7 @@ Cons* newCons(void* head, void* tail) {
 };
 
 Tuple2* newTuple2(void* a, void* b) {
-  Tuple2* p = GC_malloc(true, sizeof(Tuple2));
+  Tuple2* p = GC_allocate(true, SIZE_TUPLE2);
   p->header = (Header)HEADER_TUPLE2;
   p->a = a;
   p->b = b;
@@ -20,7 +20,7 @@ Tuple2* newTuple2(void* a, void* b) {
 };
 
 Tuple3* newTuple3(void* a, void* b, void* c) {
-  Tuple3* p = GC_malloc(true, sizeof(Tuple3));
+  Tuple3* p = GC_allocate(true, SIZE_TUPLE3);
   p->header = (Header)HEADER_TUPLE3;
   p->a = a;
   p->b = b;
@@ -29,21 +29,21 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
 };
 
 ElmInt* newElmInt(i32 value) {
-  ElmInt* p = GC_malloc(true, sizeof(ElmInt));
+  ElmInt* p = GC_allocate(true, SIZE_INT);
   p->header = (Header)HEADER_INT;
   p->value = value;
   return p;
 };
 
 ElmFloat* newElmFloat(f64 value) {
-  ElmFloat* p = GC_malloc(true, sizeof(ElmFloat));
+  ElmFloat* p = GC_allocate(true, SIZE_FLOAT);
   p->header = (Header)HEADER_FLOAT;
   p->value = value;
   return p;
 };
 
 ElmChar* newElmChar(u32 value) {
-  ElmChar* p = GC_malloc(true, sizeof(ElmChar));
+  ElmChar* p = GC_allocate(true, SIZE_CHAR);
   p->header = (Header)HEADER_CHAR;
   p->value = value;
   return p;
@@ -55,9 +55,8 @@ ElmString* newElmString(size_t payload_bytes, char* str) {
   size_t used_bytes = sizeof(Header) + payload_bytes +
                       (STRING_ENCODING == UTF8);  // 1 byte for padding size
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
-  size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
-  ElmString* p = GC_malloc(true, aligned_bytes);
+  ElmString* p = GC_allocate(true, aligned_words);
   size_t* words = (size_t*)p;  // the ElmString as an array of words
 
 #if STRING_ENCODING == UTF16
@@ -108,7 +107,7 @@ ElmString16* newElmString16(size_t len16) {
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
-  ElmString16* p = GC_malloc(true, aligned_bytes);
+  ElmString16* p = GC_allocate(true, aligned_words);
 
   if (aligned_bytes != used_bytes) {
     size_t* words = (size_t*)p;
@@ -125,7 +124,7 @@ ElmString16* newElmString16(size_t len16) {
 }
 
 Custom* newCustom(u32 ctor, u32 n_children, void* children[]) {
-  Custom* c = GC_malloc(true, sizeof(Custom) + n_children * sizeof(void*));
+  Custom* c = GC_allocate(true, SIZE_CUSTOM(n_children));
 
   c->header = (Header)HEADER_CUSTOM(n_children);
   c->ctor = ctor;
@@ -138,7 +137,7 @@ Custom* newCustom(u32 ctor, u32 n_children, void* children[]) {
 }
 
 Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]) {
-  Record* r = GC_malloc(true, sizeof(Record) + n_children * sizeof(void*));
+  Record* r = GC_allocate(true, SIZE_RECORD(n_children));
   r->header = (Header)HEADER_RECORD(n_children);
   r->fieldgroup = fg;
   for (size_t i = 0; i < n_children; ++i) {
@@ -148,7 +147,7 @@ Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]) {
 }
 Closure* newClosure(
     u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
-  Closure* c = GC_malloc(true, sizeof(Closure) + n_values * sizeof(void*));
+  Closure* c = GC_allocate(true, SIZE_CLOSURE(n_values));
   c->header = (Header)HEADER_CLOSURE(n_values);
   c->n_values = n_values;
   c->max_values = max_values;
