@@ -127,8 +127,8 @@ void compact(GcState* state, size_t* compact_start) {
         if (child_old < first_move_to || child_old > heap->end) {
           // Child value has not been moved
           child_new = child_old;
-        } else if (child_old >= live_patch_start) {
-          // Optimisation for related values in the same patch
+        } else if (child_old >= live_patch_start && child_old < from) {
+          // Optimisation for parent and child both in the current live patch
           child_new = child_old - garbage_so_far;
         } else {
           // Calculate where child was moved to (using bitmap and block offsets)
