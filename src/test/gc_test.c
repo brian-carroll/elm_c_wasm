@@ -3,14 +3,10 @@
 #include <string.h>
 
 #include "../kernel/core/core.h"
+#include "../kernel/core/gc/internals.h"
 #include "test.h"
-#include "gc_test.h"
 
-void reset_state(GcState*);
 bool mark_words(GcHeap* heap, void* p_void, size_t size);
-void compact(GcState* state, size_t* compact_start);
-bool sanity_check(void* v);
-
 
 void gc_test_reset() {
   GcState* state = &gc_state;
@@ -329,43 +325,6 @@ void* test_memcpy() {
 
 // --------------------------------------------------------------------------------
 
-
-/*
-fib : Int -> Int
-fib i =
-    if i <= 1 then
-        1
-    else
-        fib (i-1) + fib (i-2)
-*/
-#define g_elm_core_Basics_le Utils_le
-#define g_elm_core_Basics_sub Basics_sub
-#define g_elm_core_Basics_add Basics_add
-
-ElmInt int_2 = { .header = HEADER_INT, .value = 2 };
-ElmInt int_1 = { .header = HEADER_INT, .value = 1 };
-ElmInt int_n = { .header = HEADER_INT, .value = 6 };
-
-Closure fib;
-void * eval_fib(void * args[]) {
-    void * x_i = args[0];
-    void * if0;
-    if (A2(&g_elm_core_Basics_le, x_i, &int_1) == &True) {
-        if0 = &int_1;
-    } else {
-        void * tmp1 = A2(&g_elm_core_Basics_sub, x_i, &int_2);
-        void * tmp2 = A1(&fib, tmp1);
-        void * tmp3 = A2(&g_elm_core_Basics_sub, x_i, &int_1);
-        void * tmp4 = A1(&fib, tmp3);
-        if0 = A2(&g_elm_core_Basics_add, tmp4, tmp2);
-    };
-    return if0;
-}
-Closure fib = { .header = HEADER_CLOSURE(0), .n_values = 0x0, .max_values = 0x1, .evaluator = &eval_fib };
-
-
-// --------------------------------------------------------------------------------
-
 void* eval_trashyFold(void* args[]) {
   ElmInt* free_var = args[0];
   ElmInt* a = args[1];
@@ -421,11 +380,11 @@ Closure listNonsense = {
   .max_values = 1,
 };
 
-char* stackmap_mark_eyeball_test() {
+char* stackmap_mark_test() {
   if (verbose) {
     printf(
         "\n"
-        "## stackmap_mark_eyeball_test\n"
+        "## stackmap_mark_test\n"
         "\n");
   }
 
@@ -446,9 +405,32 @@ char* stackmap_mark_eyeball_test() {
 
   GcState* state = &gc_state;
   mark(state, state->heap.start);
-  // print_heap();
-  // print_state();
-  // print_stack_map();
+#if 0
+  print_heap();
+  print_state();
+  print_stack_map();
+#endif
+
+#ifdef TARGET_64BIT
+  char expected_marks[] = "XXXXXXXXXXXXXXX----------------------------------------X-------------------XX--------------XXXXXXXXX";
+#else
+  char expected_marks[] = "XXXXXXXXXXXXXXXXXXX--------------------------------------------------XX---------------------XXXX---------------XXXXXXXXX";
+#endif
+
+  int expected_size = sizeof(expected_marks) - 1;
+  mu_expect_equal("heap should be the expected size", state->next_alloc - state->heap.start, expected_size);
+  int n_correct = 0;
+  for (size_t* p = state->heap.start; p < state->next_alloc; p++) {
+    int i = p - state->heap.start;
+    bool expected = expected_marks[i] == 'X';
+    bool actual = is_marked(p);
+    if (expected == actual) {
+      n_correct++;
+    } else if (verbose) {
+      printf("%p %s be marked\n", p, expected ? "should" : "should not");
+    }
+  }
+  mu_expect_equal("stack map should correctly mark all values", n_correct, expected_size);
 
   return NULL;
 }
@@ -522,9 +504,7 @@ char* assertions_test() {
 
 char unknown_function_address[FORMAT_PTR_LEN];
 char * Debug_evaluator_name(void * p) {
-  if (p == eval_fib) {
-    return "fib          ";
-  } else if (p == Utils_le.evaluator) {
+  if (p == Utils_le.evaluator) {
     return "Utils_le     ";
   } else if (p == Basics_sub.evaluator) {
     return "Basics_sub   ";
@@ -558,13 +538,13 @@ char* gc_test() {
         "\n"
         "##############################################################################\n");
 
-  mu_run_test(gc_bitmap_test);
-  mu_run_test(gc_bitmap_next_test);
-  mu_run_test(gc_dead_between_test);
-  mu_run_test(test_heap_layout);
-  mu_run_test(test_memcpy);
-  mu_run_test(stackmap_mark_eyeball_test);
-  mu_run_test(assertions_test);
+  // mu_run_test(gc_bitmap_test);
+  // mu_run_test(gc_bitmap_next_test);
+  // mu_run_test(gc_dead_between_test);
+  // mu_run_test(test_heap_layout);
+  // mu_run_test(test_memcpy);
+  mu_run_test(stackmap_mark_test);
+  // mu_run_test(assertions_test);
 
   return NULL;
 }

@@ -12,7 +12,6 @@
 #include <string.h>
 
 #include "../kernel/core/core.h"
-#include "gc_test.h"
 
 #include "basics_test.c"
 #include "char_test.c"

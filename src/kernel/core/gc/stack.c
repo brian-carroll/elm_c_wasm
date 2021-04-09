@@ -11,29 +11,30 @@
     pointed to from the stack or registers.
 
     As we execute the program, functions grab pointers to heap values
-    and manipulate them in local variables. But when we interrupt to
-    do GC, we move values around, making those local pointers corrupt.
-    We need a way to fix this up after GC.
+    and manipulate them in local variables. When we interrupt to
+    do GC, we need to mark those as live.
 
     Local heap pointers must either be:
-        - on the C stack (in the top part of Wasm linear memory)
-        - or in registers (represented as the 'stack machine' in Wasm)
+     - on the C stack (in Wasm linear memory)
+     - or in registers (represented as the 'stack machine' in Wasm)
 
-    People usually scan both, but Wasm's registers are completely
-    abstracted away and un-scannable!
+    In Wasm we can't scan the registers because they are completely
+    abstracted away! This is part of the Wasm security model.
 
-    So we do this:
-        - When out of memory, return early from all functions (like throwing an exception)
-        - Mark all heap values that were allocated by functions we interrupted
-        - Mark any return values from functions that have finished running
-        - Do a collection
-        - Rerun the top-level function (e.g. `update` with same model and message)
-        - **BUT** replace function calls with the values they returned last time
-        - For all allocations, return same object as last time (at its new address)
+    Instead we use a "stack map", our own structure that tracks which
+    functions are active and which heap values they are using.
 
-    This fast-forwards back to where we interrupted execution, with all local
-    variables referencing only the new moved pointers.
-    This is only possible when there are no side-effects.
+    A heap value is considered to be in use if
+     - a live call allocated it
+     - a live call received it from a completed child call
+     - a live call received it as an argument
+
+    We can ignore argument values, based on inductive reasoning!
+    Any argument must come from the parent frame.
+    If it was allocated or returned there, we already flagged it as live.
+    Otherwise it comes from an even higher frame, etc...
+    In the top frame, we start with a full Closure and flag it as an allocation.
+
 */
 
 #define GC_STACK_VERBOSE 0
