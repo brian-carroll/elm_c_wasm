@@ -116,16 +116,16 @@ testLocalTailRecursion =
 
 fibGlobalTailRec : Int -> Int
 fibGlobalTailRec n =
-    fibGlobalTailRecLoop n 0 0 1
+    fibGlobalTailRecHelp n 0 0 1
 
 
-fibGlobalTailRecLoop : Int -> Int -> Int -> Int -> Int
-fibGlobalTailRecLoop n i a b =
+fibGlobalTailRecHelp : Int -> Int -> Int -> Int -> Int
+fibGlobalTailRecHelp n i a b =
     if i == n then
         a
 
     else
-        fibGlobalTailRecLoop n (i + 1) b (a + b)
+        fibGlobalTailRecHelp n (i + 1) b (a + b)
 
 
 testGlobalTailRecursion : Test

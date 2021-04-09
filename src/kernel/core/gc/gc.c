@@ -25,6 +25,7 @@
 */
 #ifdef DEBUG
 #include <stdio.h>
+void (*gc_test_mark_callback)();
 #endif
 #include "internals.h"
 #include "../core.h"
@@ -102,6 +103,9 @@ static size_t percent_full(GcState* state) {
 
 static void collect(GcState* state, size_t* ignore_below) {
   mark(state, ignore_below);
+#ifdef DEBUG
+  if (gc_test_mark_callback) gc_test_mark_callback();
+#endif
   compact(state, ignore_below);
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);

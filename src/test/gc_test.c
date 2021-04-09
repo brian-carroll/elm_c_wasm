@@ -17,6 +17,14 @@ void gc_test_reset() {
   }
 }
 
+
+#define LARGE_ALLOCATION_WORDS 1024
+
+void gc_test_large_allocation() {
+  GC_allocate(false, 1024);
+}
+
+
 // --------------------------------------------------------------------------------
 
 
@@ -33,7 +41,7 @@ char* gc_bitmap_test() {
     ElmString16* p3 = newElmString16(sizeof(str) - 1);
     ElmInt* p4 = newElmInt(0x103);
 
-    for (int c=0; c < sizeof(str); c++) {
+    for (int c = 0; c < sizeof(str); c++) {
       p3->words16[c] = str[c];
     }
 
@@ -296,7 +304,10 @@ void* test_memcpy() {
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description, sizeof(description), "should correctly copy %zd 32-bit words, 32-bit aligned", size);
+    snprintf(description,
+        sizeof(description),
+        "should correctly copy %zd 32-bit words, 32-bit aligned",
+        size);
     mu_assert(description, mismatches == 0);
   }
 #endif
@@ -315,11 +326,255 @@ void* test_memcpy() {
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description, sizeof(description), "should correctly copy %zd 32-bit words, 64-bit aligned", size);
+    snprintf(description,
+        sizeof(description),
+        "should correctly copy %zd 32-bit words, 64-bit aligned",
+        size);
     mu_assert(description, mismatches == 0);
   }
 
- return NULL;
+  return NULL;
+}
+
+
+// --------------------------------------------------------------------------------
+
+struct stackmap_mark_scenario {
+  char* name;
+  char* expected_marks;
+  i32 argument;
+  i32 gc_trigger_arg;
+};
+
+#ifdef TARGET_64BIT
+#define IS_64BIT 1
+#else
+#define IS_64BIT 0
+#endif
+
+int stackmap_mark_scenario_index;
+struct stackmap_mark_scenario stackmap_mark_scenarios[] = {
+    {
+        .name = "COMPLETE",
+        .argument = 6,
+        .gc_trigger_arg = 8,
+        .expected_marks = "",
+    },
+    {
+        .name = "RECURSE",
+        .argument = 6,
+        .gc_trigger_arg = 2,
+        .expected_marks = IS_64BIT ? "XXXXXXX" : "XXXXXXXXXXXX",
+    },
+};
+
+ElmInt int_0 = {.header = HEADER_INT, .value = 0};
+ElmInt int_1 = {.header = HEADER_INT, .value = 1};
+ElmInt int_2 = {.header = HEADER_INT, .value = 2};
+#define g_elm_core_Basics_eq Utils_equal
+#define g_elm_core_Basics_le Utils_le
+#define g_elm_core_Basics_add Basics_add
+#define g_elm_core_Basics_sub Basics_sub
+
+
+void* eval_fibGlobalTailRecHelp(void* args[]) {
+  ElmInt* x_n = args[0];
+  ElmInt* x_i = args[1];
+  ElmInt* x_a = args[2];
+  ElmInt* x_b = args[3];
+  u32 gc_stack_frame = GC_get_stack_frame();
+  Closure* gc_resume = newClosure(4, 4, eval_fibGlobalTailRecHelp, args);
+tce_loop:;
+  struct stackmap_mark_scenario scenario =
+      stackmap_mark_scenarios[stackmap_mark_scenario_index];
+  if (x_i->value == scenario.gc_trigger_arg) {
+    gc_test_large_allocation();
+  }
+
+  void* if0;
+  if (A2(&g_elm_core_Basics_eq, x_i, x_n) == &True) {
+    if0 = x_a;
+  } else {
+    ElmInt* tmp1 = x_n;
+    ElmInt* tmp2 = A2(&g_elm_core_Basics_add, x_i, &int_1);
+    ElmInt* tmp3 = x_b;
+    ElmInt* tmp4 = A2(&g_elm_core_Basics_add, x_a, x_b);
+    x_n = tmp1;
+    x_i = tmp2;
+    x_a = tmp3;
+    x_b = tmp4;
+    gc_resume =
+        GC_stack_tailcall(gc_stack_frame, gc_resume, 4, ((void*[]){x_n, x_i, x_a, x_b}));
+    goto tce_loop;
+    if0 = NULL;
+  };
+  return if0;
+}
+Closure fibGlobalTailRecHelp = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x4,
+    .evaluator = eval_fibGlobalTailRecHelp,
+};
+
+
+void* eval_fibGlobalTailRec(void* args[]) {
+  void* x_n = args[0];
+  return A4(&fibGlobalTailRecHelp, x_n, &int_0, &int_0, &int_1);
+}
+Closure fibGlobalTailRec = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_fibGlobalTailRec,
+};
+
+
+Closure fibGlobalRec;
+void* eval_fibGlobalRec(void* args[]) {
+  ElmInt* x_i = args[0];
+  ElmInt* if0;
+
+  struct stackmap_mark_scenario scenario =
+      stackmap_mark_scenarios[stackmap_mark_scenario_index];
+  fflush(0);
+  if (x_i->value == scenario.gc_trigger_arg) {
+    gc_test_large_allocation();
+  }
+
+  if (A2(&g_elm_core_Basics_le, x_i, &int_1) == &True) {
+    if0 = &int_1;
+  } else {
+    ElmInt* tmp1 = A2(&g_elm_core_Basics_sub, x_i, &int_1);
+    ElmInt* tmp2 = A1(&fibGlobalRec, tmp1);
+    ElmInt* tmp3 = A2(&g_elm_core_Basics_sub, x_i, &int_2);
+    ElmInt* tmp4 = A1(&fibGlobalRec, tmp3);
+    if0 = A2(&g_elm_core_Basics_add, tmp2, tmp4);
+  };
+  return if0;
+}
+Closure fibGlobalRec = {
+    .header = HEADER_CLOSURE(0),
+    .n_values = 0x0,
+    .max_values = 0x1,
+    .evaluator = &eval_fibGlobalRec,
+};
+
+/*
+  TODO
+  Improve this test
+
+  - Use Fibonacci so that we can check against an actual known result!
+    - Do a tail recursive version and a normal recursive version
+  - Throw in some extra garbage allocations
+  - At a particular count, trigger a big allocation that forces GC
+  - Have a GC test callback just before allocation fails
+    - In the callback, check what's marked and do some assertions
+  - After GC, let it run to completion and check Fibonacci result.
+
+Scenario parameters:
+  - available space to start with
+  - expected mark bits
+  - Fibonacci result
+
+
+*/
+
+
+static int fibonacci(int n) {
+  if (n <= 1) return n;
+
+  int t1 = 0;
+  int t2 = 1;
+  int next;
+
+  for (int i = 1; i <= n; ++i) {
+    next = t1 + t2;
+    t1 = t2;
+    t2 = next;
+  }
+  return next;
+}
+
+
+bool callback_called;
+
+void stackmap_mark_test_callback() {
+  char message[100];
+  callback_called = true;
+  GcState* state = &gc_state;
+  size_t* start = stack_values[1];
+  struct stackmap_mark_scenario scenario =
+      stackmap_mark_scenarios[stackmap_mark_scenario_index];
+
+  // print_heap();
+  // print_state();
+  // print_stack_map();
+
+  size_t expected_size = strlen(scenario.expected_marks);
+  size_t actual_size = state->next_alloc - start;
+  snprintf(message,
+    sizeof(message),
+    "should have %zd allocated words before GC",
+    expected_size);
+  mu_expect_equal(message, expected_size, actual_size);
+
+  int expected_marks_len = strlen(scenario.expected_marks);
+  int n_correct = 0;
+  for (size_t* p = stack_values[1]; p < state->next_alloc; p++) {
+    int i = p - start;
+    if (i >= expected_marks_len) break;
+    bool expected = scenario.expected_marks[i] == 'X';
+    bool actual = is_marked(p);
+    if (expected == actual) {
+      n_correct++;
+    } else if (verbose) {
+      printf("%p %s be marked\n", p, expected ? "should" : "should not");
+    }
+  }
+
+  mu_expect_equal("stack map should correctly mark all words", n_correct, expected_size);
+}
+
+
+char* stackmap_mark_test() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## stackmap_mark_test\n"
+        "\n");
+  }
+  gc_test_mark_callback = stackmap_mark_test_callback;
+  const int n_scenarios =
+      sizeof(stackmap_mark_scenarios) / sizeof(stackmap_mark_scenarios[0]);
+
+  for (int i = 0; i < n_scenarios; ++i) {
+    stackmap_mark_scenario_index = i;
+    struct stackmap_mark_scenario scenario = stackmap_mark_scenarios[i];
+
+    if (verbose) {
+      printf("\n- %s\n", scenario.name);
+    }
+
+    callback_called = false;
+    gc_test_reset();
+    size_t filler_size = gc_state.heap.end - gc_state.heap.start - LARGE_ALLOCATION_WORDS;
+    GC_allocate(false, filler_size);
+    ElmInt* arg = newElmInt(scenario.argument);
+    Closure* c = newClosure(1, 1, eval_fibGlobalRec, (void*[]){arg});
+
+    ElmInt* result = GC_execute(c);
+
+    mu_expect_equal("should return the correct result", result->value, fibonacci(scenario.argument));
+
+    if (scenario.gc_trigger_arg < scenario.argument) {
+      mu_assert("should call the mark callback", callback_called);
+    } else {
+      mu_assert("should not call the mark callback", !callback_called);
+    }
+  }
+
+  return NULL;
 }
 
 
@@ -375,80 +630,10 @@ void* eval_listNonsense(void* args[]) {
   return reversed;
 }
 Closure listNonsense = {
-  .header = HEADER_CLOSURE(0),
-  .evaluator = eval_listNonsense,
-  .max_values = 1,
+    .header = HEADER_CLOSURE(0),
+    .evaluator = eval_listNonsense,
+    .max_values = 1,
 };
-
-
-/*
-  TODO
-  Improve this test
-
-  - Use Fibonacci so that we can check against an actual known result!
-    - Do a tail recursive version and a normal recursive version
-  - Throw in some extra garbage allocations
-  - At a particular count, trigger a big allocation that forces GC
-  - Have a GC test callback just before allocation fails
-    - In the callback, check what's marked and store some result in a global for this test
-  - After GC, let it run to completion. Then check Fibonacci result and also mark callback result.
-
-*/
-
-char* stackmap_mark_test() {
-  if (verbose) {
-    printf(
-        "\n"
-        "## stackmap_mark_test\n"
-        "\n");
-  }
-
-  gc_test_reset();
-
-  void* list_elems[3] = {
-    newElmInt(123),
-    newElmInt(999),
-    newElmInt(-7),
-  };
-  Cons* list = List_create(3, list_elems);
-  Closure* c = newClosure(1, 1, eval_listNonsense, ((void*[]){list}));
-
-  stack_clear();
-  stack_enter(c);
-
-  Utils_apply(c, 0, NULL);
-
-  GcState* state = &gc_state;
-  mark(state, state->heap.start);
-#if 0
-  print_heap();
-  print_state();
-  print_stack_map();
-#endif
-
-#ifdef TARGET_64BIT
-  char expected_marks[] = "XXXXXXXXXXXXXXX----------------------------------------X-------------------XX--------------XXXXXXXXX";
-#else
-  char expected_marks[] = "XXXXXXXXXXXXXXXXXXX--------------------------------------------------XX---------------------XXXX---------------XXXXXXXXX";
-#endif
-
-  int expected_size = sizeof(expected_marks) - 1;
-  mu_expect_equal("heap should be the expected size", state->next_alloc - state->heap.start, expected_size);
-  int n_correct = 0;
-  for (size_t* p = state->heap.start; p < state->next_alloc; p++) {
-    int i = p - state->heap.start;
-    bool expected = expected_marks[i] == 'X';
-    bool actual = is_marked(p);
-    if (expected == actual) {
-      n_correct++;
-    } else if (verbose) {
-      printf("%p %s be marked\n", p, expected ? "should" : "should not");
-    }
-  }
-  mu_expect_equal("stack map should correctly mark all values", n_correct, expected_size);
-
-  return NULL;
-}
 
 
 // --------------------------------------------------------------------------------
@@ -462,12 +647,10 @@ void* eval_infinite_loop(void* args[]) {
   Cons* list = gc_resume->values[0];
   assert(sanity_check(list));
 
-  tce_loop:
+tce_loop:
   list = A1(&listNonsense, list);
   assert(sanity_check(list));
-  gc_resume = GC_stack_tailcall(
-    gc_stack_frame, gc_resume, 1, ((void * []){ list })
-  );
+  gc_resume = GC_stack_tailcall(gc_stack_frame, gc_resume, 1, ((void*[]){list}));
   goto tce_loop;
 }
 
@@ -501,9 +684,9 @@ char* assertions_test() {
   gc_test_reset();
 
   void* list_elems[3] = {
-    newElmInt(123),
-    newElmInt(999),
-    newElmInt(-7),
+      newElmInt(123),
+      newElmInt(999),
+      newElmInt(-7),
   };
   Cons* list = List_create(3, list_elems);
   Closure* c = newClosure(1, 1, eval_infinite_loop, ((void*[]){list}));
@@ -518,7 +701,7 @@ char* assertions_test() {
 
 
 char unknown_function_address[FORMAT_PTR_LEN];
-char * Debug_evaluator_name(void * p) {
+char* Debug_evaluator_name(void* p) {
   if (p == Utils_le.evaluator) {
     return "Utils_le     ";
   } else if (p == Basics_sub.evaluator) {
@@ -542,8 +725,6 @@ char * Debug_evaluator_name(void * p) {
 }
 
 
-
-
 char* gc_test() {
   if (verbose)
     printf(
@@ -551,7 +732,8 @@ char* gc_test() {
         "\n"
         "                              Garbage Collector tests\n"
         "\n"
-        "##############################################################################\n");
+        "##############################################################################"
+        "\n");
 
   // mu_run_test(gc_bitmap_test);
   // mu_run_test(gc_bitmap_next_test);
