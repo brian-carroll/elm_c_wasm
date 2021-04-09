@@ -380,6 +380,21 @@ Closure listNonsense = {
   .max_values = 1,
 };
 
+
+/*
+  TODO
+  Improve this test
+
+  - Use Fibonacci so that we can check against an actual known result!
+    - Do a tail recursive version and a normal recursive version
+  - Throw in some extra garbage allocations
+  - At a particular count, trigger a big allocation that forces GC
+  - Have a GC test callback just before allocation fails
+    - In the callback, check what's marked and store some result in a global for this test
+  - After GC, let it run to completion. Then check Fibonacci result and also mark callback result.
+
+*/
+
 char* stackmap_mark_test() {
   if (verbose) {
     printf(

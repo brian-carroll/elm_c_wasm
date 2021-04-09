@@ -1,6 +1,6 @@
 FILENAME='elm'
 KDIR=../../src/kernel
-KERNELS="${KDIR}/core/core.c ${KDIR}/test/test.c ${KDIR}/json/json.c ${KDIR}/wrapper/wrapper.c"
+KERNELS="${KDIR}/core/core.c ${KDIR}/elm-test/elm-test.c ${KDIR}/json/json.c ${KDIR}/wrapper/wrapper.c"
 WRAPPER_DIR=../../src/kernel/wrapper
 
 extra_opt=""
