@@ -1,6 +1,8 @@
 #include "internals.h"
 #include <stdio.h>
 
+void (*gc_test_oom_callback)();
+
 /* ====================================================
 
                 ALLOCATE & COPY
@@ -16,6 +18,9 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t words) {
   size_t* new_heap = old_heap + words;
 
   if (new_heap >= state->heap.end) {
+    if (gc_test_oom_callback) {
+      gc_test_oom_callback();
+    }
     longjmp(gcLongJumpBuf, 1);
   }
   if (push_to_stack) {

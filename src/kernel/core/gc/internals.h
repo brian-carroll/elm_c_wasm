@@ -56,6 +56,7 @@ typedef struct {
 extern GcState gc_state;
 extern void* stack_values[GC_STACK_MAP_SIZE];
 extern char stack_flags[GC_STACK_MAP_SIZE];
+extern void (*gc_test_oom_callback)();
 
 void mark(GcState* state, size_t* ignore_below);
 void compact(GcState* state, size_t* compact_start);
