@@ -1,18 +1,3 @@
-# TODO
-
-- We don't need longjmp any more!!
-
-- write some tests to make sure the stack map is actually working for `mark`
-  - do some nested calls
-  - go down a couple of levels, then allocate a few things and make a few calls
-  - at some point deliberately run out of memory
-    - have some way to init the GC in test with an artificially small heap
-  - run `mark`
-  - check if the expected stuff is marked
-    - each allocated value has a unique ID of some kind?
-    - or the mark bits are in some pattern defined by an array in the test code?
-      - that array can be a string actually! X's and spaces.
-
 # Non-moving GC
 
 Getting tired of this replay GC, it's so damn confusing, I've been fighting it for literally years now.

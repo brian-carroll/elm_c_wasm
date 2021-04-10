@@ -26,9 +26,15 @@
 #ifdef DEBUG
 #include <stdio.h>
 void (*gc_test_mark_callback)();
+#define TEST_MARK_CALLBACK() if (gc_test_mark_callback) gc_test_mark_callback()
+#else
+#define TEST_MARK_CALLBACK()
 #endif
 #include "internals.h"
 #include "../core.h"
+#if PERF_TIMER_ENABLED
+struct gc_perf_data perf_data;
+#endif
 
 #include "allocate.c"
 #include "bitmap.c"
@@ -102,14 +108,21 @@ static size_t percent_full(GcState* state) {
 
 
 static void collect(GcState* state, size_t* ignore_below) {
+  PERF_START();
+
   mark(state, ignore_below);
-#ifdef DEBUG
-  if (gc_test_mark_callback) gc_test_mark_callback();
-#endif
+  PERF_TIMER(marked);
+  TEST_MARK_CALLBACK();
+
   compact(state, ignore_below);
+  PERF_TIMER(compacted);
+
   bool is_full_gc = ignore_below <= gc_state.heap.start;
   sweepJsRefs(is_full_gc);
-  printf("After GC, heap is %zd%% full\n", percent_full(state));
+  PERF_TIMER(jsRefs);
+  PERF_TIMER_PRINT();
+
+  // printf("After GC, heap is %zd%% full\n", percent_full(state));
 }
 
 void GC_collect_full() {

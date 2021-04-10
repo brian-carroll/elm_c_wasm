@@ -5,10 +5,10 @@
 #ifndef ELM_KERNEL_GC_INTERNALS
 #define ELM_KERNEL_GC_INTERNALS
 
-#include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
 #include <setjmp.h>
+#include <stdbool.h>
 
 #include "../core.h"
 
@@ -77,5 +77,44 @@ size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter);
 
 size_t child_count(ElmValue* v);
 bool sanity_check(void* v);
+
+
+#if !defined(DEBUG) || defined(__EMSCRIPTEN__)
+#define PERF_TIMER_ENABLED 0
+#define PERF_TIMER(field)
+#define PERF_TIMER_PRINT()
+#else
+#define PERF_TIMER_ENABLED 1
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+
+struct gc_perf_data {
+  size_t size;
+  u64 start;
+  u64 marked;
+  u64 compacted;
+  u64 jsRefs;
+};
+
+extern struct gc_perf_data perf_data;
+
+#define PERF_START()           \
+  perf_data.start = __rdtsc(); \
+  perf_data.size = (gc_state.next_alloc - gc_state.heap.start)
+
+#define PERF_TIMER(field) perf_data.field = __rdtsc()
+
+#define PERF_TIMER_PRINT()                                                       \
+  printf("GC performance:\n");                                                   \
+  printf("  before:  %5zd kB\n", perf_data.size * sizeof(void*) / 1024);             \
+  printf("  after:   %5zd kB\n", (gc_state.next_alloc - gc_state.heap.start) * sizeof(void*) / 1024);             \
+  printf("  mark:    %5lld k cycles\n", (perf_data.marked - perf_data.start) / 1000);        \
+  printf("  compact: %5lld k cycles\n", (perf_data.compacted - perf_data.marked) / 1000); \
+  printf("  jsRefs:  %5lld k cycles\n", (perf_data.jsRefs - perf_data.compacted) / 1000);
+
+#endif
 
 #endif
