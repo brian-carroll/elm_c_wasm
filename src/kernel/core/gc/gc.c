@@ -26,12 +26,13 @@
 #ifdef DEBUG
 #include <stdio.h>
 void (*gc_test_mark_callback)();
-#define TEST_MARK_CALLBACK() if (gc_test_mark_callback) gc_test_mark_callback()
+#define TEST_MARK_CALLBACK() \
+  if (gc_test_mark_callback) gc_test_mark_callback()
 #else
 #define TEST_MARK_CALLBACK()
 #endif
-#include "internals.h"
 #include "../core.h"
+#include "internals.h"
 #if PERF_TIMER_ENABLED
 struct gc_perf_data perf_data;
 #endif
@@ -98,11 +99,36 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
    ==================================================== */
 
-static size_t percent_full(GcState* state) {
+#ifdef _WIN32
+// #include <intrin.h>
+// #define popcount(w) __popcnt64(w) // TODO: figure out header files/options/whatever for MSVC
+size_t popcount(size_t word) {
+  size_t w = word;
+  size_t count;
+  for (count = 0; w; count++) {
+    w &= w - 1;  // clear the least significant bit set
+  }
+  return count;
+}
+#elif defined(TARGET_64BIT)
+#define popcount(w) __builtin_popcountll(w)
+#else
+#define popcount(w) __builtin_popcountl(w)
+#endif
+
+static size_t percent_marked(GcState* state) {
   GcHeap* heap = &state->heap;
-  size_t available_words = heap->end - heap->start;
-  size_t used_words = state->next_alloc - heap->start;
-  size_t percent = (100 * used_words) / available_words;
+  size_t* bitmap = heap->bitmap;
+  size_t live = 0;
+  size_t last_index = (state->next_alloc - heap->start) / GC_WORD_BITS;
+
+  for (size_t i = 0; i < last_index; ++i) {
+    size_t w = bitmap[i];
+    live += popcount(w);
+  }
+  size_t total = heap->end - heap->start;
+  size_t percent = (100 * live) / total;
+  printf("live=%zd total=%zd\n", live, total);
   return percent;
 }
 
@@ -114,6 +140,8 @@ static void collect(GcState* state, size_t* ignore_below) {
   PERF_TIMER(marked);
   TEST_MARK_CALLBACK();
 
+  printf("After mark, heap is %zd%% full\n", percent_marked(state));
+
   compact(state, ignore_below);
   PERF_TIMER(compacted);
 
@@ -121,8 +149,6 @@ static void collect(GcState* state, size_t* ignore_below) {
   sweepJsRefs(is_full_gc);
   PERF_TIMER(jsRefs);
   PERF_TIMER_PRINT();
-
-  // printf("After GC, heap is %zd%% full\n", percent_full(state));
 }
 
 void GC_collect_full() {
@@ -137,7 +163,7 @@ void GC_collect_nursery() {
 /* ====================================================
 
                 PROGRAM ENTRY POINT
-  
+
     Execute a function in the context of the GC
 
    ==================================================== */

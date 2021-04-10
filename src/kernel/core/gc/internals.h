@@ -81,6 +81,7 @@ bool sanity_check(void* v);
 
 #if !defined(DEBUG) || defined(__EMSCRIPTEN__)
 #define PERF_TIMER_ENABLED 0
+#define PERF_START()
 #define PERF_TIMER(field)
 #define PERF_TIMER_PRINT()
 #else
