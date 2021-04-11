@@ -130,7 +130,7 @@ int GC_init();
 void GC_register_root(void** root);
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)());
 void GC_collect_full();
-void GC_collect_nursery();
+void GC_collect_minor();
 void* GC_execute(Closure* c);
 
 // allocate

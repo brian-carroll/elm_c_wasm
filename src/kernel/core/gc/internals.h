@@ -48,6 +48,7 @@ typedef struct {
 typedef struct {
   GcHeap heap;
   size_t* next_alloc;
+  size_t* end_of_alloc_patch;
   size_t* nursery;
   Cons* roots;
   GcStackMap stack_map;
@@ -74,6 +75,7 @@ size_t make_bitmask(size_t first_bit, size_t last_bit);
 GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr);
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter);
 size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter);
+void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter *iter);
 
 size_t child_count(ElmValue* v);
 bool sanity_check(void* v);
@@ -99,7 +101,7 @@ TODO:
   - __COUNTER__ for the array index
   - Create macros BEGIN_TIMED_BLOCK and END_TIMED_BLOCK
     - call begin and end functions with marcro args
-    - Put identifyig info in the counter struct __FUNCTION__, __LINE__, __FILE__
+    - Put identifying info in the counter struct __FUNCTION__, __LINE__, __FILE__
   - PERF_TIMER_PRINT 
 */
 

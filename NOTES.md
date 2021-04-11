@@ -51,31 +51,30 @@ size_t target_space = 3;
 for (int attempts = 0; attempts < 2; ++attempts) {
   size_t bm_word = state->alloc_idx;
   size_t bm_mask = state->alloc_mask;
-  size_t* after_alloc = state->next_alloc; // next heap slot after allocated space
+  size_t* found = state->next_alloc; // next heap slot after allocated space
 
   size_t max_word = state->heap.offsets - state->heap.bitmap;
-  size_t found_space = 0;
+  size_t words_found = 0;
 
-  while (after_alloc < heap->end) {
+  while (found < heap->end) {
     size_t is_live = heap->bitmap[bm_word] & bm_mask;
     if (is_live) {
-      found_space = 0;
-      found_word = bm_word;
+      words_found = 0;
     } else {
-      found_space++;
-      if (found_space == target_space) {
+      words_found++;
+      if (words_found == target_space) {
         break;
       }
     }
-    after_alloc++;
+    found++;
     bitmap_next(&bm_word, &bm_mask);
   }
 
-  if (found_space == target_space) {
+  if (words_found == target_space) {
     state->alloc_idx = bm_word;
     state->alloc_mask = bm_mask;
-    state->alloc_next = after_alloc;
-    return (after_alloc - target_space);
+    state->alloc_next = found;
+    return (found - target_space);
   }
 
   collect(); // will change state, grow heap, etc.

@@ -158,7 +158,7 @@ void GC_collect_full() {
   collect(&gc_state, gc_state.heap.start);
 }
 
-void GC_collect_nursery() {
+void GC_collect_minor() {
   collect(&gc_state, gc_state.nursery);
 }
 
