@@ -23,20 +23,9 @@
         [2] Kermany and Petrank, 2006
         [3] Abuaiadh et al, 2004
 */
-#ifdef DEBUG
-#include <stdio.h>
-void (*gc_test_mark_callback)();
-#define TEST_MARK_CALLBACK() \
-  if (gc_test_mark_callback) gc_test_mark_callback()
-#else
-#define TEST_MARK_CALLBACK()
-#endif
+
 #include "../core.h"
 #include "internals.h"
-#if PERF_TIMER_ENABLED
-struct gc_perf_data perf_data;
-#endif
-
 #include "allocate.c"
 #include "bitmap.c"
 #include "compact.c"
@@ -44,6 +33,22 @@ struct gc_perf_data perf_data;
 #include "mark.c"
 #include "stack.c"
 #include "state.c"
+
+#ifdef DEBUG
+
+#include <stdio.h>
+void (*gc_test_mark_callback)();
+#define TEST_MARK_CALLBACK() \
+  if (gc_test_mark_callback) gc_test_mark_callback()
+
+#else
+#define TEST_MARK_CALLBACK()
+#endif
+
+#if PERF_TIMER_ENABLED
+struct gc_perf_data perf_data;
+#endif
+
 
 jmp_buf gcLongJumpBuf;
 
