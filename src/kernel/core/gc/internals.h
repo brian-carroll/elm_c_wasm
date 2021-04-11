@@ -92,6 +92,17 @@ bool sanity_check(void* v);
 #include <x86intrin.h>
 #endif
 
+/*
+TODO:
+  - Support an arbitrary number of counters
+  - Have an array of counter structs
+  - __COUNTER__ for the array index
+  - Create macros BEGIN_TIMED_BLOCK and END_TIMED_BLOCK
+    - call begin and end functions with marcro args
+    - Put identifyig info in the counter struct __FUNCTION__, __LINE__, __FILE__
+  - PERF_TIMER_PRINT 
+*/
+
 struct gc_perf_data {
   size_t size;
   u64 start;

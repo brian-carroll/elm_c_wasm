@@ -119,6 +119,7 @@ int popcount(u64 word) {
 #define popcount(w) __builtin_popcountll(w)
 #endif
 
+// TODO: build this into the mark routine?
 static u32 percent_marked(GcState* state) {
   GcHeap* heap = &state->heap;
   size_t total_words = state->next_alloc - heap->start;
