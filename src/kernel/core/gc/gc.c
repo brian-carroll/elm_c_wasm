@@ -102,33 +102,30 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 #ifdef _WIN32
 // #include <intrin.h>
 // #define popcount(w) __popcnt64(w) // TODO: figure out header files/options/whatever for MSVC
-size_t popcount(size_t word) {
-  size_t w = word;
-  size_t count;
+int popcount(u64 word) {
+  u64 w = word;
+  int count;
   for (count = 0; w; count++) {
     w &= w - 1;  // clear the least significant bit set
   }
   return count;
 }
-#elif defined(TARGET_64BIT)
-#define popcount(w) __builtin_popcountll(w)
 #else
-#define popcount(w) __builtin_popcountl(w)
+#define popcount(w) __builtin_popcountll(w)
 #endif
 
-static size_t percent_marked(GcState* state) {
+static u32 percent_marked(GcState* state) {
   GcHeap* heap = &state->heap;
-  size_t* bitmap = heap->bitmap;
-  size_t live = 0;
-  size_t last_index = (state->next_alloc - heap->start) / GC_WORD_BITS;
+  size_t total_words = state->next_alloc - heap->start;
 
-  for (size_t i = 0; i < last_index; ++i) {
-    size_t w = bitmap[i];
-    live += popcount(w);
+  u64* bitmap64 = (u64*)heap->bitmap;
+  size_t bitmap64_len = total_words / 64;
+  size_t live_words = 0;
+  for (size_t i = 0; i < bitmap64_len; ++i) {
+    live_words += popcount(bitmap64[i]);
   }
-  size_t total = heap->end - heap->start;
-  size_t percent = (100 * live) / total;
-  printf("live=%zd total=%zd\n", live, total);
+
+  u32 percent = (100 * live_words) / total_words;
   return percent;
 }
 
@@ -140,7 +137,7 @@ static void collect(GcState* state, size_t* ignore_below) {
   PERF_TIMER(marked);
   TEST_MARK_CALLBACK();
 
-  printf("After mark, heap is %zd%% full\n", percent_marked(state));
+  printf("After mark, heap is %d%% full\n", percent_marked(state));
 
   compact(state, ignore_below);
   PERF_TIMER(compacted);
