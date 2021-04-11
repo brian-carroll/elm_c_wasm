@@ -130,7 +130,7 @@ int GC_init();
 void GC_register_root(void** root);
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)());
 void GC_collect_major();
-void GC_collect_minor();
+bool GC_collect_minor();
 void* GC_execute(Closure* c);
 
 // allocate
@@ -143,8 +143,7 @@ typedef u32 GcStackMapIndex;
 void GC_stack_push_value(void* value);
 void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex push);
 GcStackMapIndex GC_get_stack_frame();
-Closure* GC_stack_tailcall(
-    GcStackMapIndex push, Closure* old, u32 n_explicit_args, void* explicit_args[]);
+void GC_stack_tailcall(GcStackMapIndex frame);
 void GC_stack_push_frame(EvalFunction evaluator);
 
 // =========================================

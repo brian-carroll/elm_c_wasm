@@ -7,8 +7,8 @@
 
    ==================================================== */
 
-static size_t* find_space(GcState* state, size_t* start, size_t size) {
-  GcHeap* heap = &state->heap;
+static size_t* find_space(
+    GcHeap* heap, size_t* start, size_t size, size_t** end_of_space) {
   if (start >= heap->end) {
     return NULL;
   }
@@ -24,7 +24,7 @@ static size_t* find_space(GcState* state, size_t* start, size_t size) {
     bitmap_find(heap, true, &iter);
     size_t* next_occupied = bitmap_iter_to_ptr(heap, iter);
     if (next_occupied - next_available >= size) {
-      state->end_of_alloc_patch = next_occupied;
+      *end_of_space = next_occupied;
       return next_available;
     }
   }
@@ -32,26 +32,40 @@ static size_t* find_space(GcState* state, size_t* start, size_t size) {
 
 /*
   Allocate memory on the heap
+    push_to_stack: should be `true` in 99.99% of cases. Only false for fancy perf tricks
+    words: Number of words to allocate. A word is the size of a pointer, 32 or 64 bits.
 */
 void* GC_allocate(bool push_to_stack, ptrdiff_t words) {
   GcState* state = &gc_state;
+  GcHeap* heap = &state->heap;
   size_t* alloc = state->next_alloc;
+  size_t* end_of_alloc_patch = state->end_of_alloc_patch;
+
   size_t* new_alloc = alloc + words;
 
-  if (new_alloc >= state->end_of_alloc_patch) {
+  if (new_alloc >= end_of_alloc_patch) {
     // Out of space in current empty patch. Find the next patch.
-    alloc = find_space(state, new_alloc, words);
+    alloc = find_space(heap, end_of_alloc_patch, words, &end_of_alloc_patch);
     if (!alloc) {
-      // No more empty patches left. Mark garbage and search again
-      GC_collect_minor();
-      alloc = find_space(state, state->heap.start, words);
+      // No more empty patches left. Mark the heap and search again
+      size_t* old_end = heap->end;
+      bool grew = GC_collect_minor(); // only affects heap, not the rest of state
+      if (grew) {
+        // Use the new space. Allocation will be faster than if we found a gap.
+        alloc = old_end;
+        end_of_alloc_patch = heap->end;
+      } else {
+        alloc = find_space(heap, heap->start, words, &end_of_alloc_patch);
+      }
     }
     new_alloc = alloc + words;
+    state->end_of_alloc_patch = end_of_alloc_patch;
   }
 
   if (push_to_stack) {
     GC_stack_push_value(alloc);
   }
+
   state->next_alloc = new_alloc;
   return alloc;
 }

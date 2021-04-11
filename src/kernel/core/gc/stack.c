@@ -89,7 +89,7 @@ void GC_stack_push_frame(EvalFunction evaluator) {
   stack_values[i] = evaluator;
   sm->index++;
 #if GC_STACK_VERBOSE
-    printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
+  printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
 #endif
 }
 
@@ -106,50 +106,28 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
   sm->index = frame + 1;
 
   GcStackMapIndex parent = frame;
-  while (parent != 0 && stack_flags[--parent] != 'F');
+  while (parent != 0 && stack_flags[--parent] != 'F')
+    ;
   sm->frame = parent;
 
 #if GC_STACK_VERBOSE
   printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",
-    Debug_evaluator_name(evaluator),
-    frame,
-    parent
-  );
+      Debug_evaluator_name(evaluator),
+      frame,
+      parent);
 #endif
 }
 
 
 // Track when a tail call occurs
-Closure* GC_stack_tailcall(
-    GcStackMapIndex frame, Closure* old, u32 n_explicit_args, void* explicit_args[]) {
+void GC_stack_tailcall(GcStackMapIndex frame) {
   GcStackMap* sm = &gc_state.stack_map;
   assert(stack_flags[frame] == 'F');
 
   sm->frame = frame;
   sm->index = frame + 1;
 
-  u16 max_values = old->max_values;
-  u16 n_free = max_values - n_explicit_args;
-
 #if GC_STACK_VERBOSE
-  printf("Tailcall in %s, rewinding to frame %d, writing closure at index %d\n",
-    Debug_evaluator_name(old->evaluator),
-    frame,
-    sm->index
-  );
+  printf("Tail call in %s, frame %d\n", Debug_evaluator_name(evaluator), frame, );
 #endif
-
-  // newClosure implicitly pushes a value to sm->index
-  Closure* new = newClosure(max_values, max_values, old->evaluator, NULL);
-  for (u32 i = 0; i < n_free; i++) {
-    assert(sanity_check(old->values[i]));
-    new->values[i] = old->values[i];
-  }
-  for (u32 i = 0; i < n_explicit_args; i++) {
-    assert(sanity_check(explicit_args[i]));
-    new->values[n_free + i] = explicit_args[i];
-  }
-  assert(sanity_check(new));
-
-  return new;
 }

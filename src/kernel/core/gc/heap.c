@@ -104,11 +104,9 @@ int init_heap(GcHeap* heap) {
 void grow_heap_x2(GcHeap* heap) {
   size_t factor = 2;
 
-  // Temporarily store old values
   size_t* old_offsets = heap->offsets;
   size_t* old_bitmap = heap->bitmap;
   size_t* old_system_end = heap->system_end;
-  size_t old_bitmap_size = heap->system_end - heap->bitmap;
 
   // Grow
   size_t old_total_bytes = (heap->system_end - heap->start) * sizeof(size_t*);
@@ -116,10 +114,8 @@ void grow_heap_x2(GcHeap* heap) {
   grow_system_memory(heap->start, new_total_bytes);
   set_heap_layout(heap, heap->start, new_total_bytes);
 
-  // Move the mark bits
-  GC_memcpy(heap->bitmap, old_bitmap, old_bitmap_size);
-
-  // Clear old offsets and bitmap, ready for user data
+  // GC bookkeeping data
+  GC_memcpy(heap->bitmap, old_bitmap, old_system_end - old_bitmap);
   for (u64* p = (u64*)old_offsets; p < (u64*)old_system_end; ++p) {
     *p = 0;
   }

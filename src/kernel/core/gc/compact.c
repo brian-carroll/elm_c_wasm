@@ -59,9 +59,10 @@ void* forwarding_address(GcHeap* heap, size_t* old_pointer) {
 
 void compact(GcState* state, size_t* compact_start) {
   GcHeap* heap = &state->heap;
-  size_t* compact_end = state->next_alloc;
+  size_t* compact_end = heap->end;
 
   // Find starting point in bitmap
+  // bm_iter acts as a target for the `from` pointer, working ahead of it
   GcBitmapIter bm_iter = ptr_to_bitmap_iter(heap, compact_start);
 
   // Find first garbage patch
@@ -73,6 +74,9 @@ void compact(GcState* state, size_t* compact_start) {
   if (first_move_to >= compact_end) return;
 
   calc_offsets(heap, compact_start, compact_end);
+
+  // The `to` pointer is where we're copying to.
+  // It just moves uniformly forward. Doesn't need to care about the mark bits.
   size_t* to = first_move_to;
   size_t garbage_so_far = 0;
 
@@ -145,6 +149,7 @@ void compact(GcState* state, size_t* compact_start) {
 
   state->next_alloc = to;
   state->end_of_old_gen = to;
+  state->end_of_alloc_patch = heap->end;
 
   for (size_t i = 0; i < state->stack_map.index; ++i) {
     stack_values[i] = forwarding_address(heap, stack_values[i]);

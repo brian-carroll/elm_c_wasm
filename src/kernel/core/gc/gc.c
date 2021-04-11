@@ -82,23 +82,13 @@ int GC_init() {
 ==================================================== */
 
 /*
-  Roots should be registered by Kernel modules once on program startup.
-
-  Usage:
-    ElmValue* my_mutable_heap_pointer;
-
-    void My_init() {
-        GC_register_root(&my_mutable_heap_pointer);
-    }
-
-  Once the mutable pointer is registered, the Kernel module
-  can point it at any heap value it wants to keep alive.
-  It can later update the pointer to point at a different
-  ElmValue on the heap, as the program executes.
-  Whenever the GC does a collection, it checks this pointer
-  and preserves whatever heap value it is currently
-  pointing to. If it moves the value, it will update the
-  pointer to reference the new location.
+  There are two types of GC root
+  - Global vars that require Elm code to run to initialise them
+    - known at compile time
+  - Mutable state in Kernel code that points to heap values
+    - Hard for the compiler to know about
+    - We're not actually using this yet since most kernel code is in JS
+    - Using a list instead of a C array supports this case.
 */
 void GC_register_root(void** ptr_to_mutable_ptr) {
   GcState* state = &gc_state;
@@ -112,27 +102,11 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
    ==================================================== */
 
-#ifdef _WIN32
-// #include <intrin.h>
-// #define popcount(w) __popcnt64(w)
-// TODO: figure out header files/options/whatever for MSVC
-int popcount(u64 word) {
-  u64 w = word;
-  int count;
-  for (count = 0; w; count++) {
-    w &= w - 1;  // clear the least significant bit set
-  }
-  return count;
-}
-#else
-#define popcount(w) __builtin_popcountll(w)
-#endif
-
 /**
  * Minor collection
  * Can be used during execution. Does not move any live pointers.
  */
-void GC_collect_minor() {
+bool GC_collect_minor() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->end_of_old_gen;
 
@@ -150,13 +124,17 @@ void GC_collect_minor() {
       used * SIZE_UNIT / 1024,
       new_gen_size * SIZE_UNIT / 1024);
 
+  bool grew = false;
   if (percent_marked > 75) {
     grow_heap_x2(&state->heap);
+    grew = true;
   }
 
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);
   PERF_TIMER_PRINT();
+
+  return grew;
 }
 
 

@@ -18,6 +18,23 @@ void bitmap_reset(GcHeap* heap) {
 }
 
 
+#ifdef _WIN32
+// #include <intrin.h>
+// #define popcount(w) __popcnt64(w)
+// TODO: figure out header files/options/whatever for MSVC
+int popcount(u64 word) {
+  u64 w = word;
+  int count;
+  for (count = 0; w; count++) {
+    w &= w - 1;  // clear the least significant bit set
+  }
+  return count;
+}
+#else
+#define popcount(w) __builtin_popcountll(w)
+#endif
+
+
 // Count garbage words between two heap pointers, using the bitmap
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
   GcBitmapIter first_iter = ptr_to_bitmap_iter(heap, first);

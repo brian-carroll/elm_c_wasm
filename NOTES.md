@@ -1,8 +1,19 @@
-# Non-moving GC
-
 ## TODO
 - get rid of tailcall resume stuff
+  - compiler too
+- bitmap refactor
+  - **get tests passing first!** or use a new branch from master?
+  - use new bitmap_find function in compactor
+  - compactor was using next_alloc as a max!
+  - bm_iter is related to `from`, not `to`. It works a bit ahead of `from`. It's a target for where `from` wants to get to.
+  - update bitmap_dead_between (popcount & make_bitmask)
+  - update mark_words
+- timers for grow_heap_x2
+- better timers
+- test the basics of the new system
+  - when I grow, do I actually get contiguous memory?
 
+# Non-moving GC
 
 Getting tired of this replay GC, it's so damn confusing, I've been fighting it for literally years now.
 
