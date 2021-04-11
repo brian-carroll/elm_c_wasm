@@ -144,7 +144,7 @@ void compact(GcState* state, size_t* compact_start) {
   // Compaction is finished. Update the GC state and roots.
 
   state->next_alloc = to;
-  state->nursery = to;
+  state->end_of_old_gen = to;
 
   for (size_t i = 0; i < state->stack_map.index; ++i) {
     stack_values[i] = forwarding_address(heap, stack_values[i]);

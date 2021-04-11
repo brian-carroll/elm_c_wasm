@@ -6,7 +6,7 @@
 #include "../kernel/core/gc/internals.h"
 #include "test.h"
 
-bool mark_words(GcHeap* heap, void* p_void, size_t size);
+bool mark_words(GcState* state, void* p_void, size_t size);
 
 void gc_test_reset() {
   GcState* state = &gc_state;
@@ -45,8 +45,8 @@ char* gc_bitmap_test() {
       p3->words16[c] = str[c];
     }
 
-    mark_words(&state->heap, p1, p1->header.size);
-    mark_words(&state->heap, p3, p3->header.size);
+    mark_words(state, p1, p1->header.size);
+    mark_words(state, p3, p3->header.size);
 
     mu_assert("p1 should be marked", !!is_marked(p1));
     mu_assert("p2 should NOT be marked", !is_marked(p2));
@@ -638,8 +638,14 @@ Closure listNonsense = {
 
 // --------------------------------------------------------------------------------
 
+int count_gc_cycles;
+void increment_gc_cycles() {
+  count_gc_cycles++;
+}
+
 
 void* eval_infinite_loop(void* args[]) {
+  ElmInt* max_gc_cycles = args[0];
   u32 gc_stack_frame = GC_get_stack_frame();
   Closure* gc_resume = newClosure(1, 1, eval_infinite_loop, args);
   assert(sanity_check(gc_resume));
@@ -647,29 +653,21 @@ void* eval_infinite_loop(void* args[]) {
   Cons* list = gc_resume->values[0];
   assert(sanity_check(list));
 
-tce_loop:
-  list = A1(&listNonsense, list);
-  assert(sanity_check(list));
-  gc_resume = GC_stack_tailcall(gc_stack_frame, gc_resume, 1, ((void*[]){list}));
-  goto tce_loop;
+  while (count_gc_cycles < max_gc_cycles->value) {
+    list = A1(&listNonsense, list);
+    assert(sanity_check(list));
+    gc_resume = GC_stack_tailcall(gc_stack_frame, gc_resume, 1, ((void*[]){list}));
+  }
+
+  return list;
 }
 
 
 void* test_execute(Closure* c, int max_gc_cycles) {
+  gc_test_mark_callback = increment_gc_cycles;
   stack_clear();
   stack_enter(c);
-
-  // long jump creates an implicit loop
-  int gc_cycles = 0;
-  int out_of_memory = setjmp(gcLongJumpBuf);
-  if (gc_cycles >= max_gc_cycles) {
-    return NULL;
-  }
-  if (out_of_memory) {
-    GC_collect_full();
-    gc_cycles++;
-  }
-  return Utils_apply(stack_values[1], 0, NULL);
+  return Utils_apply(stack_values[1], 0, (void*[]){newElmInt(max_gc_cycles)});
 }
 
 

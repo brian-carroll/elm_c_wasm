@@ -25,8 +25,6 @@
 
 #define ALL_ONES -1
 
-extern jmp_buf gcLongJumpBuf;
-
 typedef struct {
   size_t* start;
   size_t* end;  // end of usable heap area
@@ -49,7 +47,8 @@ typedef struct {
   GcHeap heap;
   size_t* next_alloc;
   size_t* end_of_alloc_patch;
-  size_t* nursery;
+  size_t* end_of_old_gen;
+  size_t n_marked_words;
   Cons* roots;
   GcStackMap stack_map;
 } GcState;
@@ -64,6 +63,7 @@ void compact(GcState* state, size_t* compact_start);
 
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
+void grow_heap_x2(GcHeap* heap);
 
 void stack_clear();
 void stack_enter(Closure* c);

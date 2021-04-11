@@ -1,5 +1,9 @@
 # Non-moving GC
 
+## TODO
+- get rid of tailcall resume stuff
+
+
 Getting tired of this replay GC, it's so damn confusing, I've been fighting it for literally years now.
 
 Try mark/sweep with an allocator.

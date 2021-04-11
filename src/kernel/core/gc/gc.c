@@ -25,14 +25,14 @@
 */
 
 #include "../core.h"
-#include "internals.h"
 #include "allocate.c"
 #include "bitmap.c"
 #include "compact.c"
 #include "header.c"
+#include "heap.c"
+#include "internals.h"
 #include "mark.c"
 #include "stack.c"
-#include "state.c"
 
 #ifdef DEBUG
 
@@ -50,13 +50,21 @@ struct gc_perf_data perf_data;
 #endif
 
 
-jmp_buf gcLongJumpBuf;
+GcState gc_state;
 
 /* ====================================================
 
                 PROGRAM STARTUP
 
    ==================================================== */
+
+void reset_state(GcState* state) {
+  void* start = state->heap.start;
+  state->end_of_old_gen = start;
+  state->next_alloc = start;
+  state->roots = &Nil;
+  stack_clear();
+}
 
 // Call exactly once on program startup
 int GC_init() {
@@ -106,7 +114,8 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
 #ifdef _WIN32
 // #include <intrin.h>
-// #define popcount(w) __popcnt64(w) // TODO: figure out header files/options/whatever for MSVC
+// #define popcount(w) __popcnt64(w)
+// TODO: figure out header files/options/whatever for MSVC
 int popcount(u64 word) {
   u64 w = word;
   int count;
@@ -119,47 +128,69 @@ int popcount(u64 word) {
 #define popcount(w) __builtin_popcountll(w)
 #endif
 
-// TODO: build this into the mark routine?
-static u32 percent_marked(GcState* state) {
-  GcHeap* heap = &state->heap;
-  size_t total_words = state->next_alloc - heap->start;
+/**
+ * Minor collection
+ * Can be used during execution. Does not move any live pointers.
+ */
+void GC_collect_minor() {
+  GcState* state = &gc_state;
+  size_t* ignore_below = state->end_of_old_gen;
 
-  u64* bitmap64 = (u64*)heap->bitmap;
-  size_t bitmap64_len = total_words / 64;
-  size_t live_words = 0;
-  for (size_t i = 0; i < bitmap64_len; ++i) {
-    live_words += popcount(bitmap64[i]);
-  }
-
-  u32 percent = (100 * live_words) / total_words;
-  return percent;
-}
-
-
-static void collect(GcState* state, size_t* ignore_below) {
   PERF_START();
 
   mark(state, ignore_below);
   PERF_TIMER(marked);
   TEST_MARK_CALLBACK();
 
-  printf("After mark, heap is %d%% full\n", percent_marked(state));
+  i32 new_gen_size = state->heap.end - ignore_below;
+  i32 used = (i32)state->n_marked_words;
+  i32 percent_marked = (100 * used) / new_gen_size;
+  printf("Minor GC marked %d%% (%zd kB / %zd kB)\n",
+      percent_marked,
+      used * SIZE_UNIT / 1024,
+      new_gen_size * SIZE_UNIT / 1024);
 
-  compact(state, ignore_below);
-  PERF_TIMER(compacted);
+  if (percent_marked > 75) {
+    grow_heap_x2(&state->heap);
+  }
 
-  bool is_full_gc = ignore_below <= gc_state.heap.start;
-  sweepJsRefs(is_full_gc);
+  sweepJsRefs(false);
   PERF_TIMER(jsRefs);
   PERF_TIMER_PRINT();
 }
 
-void GC_collect_full() {
-  collect(&gc_state, gc_state.heap.start);
-}
 
-void GC_collect_minor() {
-  collect(&gc_state, gc_state.nursery);
+/**
+ * Major collection
+ * Not to be used during execution. Moves pointers by compaction.
+ */
+void GC_collect_major() {
+  GcState* state = &gc_state;
+  size_t* ignore_below = state->heap.start;
+
+  PERF_START();
+
+  mark(state, ignore_below);
+  PERF_TIMER(marked);
+  TEST_MARK_CALLBACK();
+
+  compact(state, ignore_below);
+  PERF_TIMER(compacted);
+
+  sweepJsRefs(true);
+  PERF_TIMER(jsRefs);
+
+  size_t used = state->next_alloc - state->heap.start;
+  size_t available = state->heap.end - state->heap.start;
+  printf("Major GC: %zd kB used, %zd kb available\n",
+      used * SIZE_UNIT / 1024,
+      available * SIZE_UNIT / 1024);
+
+  if (used * 2 > available) {
+    grow_heap_x2(&state->heap);
+  }
+
+  PERF_TIMER_PRINT();
 }
 
 
@@ -174,12 +205,6 @@ void GC_collect_minor() {
 void* GC_execute(Closure* c) {
   stack_clear();
   stack_enter(c);
-
-  // long jump creates an implicit loop
-  int out_of_memory = setjmp(gcLongJumpBuf);
-  if (out_of_memory) {
-    GC_collect_full();
-  }
   return Utils_apply(stack_values[1], 0, NULL);
 }
 
@@ -201,10 +226,5 @@ void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
   stack_clear();
   stack_enter(NULL);
 
-  // long jump creates an implicit loop
-  int out_of_memory = setjmp(gcLongJumpBuf);
-  if (out_of_memory) {
-    GC_collect_full();
-  }
   *global_permanent_ptr = init_func();
 }

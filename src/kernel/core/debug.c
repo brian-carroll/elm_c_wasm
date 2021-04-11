@@ -491,19 +491,19 @@ void print_state() {
   size_t end = (size_t)state->heap.end;
   size_t system_end = (size_t)state->heap.system_end;
   size_t next_alloc = (size_t)state->next_alloc;
-  size_t nursery = (size_t)state->nursery;
+  size_t end_of_old_gen = (size_t)state->end_of_old_gen;
 
   size_t total = (system_end - start + 512) / 1024;
   size_t available = (end - start + 512) / 1024;
   size_t used = (next_alloc - start + 512) / 1024;
-  size_t since_gc = (next_alloc - nursery + 512) / 1024;
+  size_t since_gc = (next_alloc - end_of_old_gen + 512) / 1024;
 
   printf("\n");
   printf("%p start\n", state->heap.start);
   printf("%p system_end      (%zd kB total heap)\n", state->heap.system_end, total);
   printf("%p end             (%zd kB app heap)\n", state->heap.end, available);
   printf("%p next_alloc      (%zd kB used)\n", state->next_alloc, used);
-  printf("%p nursery         (%zd kB since last GC)\n", state->nursery, since_gc);
+  printf("%p end_of_old_gen  (%zd kB since last GC)\n", state->end_of_old_gen, since_gc);
   printf("\n");
   printf("%p offsets\n", state->heap.offsets);
   printf("%p bitmap\n", state->heap.bitmap);

@@ -68,10 +68,12 @@ void* GC_memcpy(void* vdest, void* vsrc, size_t words) {
 
   u8* dest = vdest;
   u8* src = vsrc;
-  u32* src32;
-  u32* dest32;
   u64* src64;
   u64* dest64;
+
+#ifndef TARGET_64BIT
+  u32* src32;
+  u32* dest32;
 
   // Get 64-bit alignment if we don't already have it
   if ((size_t)dest % sizeof(u64)) {
@@ -82,6 +84,7 @@ void* GC_memcpy(void* vdest, void* vsrc, size_t words) {
     src += sizeof(u32);
     dest += sizeof(u32);
   }
+#endif
 
   // Bulk copy in 64-bit chunks
   src64 = (u64*)src;
@@ -91,12 +94,14 @@ void* GC_memcpy(void* vdest, void* vsrc, size_t words) {
     dest64[i] = src64[i];
   }
 
+#ifndef TARGET_64BIT
   // last 32 bits if needed
   if (bytes % sizeof(u64)) {
     src32 = (u32*)(&src64[i]);
     dest32 = (u32*)(&dest64[i]);
     *dest32 = *src32;
   }
+#endif
 
   return dest;  // C standard lib returns this. Normally ignored.
 }

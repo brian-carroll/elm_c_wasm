@@ -10,23 +10,6 @@
 
 /* ====================================================
 
-        GC STATE
-
-   ==================================================== */
-
-// globals
-GcState gc_state;
-
-void reset_state(GcState* state) {
-  void* start = state->heap.start;
-  state->nursery = start;
-  state->next_alloc = start;
-  state->roots = &Nil;
-  stack_clear();
-}
-
-/* ====================================================
-
         HEAP
 
    ==================================================== */
@@ -37,7 +20,7 @@ static HANDLE hHeap;
 static const DWORD dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
 static void* system_block;
 
-void* get_initial_memory(size_t bytes) {
+static void* get_initial_system_memory(size_t bytes) {
   // https://docs.microsoft.com/en-us/windows/win32/api/heapapi/
   assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
   hHeap = GetProcessHeap();
@@ -47,7 +30,7 @@ void* get_initial_memory(size_t bytes) {
   return (void*)aligned_addr;
 }
 
-void grow_memory(void* start, size_t new_total_bytes) {
+static void grow_system_memory(void* start, size_t new_total_bytes) {
   assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
   size_t alignment_bytes = (size_t)start - (size_t)system_block;
   size_t new_system_bytes = new_total_bytes + alignment_bytes;
@@ -57,7 +40,7 @@ void grow_memory(void* start, size_t new_total_bytes) {
 
 #else
 
-void* get_initial_memory(size_t bytes) {
+static void* get_initial_system_memory(size_t bytes) {
   size_t initial_break = (size_t)sbrk(0);
   size_t aligned_break = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
   size_t new_break = aligned_break + bytes;
@@ -66,7 +49,7 @@ void* get_initial_memory(size_t bytes) {
   return (void*)aligned_break;
 }
 
-void grow_memory(void* start, size_t new_total_bytes) {
+static void grow_system_memory(void* start, size_t new_total_bytes) {
   void* new_break = start + new_total_bytes;
   int result = brk(new_break);
   assert(result == 0);
@@ -110,9 +93,34 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
 // Call exactly once on program startup
 int init_heap(GcHeap* heap) {
   size_t bytes = GC_INITIAL_HEAP_MB * MB;
-  void* start = get_initial_memory(bytes);
+  void* start = get_initial_system_memory(bytes);
 
   set_heap_layout(heap, start, bytes);
 
   return 0;
+}
+
+
+void grow_heap_x2(GcHeap* heap) {
+  size_t factor = 2;
+
+  // Temporarily store old values
+  size_t* old_offsets = heap->offsets;
+  size_t* old_bitmap = heap->bitmap;
+  size_t* old_system_end = heap->system_end;
+  size_t old_bitmap_size = heap->system_end - heap->bitmap;
+
+  // Grow
+  size_t old_total_bytes = (heap->system_end - heap->start) * sizeof(size_t*);
+  size_t new_total_bytes = old_total_bytes * factor;
+  grow_system_memory(heap->start, new_total_bytes);
+  set_heap_layout(heap, heap->start, new_total_bytes);
+
+  // Move the mark bits
+  GC_memcpy(heap->bitmap, old_bitmap, old_bitmap_size);
+
+  // Clear old offsets and bitmap, ready for user data
+  for (u64* p = (u64*)old_offsets; p < (u64*)old_system_end; ++p) {
+    *p = 0;
+  }
 }
