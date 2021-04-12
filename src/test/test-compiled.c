@@ -30,7 +30,6 @@ void * eval_elm_core_List_foldl(void * args[]) {
     void * x_acc = args[1];
     void * x_list = args[2];
     u32 gc_stack_frame = GC_get_stack_frame();
-    Closure* gc_resume = newClosure(3, 3, eval_elm_core_List_foldl, args);
     tce_loop:
     ;
     void * case0;
@@ -46,7 +45,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
             x_list = x_xs;
             x_acc = tmp1;
             // x_func = x_func;
-            gc_resume = GC_stack_tailcall(gc_stack_frame, gc_resume, 3, ((void * []){ x_func, x_acc, x_list }));
+            GC_stack_tailcall(gc_stack_frame);
             goto tce_loop;
             case0 = NULL;
             break;

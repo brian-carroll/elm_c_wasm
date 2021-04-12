@@ -383,7 +383,6 @@ void* eval_fibGlobalTailRecHelp(void* args[]) {
   ElmInt* x_a = args[2];
   ElmInt* x_b = args[3];
   u32 gc_stack_frame = GC_get_stack_frame();
-  Closure* gc_resume = newClosure(4, 4, eval_fibGlobalTailRecHelp, args);
 tce_loop:;
   struct stackmap_mark_scenario scenario =
       stackmap_mark_scenarios[stackmap_mark_scenario_index];
@@ -403,8 +402,7 @@ tce_loop:;
     x_i = tmp2;
     x_a = tmp3;
     x_b = tmp4;
-    gc_resume =
-        GC_stack_tailcall(gc_stack_frame, gc_resume, 4, ((void*[]){x_n, x_i, x_a, x_b}));
+    GC_stack_tailcall(gc_stack_frame);
     goto tce_loop;
     if0 = NULL;
   };
@@ -514,9 +512,9 @@ void stackmap_mark_test_callback() {
   size_t expected_size = strlen(scenario.expected_marks);
   size_t actual_size = state->next_alloc - start;
   snprintf(message,
-    sizeof(message),
-    "should have %zd allocated words before GC",
-    expected_size);
+      sizeof(message),
+      "should have %zd allocated words before GC",
+      expected_size);
   mu_expect_equal(message, expected_size, actual_size);
 
   int expected_marks_len = strlen(scenario.expected_marks);
@@ -565,7 +563,8 @@ char* stackmap_mark_test() {
 
     ElmInt* result = GC_execute(c);
 
-    mu_expect_equal("should return the correct result", result->value, fibonacci(scenario.argument));
+    mu_expect_equal(
+        "should return the correct result", result->value, fibonacci(scenario.argument));
 
     if (scenario.gc_trigger_arg < scenario.argument) {
       mu_assert("should call the mark callback", callback_called);
@@ -645,29 +644,27 @@ void increment_gc_cycles() {
 
 
 void* eval_infinite_loop(void* args[]) {
-  ElmInt* max_gc_cycles = args[0];
+  Cons* list = args[0];
+  ElmInt* max_gc_cycles = args[1];
   u32 gc_stack_frame = GC_get_stack_frame();
-  Closure* gc_resume = newClosure(1, 1, eval_infinite_loop, args);
-  assert(sanity_check(gc_resume));
 
-  Cons* list = gc_resume->values[0];
   assert(sanity_check(list));
 
   while (count_gc_cycles < max_gc_cycles->value) {
     list = A1(&listNonsense, list);
     assert(sanity_check(list));
-    gc_resume = GC_stack_tailcall(gc_stack_frame, gc_resume, 1, ((void*[]){list}));
+    GC_stack_tailcall(gc_stack_frame);
   }
 
   return list;
 }
 
 
-void* test_execute(Closure* c, int max_gc_cycles) {
+void* test_execute(Closure* c) {
   gc_test_mark_callback = increment_gc_cycles;
   stack_clear();
   stack_enter(c);
-  return Utils_apply(stack_values[1], 0, (void*[]){newElmInt(max_gc_cycles)});
+  return Utils_apply(stack_values[1], 0, NULL);
 }
 
 
@@ -687,9 +684,10 @@ char* assertions_test() {
       newElmInt(-7),
   };
   Cons* list = List_create(3, list_elems);
-  Closure* c = newClosure(1, 1, eval_infinite_loop, ((void*[]){list}));
+  int max_gc_cycles = newElmInt(10);
+  Closure* c = newClosure(2, 2, eval_infinite_loop, ((void*[]){list, max_gc_cycles}));
 
-  test_execute(c, 10);
+  test_execute(c);
 
   mu_assert("should complete without triggering any assertions", true);
   return NULL;
