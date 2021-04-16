@@ -695,6 +695,60 @@ char* assertions_test() {
 
 // --------------------------------------------------------------------------------
 
+void* eval_generateHeapPattern(void* args[]) {
+  ElmInt* garbageChunkSize = args[0];
+  ElmInt* liveChunkSize = args[1];
+  ElmInt* iterations = args[2];
+  u32 gc_stack_frame = GC_get_stack_frame();
+
+  Cons* liveList = pNil;
+  i32 initialIterations = iterations->value;
+  i32 garbageChildren = SIZE_CUSTOM(garbageChunkSize->value) - SIZE_CUSTOM(0);
+  i32 liveChildren = SIZE_CUSTOM(liveChunkSize->value) - SIZE_CUSTOM(0) - SIZE_INT - SIZE_LIST;
+  assert(garbageChildren >= 0);
+  assert(liveChildren >= 1);
+
+tce_loop:;
+  do {
+    if (iterations->value == 0) {
+      i32 nErrors = 0;
+      i32 expected = 0;
+      for (; liveList->tail; liveList = liveList->tail) {
+        Custom* live =  liveList->head;
+        ElmInt* iter = live->values[0];
+        if (iter->value != expected) {
+          nErrors++;
+        }
+        expected++;
+      }
+      return newElmInt(nErrors);
+    } else {
+      Custom* garbage = newCustom(CTOR_Err, garbageChildren, NULL);
+      for (int i = 1; i < garbageChildren; i++) {
+        garbage->values[i] = pUnit;
+      }
+
+      Custom* live = newCustom(CTOR_Ok, liveChildren, NULL);
+      live->values[0] = iterations;
+      for (int i = 1; i < liveChildren; i++) {
+        live->values[i] = pUnit;
+      }
+      liveList = newCons(live, liveList);
+      iterations = newElmInt(iterations->value - 1);
+      GC_stack_tailcall(gc_stack_frame);
+      goto tce_loop;
+    };
+  } while (0);
+}
+Closure generateHeapPattern = {
+    .header = HEADER_CLOSURE(3),
+    .max_values = 3,
+    .evaluator = eval_generateHeapPattern,
+};
+
+
+// --------------------------------------------------------------------------------
+
 
 char unknown_function_address[FORMAT_PTR_LEN];
 char* Debug_evaluator_name(void* p) {

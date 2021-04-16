@@ -13,6 +13,86 @@
 - test the basics of the new system
   - when I grow, do I actually get contiguous memory?
 
+## what tests to do?
+- all the conditions in allocate
+  - fill up the heap with live + garbage stuff
+  - get to the top, wrap back around, check it fills the gaps
+  - fill it up 90% and 50% and see what difference
+- So I need a test function that will
+  - run for a configurable amount of memory
+  - produce a configurable % of garbage
+  - give me a predictable return value
+- at the moment I'm using recursion to get multiple stack frames
+
+- could just do a simple counter. Increment by 1 till you hit some target
+  - the target value is calculated in C before running, based on target garbage and total memory specs, and is returned from the function itself
+  - alternatively, do a sum from 1:n and calculate as n*(n-1)/2
+  - if worried about integer overflow, just use floats and check with tolerance +-0.5
+  - Controllable live values:
+    - Make a `List Custom`. Take 2 params, one for size of live chunk (Custom), another for spacing (based on count)
+  - Function needs to be tail recursive. Stack frame can't take up the whole heap.
+
+- Fibonacci stuff is more useful for stackmap testing
+  - although could extend the same idea
+    - param for how far to count before doing a non-tail-recursion
+
+
+
+## debug ideas
+Casey Muratori made a huge debug system to visualise things. He went further with it than I would have even thought about. What ideas can I use from that?
+
+- Do something with __FILE__ and __LINE__ on allocations and function applications, to see who allocated what
+  - Build something into the data constructors (newElmInt and friends)
+  - Can have different number of args in DEBUG by defining macros
+  - I have a codemod script already, could put it there for now at least!
+  - could record this stuff in global vars. But at the allocation site we don't know where the allocated address will be.
+  - GC_stack_push_value is a good place to write the actual debug record
+
+- Have a way of visualising fragmentation
+  - print out the bitmap in rows of some kind of ASCII art?
+    ```
+    ***---**------*-----***---*--
+    --*-----******---**----***---
+    ----*--*------***-****----***
+    ```
+  - If it's different between snapshot and current, use a different character?
+    ```
+    ***##-**####--*####-***##-*--
+    ##*###--******###**###-***##-
+    ###-*##*#####-***-****##--***
+    ```
+  - Yeah this actually looks really useful!
+    - Here I drew * for old marked and # for new marked
+    - There are 4 possibilities, so use 4 characters
+    ```
+    X-xXXXXxx-
+    xX--x-x_-_
+    -X__Xxx__- 
+    _x--XXx___ 
+    ```
+
+- massive test data
+  - allocate a whole other heap area for debug data
+  - take test snapshots of the entire heap, to compare things over time
+  - store function & line number in an array the size of the heap
+  - Quadruple the memory usage. It's still only a few MB or tens of MB, not hundreds!
+    - actual heap
+    - previous heap
+    - actual heap line numbers
+    - snapshot line numbers
+
+- Dump debug data to file(s)! That sort of gets around the memory allocation issues I think
+  - Store as binary files and make some binary utils for pretty-printing if I want
+  - Log out loads of files at the same time to keep things separate?
+  - Or maybe I want just one big text file... I dunno
+
+What sort of issues do I want to find?
+- Fragmentation
+- Data corruption
+  - sweeping something I shouldn't have swept
+  - Maybe take a heap snapshot before sweeping, and track who allocated it?
+
+
 # Non-moving GC
 
 Getting tired of this replay GC, it's so damn confusing, I've been fighting it for literally years now.
