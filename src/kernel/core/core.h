@@ -143,7 +143,7 @@ typedef u32 GcStackMapIndex;
 void GC_stack_push_value(void* value);
 void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex push);
 GcStackMapIndex GC_get_stack_frame();
-void GC_stack_tailcall(GcStackMapIndex frame);
+void GC_stack_tailcall(int count, ...);
 void GC_stack_push_frame(EvalFunction evaluator);
 
 // =========================================

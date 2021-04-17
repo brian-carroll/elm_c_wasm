@@ -402,7 +402,7 @@ tce_loop:;
     x_i = tmp2;
     x_a = tmp3;
     x_b = tmp4;
-    GC_stack_tailcall(gc_stack_frame);
+    GC_stack_tailcall(4, x_n, x_i, x_a, x_b);
     goto tce_loop;
     if0 = NULL;
   };
@@ -638,7 +638,7 @@ Closure listNonsense = {
 // --------------------------------------------------------------------------------
 
 int count_gc_cycles;
-void increment_gc_cycles() {
+void assertions_test_callback() {
   count_gc_cycles++;
 }
 
@@ -653,7 +653,7 @@ void* eval_infinite_loop(void* args[]) {
   while (count_gc_cycles < max_gc_cycles->value) {
     list = A1(&listNonsense, list);
     assert(sanity_check(list));
-    GC_stack_tailcall(gc_stack_frame);
+    GC_stack_tailcall(2, list, max_gc_cycles);
   }
 
   return list;
@@ -661,7 +661,7 @@ void* eval_infinite_loop(void* args[]) {
 
 
 void* test_execute(Closure* c) {
-  gc_test_mark_callback = increment_gc_cycles;
+  gc_test_mark_callback = assertions_test_callback;
   stack_clear();
   stack_enter(c);
   return Utils_apply(stack_values[1], 0, NULL);
@@ -684,7 +684,7 @@ char* assertions_test() {
       newElmInt(-7),
   };
   Cons* list = List_create(3, list_elems);
-  int max_gc_cycles = newElmInt(10);
+  ElmInt* max_gc_cycles = newElmInt(10);
   Closure* c = newClosure(2, 2, eval_infinite_loop, ((void*[]){list, max_gc_cycles}));
 
   test_execute(c);
@@ -699,23 +699,30 @@ void* eval_generateHeapPattern(void* args[]) {
   ElmInt* garbageChunkSize = args[0];
   ElmInt* liveChunkSize = args[1];
   ElmInt* iterations = args[2];
-  u32 gc_stack_frame = GC_get_stack_frame();
 
   Cons* liveList = pNil;
-  i32 initialIterations = iterations->value;
-  i32 garbageChildren = SIZE_CUSTOM(garbageChunkSize->value) - SIZE_CUSTOM(0);
-  i32 liveChildren = SIZE_CUSTOM(liveChunkSize->value) - SIZE_CUSTOM(0) - SIZE_INT - SIZE_LIST;
-  assert(garbageChildren >= 0);
-  assert(liveChildren >= 1);
+  i32 nKidsGarbage = SIZE_CUSTOM(garbageChunkSize->value) - SIZE_CUSTOM(0);
+  i32 nKidsLive = SIZE_CUSTOM(liveChunkSize->value) - SIZE_CUSTOM(0) - SIZE_INT - SIZE_LIST;
+  assert(nKidsGarbage >= 0);
+  assert(nKidsLive >= 1);
+
+  printf("nKidsGarbage %d\n", nKidsGarbage);
+  printf("nKidsLive %d\n", nKidsLive);
 
 tce_loop:;
   do {
+    printf("tce_loop: iterations=%d, liveList=%p, liveList->head=%p, liveList->tail=%p\n", iterations->value, liveList, liveList->head, liveList->tail);
     if (iterations->value == 0) {
+      print_heap();
+      print_state();
+
       i32 nErrors = 0;
       i32 expected = 0;
-      for (; liveList->tail; liveList = liveList->tail) {
-        Custom* live =  liveList->head;
+      for (; liveList->tail != pNil; liveList = liveList->tail) {
+        Custom* live = liveList->head;
         ElmInt* iter = live->values[0];
+        printf("for loop: liveList=%p, liveList->head=%p, liveList->tail=%p, iter=%d\n", liveList, liveList->head, liveList->tail, iter->value);
+        fflush(0);
         if (iter->value != expected) {
           nErrors++;
         }
@@ -723,28 +730,77 @@ tce_loop:;
       }
       return newElmInt(nErrors);
     } else {
-      Custom* garbage = newCustom(CTOR_Err, garbageChildren, NULL);
-      for (int i = 1; i < garbageChildren; i++) {
+      Custom* garbage = newCustom(CTOR_Err, nKidsGarbage, NULL);
+      for (int i = 1; i < nKidsGarbage; i++) {
         garbage->values[i] = pUnit;
       }
 
-      Custom* live = newCustom(CTOR_Ok, liveChildren, NULL);
+      Custom* live = newCustom(CTOR_Ok, nKidsLive, NULL);
       live->values[0] = iterations;
-      for (int i = 1; i < liveChildren; i++) {
+      for (int i = 1; i < nKidsLive; i++) {
         live->values[i] = pUnit;
       }
       liveList = newCons(live, liveList);
       iterations = newElmInt(iterations->value - 1);
-      GC_stack_tailcall(gc_stack_frame);
+      GC_stack_tailcall(4, garbageChunkSize, liveChunkSize, iterations, liveList);
       goto tce_loop;
     };
   } while (0);
 }
-Closure generateHeapPattern = {
-    .header = HEADER_CLOSURE(3),
-    .max_values = 3,
-    .evaluator = eval_generateHeapPattern,
-};
+
+void minor_gc_test_callback() {
+  printf("\n\n minor_gc_test_callback \n\n");
+  // print_heap();
+  // print_state();
+}
+
+char* minor_gc_test() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## minor_gc_test\n"
+        "(fill the heap with both live and garbage values, mark, sweep, fill in the swept gaps)\n"
+        "\n");
+  }
+  gc_test_reset();
+  printf("gc_test_reset\n");
+  gc_test_mark_callback = minor_gc_test_callback;
+
+  GcState * state = &gc_state;
+  GcHeap* heap = &state->heap;
+
+  size_t heap_size = heap->end - heap->start;
+
+  i32 garbageChunkSize = 256;
+  i32 liveChunkSize = 256;
+  i32 iterations_to_fill_heap = heap_size / (garbageChunkSize + liveChunkSize);
+  i32 iterations = iterations_to_fill_heap + (iterations_to_fill_heap / 4);
+
+  printf("garbageChunkSize = %d\n", garbageChunkSize);
+  printf("liveChunkSize = %d\n", liveChunkSize);
+  printf("iterations_to_fill_heap = %d\n", iterations_to_fill_heap);
+  printf("iterations = %d\n", iterations);
+
+
+  Closure* run = newClosure(3, 3, eval_generateHeapPattern, ((void*[]){
+    newElmInt(garbageChunkSize),
+    newElmInt(liveChunkSize),
+    newElmInt(iterations),
+  }));
+
+  stack_clear();
+  stack_enter(run);
+  Utils_apply(run, 0, NULL);
+
+  printf("\n\n----------------------\n");
+  printf("test function returned\n");
+  printf("\n\n----------------------\n");
+
+  print_heap();
+  print_state();
+
+  return NULL;
+}
 
 
 // --------------------------------------------------------------------------------
@@ -768,6 +824,8 @@ char* Debug_evaluator_name(void* p) {
     return "listNonsense ";
   } else if (p == eval_infinite_loop) {
     return "infinite_loop";
+  } else if (p == eval_generateHeapPattern) {
+    return "generateHeapPattern";
   } else {
     snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
     return unknown_function_address;
@@ -790,7 +848,8 @@ char* gc_test() {
   // mu_run_test(gc_dead_between_test);
   // mu_run_test(test_heap_layout);
   // mu_run_test(test_memcpy);
-  mu_run_test(stackmap_mark_test);
+  // mu_run_test(stackmap_mark_test);
+  mu_run_test(minor_gc_test);
   // mu_run_test(assertions_test);
 
   return NULL;

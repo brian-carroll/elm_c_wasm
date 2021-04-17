@@ -436,7 +436,7 @@ void print_value_full(void* p) {
 
 void print_heap() {
   GcState* state = &gc_state;
-  mark(state, state->heap.start);
+  // mark(state, state->heap.start); // beware of infinite loop
   print_heap_range(state->heap.start, state->next_alloc);
 }
 

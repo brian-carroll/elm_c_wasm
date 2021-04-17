@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include "internals.h"
 
@@ -74,6 +75,9 @@ void GC_stack_push_value(void* value) {
   GcStackMap* sm = &gc_state.stack_map;
   stack_values[sm->index] = value;
   stack_flags[sm->index] = 'A';
+#if GC_STACK_VERBOSE
+  printf("Pushing stack index %d in %s: %p\n", sm->index, Debug_evaluator_name(stack_values[sm->frame]), value);
+#endif
   sm->index++;
   assert(sm->index < GC_STACK_MAP_SIZE);
 }
@@ -119,15 +123,21 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
 }
 
 
-// Track when a tail call occurs
-void GC_stack_tailcall(GcStackMapIndex frame) {
-  GcStackMap* sm = &gc_state.stack_map;
-  assert(stack_flags[frame] == 'F');
+// For tail call, restart the stack with the latest args
+void GC_stack_tailcall(int count, ...) {
+  va_list args;
+  va_start(args, count);
 
-  sm->frame = frame;
-  sm->index = frame + 1;
+  GcStackMap* sm = &gc_state.stack_map;
+  sm->index = sm->frame + 1;
+
+  for (int i = 0; i < count; ++i) {
+    stack_values[sm->index++] = va_arg(args, void*);
+  }
+
+  va_end(args);
 
 #if GC_STACK_VERBOSE
-  printf("Tail call in %s, frame %d\n", Debug_evaluator_name(evaluator), frame, );
+  printf("Tail call in %s at stack index %d\n", Debug_evaluator_name(stack_values[sm->frame]), sm->frame);
 #endif
 }

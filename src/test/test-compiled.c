@@ -44,8 +44,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
             assert(sanity_check(tmp1));
             x_list = x_xs;
             x_acc = tmp1;
-            // x_func = x_func;
-            GC_stack_tailcall(gc_stack_frame);
+            GC_stack_tailcall(3, x_func, x_acc, x_list);
             goto tce_loop;
             case0 = NULL;
             break;

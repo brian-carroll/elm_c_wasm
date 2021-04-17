@@ -62,6 +62,7 @@ void reset_state(GcState* state) {
   void* start = state->heap.start;
   state->end_of_old_gen = start;
   state->next_alloc = start;
+  state->end_of_alloc_patch = state->heap.end;
   state->roots = &Nil;
   stack_clear();
 }
