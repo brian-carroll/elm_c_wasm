@@ -78,7 +78,7 @@ extern Closure Char_toCode;
 #define FORMAT_PTR_LEN 8
 #endif
 
-#define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->system_end < (size_t*)p)
+#define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->end <= (size_t*)p)
 
 void Debug_pretty(const char* label, void* p);
 extern char* Debug_ctors[];
@@ -102,7 +102,9 @@ void print_heap_range(size_t* start, size_t* end);
 void print_heap();
 void print_state();
 void print_stack_map();
-void print_bitmap();
+void print_bitmap(const char* function, const char* filename, int line_no);
+#define PRINT_BITMAP() print_bitmap(__FUNCTION__, __FILE__, __LINE__)
+
 void log_error(char* fmt, ...);
 void log_debug(char* fmt, ...);
 

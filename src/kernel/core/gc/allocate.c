@@ -7,29 +7,6 @@
 
    ==================================================== */
 
-static size_t* find_space(
-    GcHeap* heap, size_t* start, size_t size, size_t** end_of_space) {
-  if (start >= heap->end) {
-    return NULL;
-  }
-  GcBitmapIter iter = ptr_to_bitmap_iter(heap, start);
-
-  for (;;) {
-    bitmap_find(heap, false, &iter);
-    size_t* next_available = bitmap_iter_to_ptr(heap, iter);
-    if (next_available >= heap->end) {
-      return NULL;
-    }
-
-    bitmap_find(heap, true, &iter);
-    size_t* next_occupied = bitmap_iter_to_ptr(heap, iter);
-    if (next_occupied - next_available >= size) {
-      *end_of_space = next_occupied;
-      return next_available;
-    }
-  }
-}
-
 /*
   Allocate memory on the heap
     push_to_stack: should be `true` in 99.99% of cases. Only false for fancy perf tricks
@@ -45,7 +22,7 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t words) {
 
   if (new_alloc >= end_of_alloc_patch) {
     // Out of space in current empty patch. Find the next patch.
-    alloc = find_space(heap, end_of_alloc_patch, words, &end_of_alloc_patch);
+    alloc = bitmap_find_space(heap, end_of_alloc_patch, words, &end_of_alloc_patch);
     if (!alloc) {
       // No more empty patches left. Mark the heap and search again
       size_t* old_end = heap->end;
@@ -55,7 +32,7 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t words) {
         alloc = old_end;
         end_of_alloc_patch = heap->end;
       } else {
-        alloc = find_space(heap, heap->start, words, &end_of_alloc_patch);
+        alloc = bitmap_find_space(heap, heap->start, words, &end_of_alloc_patch);
       }
     }
     new_alloc = alloc + words;

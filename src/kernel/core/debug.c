@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "./gc/internals.h"
 #include "../json/json.h"
+#include "./gc/internals.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -16,7 +16,6 @@
 extern GcState gc_state;
 extern char stack_flags[GC_STACK_MAP_SIZE];
 char Debug_unknown_evaluator[] = "(?)";
-
 
 
 // =======================================================================
@@ -440,23 +439,32 @@ void print_heap() {
   print_heap_range(state->heap.start, state->next_alloc);
 }
 
-void print_bitmap() {
-  GcState* state = &gc_state;
+
+void print_bitmap(const char* function, const char* filename, int line_no) {
+  GcHeap* heap = &gc_state.heap;
+  size_t* bitmap = gc_state.heap.bitmap;
 
   // find last non-zero word in the bitmap
-  size_t bitmap_size = state->heap.system_end - state->heap.bitmap;
+  size_t bitmap_size = heap->system_end - heap->bitmap;
   size_t last_word = bitmap_size;
+  while (bitmap[--last_word] == 0)
+    ;
 
-  printf("Bitmap (size %zd):\n", bitmap_size);
-  for (size_t word = 0; word <= last_word && word < bitmap_size; word++) {
-    size_t value = state->heap.bitmap[word];
-    if (value) {
-#ifdef TARGET_64BIT
-      printf("%3zd | %016zx\n", word, value);
-#else
-      printf("%3zd | %08zx\n", word, value);
-#endif
+  printf("Bitmap at %s:%d (%s)\n", filename, line_no, function);
+  size_t* p = heap->start;
+  for (size_t word = 0; word <= last_word && word < bitmap_size; word++, p += GC_WORD_BITS) {
+    size_t value = bitmap[word];
+    char s[GC_WORD_BITS + 1];
+    for (size_t bit = 0, mask = 1; bit < GC_WORD_BITS; bit++, mask <<= 1) {
+      if (value & mask) {
+        s[bit] = 'X';
+      } else {
+        size_t* addr = p + bit;
+        s[bit] = (*addr) ? '|' : '-';
+      }
     }
+    s[GC_WORD_BITS] = 0;
+    printf("%3zd | " FORMAT_PTR " %s\n", word, p, s);
   }
   printf("\n");
 }
@@ -512,7 +520,7 @@ void print_state() {
   printf("%d stack_index\n", state->stack_map.index);
   printf("\n");
 
-  // print_bitmap();
+  // PRINT_BITMAP();
 }
 
 
@@ -560,7 +568,6 @@ void log_debug(char* fmt, ...) {
 #else
 void log_debug(char* fmt, ...) {}
 #endif
-
 
 
 // ========================================================
@@ -658,7 +665,7 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
     case Tag_List: {
       copy_ascii("[", sb);
       for (Cons* list = &v->cons; list != pNil; list = list->tail) {
-        Debug_toStringHelp(depth-1, list->head, sb);
+        Debug_toStringHelp(depth - 1, list->head, sb);
         if (list->tail != pNil) copy_ascii(", ", sb);
       }
       copy_ascii("]", sb);
@@ -667,20 +674,20 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
     case Tag_Tuple2: {
       Tuple2* t = &v->tuple2;
       copy_ascii("(", sb);
-      Debug_toStringHelp(depth-1, t->a, sb);
+      Debug_toStringHelp(depth - 1, t->a, sb);
       copy_ascii(", ", sb);
-      Debug_toStringHelp(depth-1, t->b, sb);
+      Debug_toStringHelp(depth - 1, t->b, sb);
       copy_ascii(")", sb);
       return;
     }
     case Tag_Tuple3: {
       Tuple3* t = &v->tuple3;
       copy_ascii("(", sb);
-      Debug_toStringHelp(depth-1, t->a, sb);
+      Debug_toStringHelp(depth - 1, t->a, sb);
       copy_ascii(", ", sb);
-      Debug_toStringHelp(depth-1, t->b, sb);
+      Debug_toStringHelp(depth - 1, t->b, sb);
       copy_ascii(", ", sb);
-      Debug_toStringHelp(depth-1, t->c, sb);
+      Debug_toStringHelp(depth - 1, t->c, sb);
       copy_ascii(")", sb);
       return;
     }
@@ -710,7 +717,7 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
       copy_ascii(" ", sb);
       int len = custom_params(c);
       for (int i = 0; i < len; ++i) {
-        Debug_toStringHelp(depth-1, c->values[i], sb);
+        Debug_toStringHelp(depth - 1, c->values[i], sb);
         if (i != len - 1) copy_ascii(" ", sb);
       }
       return;
@@ -724,7 +731,7 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
         char* field = Debug_fields[fg->fields[i]];
         copy_ascii(field, sb);
         copy_ascii(": ", sb);
-        Debug_toStringHelp(depth-1, r->values[i], sb);
+        Debug_toStringHelp(depth - 1, r->values[i], sb);
         if (i != size - 1) copy_ascii(",", sb);
       }
       return;
@@ -754,9 +761,9 @@ void* eval_Debug_toString(void* args[]) {
   size_t len = (toString_alloc_chunk_words - 1) * SIZE_UNIT / sizeof(u16);
   ElmString16* str = newElmString16(len);
   StringBuilder sb = {
-    .s = str,
-    .cursor = str->words16,
-    .end = str->words16 + len,
+      .s = str,
+      .cursor = str->words16,
+      .end = str->words16 + len,
   };
 
   Debug_toStringHelp(5, value, &sb);
@@ -775,9 +782,9 @@ void* eval_Debug_toString(void* args[]) {
   return str;
 }
 Closure Debug_toString = {
-  .header = HEADER_CLOSURE(0),
-  .max_values = 1,
-  .evaluator = eval_Debug_toString,
+    .header = HEADER_CLOSURE(0),
+    .max_values = 1,
+    .evaluator = eval_Debug_toString,
 };
 
 
@@ -803,9 +810,9 @@ void* eval_Debug_log(void* args[]) {
   return value;
 }
 Closure Debug_log = {
-  .header = HEADER_CLOSURE(0),
-  .max_values = 2,
-  .evaluator = eval_Debug_log,
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = eval_Debug_log,
 };
 
 
@@ -820,7 +827,7 @@ void* eval_Debug_todo(void* args[]) {
   return NULL;
 }
 Closure Debug_todo = {
-  .header = HEADER_CLOSURE(0),
-  .max_values = 1,
-  .evaluator = eval_Debug_todo,
+    .header = HEADER_CLOSURE(0),
+    .max_values = 1,
+    .evaluator = eval_Debug_todo,
 };

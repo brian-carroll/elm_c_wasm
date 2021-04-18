@@ -76,6 +76,7 @@ GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr);
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter);
 size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter);
 void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter *iter);
+size_t* bitmap_find_space(GcHeap* heap, size_t* start, size_t min_size, size_t** end_of_space);
 
 size_t child_count(ElmValue* v);
 bool sanity_check(void* v);
@@ -109,6 +110,7 @@ struct gc_perf_data {
   size_t size;
   u64 start;
   u64 marked;
+  u64 swept;
   u64 compacted;
   u64 jsRefs;
 };
@@ -126,6 +128,7 @@ extern struct gc_perf_data perf_data;
   printf("  before:  %5zd kB\n", perf_data.size * sizeof(void*) / 1024);             \
   printf("  after:   %5zd kB\n", (gc_state.next_alloc - gc_state.heap.start) * sizeof(void*) / 1024);             \
   printf("  mark:    %5lld k cycles\n", (perf_data.marked - perf_data.start) / 1000);        \
+  printf("  sweep:   %5lld k cycles\n", (perf_data.swept - perf_data.marked) / 1000);        \
   printf("  compact: %5lld k cycles\n", (perf_data.compacted - perf_data.marked) / 1000); \
   printf("  jsRefs:  %5lld k cycles\n", (perf_data.jsRefs - perf_data.compacted) / 1000);
 

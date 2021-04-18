@@ -103,6 +103,18 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
    ==================================================== */
 
+void sweep(GcHeap* heap) {
+  size_t* end_of_space = heap->start;
+  for (;;) {
+    size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
+    if (!start_of_space) break;
+    printf("sweeping %p -> %p\n", start_of_space, end_of_space);
+    for (size_t* p = start_of_space; p < end_of_space; p++) {
+      *p = 0;
+    }
+  }  
+}
+
 /**
  * Minor collection
  * Can be used during execution. Does not move any live pointers.
@@ -116,6 +128,12 @@ bool GC_collect_minor() {
   mark(state, ignore_below);
   PERF_TIMER(marked);
   TEST_MARK_CALLBACK();
+
+  sweep(&state->heap);
+  PERF_TIMER(swept);
+
+  // PRINT_BITMAP();
+  // print_heap();
 
   i32 new_gen_size = state->heap.end - ignore_below;
   i32 used = (i32)state->n_marked_words;

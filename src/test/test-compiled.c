@@ -29,7 +29,7 @@ void * eval_elm_core_List_foldl(void * args[]) {
     void * x_func = args[0];
     void * x_acc = args[1];
     void * x_list = args[2];
-    u32 gc_stack_frame = GC_get_stack_frame();
+    // u32 gc_stack_frame = GC_get_stack_frame();
     tce_loop:
     ;
     void * case0;

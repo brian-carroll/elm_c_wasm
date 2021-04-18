@@ -87,7 +87,7 @@ GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr) {
 
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
   size_t* ptr = heap->start + (iter.index * GC_WORD_BITS);
-  for (size_t mask = iter.mask; mask; mask >>= 1) {
+  for (size_t mask = iter.mask; mask > 1; mask >>= 1) {
     ptr++;
   }
   return ptr;
@@ -109,5 +109,29 @@ void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter *iter) {
   for (; iter->index < max_index; bitmap_next(iter)) {
     bool value = !!(heap->bitmap[iter->index] & iter->mask);
     if (value == target_value) break;
+  }
+}
+
+
+size_t* bitmap_find_space(
+    GcHeap* heap, size_t* start, size_t min_size, size_t** end_of_space) {
+  if (start >= heap->end) {
+    return NULL;
+  }
+  GcBitmapIter iter = ptr_to_bitmap_iter(heap, start);
+
+  for (;;) {
+    bitmap_find(heap, false, &iter);
+    size_t* next_available = bitmap_iter_to_ptr(heap, iter);
+    if (next_available >= heap->end) {
+      return NULL;
+    }
+
+    bitmap_find(heap, true, &iter);
+    size_t* next_occupied = bitmap_iter_to_ptr(heap, iter);
+    if (next_occupied - next_available >= min_size) {
+      *end_of_space = next_occupied;
+      return next_available;
+    }
   }
 }

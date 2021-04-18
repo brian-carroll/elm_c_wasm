@@ -106,7 +106,7 @@ $(BUILD)/bin/json.o: $(KERNEL)/json/*.c $(KERNEL)/json/*.h
 $(BUILD)/bin/wrapper.o: $(KERNEL)/wrapper/*.c $(KERNEL)/wrapper/*.h
 	gcc -ggdb $(CFLAGS) -c $(KERNEL)/wrapper/wrapper.c -o $@
 
-$(BUILD)/bin/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c
+$(BUILD)/bin/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c $(TEST)/gc/*.c
 	gcc -ggdb $(CFLAGS) -c $(TEST)/test.c -o $@
 
 

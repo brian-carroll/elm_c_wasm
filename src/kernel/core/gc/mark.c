@@ -11,7 +11,7 @@ bool mark_words(GcState* state, void* p_void, size_t size) {
   }
   if (size == 0) return true;
   assert(p < heap->end);
-  assert(p + size < heap->end);
+  assert(p + size <= heap->end);
 
   size_t first_index = (size_t)(p - heap->start);
   size_t first_word = first_index / GC_WORD_BITS;
