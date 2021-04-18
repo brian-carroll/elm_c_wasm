@@ -1,6 +1,9 @@
 ## TODO
-- get rid of tailcall resume stuff
-  - compiler too
+
+end_of_alloc_patch is not initialised
+
+
+
 - bitmap refactor
   - **get tests passing first!** or use a new branch from master?
   - use new bitmap_find function in compactor

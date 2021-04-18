@@ -50,9 +50,6 @@ clean:
 	@mkdir -p $(BUILD)/bin $(BUILD)/wasm $(BUILD)/exe
 	@rm -f $(KERNEL)/wrapper/wrapper.js
 
-watch:
-	(while true ; do make build.log; sleep 1; done) | grep -v make
-
 benchmark:
 	cd $(ROOT)/demos/2019-08-benchmark && make clean && make
 
