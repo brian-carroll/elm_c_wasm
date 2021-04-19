@@ -540,7 +540,7 @@ tce_loop:;
       PRINT_BITMAP();
 
       i32 nErrors = 0;
-      i32 expected = 0;
+      i32 expected = 1;
       for (; liveList->tail != pNil; liveList = liveList->tail) {
         Custom* live = liveList->head;
         ElmInt* iter = live->values[0];
@@ -554,7 +554,7 @@ tce_loop:;
       return newElmInt(nErrors);
     } else {
       Custom* garbage = newCustom(CTOR_Err, nKidsGarbage, NULL);
-      for (int i = 1; i < nKidsGarbage; i++) {
+      for (int i = 0; i < nKidsGarbage; i++) {
         garbage->values[i] = pUnit;
       }
 
@@ -582,8 +582,7 @@ char* minor_gc_test() {
     printf(
         "\n"
         "## minor_gc_test\n"
-        "(fill the heap with both live and garbage values, mark, sweep, fill in the "
-        "swept gaps)\n"
+        "(fill the heap with a pattern, mark, sweep, allocate in swept areas)\n"
         "\n");
   }
   gc_test_reset();
@@ -600,11 +599,12 @@ char* minor_gc_test() {
   i32 iterations_to_fill_heap = heap_size / (garbageChunkSize + liveChunkSize);
   i32 iterations = iterations_to_fill_heap + (iterations_to_fill_heap / 4);
 
-  printf("garbageChunkSize = %d\n", garbageChunkSize);
-  printf("liveChunkSize = %d\n", liveChunkSize);
-  printf("iterations_to_fill_heap = %d\n", iterations_to_fill_heap);
-  printf("iterations = %d\n", iterations);
-
+  if (verbose) {
+    printf("garbageChunkSize = %d\n", garbageChunkSize);
+    printf("liveChunkSize = %d\n", liveChunkSize);
+    printf("iterations_to_fill_heap = %d\n", iterations_to_fill_heap);
+    printf("iterations = %d\n", iterations);
+  }
 
   Closure* run = newClosure(3,
       3,
@@ -671,7 +671,7 @@ char* gc_test() {
   mu_run_test(test_heap_layout);
   mu_run_test(test_memcpy);
   mu_run_test(stackmap_mark_test);
-  // mu_run_test(minor_gc_test); // FIXME
+  mu_run_test(minor_gc_test);
   // mu_run_test(assertions_test); // FIXME
 
   return NULL;
