@@ -21,6 +21,7 @@
 #define GC_BLOCK_MASK (-GC_BLOCK_BYTES)
 #define GC_WORD_BITS (sizeof(size_t) * 8)
 #define GC_DIV_ROUND_UP(num, den) ((num + den - 1) / den)
+#define GC_ROUND_UP(num, pow2) ((num & (-(size_t)pow2)) + pow2)
 #define GC_STACK_MAP_SIZE (10 * 1024)
 
 #define ALL_ONES -1
@@ -63,7 +64,7 @@ void compact(GcState* state, size_t* compact_start);
 
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
-void grow_heap_x2(GcHeap* heap);
+void grow_heap(GcHeap* heap, size_t current_alloc_words);
 
 void stack_clear();
 void stack_enter(Closure* c);

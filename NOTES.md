@@ -1,5 +1,10 @@
 ## TODO
 
+- growing
+  - [x] minor gc returns percentage_marked, and allocator does the growing
+  - [x] grow function takes a min_space argument
+  - [ ] mark stack overflow
+    - first refactor the heap struct: remove layout assumptions, then put offsets on top
 
 - bitmap refactor
   - **get tests passing first!** or use a new branch from master?
@@ -8,35 +13,19 @@
   - bm_iter is related to `from`, not `to`. It works a bit ahead of `from`. It's a target for where `from` wants to get to.
   - update bitmap_dead_between (popcount & make_bitmask)
   - update mark_words
-- timers for grow_heap_x2
+- timers for grow_heap
 - better timers
 - test the basics of the new system
   - when I grow, do I actually get contiguous memory?
 
 ## what tests to do?
-- allocation
-  - tail recursion, dropping garbage and live values in a pattern
-  - GC, then start from the bottom, check it fills the gaps
-- growing memory
-  - same function as for allocation tests, but with more iterations
-- stack map marking
-  - the trashyfold thing is undiagnosable
-  - ideally want all scenarios in 1
-    - finished
-      - tail call with garbage and live
-      - normal call with garbage and live
-    - interrupted
-      - tail call with garbage and live
-      - normal call with garbage and live
-
-#### stackmap test allocations
-- eval_stack_tail_complete x3
-- eval_stack_normal_complete
-- eval_stack_normal_overflow
-- eval_stack_tail_overflow x2
-- eval_stack_normal_overflow
-
-
+- growing the heap
+  - low % free space on minor GC
+  - bad fragmentation after minor GC
+  - mark stack overflow
+- major GC
+  - check integrity after compactor moves stuff around
+    - pointers both up and down (via minor GC?)
 
 ## debug ideas
 Casey Muratori made a huge debug system to visualise things. He went further with it than I would have even thought about. What ideas can I use from that?

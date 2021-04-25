@@ -10,32 +10,39 @@
 /*
   Allocate memory on the heap
     push_to_stack: should be `true` in 99.99% of cases. Only false for fancy perf tricks
-    words: Number of words to allocate. A word is the size of a pointer, 32 or 64 bits.
+    alloc_words: Number of words to allocate. A word is the size of a pointer, 32 or 64 bits.
 */
-void* GC_allocate(bool push_to_stack, ptrdiff_t words) {
+void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
   GcState* state = &gc_state;
   GcHeap* heap = &state->heap;
   size_t* alloc = state->next_alloc;
   size_t* end_of_alloc_patch = state->end_of_alloc_patch;
 
-  size_t* new_alloc = alloc + words;
+  size_t* new_alloc = alloc + alloc_words;
 
   if (new_alloc >= end_of_alloc_patch) {
-    // Out of space in current empty patch. Find the next patch.
-    alloc = bitmap_find_space(heap, end_of_alloc_patch, words, &end_of_alloc_patch);
+    alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch);
     if (!alloc) {
-      // No more empty patches left. Mark the heap and search again
-      size_t* old_end = heap->end;
-      bool grew = GC_collect_minor(); // only affects heap, not the rest of state
-      if (grew) {
-        // Use the new space. Allocation will be faster than if we found a gap.
+      GC_collect_minor();
+
+      size_t new_gen_size = state->heap.end - state->end_of_old_gen;
+      size_t used_size = state->n_marked_words;
+      size_t free_size = new_gen_size - used_size;
+      size_t fullness_threshold = new_gen_size / 2;
+
+      bool should_grow = (used_size > fullness_threshold) || (alloc_words > free_size);
+      if (!should_grow) {
+        alloc = bitmap_find_space(heap, heap->start, alloc_words, &end_of_alloc_patch);
+        should_grow = !alloc;  // handle failure due to fragmentation
+      }
+      if (should_grow) {
+        size_t* old_end = heap->end;
+        grow_heap(heap, alloc_words);
         alloc = old_end;
         end_of_alloc_patch = heap->end;
-      } else {
-        alloc = bitmap_find_space(heap, heap->start, words, &end_of_alloc_patch);
       }
     }
-    new_alloc = alloc + words;
+    new_alloc = alloc + alloc_words;
     state->end_of_alloc_patch = end_of_alloc_patch;
   }
 

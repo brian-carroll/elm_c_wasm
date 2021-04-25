@@ -101,16 +101,20 @@ int init_heap(GcHeap* heap) {
 }
 
 
-void grow_heap_x2(GcHeap* heap) {
-  size_t factor = 2;
-
+void grow_heap(GcHeap* heap, size_t current_alloc_words) {
   size_t* old_offsets = heap->offsets;
   size_t* old_bitmap = heap->bitmap;
   size_t* old_system_end = heap->system_end;
 
-  // Grow
-  size_t old_total_bytes = (heap->system_end - heap->start) * sizeof(size_t*);
-  size_t new_total_bytes = old_total_bytes * factor;
+  // Grow to 2x, or enough to fit the current allocation, whichever is larger
+  size_t old_total_words = heap->system_end - heap->start;
+  size_t alloc_with_overhead = current_alloc_words + (current_alloc_words >> 4);
+  size_t extra_words =
+      (alloc_with_overhead > old_total_words) ? alloc_with_overhead : old_total_words;
+  size_t new_total_words = old_total_words + extra_words;
+  size_t new_total_bytes =
+      GC_ROUND_UP(new_total_words * sizeof(void*), GC_SYSTEM_MEM_CHUNK);
+
   grow_system_memory(heap->start, new_total_bytes);
   set_heap_layout(heap, heap->start, new_total_bytes);
 

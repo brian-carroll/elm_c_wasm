@@ -119,7 +119,7 @@ void sweep(GcHeap* heap) {
  * Minor collection
  * Can be used during execution. Does not move any live pointers.
  */
-bool GC_collect_minor() {
+void GC_collect_minor() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->end_of_old_gen;
 
@@ -144,17 +144,9 @@ bool GC_collect_minor() {
   format_mem_size(available, sizeof(available), new_gen_size);
   printf("Minor GC marked %zd%% (%s / %s)\n", percent_marked, marked, available);
 
-  bool grew = false;
-  if (percent_marked > 75) {
-    grow_heap_x2(&state->heap);
-    grew = true;
-  }
-
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);
   PERF_TIMER_PRINT_MINOR();
-
-  return grew;
 }
 
 
@@ -185,7 +177,7 @@ void GC_collect_major() {
       available * SIZE_UNIT / 1024);
 
   if (used * 2 > available) {
-    grow_heap_x2(&state->heap);
+    grow_heap(&state->heap, 0);
   }
 
   PERF_TIMER_PRINT_MAJOR();
