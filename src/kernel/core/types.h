@@ -21,6 +21,7 @@ typedef float f32;
 typedef double f64;
 
 typedef enum {
+  // Tag_Zero,             // invalid Elm value  TODO: fails Json tests, is that a real bug?
   Tag_Int,              // 0
   Tag_Float,            // 1
   Tag_Char,             // 2
