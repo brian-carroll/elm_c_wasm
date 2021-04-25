@@ -535,18 +535,19 @@ void format_ptr_diff_size(char* buffer, size_t buf_size, void* start, void* end)
 void format_mem_size(char* buffer, size_t buf_size, size_t words) {
   size_t bytes = words * sizeof(void*);
   char* suffix;
-  size_t amount;
+  f32 amount;
   if (bytes < 1024) {
     suffix = "B";
-    amount = bytes;
+    amount = (f32)bytes;
   } else if (bytes < 1024 * 1024) {
     suffix = "kB";
-    amount = bytes / 1024;
+    amount = (f32)bytes / 1024;
   } else {
     suffix = "MB";
-    amount = bytes / (1024 * 1024);
+    amount = (f32)bytes / (1024 * 1024);
   }
-  snprintf(buffer, buf_size, "%zd %s", amount, suffix);
+  char* format = (amount < 10) ? "%.1f %s" : "%.0f %s";
+  snprintf(buffer, buf_size, format, amount, suffix);
 }
 
 
