@@ -11,6 +11,12 @@ bool mark_words(GcState* state, void* p_void, size_t size) {
   }
   if (size == 0) return true;
   assert(p < heap->end);
+  if (p + size > heap->end) {
+    printf("Marking %p - %p, past heap end at %p\n", p, p+size, heap->end);
+    print_state();
+    print_stack_map();
+    fflush(0);
+  }
   assert(p + size <= heap->end);
 
   size_t first_index = (size_t)(p - heap->start);

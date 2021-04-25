@@ -90,7 +90,11 @@ size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
   for (size_t mask = iter.mask; mask > 1; mask >>= 1) {
     ptr++;
   }
-  return ptr;
+  if (ptr > heap->end) {
+    return heap->end;
+  } else {
+    return ptr;
+  }
 }
 
 

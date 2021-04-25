@@ -1,8 +1,5 @@
 ## TODO
 
-end_of_alloc_patch is not initialised
-
-
 
 - bitmap refactor
   - **get tests passing first!** or use a new branch from master?
@@ -17,27 +14,27 @@ end_of_alloc_patch is not initialised
   - when I grow, do I actually get contiguous memory?
 
 ## what tests to do?
-- all the conditions in allocate
-  - fill up the heap with live + garbage stuff
-  - get to the top, wrap back around, check it fills the gaps
-  - fill it up 90% and 50% and see what difference
-- So I need a test function that will
-  - run for a configurable amount of memory
-  - produce a configurable % of garbage
-  - give me a predictable return value
-- at the moment I'm using recursion to get multiple stack frames
+- allocation
+  - tail recursion, dropping garbage and live values in a pattern
+  - GC, then start from the bottom, check it fills the gaps
+- growing memory
+  - same function as for allocation tests, but with more iterations
+- stack map marking
+  - the trashyfold thing is undiagnosable
+  - ideally want all scenarios in 1
+    - finished
+      - tail call with garbage and live
+      - normal call with garbage and live
+    - interrupted
+      - tail call with garbage and live
+      - normal call with garbage and live
 
-- could just do a simple counter. Increment by 1 till you hit some target
-  - the target value is calculated in C before running, based on target garbage and total memory specs, and is returned from the function itself
-  - alternatively, do a sum from 1:n and calculate as n*(n-1)/2
-  - if worried about integer overflow, just use floats and check with tolerance +-0.5
-  - Controllable live values:
-    - Make a `List Custom`. Take 2 params, one for size of live chunk (Custom), another for spacing (based on count)
-  - Function needs to be tail recursive. Stack frame can't take up the whole heap.
-
-- Fibonacci stuff is more useful for stackmap testing
-  - although could extend the same idea
-    - param for how far to count before doing a non-tail-recursion
+#### stackmap test allocations
+- eval_stack_tail_complete x3
+- eval_stack_normal_complete
+- eval_stack_normal_overflow
+- eval_stack_tail_overflow x2
+- eval_stack_normal_overflow
 
 
 
