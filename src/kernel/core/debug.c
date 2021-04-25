@@ -452,7 +452,8 @@ void print_bitmap(const char* function, const char* filename, int line_no) {
 
   printf("Bitmap at %s:%d (%s)\n", filename, line_no, function);
   size_t* p = heap->start;
-  for (size_t word = 0; word <= last_word && word < bitmap_size; word++, p += GC_WORD_BITS) {
+  for (size_t word = 0; word <= last_word && word < bitmap_size;
+       word++, p += GC_WORD_BITS) {
     size_t value = bitmap[word];
     char s[GC_WORD_BITS + 1];
     for (size_t bit = 0, mask = 1; bit < GC_WORD_BITS; bit++, mask <<= 1) {
@@ -523,6 +524,64 @@ void print_state() {
   // PRINT_BITMAP();
 }
 
+
+void format_ptr_diff_size(char* buffer, size_t buf_size, void* start, void* end) {
+  size_t bytes = end - start;
+  size_t words = bytes / sizeof(void*);
+  format_mem_size(buffer, buf_size, words);
+}
+
+
+void format_mem_size(char* buffer, size_t buf_size, size_t words) {
+  size_t bytes = words * sizeof(void*);
+  char* suffix;
+  size_t amount;
+  if (bytes < 1024) {
+    suffix = "B";
+    amount = bytes;
+  } else if (bytes < 1024 * 1024) {
+    suffix = "kB";
+    amount = bytes / 1024;
+  } else {
+    suffix = "MB";
+    amount = bytes / (1024 * 1024);
+  }
+  snprintf(buffer, buf_size, "%zd %s", amount, suffix);
+}
+
+
+void print_ptr_diff_size(void* start, void* end) {
+  char buf[100];
+  format_ptr_diff_size(buf, sizeof(buf), start, end);
+  printf("%s", buf);
+}
+
+
+void print_mem_size(size_t words) {
+  char buf[100];
+  format_mem_size(buf, sizeof(buf), words);
+  printf("%s", buf);
+}
+
+#if PERF_TIMER_ENABLED
+void print_gc_perf(void* untyped_perf_data, bool major) {
+  struct gc_perf_data* perf_data = untyped_perf_data;
+  char size_before[20];
+  char size_after[20];
+  format_mem_size(size_before, sizeof(size_before), perf_data->size);
+  format_ptr_diff_size(size_after, sizeof(size_after), gc_state.heap.start, gc_state.next_alloc);
+
+  printf("GC performance:\n");
+  printf("  before:  %s\n", size_before);
+  printf("  after:   %s\n", size_after);
+  printf("  mark:    %5lld k cycles\n", (perf_data->marked - perf_data->start) / 1000);
+  printf("  sweep:   %5lld k cycles\n", (perf_data->swept - perf_data->marked) / 1000);
+  if (major) {
+    printf("  compact: %5lld k cycles\n", (perf_data->compacted - perf_data->marked) / 1000);
+    printf("  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->compacted) / 1000);
+  }
+}
+#endif
 
 // =======================================================================
 //

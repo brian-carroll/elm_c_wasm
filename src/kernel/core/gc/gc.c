@@ -112,7 +112,7 @@ void sweep(GcHeap* heap) {
     for (size_t* p = start_of_space; p < end_of_space; p++) {
       *p = 0;
     }
-  }  
+  }
 }
 
 /**
@@ -135,13 +135,14 @@ bool GC_collect_minor() {
   // PRINT_BITMAP();
   // print_heap();
 
-  i32 new_gen_size = state->heap.end - ignore_below;
-  i32 used = (i32)state->n_marked_words;
-  i32 percent_marked = (100 * used) / new_gen_size;
-  printf("Minor GC marked %d%% (%zd kB / %zd kB)\n",
-      percent_marked,
-      used * SIZE_UNIT / 1024,
-      new_gen_size * SIZE_UNIT / 1024);
+  size_t new_gen_size = state->heap.end - ignore_below;
+  size_t used = state->n_marked_words;
+  size_t percent_marked = (100 * used) / new_gen_size;
+  char marked[20];
+  char available[20];
+  format_mem_size(marked, sizeof(marked), used);
+  format_mem_size(available, sizeof(available), new_gen_size);
+  printf("Minor GC marked %zd%% (%s / %s)\n", percent_marked, marked, available);
 
   bool grew = false;
   if (percent_marked > 75) {
@@ -151,7 +152,7 @@ bool GC_collect_minor() {
 
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);
-  PERF_TIMER_PRINT();
+  PERF_TIMER_PRINT_MINOR();
 
   return grew;
 }
@@ -187,7 +188,7 @@ void GC_collect_major() {
     grow_heap_x2(&state->heap);
   }
 
-  PERF_TIMER_PRINT();
+  PERF_TIMER_PRINT_MAJOR();
 }
 
 

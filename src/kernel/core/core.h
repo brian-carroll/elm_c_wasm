@@ -104,6 +104,11 @@ void print_state();
 void print_stack_map();
 void print_bitmap(const char* function, const char* filename, int line_no);
 #define PRINT_BITMAP() print_bitmap(__FUNCTION__, __FILE__, __LINE__)
+void format_ptr_diff_size(char* buffer, size_t buf_size, void* start, void* end);
+void format_mem_size(char* buffer, size_t buf_size, size_t words);
+void print_ptr_diff_size(void* start, void* end);
+void print_mem_size(size_t words);
+void print_gc_perf(void* perf_data, bool major);
 
 void log_error(char* fmt, ...);
 void log_debug(char* fmt, ...);

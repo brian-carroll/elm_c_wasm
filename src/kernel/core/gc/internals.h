@@ -75,7 +75,7 @@ size_t make_bitmask(size_t first_bit, size_t last_bit);
 GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr);
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter);
 size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter);
-void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter *iter);
+void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter* iter);
 size_t* bitmap_find_space(GcHeap* heap, size_t* start, size_t min_size, size_t** end_of_space);
 
 size_t child_count(ElmValue* v);
@@ -86,7 +86,8 @@ bool sanity_check(void* v);
 #define PERF_TIMER_ENABLED 0
 #define PERF_START()
 #define PERF_TIMER(field)
-#define PERF_TIMER_PRINT()
+#define PERF_TIMER_PRINT_MINOR()
+#define PERF_TIMER_PRINT_MAJOR()
 #else
 #define PERF_TIMER_ENABLED 1
 #ifdef _MSC_VER
@@ -103,7 +104,7 @@ TODO:
   - Create macros BEGIN_TIMED_BLOCK and END_TIMED_BLOCK
     - call begin and end functions with marcro args
     - Put identifying info in the counter struct __FUNCTION__, __LINE__, __FILE__
-  - PERF_TIMER_PRINT 
+  - PERF_TIMER_PRINT
 */
 
 struct gc_perf_data {
@@ -123,14 +124,8 @@ extern struct gc_perf_data perf_data;
 
 #define PERF_TIMER(field) perf_data.field = __rdtsc()
 
-#define PERF_TIMER_PRINT()                                                       \
-  printf("GC performance:\n");                                                   \
-  printf("  before:  %5zd kB\n", perf_data.size * sizeof(void*) / 1024);             \
-  printf("  after:   %5zd kB\n", (gc_state.next_alloc - gc_state.heap.start) * sizeof(void*) / 1024);             \
-  printf("  mark:    %5lld k cycles\n", (perf_data.marked - perf_data.start) / 1000);        \
-  printf("  sweep:   %5lld k cycles\n", (perf_data.swept - perf_data.marked) / 1000);        \
-  printf("  compact: %5lld k cycles\n", (perf_data.compacted - perf_data.marked) / 1000); \
-  printf("  jsRefs:  %5lld k cycles\n", (perf_data.jsRefs - perf_data.compacted) / 1000);
+#define PERF_TIMER_PRINT_MINOR() print_gc_perf(&perf_data, false)
+#define PERF_TIMER_PRINT_MAJOR() print_gc_perf(&perf_data, true)
 
 #endif
 
