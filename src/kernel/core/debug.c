@@ -388,7 +388,7 @@ void print_heap_range(size_t* start, size_t* end) {
 #ifdef _WIN32
   printf("|     Address      |       Hex        | Mark | Size | Value\n");
   printf("| ---------------- | ---------------- | ---- | ---- | -----\n");
-#elif defined(TARGET_64BIT)
+#elif TARGET_64BIT
   printf("|    Address     |       Hex        | Mark | Size | Value\n");
   printf("| -------------- | ---------------- | ---- | ---- | -----\n");
 #else

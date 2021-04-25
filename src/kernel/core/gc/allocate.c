@@ -62,7 +62,7 @@ void* GC_memcpy(void* vdest, void* vsrc, size_t words) {
   u64* src64;
   u64* dest64;
 
-#ifndef TARGET_64BIT
+#if !TARGET_64BIT
   u32* src32;
   u32* dest32;
 
@@ -85,7 +85,7 @@ void* GC_memcpy(void* vdest, void* vsrc, size_t words) {
     dest64[i] = src64[i];
   }
 
-#ifndef TARGET_64BIT
+#if !TARGET_64BIT
   // last 32 bits if needed
   if (bytes % sizeof(u64)) {
     src32 = (u32*)(&src64[i]);

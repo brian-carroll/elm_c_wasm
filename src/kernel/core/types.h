@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // WEBASSEMBLY PRIMITIVE TYPES
 
@@ -46,18 +47,12 @@ typedef struct {
 } Header;
 #endif
 
-// It's nice if we can target 64-bit platforms
-// C compile times are dramatically faster for native than for WebAssembly => faster dev
-// cycle
-#if defined(_LP64) || defined(_WIN64)
-#define TARGET_64BIT
-#endif
+// Support 64-bit native executables as well as 32-bit Wasm
+// Compile times and tooling are much better for native
+#define TARGET_64BIT (UINTPTR_MAX > 0xffffffff)
 
-#ifdef TARGET_64BIT
-// Padding would be inserted by compiler anyway
-// This makes it more explicit (but we have to get it right!)
-// This also gives automatic zeroing of the padding in struct literals,
-// since if you leave out a member the compiler zeros it
+#if TARGET_64BIT
+// Making the padding an explicit member means it gets zeroed rather than ignored
 #define PADDING64 u32 padding;
 #else
 #define PADDING64

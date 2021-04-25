@@ -78,7 +78,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 0;
   char* format_str;
-#ifdef TARGET_64BIT
+#if TARGET_64BIT
   iter.mask = 0x8000000000000000;
   format_str = "bitmap_next assertion %d from word %zd mask %016zx";
 #else
