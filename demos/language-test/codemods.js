@@ -8,8 +8,8 @@ const orig = fs.readFileSync(filepath).toString();
 const withKernelPath = orig.replace(find, replace);
 
 const withPrintVdom = withKernelPath.replace(
-  'GC_collect_full();',
-  'GC_collect_full();\n    print_virtual_dom(gptr_author_project_Main_main);',
+  'GC_collect_major();',
+  'GC_collect_major();\n    print_virtual_dom(gptr_author_project_Main_main);',
 );
 
 const updated = withPrintVdom;

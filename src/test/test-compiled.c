@@ -24,12 +24,12 @@ Closure g_elm_core_List_reverse = {
     .evaluator = &eval_List_reverse,
 };
 
+
 Closure g_elm_core_List_foldl;
 void * eval_elm_core_List_foldl(void * args[]) {
     void * x_func = args[0];
     void * x_acc = args[1];
     void * x_list = args[2];
-    // u32 gc_stack_frame = GC_get_stack_frame();
     tce_loop:
     ;
     void * case0;
@@ -41,9 +41,11 @@ void * eval_elm_core_List_foldl(void * args[]) {
             void * x_x = ((Tuple3 * )(x_list))->a;
             void * x_xs = ((Tuple3 * )(x_list))->b;
             void * tmp1 = A2(x_func, x_x, x_acc);
-            assert(sanity_check(tmp1));
-            x_list = x_xs;
+            void * tmp2 = x_xs;
             x_acc = tmp1;
+            x_list = tmp2;
+            assert(sanity_check(x_acc));
+            assert(sanity_check(x_list));
             GC_stack_tailcall(3, x_func, x_acc, x_list);
             goto tce_loop;
             case0 = NULL;
