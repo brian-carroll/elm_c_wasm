@@ -108,7 +108,7 @@ void sweep(GcHeap* heap) {
   for (;;) {
     size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
     if (!start_of_space) break;
-    printf("sweeping %p -> %p\n", start_of_space, end_of_space);
+    // printf("sweeping %p -> %p\n", start_of_space, end_of_space);
     for (size_t* p = start_of_space; p < end_of_space; p++) {
       *p = 0;
     }

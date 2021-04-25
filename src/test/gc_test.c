@@ -290,19 +290,24 @@ void* eval_generateHeapPattern(void* args[]) {
   assert(nKidsGarbage >= 0);
   assert(nKidsLive >= 1);
 
-  printf("nKidsGarbage %d\n", nKidsGarbage);
-  printf("nKidsLive %d\n", nKidsLive);
+  // printf("nKidsGarbage %d\n", nKidsGarbage);
+  // printf("nKidsLive %d\n", nKidsLive);
 
 tce_loop:;
   do {
-    printf("tce_loop: iterations=%d, liveList=%p, liveList->head=%p, liveList->tail=%p\n",
-        iterations->value,
-        liveList,
-        liveList->head,
-        liveList->tail);
+    if (verbose) {
+      printf(
+          "tce_loop: iterations=%d, liveList=%p, liveList->head=%p, liveList->tail=%p\n",
+          iterations->value,
+          liveList,
+          liveList->head,
+          liveList->tail);
+    }
     if (iterations->value == 0) {
-      printf("Heap pattern generated. Calculating result\n");
-      PRINT_BITMAP();
+      if (verbose) {
+        printf("Heap pattern generated. Calculating result\n");
+        PRINT_BITMAP();
+      }
 
       i32 nErrors = 0;
       i32 expected = 1;
@@ -337,9 +342,11 @@ tce_loop:;
 }
 
 void minor_gc_test_callback() {
-  printf("\n\n minor_gc_test_callback \n\n");
-  // print_heap();
-  // print_state();
+  if (verbose) {
+    printf("\n\n minor_gc_test_callback \n\n");
+    // print_heap();
+    // print_state();
+  }
 }
 
 char* minor_gc_test() {
@@ -385,8 +392,10 @@ char* minor_gc_test() {
   ElmInt* nErrors = Utils_apply(run, 0, NULL);
   mu_expect_equal("should complete with zero errors", nErrors->value, 0);
 
-  print_heap();
-  print_state();
+  if (verbose) {
+    print_heap();
+    print_state();
+  }
 
   return NULL;
 }
@@ -445,12 +454,12 @@ char* gc_test() {
         "##############################################################################"
         "\n");
 
-  // mu_run_test(gc_bitmap_test);
+  mu_run_test(gc_bitmap_test);
   // mu_run_test(test_heap_layout);
   // mu_run_test(test_memcpy);
   // mu_run_test(assertions_test); // FIXME
   // mu_run_test(minor_gc_test);
-  mu_run_test(gc_stackmap_test);
+  // mu_run_test(gc_stackmap_test);
 
   return NULL;
 }
