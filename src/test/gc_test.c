@@ -455,11 +455,11 @@ char* gc_test() {
         "\n");
 
   mu_run_test(gc_bitmap_test);
-  // mu_run_test(test_heap_layout);
-  // mu_run_test(test_memcpy);
-  // mu_run_test(assertions_test); // FIXME
-  // mu_run_test(minor_gc_test);
-  // mu_run_test(gc_stackmap_test);
+  mu_run_test(test_heap_layout);
+  mu_run_test(test_memcpy);
+  mu_run_test(assertions_test);
+  mu_run_test(minor_gc_test);
+  mu_run_test(gc_stackmap_test);
 
   return NULL;
 }

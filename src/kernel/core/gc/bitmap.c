@@ -87,9 +87,27 @@ GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr) {
 
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
   size_t* ptr = heap->start + (iter.index * GC_WORD_BITS);
-  for (size_t mask = iter.mask; mask > 1; mask >>= 1) {
-    ptr++;
-  }
+  size_t mask = iter.mask;
+
+#if TARGET_64BIT
+  size_t bit = 63;
+  if (mask & 0x00000000FFFFFFFF) bit -= 32;
+  if (mask & 0x0000FFFF0000FFFF) bit -= 16;
+  if (mask & 0x00FF00FF00FF00FF) bit -= 8;
+  if (mask & 0x0F0F0F0F0F0F0F0F) bit -= 4;
+  if (mask & 0x3333333333333333) bit -= 2;
+  if (mask & 0x5555555555555555) bit -= 1;
+#else
+  size_t bit = 31;
+  if (mask & 0x0000FFFF) bit -= 16;
+  if (mask & 0x00FF00FF) bit -= 8;
+  if (mask & 0x0F0F0F0F) bit -= 4;
+  if (mask & 0x33333333) bit -= 2;
+  if (mask & 0x55555555) bit -= 1;
+#endif
+
+  ptr += bit;
+
   if (ptr > heap->end) {
     return heap->end;
   } else {

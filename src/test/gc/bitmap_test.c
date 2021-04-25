@@ -11,13 +11,6 @@ GcBitmapIter start_iter = {
     .mask = 1,
 };
 
-size_t* get_end_of_bitmap_ptr() {
-  GcHeap* heap = &gc_state.heap;
-  const size_t chunk = GC_WORD_BITS * sizeof(void*);
-  size_t expected_addr = ((size_t)heap->end & (-chunk)) + chunk;
-  return (size_t*)expected_addr;
-}
-
 
 // --------------------------------------------------------------------------------
 
@@ -193,9 +186,9 @@ void test_bitmap_find() {
   iter = start_iter;
   bitmap_find(heap, true, &iter);
   size_t* actual = bitmap_iter_to_ptr(heap, iter);
-  size_t* expected = get_end_of_bitmap_ptr();
+  size_t* expected = heap->end;
   mu_expect_equal(
-      "should return rounded-up heap.end when nothing is marked", actual, expected);
+      "should return heap.end when nothing is marked", actual, expected);
 }
 
 
@@ -211,7 +204,7 @@ void test_bitmap_find_space() {
   GcHeap* heap = &gc_state.heap;
   size_t* end_of_space;
   size_t* alloc;
-  size_t* end_of_bitmap = get_end_of_bitmap_ptr();
+  size_t* end_of_bitmap = heap->end;
 
   bitmap_reset(heap);
   alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
