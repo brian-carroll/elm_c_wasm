@@ -162,6 +162,7 @@ void GC_collect_major() {
   printf("\nStarting major GC\n");
   PERF_START();
 
+  stack_clear();
   mark(state, ignore_below);
   PERF_TIMER(marked);
   TEST_MARK_CALLBACK();
@@ -203,8 +204,8 @@ void GC_collect_major() {
 
 void* GC_execute(Closure* c) {
   stack_clear();
-  stack_enter(c);
-  return Utils_apply(stack_values[1], 0, NULL);
+  stack_enter(c->evaluator, c);
+  return Utils_apply(c, 0, NULL);
 }
 
 
@@ -223,7 +224,6 @@ void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
 
   stack_clear();
-  stack_enter(NULL);
-
+  stack_enter(init_func, NULL);
   *global_permanent_ptr = init_func();
 }

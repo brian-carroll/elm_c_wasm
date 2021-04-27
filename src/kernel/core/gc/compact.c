@@ -151,10 +151,6 @@ void compact(GcState* state, size_t* compact_start) {
   state->end_of_old_gen = to;
   state->end_of_alloc_patch = heap->end;
 
-  for (size_t i = 0; i < state->stack_map.index; ++i) {
-    stack_values[i] = forwarding_address(heap, stack_values[i]);
-  }
-
   size_t* roots = (size_t*)state->roots;
   if (roots > first_move_to) {
     state->roots = forwarding_address(heap, roots);

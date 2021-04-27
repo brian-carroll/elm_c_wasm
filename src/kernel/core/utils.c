@@ -122,7 +122,6 @@ Closure Utils_append = {
 void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
   void** args;
   do {
-    GC_stack_push_frame(c->evaluator);
     if (n_applied >= c->max_values) {
       // All args in one go (or too many args, expecting a function to be returned)
       args = applied;
@@ -155,6 +154,7 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
 
 
     // Execute! (and let the GC know what the stack is doing)
+    GC_stack_push_frame(c->evaluator);
     GcStackMapIndex stack_frame = GC_get_stack_frame();
     void* result = c->evaluator(args);
 

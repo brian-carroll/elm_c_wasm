@@ -56,12 +56,17 @@ void stack_clear() {
 }
 
 
-void stack_enter(Closure* c) {
+void stack_enter(void* evaluator, Closure* c) {
   GcStackMap* sm = &gc_state.stack_map;
   stack_flags[0] = 'F';
-  stack_flags[1] = 'A';
-  stack_values[1] = c;
-  sm->index = 2;
+  stack_values[0] = evaluator;
+  if (!c) {
+    sm->index = 1;
+  } else {
+    stack_flags[1] = 'A';
+    stack_values[1] = c;
+    sm->index = 2;
+  }
 }
 
 // Get current stack index (before doing a call or tail call)

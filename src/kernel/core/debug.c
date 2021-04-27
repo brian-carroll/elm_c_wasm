@@ -578,8 +578,8 @@ void print_gc_perf(void* untyped_perf_data, bool major) {
   if (dummy) printf("  after:   %s\n", size_after);
   if (dummy) printf("  mark:    %5lld k cycles\n", (perf_data->marked - perf_data->start) / 1000);
   if (major) printf("  compact: %5lld k cycles\n", (perf_data->compacted - perf_data->marked) / 1000);
-  if (dummy) printf("  sweep:   %5lld k cycles\n", (perf_data->swept - perf_data->marked) / 1000);
-  if (major) printf("  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->compacted) / 1000);
+  if (dummy) printf("  sweep:   %5lld k cycles\n", (perf_data->swept - (major ? perf_data->compacted : perf_data->marked)) / 1000);
+  if (major) printf("  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->swept) / 1000);
 }
 #endif
 

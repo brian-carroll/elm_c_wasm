@@ -66,7 +66,7 @@ int init_heap(GcHeap* heap);
 void grow_heap(GcHeap* heap, size_t current_alloc_words);
 
 void stack_clear();
-void stack_enter(Closure* c);
+void stack_enter(void* evaluator, Closure* c);
 
 void bitmap_reset(GcHeap*);
 void bitmap_next(GcBitmapIter* iter);
