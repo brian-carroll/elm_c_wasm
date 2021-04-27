@@ -103,8 +103,8 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
    ==================================================== */
 
-void sweep(GcHeap* heap) {
-  size_t* end_of_space = heap->start;
+void sweep(GcHeap* heap, size_t* start) {
+  size_t* end_of_space = start;
   for (;;) {
     size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
     if (!start_of_space) break;
@@ -123,13 +123,14 @@ void GC_collect_minor() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->end_of_old_gen;
 
+  printf("\nStarting minor GC from %p\n", ignore_below);
   PERF_START();
 
   mark(state, ignore_below);
   PERF_TIMER(marked);
   TEST_MARK_CALLBACK();
 
-  sweep(&state->heap);
+  sweep(&state->heap, ignore_below);
   PERF_TIMER(swept);
 
   // PRINT_BITMAP();
@@ -158,6 +159,7 @@ void GC_collect_major() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->heap.start;
 
+  printf("\nStarting major GC\n");
   PERF_START();
 
   mark(state, ignore_below);
@@ -166,6 +168,13 @@ void GC_collect_major() {
 
   compact(state, ignore_below);
   PERF_TIMER(compacted);
+
+  // sweep
+  for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) {
+    *p = 0;
+  }
+  bitmap_reset(&state->heap);
+  PERF_TIMER(swept);
 
   sweepJsRefs(true);
   PERF_TIMER(jsRefs);

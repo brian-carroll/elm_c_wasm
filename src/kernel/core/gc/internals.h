@@ -7,13 +7,12 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <setjmp.h>
 #include <stdbool.h>
 
 #include "../core.h"
 
 #define MB (1024 * 1024)
-#define GC_INITIAL_HEAP_MB 6
+#define GC_INITIAL_HEAP_MB 1
 #define GC_WASM_PAGE_BYTES 65536
 #define GC_SYSTEM_MEM_CHUNK 65536
 #define GC_BLOCK_WORDS 64

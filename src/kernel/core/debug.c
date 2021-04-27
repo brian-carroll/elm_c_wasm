@@ -572,15 +572,14 @@ void print_gc_perf(void* untyped_perf_data, bool major) {
   format_mem_size(size_before, sizeof(size_before), perf_data->size);
   format_ptr_diff_size(size_after, sizeof(size_after), gc_state.heap.start, gc_state.next_alloc);
 
-  printf("GC performance:\n");
-  printf("  before:  %s\n", size_before);
-  printf("  after:   %s\n", size_after);
-  printf("  mark:    %5lld k cycles\n", (perf_data->marked - perf_data->start) / 1000);
-  printf("  sweep:   %5lld k cycles\n", (perf_data->swept - perf_data->marked) / 1000);
-  if (major) {
-    printf("  compact: %5lld k cycles\n", (perf_data->compacted - perf_data->marked) / 1000);
-    printf("  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->compacted) / 1000);
-  }
+  bool dummy = true;
+  if (dummy) printf("GC performance:\n");
+  if (dummy) printf("  before:  %s\n", size_before);
+  if (dummy) printf("  after:   %s\n", size_after);
+  if (dummy) printf("  mark:    %5lld k cycles\n", (perf_data->marked - perf_data->start) / 1000);
+  if (major) printf("  compact: %5lld k cycles\n", (perf_data->compacted - perf_data->marked) / 1000);
+  if (dummy) printf("  sweep:   %5lld k cycles\n", (perf_data->swept - perf_data->marked) / 1000);
+  if (major) printf("  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->compacted) / 1000);
 }
 #endif
 

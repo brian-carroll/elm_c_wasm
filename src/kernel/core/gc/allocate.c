@@ -32,7 +32,7 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
 
       bool should_grow = (used_size > fullness_threshold) || (alloc_words > free_size);
       if (!should_grow) {
-        alloc = bitmap_find_space(heap, heap->start, alloc_words, &end_of_alloc_patch);
+        alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch);
         should_grow = !alloc;  // handle failure due to fragmentation
       }
       if (should_grow) {
@@ -40,6 +40,9 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
         grow_heap(heap, alloc_words);
         alloc = old_end;
         end_of_alloc_patch = heap->end;
+        printf("grew heap by ");
+        print_ptr_diff_size(old_end, heap->end);
+        printf("\n");
       }
     }
     new_alloc = alloc + alloc_words;
