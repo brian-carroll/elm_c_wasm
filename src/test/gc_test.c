@@ -245,7 +245,7 @@ void* eval_infinite_loop(void* args[]) {
 void* test_execute(Closure* c) {
   gc_test_mark_callback = assertions_test_callback;
   stack_clear();
-  stack_enter(c);
+  stack_enter(c->evaluator, c);
   return Utils_apply(c, 0, NULL);
 }
 
@@ -388,7 +388,8 @@ char* minor_gc_test() {
       }));
 
   stack_clear();
-  stack_enter(run);
+  stack_enter(run->evaluator, run);
+
   ElmInt* nErrors = Utils_apply(run, 0, NULL);
   mu_expect_equal("should complete with zero errors", nErrors->value, 0);
 
