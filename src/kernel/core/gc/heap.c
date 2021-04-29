@@ -30,7 +30,7 @@ static void* get_initial_system_memory(size_t bytes) {
   return (void*)aligned_addr;
 }
 
-static void grow_system_memory(void* start, size_t new_total_bytes) {
+void resize_system_memory(void* start, size_t new_total_bytes) {
   assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
   size_t alignment_bytes = (size_t)start - (size_t)system_block;
   size_t new_system_bytes = new_total_bytes + alignment_bytes;
@@ -42,17 +42,19 @@ static void grow_system_memory(void* start, size_t new_total_bytes) {
 
 static void* get_initial_system_memory(size_t bytes) {
   size_t initial_break = (size_t)sbrk(0);
-  size_t aligned_break = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
-  size_t new_break = aligned_break + bytes;
-  int result = brk((void*)new_break);
-  assert(result == 0);
-  return (void*)aligned_break;
-}
-
-static void grow_system_memory(void* start, size_t new_total_bytes) {
-  void* new_break = start + new_total_bytes;
+  size_t aligned_addr = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
+  void* aligned_break = (void*)aligned_addr;
+  void* new_break = aligned_break + bytes;
   int result = brk(new_break);
   assert(result == 0);
+  return aligned_break;
+}
+
+void resize_system_memory(void* start, size_t new_total_bytes) {
+  void* new_break = start + new_total_bytes;
+
+  int is_error = brk(new_break);
+  assert(!is_error);
 }
 
 #endif
@@ -115,7 +117,7 @@ void grow_heap(GcHeap* heap, size_t current_alloc_words) {
   size_t new_total_bytes =
       GC_ROUND_UP(new_total_words * sizeof(void*), GC_SYSTEM_MEM_CHUNK);
 
-  grow_system_memory(heap->start, new_total_bytes);
+  resize_system_memory(heap->start, new_total_bytes);
   set_heap_layout(heap, heap->start, new_total_bytes);
 
   // GC bookkeeping data

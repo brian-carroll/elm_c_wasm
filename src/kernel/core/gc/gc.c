@@ -60,9 +60,10 @@ GcState gc_state;
 
 void reset_state(GcState* state) {
   void* start = state->heap.start;
-  state->end_of_old_gen = start;
   state->next_alloc = start;
   state->end_of_alloc_patch = state->heap.end;
+  state->end_of_old_gen = start;
+  state->n_marked_words = 0;
   state->roots = &Nil;
   stack_clear();
 }
@@ -147,7 +148,7 @@ void GC_collect_minor() {
 
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);
-  PERF_TIMER_PRINT_MINOR();
+  // PERF_TIMER_PRINT_MINOR();
 }
 
 

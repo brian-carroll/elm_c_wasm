@@ -108,6 +108,7 @@ void mark(GcState* state, size_t* ignore_below) {
 
   // Clear all mark bits
   bitmap_reset(heap);
+  state->n_marked_words = 0;
 
   // Mark values being used in the current call stack
   for (size_t i = 0; i < state->stack_map.index; ++i) {

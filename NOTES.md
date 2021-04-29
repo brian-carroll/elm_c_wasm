@@ -20,9 +20,9 @@
 
 ## what tests to do?
 - growing the heap
-  - low % free space on minor GC
-  - bad fragmentation after minor GC
-  - mark stack overflow
+  - low % free space on minor GC: *50% heap pattern, run for 2.1x heap size, wraps around*
+  - high % space with bad fragmentation after minor GC _heap pattern test with <50% garbage_
+  - mark stack overflow _long list_ (may need to use Tuple3's to grow fast enough)
 - major GC
   - check integrity after compactor moves stuff around
     - pointers both up and down (via minor GC?)

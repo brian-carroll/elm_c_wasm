@@ -9,12 +9,18 @@
 #include "test.h"
 
 bool mark_words(GcState* state, void* p_void, size_t size);
+void resize_system_memory(void* start, size_t new_total_bytes);
+void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes);
 
 void gc_test_reset() {
-  GcState* state = &gc_state;
-  bitmap_reset(&state->heap);
-  reset_state(state);
-  for (size_t* p = state->heap.start; p < state->heap.end; p++) {
+  const size_t bytes = GC_INITIAL_HEAP_MB * MB;
+  size_t* start = gc_state.heap.start ? gc_state.heap.start : sbrk(0);
+
+  resize_system_memory(start, bytes);
+
+  set_heap_layout(&gc_state.heap, start, bytes);
+  reset_state(&gc_state);
+  for (size_t* p = gc_state.heap.start; p < gc_state.heap.end; p++) {
     *p = 0;
   }
 }
@@ -245,7 +251,7 @@ void* eval_infinite_loop(void* args[]) {
 void* test_execute(Closure* c) {
   gc_test_mark_callback = assertions_test_callback;
   stack_clear();
-  stack_enter(c);
+  stack_enter(c->evaluator, c);
   return Utils_apply(c, 0, NULL);
 }
 
@@ -279,34 +285,26 @@ char* assertions_test() {
 // --------------------------------------------------------------------------------
 
 void* eval_generateHeapPattern(void* args[]) {
-  ElmInt* garbageChunkSize = args[0];
-  ElmInt* liveChunkSize = args[1];
-  ElmInt* iterations = args[2];
+  ElmInt* liveChunkSize = args[0];
+  ElmInt* garbageChunkSize1 = args[1];
+  ElmInt* garbageChunkSize2 = args[2];
+  ElmInt* iterations = args[3];
 
   Cons* liveList = pNil;
-  i32 nKidsGarbage = SIZE_CUSTOM(garbageChunkSize->value) - SIZE_CUSTOM(0);
+  i32 nKidsGarbage1 = SIZE_CUSTOM(garbageChunkSize1->value) - SIZE_CUSTOM(0);
+  i32 nKidsGarbage2 = SIZE_CUSTOM(garbageChunkSize2->value) - SIZE_CUSTOM(0);
   i32 nKidsLive =
       SIZE_CUSTOM(liveChunkSize->value) - SIZE_CUSTOM(0) - SIZE_INT - SIZE_LIST;
-  assert(nKidsGarbage >= 0);
   assert(nKidsLive >= 1);
-
-  // printf("nKidsGarbage %d\n", nKidsGarbage);
-  // printf("nKidsLive %d\n", nKidsLive);
 
 tce_loop:;
   do {
-    if (verbose) {
-      printf(
-          "tce_loop: iterations=%d, liveList=%p, liveList->head=%p, liveList->tail=%p\n",
-          iterations->value,
-          liveList,
-          liveList->head,
-          liveList->tail);
-    }
     if (iterations->value == 0) {
       if (verbose) {
         printf("Heap pattern generated. Calculating result\n");
-        PRINT_BITMAP();
+        // PRINT_BITMAP();
+        // print_state();
+        // print_stack_map();
       }
 
       i32 nErrors = 0;
@@ -314,7 +312,6 @@ tce_loop:;
       for (; liveList->tail != pNil; liveList = liveList->tail) {
         Custom* live = liveList->head;
         ElmInt* iter = live->values[0];
-        fflush(0);
         if (iter->value != expected) {
           printf("Wrong value at %p: expected %d, got %d\n", iter, expected, iter->value);
           nErrors++;
@@ -323,9 +320,11 @@ tce_loop:;
       }
       return newElmInt(nErrors);
     } else {
-      Custom* garbage = newCustom(CTOR_Err, nKidsGarbage, NULL);
-      for (int i = 0; i < nKidsGarbage; i++) {
-        garbage->values[i] = pUnit;
+      if (nKidsGarbage1 > 0) {
+        Custom* garbage = newCustom(CTOR_Err, nKidsGarbage1, NULL);
+        for (int i = 0; i < nKidsGarbage1; i++) {
+          garbage->values[i] = pUnit;
+        }
       }
 
       Custom* live = newCustom(CTOR_Ok, nKidsLive, NULL);
@@ -333,9 +332,19 @@ tce_loop:;
       for (int i = 1; i < nKidsLive; i++) {
         live->values[i] = pUnit;
       }
+
+      if (nKidsGarbage2 > 0) {
+        Custom* garbage = newCustom(CTOR_Err, nKidsGarbage2, NULL);
+        for (int i = 0; i < nKidsGarbage2; i++) {
+          garbage->values[i] = pUnit;
+        }
+      }
+
       liveList = newCons(live, liveList);
       iterations = newElmInt(iterations->value - 1);
-      GC_stack_tailcall(4, garbageChunkSize, liveChunkSize, iterations, liveList);
+
+      GC_stack_tailcall(
+          5, liveChunkSize, garbageChunkSize1, garbageChunkSize2, iterations, liveList);
       goto tce_loop;
     };
   } while (0);
@@ -344,21 +353,24 @@ tce_loop:;
 void minor_gc_test_callback() {
   if (verbose) {
     printf("\n\n minor_gc_test_callback \n\n");
+    // PRINT_BITMAP();
     // print_heap();
     // print_state();
   }
 }
 
-char* minor_gc_test() {
+void minor_gc_scenario(char* test_name,
+    f32 fill_factor,
+    i32 liveChunkSize,
+    i32 garbageChunkSize1,
+    i32 garbageChunkSize2) {
   if (verbose) {
-    printf(
-        "\n"
-        "## minor_gc_test\n"
-        "(fill the heap with a pattern, mark, sweep, allocate in swept areas)\n"
-        "\n");
+    printf("\n");
+    printf("Scenario: %s\n", test_name);
+    printf("--------\n");
   }
   gc_test_reset();
-  printf("gc_test_reset\n");
+
   gc_test_mark_callback = minor_gc_test_callback;
 
   GcState* state = &gc_state;
@@ -366,40 +378,63 @@ char* minor_gc_test() {
 
   size_t heap_size = heap->end - heap->start;
 
-  i32 garbageChunkSize = 256;
-  i32 liveChunkSize = 256;
-  i32 iterations_to_fill_heap = heap_size / (garbageChunkSize + liveChunkSize);
-  i32 iterations = iterations_to_fill_heap + (iterations_to_fill_heap / 4);
+  i32 iterations_to_fill_heap =
+      heap_size / (garbageChunkSize1 + garbageChunkSize2 + liveChunkSize);
+  i32 iterations = iterations_to_fill_heap * fill_factor;
 
-  if (verbose) {
-    printf("garbageChunkSize = %d\n", garbageChunkSize);
+  if (0 && verbose) {
+    printf("fill_factor = %.2f\n", fill_factor);
+    printf("heap_size = %zd\n", heap_size);
     printf("liveChunkSize = %d\n", liveChunkSize);
+    printf("garbageChunkSize1 = %d\n", garbageChunkSize1);
+    printf("garbageChunkSize2 = %d\n", garbageChunkSize2);
     printf("iterations_to_fill_heap = %d\n", iterations_to_fill_heap);
     printf("iterations = %d\n", iterations);
   }
 
-  Closure* run = newClosure(3,
-      3,
+  Closure* run = newClosure(4,
+      4,
       eval_generateHeapPattern,
       ((void*[]){
-          newElmInt(garbageChunkSize),
           newElmInt(liveChunkSize),
+          newElmInt(garbageChunkSize1),
+          newElmInt(garbageChunkSize2),
           newElmInt(iterations),
       }));
 
   stack_clear();
-  stack_enter(run);
+  stack_enter(eval_generateHeapPattern, run);
   ElmInt* nErrors = Utils_apply(run, 0, NULL);
   mu_expect_equal("should complete with zero errors", nErrors->value, 0);
-
-  if (verbose) {
-    print_heap();
-    print_state();
-  }
-
-  return NULL;
 }
 
+
+void minor_gc_test() {
+  if (verbose) {
+    printf(
+        "\n"
+        "## minor_gc_test\n"
+        "\n");
+  }
+  // print_state();
+
+  size_t initial_size = GC_INITIAL_HEAP_MB * MB / sizeof(void*);
+  GcHeap* heap = &gc_state.heap;
+
+  minor_gc_scenario("Grow on 2nd GC", 2.1, 200, 300, 0);
+  mu_expect_equal(
+      "heap should be twice original size", heap->end - heap->start, initial_size * 2);
+
+  minor_gc_scenario("Complete after 1 GC", 1.25, 200, 300, 0);
+  mu_expect_equal("heap should be original size", heap->system_end - heap->start, initial_size);
+
+  minor_gc_scenario("Grow on 1st GC due to fragmentation", 1.25, 200, 150, 150);
+  mu_expect_equal(
+      "heap should be twice original size", heap->end - heap->start, initial_size * 2);
+
+  // PRINT_BITMAP();
+  // print_state();
+}
 
 // --------------------------------------------------------------------------------
 
