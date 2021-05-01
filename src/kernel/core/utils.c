@@ -5,12 +5,6 @@
 
 #include <stdio.h>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#else
-#define emscripten_run_script(x)
-#endif
-
 
 // Destructure by index
 //    custom, cons, or tuple

@@ -4,8 +4,6 @@
 #include "json-internal.h"
 #include "json.h"
 
-#define GC_NOT_FULL NULL;
-
 // assumes nothing else gets allocated while stringifying
 static void grow(StringBuilder* sb) {
   GC_allocate(false, stringify_alloc_chunk_words);
