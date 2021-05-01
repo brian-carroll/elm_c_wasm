@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "internals.h"
 
 /* ====================================================
@@ -42,9 +41,9 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
         grow_heap(heap, alloc_words);
         alloc = old_end;
         end_of_alloc_patch = heap->end;
-        printf("grew heap by ");
+        safe_printf("grew heap by ");
         print_ptr_diff_size(old_end, heap->end);
-        printf("\n");
+        safe_printf("\n");
       }
     }
     new_alloc = alloc + alloc_words;

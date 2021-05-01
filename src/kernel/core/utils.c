@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include <stdio.h>
 
 
 // Destructure by index
@@ -153,7 +152,7 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
     void* result = c->evaluator(args);
 
     if (!result) {
-      printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
+      safe_printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
       char label[5] = "arg 0";
       for (int i=0; i< n_applied; i++) {
         Debug_pretty(label, args[i]);

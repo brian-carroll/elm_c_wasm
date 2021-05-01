@@ -44,9 +44,9 @@ extern size_t testJsonValueRoundTrip(size_t jsonStringAddr);
     assertions_made++;               \
     if (!(test)) {                   \
       tests_failed++;                \
-      printf("FAIL: %s\n", message); \
+      safe_printf("FAIL: %s\n", message); \
     } else if (verbose) {            \
-      printf("PASS: %s\n", message); \
+      safe_printf("PASS: %s\n", message); \
     }                                \
   } while (0)
 
@@ -55,12 +55,12 @@ extern size_t testJsonValueRoundTrip(size_t jsonStringAddr);
     assertions_made++;                                   \
     if (expr1 != expr2) {                                \
       tests_failed++;                                    \
-      printf("FAIL: %s\n  LHS : 0x%zx\n  RHS : 0x%zx\n", \
+      safe_printf("FAIL: %s\n  LHS : 0x%zx\n  RHS : 0x%zx\n", \
           message,                                       \
           (size_t)(expr1),                               \
           (size_t)(expr2));                              \
     } else if (verbose) {                                \
-      printf("PASS: %s\n", message);                     \
+      safe_printf("PASS: %s\n", message);                     \
     }                                                    \
   } while (0)
 

@@ -227,7 +227,7 @@ void* test_Json_decodeArray(void* runner) {
 void* test_Json_decodeField(void* runner) {
   char* fld = "myField";
   if (verbose) {
-    printf("field = \"%s\"\n", fld);
+    safe_printf("field = \"%s\"\n", fld);
   }
   ElmString16* field = create_string(fld);
   Custom* decoder = A2(&Json_decodeField, field, &Json_decodeInt);
@@ -251,7 +251,7 @@ void* test_Json_decodeField(void* runner) {
 void* test_Json_decodeIndex(void* runner) {
   const i32 idx = 2;
   if (verbose) {
-    printf("index = %d\n", idx);
+    safe_printf("index = %d\n", idx);
   }
   ElmInt* index = newElmInt(idx);
   Custom* decoder = A2(&Json_decodeIndex, index, &Json_decodeInt);
@@ -429,7 +429,7 @@ void* test_Json_oneOf(void* runner) {
       oneOf [ int, null 0 ]
   */
   if (verbose) {
-    printf("decoder = oneOf [ int, null 0 ]\n");
+    safe_printf("decoder = oneOf [ int, null 0 ]\n");
   }
 
   Custom* decoder = A1(&Json_oneOf,
@@ -506,17 +506,17 @@ void json_runner_test(void* runner) {
 
 void json_decoder_test() {
   if (verbose) {
-    printf("\n");
-    printf("Json.Decode.decodeString\n");
-    printf("------------------------\n");
+    safe_printf("\n");
+    safe_printf("Json.Decode.decodeString\n");
+    safe_printf("------------------------\n");
   }
   describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
   json_runner_test(&Json_runOnString);
 
   if (verbose) {
-    printf("\n");
-    printf("Json.Decode.decodeValue\n");
-    printf("------------------------\n");
+    safe_printf("\n");
+    safe_printf("Json.Decode.decodeValue\n");
+    safe_printf("------------------------\n");
   }
   json_runner_test(&Json_run);
 }

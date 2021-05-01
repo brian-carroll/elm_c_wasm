@@ -279,9 +279,9 @@ void* test_Json_encode_object() {
 
 void json_encoder_test() {
   if (verbose) {
-    printf("\n");
-    printf("Json.Encode\n");
-    printf("-----------\n");
+    safe_printf("\n");
+    safe_printf("Json.Encode\n");
+    safe_printf("-----------\n");
   }
   describe("test_Json_encode_boolean", test_Json_encode_boolean);
   describe("test_Json_encode_null", test_Json_encode_null);

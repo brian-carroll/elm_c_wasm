@@ -37,7 +37,7 @@ void log_error(char* fmt, ...) {
   // print_heap();
   print_state();
   // fprintf(stderr, fmt, args);
-  printf(fmt, args);
+  safe_printf(fmt, args);
   va_end(args);
   // emscripten_run_script("debugger;");
   exit(EXIT_FAILURE);
@@ -46,7 +46,7 @@ void log_error(char* fmt, ...) {
 void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  printf(fmt, args);
+  safe_printf(fmt, args);
   va_end(args);
   exit(EXIT_FAILURE);
 }
@@ -57,7 +57,7 @@ void log_error(char* fmt, ...) {
 void log_debug(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  printf(fmt, args);
+  safe_printf(fmt, args);
   va_end(args);
 }
 #else

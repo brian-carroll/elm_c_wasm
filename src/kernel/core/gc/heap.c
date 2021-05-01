@@ -72,7 +72,7 @@ static void* get_initial_system_memory(size_t bytes) {
 
   void* allocated = mmap(addr, length, prot, flags, fd, offset);
 
-  printf("mmap %zd bytes at %p\n", length, allocated);
+  safe_printf("mmap %zd bytes at %p\n", length, allocated);
   fflush(0);
 
   assert(allocated != MAP_FAILED); // TODO
@@ -83,7 +83,7 @@ static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
   size_t old_total_bytes = (heap->system_end - heap->start) * sizeof(void*);
   if (new_total_bytes == old_total_bytes) {
-    printf("resize_system_memory: nothing to do\n");
+    safe_printf("resize_system_memory: nothing to do\n");
   } else if (new_total_bytes > old_total_bytes) {
     void *addr = heap->system_end; // requested starting address
     size_t length = new_total_bytes - old_total_bytes;
@@ -93,16 +93,16 @@ static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
     off_t offset = 0; // file offset for the memory block to start at
 
 
-    printf("old_total_bytes %zd\n", old_total_bytes);
-    printf("new_total_bytes %zd\n", new_total_bytes);
-    printf("length %f MB\n", (1.0*length) / MB);
-    printf("heap->start %p\n", heap->start);
-    printf("heap->system_end %p\n", heap->system_end);
-    printf("addr %p\n", addr);
+    safe_printf("old_total_bytes %zd\n", old_total_bytes);
+    safe_printf("new_total_bytes %zd\n", new_total_bytes);
+    safe_printf("length %f MB\n", (1.0*length) / MB);
+    safe_printf("heap->start %p\n", heap->start);
+    safe_printf("heap->system_end %p\n", heap->system_end);
+    safe_printf("addr %p\n", addr);
 
 
     void* allocated = mmap(addr, length, prot, flags, fd, offset);
-    printf("mmap %zd bytes at %p\n", length, allocated);
+    safe_printf("mmap %zd bytes at %p\n", length, allocated);
     fflush(0);
     assert(allocated != MAP_FAILED); // TODO
     assert(allocated == addr);
@@ -110,7 +110,7 @@ static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
     size_t length = old_total_bytes - new_total_bytes;
     void* addr = ((void*)heap->system_end) - length;
     int err = munmap(addr, length);
-    printf("munmap %zd bytes at %p\n", length, addr);
+    safe_printf("munmap %zd bytes at %p\n", length, addr);
     assert(!err);
   }
 }

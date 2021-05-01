@@ -33,11 +33,11 @@ void* test_Debug_toString() {
 
 char* debug_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("Debug\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("Debug\n");
+    safe_printf("------\n");
   }
 
   mu_run_test(test_Debug_toString);

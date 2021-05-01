@@ -39,8 +39,8 @@ char* parse_test(void* (*parse_func)(u16** cursor, u16* end),
   if (expect_val == NULL) {
     mu_assert(parse_test_msg, result == NULL && consumed == 0);
   } else if (consumed != expect_chars_consumed) {
-    printf("FAIL: %s\n", parse_test_msg);
-    printf("Expected to consume %zd characters but consumed %zd\n",
+    safe_printf("FAIL: %s\n", parse_test_msg);
+    safe_printf("Expected to consume %zd characters but consumed %zd\n",
         expect_chars_consumed,
         consumed);
     assertions_made++;
@@ -322,9 +322,9 @@ void* test_Json_parse_object() {
 
 void json_parser_test() {
   if (verbose) {
-    printf("\n");
-    printf("Json parser\n");
-    printf("------------\n");
+    safe_printf("\n");
+    safe_printf("Json parser\n");
+    safe_printf("------------\n");
   }
 
   describe("test_Json_parse_bool", test_Json_parse_bool);

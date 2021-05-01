@@ -35,7 +35,7 @@ void* eval_stack_tail_overflow(void* args[]) {
           ElmString16* junk = JUNK_STRING();
           if (junk < last_alloc) {
             if (verbose) {
-              printf("allocation pointer wrapped around to %p\n", junk);
+              safe_printf("allocation pointer wrapped around to %p\n", junk);
             }
             break; 
           }
@@ -132,7 +132,7 @@ Closure stackmap_test = {
 
 void gc_stackmap_test_callback() {
   if (verbose) {
-    printf(__FUNCTION__);
+    safe_printf(__FUNCTION__);
     print_stack_map();
     print_state();
     PRINT_BITMAP();
@@ -142,9 +142,9 @@ void gc_stackmap_test_callback() {
 
 void gc_stackmap_test() {
   if (verbose) {
-    printf("\n");
-    printf("gc_stackmap_test\n");
-    printf("-----------\n");
+    safe_printf("\n");
+    safe_printf("gc_stackmap_test\n");
+    safe_printf("-----------\n");
   }
 
   gc_test_mark_callback = gc_stackmap_test_callback;

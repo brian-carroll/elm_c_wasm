@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "../../kernel/core/types.h"
@@ -289,7 +288,7 @@ int perf_main(int argc, char** argv) {
     }
   }
 
-  printf("count %d size %d algo %d field %d: found in position %u\n",
+  safe_printf("count %d size %d algo %d field %d: found in position %u\n",
       count,
       size,
       algo,

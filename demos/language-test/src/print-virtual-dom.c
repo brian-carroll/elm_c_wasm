@@ -42,10 +42,10 @@ void print_virtual_dom_help(int indent, Closure* vdom) {
     bool newline = false;
 
     if (is_html_tag("h2", tag)) {
-      printf("\n## ");
+      safe_printf("\n## ");
       newline = true;
     } else if (is_html_tag("h3", tag)) {
-      printf("### ");
+      safe_printf("### ");
       newline = true;
     } else if (is_html_tag("ul", tag)) {
       indent += 2;
@@ -53,7 +53,7 @@ void print_virtual_dom_help(int indent, Closure* vdom) {
       for (int i = 0; i < indent; ++i) {
         putchar(' ');
       }
-      printf("- ");
+      safe_printf("- ");
       newline = true;
     } else if (is_html_tag("br", tag)) {
       newline = true;

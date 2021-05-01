@@ -36,7 +36,6 @@
 
 #ifdef DEBUG
 
-#include <stdio.h>
 void (*gc_test_mark_callback)();
 #define TEST_MARK_CALLBACK() \
   if (gc_test_mark_callback) gc_test_mark_callback()
@@ -109,7 +108,7 @@ void sweep(GcHeap* heap, size_t* start) {
   for (;;) {
     size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
     if (!start_of_space) break;
-    // printf("sweeping %p -> %p\n", start_of_space, end_of_space);
+    // safe_printf("sweeping %p -> %p\n", start_of_space, end_of_space);
     for (size_t* p = start_of_space; p < end_of_space; p++) {
       *p = 0;
     }
@@ -124,7 +123,7 @@ void GC_collect_minor() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->end_of_old_gen;
 
-  printf("\nStarting minor GC from %p\n", ignore_below);
+  safe_printf("\nStarting minor GC from %p\n", ignore_below);
   PERF_START();
 
   mark(state, ignore_below);
@@ -144,7 +143,7 @@ void GC_collect_minor() {
   char available[20];
   format_mem_size(marked, sizeof(marked), used);
   format_mem_size(available, sizeof(available), new_gen_size);
-  printf("Minor GC marked %zd%% (%s / %s)\n", percent_marked, marked, available);
+  safe_printf("Minor GC marked %zd%% (%s / %s)\n", percent_marked, marked, available);
 
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);
@@ -160,7 +159,7 @@ void GC_collect_major() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->heap.start;
 
-  printf("\nStarting major GC\n");
+  safe_printf("\nStarting major GC\n");
   PERF_START();
 
   stack_clear();
@@ -183,7 +182,7 @@ void GC_collect_major() {
 
   size_t used = state->next_alloc - state->heap.start;
   size_t available = state->heap.end - state->heap.start;
-  printf("Major GC: %zd kB used, %zd kb available\n",
+  safe_printf("Major GC: %zd kB used, %zd kb available\n",
       used * SIZE_UNIT / 1024,
       available * SIZE_UNIT / 1024);
 
