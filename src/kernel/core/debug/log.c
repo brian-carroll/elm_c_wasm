@@ -15,9 +15,16 @@
 void safe_printf(const char* format, ...) {
   va_list va;
   va_start(va, format);
+
   char buf[LOG_BUFFER_BYTES];
   int count = stbsp_vsnprintf(buf, sizeof(buf), format, va);
+
+#ifdef __EMSCRIPTEN__
+  fwrite(buf, sizeof(char), count, stdout);
+#else
   write(STDOUT_FILENO, buf, count);
+#endif
+
   va_end(va);
 }
 
