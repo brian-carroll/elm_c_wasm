@@ -147,7 +147,7 @@ void GC_collect_minor() {
 
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);
-  PERF_TIMER_PRINT_MINOR();
+  // PERF_TIMER_PRINT_MINOR();
 }
 
 
