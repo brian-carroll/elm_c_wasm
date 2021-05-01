@@ -127,7 +127,7 @@ void* test_memcpy() {
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description,
+    stbsp_snprintf(description,
         sizeof(description),
         "should correctly copy %zd 32-bit words, 32-bit aligned",
         size);
@@ -149,7 +149,7 @@ void* test_memcpy() {
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description,
+    stbsp_snprintf(description,
         sizeof(description),
         "should correctly copy %zd 32-bit words, 64-bit aligned",
         size);
@@ -474,7 +474,7 @@ char* Debug_evaluator_name(void* p) {
   } else if (p == eval_generateHeapPattern) {
     return "generateHeapPattern";
   } else {
-    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
+    stbsp_snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
     return unknown_function_address;
   }
 }

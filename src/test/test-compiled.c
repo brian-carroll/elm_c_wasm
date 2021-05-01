@@ -156,7 +156,7 @@ void** Wrapper_mainsArray[] = {NULL};
 
 // char Debug_evaluator_name_buf[1024];
 // char* Debug_evaluator_name(void* p) {
-//   sprintf(Debug_evaluator_name_buf, "%p", p);
+//   stbsp_sprintf(Debug_evaluator_name_buf, "%p", p);
 //   return Debug_evaluator_name_buf;
 // }
 

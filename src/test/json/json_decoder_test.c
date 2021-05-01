@@ -23,7 +23,7 @@ void* createJsValue(ElmString16* json) {
 }
 
 void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* expected) {
-  sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
+  stbsp_sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
   ElmString16* json = create_string(json_c_str);
 
   void* actual = runner == &Json_runOnString
@@ -37,7 +37,7 @@ void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* e
 
 void* test_decode_err(
     Closure* runner, Custom* decoder, char* json_c_str, Custom* expected_err) {
-  sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
+  stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
   ElmString16* json = create_string(json_c_str);
 
   void* actual_err;
@@ -55,7 +55,7 @@ void* test_decode_err(
 void* test_decode_errFailure(
     Closure* runner, Custom* decoder, char* json_c_str, char* msg_c_str) {
   ElmString16* json = create_string(json_c_str);
-  sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
+  stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
 
   void* actual_err = runner == &Json_runOnString
                          ? A2(&Json_runOnString, decoder, json)
@@ -345,7 +345,7 @@ void* test_Json_map(void* runner) {
     Closure* mapFn = mapFns[i];
     u32 n_args = i + 1;
 
-    json_index += sprintf(&json[json_index], "\"%c\":%d", 'a' + i, i + 1);
+    json_index += stbsp_sprintf(&json[json_index], "\"%c\":%d", 'a' + i, i + 1);
     json[json_index] = '}';
     json[json_index + 1] = 0;
 

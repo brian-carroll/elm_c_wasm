@@ -14,7 +14,7 @@ bool mark_words(GcState* state, void* p_void, size_t size) {
     safe_printf("Marking %p - %p, past heap end at %p\n", p, p+size, heap->end);
     print_state();
     print_stack_map();
-    fflush(0);
+    // fflush(0);
   }
   assert(p + size <= heap->end);
 

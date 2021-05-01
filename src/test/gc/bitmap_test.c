@@ -31,7 +31,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 0;
   iter.mask = 1;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -41,7 +41,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 0;
   iter.mask = 2;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -51,7 +51,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 1;
   iter.mask = 1;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -61,7 +61,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 1;
   iter.mask = 2;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -82,7 +82,7 @@ char* gc_bitmap_next_test() {
   mu_assert("bitmap_next: highest bit is correctly set in test", (iter.mask << 1) == 0);
   assertion++;
 
-  sprintf(gc_bitmap_next_test_str, format_str, assertion++, iter.index, iter.mask);
+  stbsp_sprintf(gc_bitmap_next_test_str, format_str, assertion++, iter.index, iter.mask);
   bitmap_next(&iter);
   mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 1);
 

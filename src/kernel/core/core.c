@@ -1,5 +1,7 @@
 #include "core.h"
 
+#include "../../lib/stb/stb_sprintf.c"
+
 #include "basics.c"
 #include "bitwise.c"
 #include "char.c"

@@ -71,7 +71,7 @@ void* test_code_units() {
       buf[j] = '.';
     }
     buf[j] = 0;
-    sprintf(mu_message, "Expect code_units=%zu for \"%s\"", i, buf);
+    stbsp_sprintf(mu_message, "Expect code_units=%zu for \"%s\"", i, buf);
     mu_assert(mu_message, code_units(create_string(buf)) == i);
   }
   return NULL;

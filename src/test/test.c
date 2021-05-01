@@ -1,7 +1,7 @@
 #include "test.h"
 
 #ifdef _WIN32
-#include "wingetopt.c"
+#include "../lib/wingetopt/wingetopt.c"
 #else
 #include <getopt.h>
 #include <unistd.h>
@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../lib/stb/stb_sprintf.h"
 #include "../kernel/core/core.h"
 
 #include "basics_test.c"
@@ -112,7 +113,7 @@ char* hex(void* addr, int size) {
   u32 i, c = 0;
   for (i = 0; i < size; c += 9, i += 4) {
     // Print in actual byte order (little endian)
-    sprintf(hex_strings[rotate] + c,
+    stbsp_sprintf(hex_strings[rotate] + c,
         "%02x%02x%02x%02x|",
         *((u8*)addr + i),
         *((u8*)addr + i + 1),
@@ -240,9 +241,10 @@ int main(int argc, char** argv) {
       case 'g':
         gc = !optarg;
         break;
-      default:
-        fprintf(stderr, "Usage: %s [-%s]\n", argv[0], options);
+      default: {
+        safe_printf("Usage: %s [-%s]\n", argv[0], options);
         exit(EXIT_FAILURE);
+      }
     }
   }
 

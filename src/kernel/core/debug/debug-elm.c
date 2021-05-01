@@ -4,6 +4,7 @@
 //
 // ========================================================
 
+#include <stdio.h> // putchar
 
 // helpers for string building & memory management
 
@@ -63,12 +64,12 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
 
   switch (v->header.tag) {
     case Tag_Int: {
-      snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
+      stbsp_snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
       copy_ascii(ascii_buf, sb);
       return;
     }
     case Tag_Float: {
-      snprintf(ascii_buf, sizeof(ascii_buf), "%.16g", v->elm_float.value);
+      stbsp_snprintf(ascii_buf, sizeof(ascii_buf), "%.16g", v->elm_float.value);
       copy_ascii(ascii_buf, sb);
       return;
     }

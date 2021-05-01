@@ -6,7 +6,7 @@ void gc_test_reset();
 
 ElmString16* create_test_string(char* prefix, const char* function_name) {
   char buf[100];
-  snprintf(buf, sizeof(buf), "%s %s", prefix, function_name);
+  stbsp_snprintf(buf, sizeof(buf), "%s %s", prefix, function_name);
   return create_string(buf);
 }
 #define JUNK_STRING() create_test_string("JUNK", __FUNCTION__)
@@ -176,7 +176,7 @@ void gc_stackmap_test() {
   // test live strings in order
   for (i = 0; i < len; i++) {
     char description[100];
-    snprintf(description, sizeof(description), "returned string %d", i);
+    stbsp_snprintf(description, sizeof(description), "returned string %d", i);
     expect_string(description, expected[i], actual[i]);
   }
 }

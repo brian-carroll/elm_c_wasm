@@ -1,9 +1,7 @@
-#define STB_SPRINTF_IMPLEMENTATION
-#include "./stb_sprintf.h"
-
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
+#include <stdio.h> // fwrite for safe_printf
 #define emscripten_run_script(x)
 #endif
 

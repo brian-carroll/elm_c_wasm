@@ -312,7 +312,7 @@ void format_mem_size(char* buffer, size_t buf_size, size_t words) {
     amount = (f32)bytes / (1024 * 1024);
   }
   char* format = (amount < 10) ? "%.1f %s" : "%.0f %s";
-  snprintf(buffer, buf_size, format, amount, suffix);
+  stbsp_snprintf(buffer, buf_size, format, amount, suffix);
 }
 
 

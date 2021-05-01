@@ -21,10 +21,10 @@ char* parse_test(void* (*parse_func)(u16** cursor, u16* end),
 
   int msg_prefix_len;
   if (expect_val) {
-    msg_prefix_len = sprintf(
+    msg_prefix_len = stbsp_sprintf(
         parse_test_msg, "should correctly parse %zd chars from '", expect_chars_consumed);
   } else {
-    msg_prefix_len = sprintf(parse_test_msg, "should reject '");
+    msg_prefix_len = stbsp_sprintf(parse_test_msg, "should reject '");
   }
   int i;
   for (i = 0; i < len && i < PARSE_TEST_MSG_LEN; i++) {

@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>  // snprintf
+#include <stdio.h>  // sscanf
 #include <stdlib.h>
 #include <string.h>
 
@@ -534,9 +534,9 @@ static void* String_fromNumber_eval(void* args[1]) {
   int n_chars;
 
   if (box->i.header.tag == Tag_Int) {
-    n_chars = snprintf(buf, sizeof(buf), "%d", box->i.value);
+    n_chars = stbsp_snprintf(buf, sizeof(buf), "%d", box->i.value);
   } else {
-    n_chars = snprintf(buf, sizeof(buf), "%.16g", box->f.value);
+    n_chars = stbsp_snprintf(buf, sizeof(buf), "%.16g", box->f.value);
   }
 
   ElmString16* s = newElmString16(n_chars);
@@ -599,7 +599,7 @@ static void* eval_String_toFloat(void* args[]) {
   ascii[i] = 0;
 
   f64 value;
-  int successChars = sscanf(ascii, "%lf", &value);
+  int successChars = sscanf(ascii, "%lf", &value); // TODO
 
   return (successChars > 0) ? A1(&g_elm_core_Maybe_Just, newElmFloat(value))
                             : &g_elm_core_Maybe_Nothing;

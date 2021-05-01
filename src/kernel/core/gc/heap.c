@@ -73,7 +73,7 @@ static void* get_initial_system_memory(size_t bytes) {
   void* allocated = mmap(addr, length, prot, flags, fd, offset);
 
   safe_printf("mmap %zd bytes at %p\n", length, allocated);
-  fflush(0);
+  // fflush(0);
 
   assert(allocated != MAP_FAILED); // TODO
   return allocated;
@@ -103,7 +103,7 @@ static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
 
     void* allocated = mmap(addr, length, prot, flags, fd, offset);
     safe_printf("mmap %zd bytes at %p\n", length, allocated);
-    fflush(0);
+    // fflush(0);
     assert(allocated != MAP_FAILED); // TODO
     assert(allocated == addr);
   } else {
