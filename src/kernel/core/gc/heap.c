@@ -4,6 +4,10 @@
 
         HEAP
 
+  For simplicity & code size we have one region that we grow and shrink.
+  That's perfect for the Wasm platform, but not ideal for OS heap APIs.
+  There may be cases where the native executable would be slow or crash.
+
    ==================================================== */
 
 static void* get_initial_system_memory(size_t bytes);
@@ -36,7 +40,7 @@ static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   assert(result == system_block);
 }
 
-#elif defined(__EMSCRIPTEN__)
+#else
 
 #include <unistd.h>
 
@@ -54,65 +58,6 @@ static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   void* new_break = ((void*)heap->start) + new_total_bytes;
   brk(new_break);
   assert(sbrk(0) == new_break);
-}
-
-#else
-
-#include <sys/mman.h>
-
-static void* get_initial_system_memory(size_t bytes) {
-  // mmap is for mapping files into memory but is also the main API for memory allocation.
-  assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  void *addr = NULL; // requested starting address
-  size_t length = bytes;
-  int prot = PROT_READ | PROT_WRITE;
-  int flags = MAP_PRIVATE | MAP_ANONYMOUS; // MAP_ANONYMOUS = memory not backed by a file
-  int fd = -1; // file descriptor for file-backed memory, or -1 for no file
-  off_t offset = 0; // file offset for the memory block to start at
-
-  void* allocated = mmap(addr, length, prot, flags, fd, offset);
-
-  safe_printf("mmap %zd bytes at %p\n", length, allocated);
-  // fflush(0);
-
-  assert(allocated != MAP_FAILED); // TODO
-  return allocated;
-}
-
-static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
-  assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  size_t old_total_bytes = (heap->system_end - heap->start) * sizeof(void*);
-  if (new_total_bytes == old_total_bytes) {
-    safe_printf("resize_system_memory: nothing to do\n");
-  } else if (new_total_bytes > old_total_bytes) {
-    void *addr = heap->system_end; // requested starting address
-    size_t length = new_total_bytes - old_total_bytes;
-    int prot = PROT_READ | PROT_WRITE;
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED; // MAP_ANONYMOUS = memory not backed by a file
-    int fd = -1; // file descriptor for file-backed memory, or -1 for no file
-    off_t offset = 0; // file offset for the memory block to start at
-
-
-    safe_printf("old_total_bytes %zd\n", old_total_bytes);
-    safe_printf("new_total_bytes %zd\n", new_total_bytes);
-    safe_printf("length %f MB\n", (1.0*length) / MB);
-    safe_printf("heap->start %p\n", heap->start);
-    safe_printf("heap->system_end %p\n", heap->system_end);
-    safe_printf("addr %p\n", addr);
-
-
-    void* allocated = mmap(addr, length, prot, flags, fd, offset);
-    safe_printf("mmap %zd bytes at %p\n", length, allocated);
-    // fflush(0);
-    assert(allocated != MAP_FAILED); // TODO
-    assert(allocated == addr);
-  } else {
-    size_t length = old_total_bytes - new_total_bytes;
-    void* addr = ((void*)heap->system_end) - length;
-    int err = munmap(addr, length);
-    safe_printf("munmap %zd bytes at %p\n", length, addr);
-    assert(!err);
-  }
 }
 
 #endif

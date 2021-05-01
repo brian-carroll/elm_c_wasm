@@ -1,7 +1,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
-#include <stdio.h> // fwrite for safe_printf
+#include <unistd.h> // 'write' for safe_printf
 #define emscripten_run_script(x)
 #endif
 
@@ -17,7 +17,7 @@ void safe_printf(const char* format, ...) {
   va_start(va, format);
   char buf[LOG_BUFFER_BYTES];
   int count = stbsp_vsnprintf(buf, sizeof(buf), format, va);
-  fwrite(buf, sizeof(char), count, stdout);
+  write(STDOUT_FILENO, buf, count);
   va_end(va);
 }
 
