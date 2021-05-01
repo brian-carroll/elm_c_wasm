@@ -599,7 +599,7 @@ static void* eval_String_toFloat(void* args[]) {
   ascii[i] = 0;
 
   f64 value;
-  int successChars = sscanf(ascii, "%lf", &value); // TODO
+  int successChars = sscanf(ascii, "%lf", &value); // TODO: sscanf is 30kB of wasm with -Oz !
 
   return (successChars > 0) ? A1(&g_elm_core_Maybe_Just, newElmFloat(value))
                             : &g_elm_core_Maybe_Nothing;

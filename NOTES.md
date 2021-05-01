@@ -1,3 +1,18 @@
+## GC size analysis
+
+2020-05-01: mark-sweep with dynamic resizing and compactor
+
+Bytes of wasm, compiling demo/language-test with -Oz, DEBUG undefined
+223445: full build
+223047: brk and sbrk commented out
+174378: All GC functions stubbed out in #define
+215315: All GC functions stubbed, GC_allocate replaced with a one-liner conditional (7.9 kB less than full build)
+215550: All public GC functions replaced with single statement (7.7 kB less than full build)
+
+**GC code size < 8kB**
+
+sscanf is 30kB! Only using it for floats. Could write something.
+
 ## TODO
 
 growing + staying in the same place is not going to happen!

@@ -75,7 +75,7 @@ void* parse_number(u16** cursor, u16* end) {
   digits[d] = '\0';
 
   f64 f;
-  int success = sscanf(digits, "%lg", &f);
+  int success = sscanf(digits, "%lg", &f); // TODO: sscanf is 30kB of wasm with -Oz !
   if (!success) return NULL;
 
   *cursor += d;
