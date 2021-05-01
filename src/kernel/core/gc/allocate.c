@@ -29,8 +29,10 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
       size_t used_size = state->n_marked_words;
       size_t free_size = new_gen_size - used_size;
       size_t fullness_threshold = new_gen_size / 2;
+      bool too_full = used_size > fullness_threshold;
+      bool large_alloc = alloc_words > free_size;
+      bool should_grow = too_full || large_alloc;
 
-      bool should_grow = (used_size > fullness_threshold) || (alloc_words > free_size);
       if (!should_grow) {
         alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch);
         should_grow = !alloc;  // handle failure due to fragmentation

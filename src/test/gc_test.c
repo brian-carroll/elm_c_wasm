@@ -11,12 +11,13 @@
 bool mark_words(GcState* state, void* p_void, size_t size);
 
 void gc_test_reset() {
-  GcState* state = &gc_state;
-  bitmap_reset(&state->heap);
-  reset_state(state);
-  for (size_t* p = state->heap.start; p < state->heap.end; p++) {
-    *p = 0;
-  }
+  // GcState* state = &gc_state;
+  // for (size_t* p = state->heap.start; p < state->heap.end; p++) {
+  //   *p = 0;
+  // }
+  printf("gc_test_reset\n");
+  GC_init();
+  print_state();
 }
 
 
@@ -403,6 +404,16 @@ void minor_gc_scenario(char* test_name,
 }
 
 
+void assert_approx_heap_size(char* msg, size_t expected_size) {
+  GcHeap* heap = &gc_state.heap;
+
+  f32 final_size = heap->end - heap->start;
+  f32 rel_err = fabs((final_size / expected_size) - 1);
+
+  mu_assert(msg, rel_err < 0.1);
+}
+
+
 void minor_gc_test() {
   if (verbose) {
     printf(
@@ -411,20 +422,16 @@ void minor_gc_test() {
         "\n");
   }
   // print_state();
-
   size_t initial_size = GC_INITIAL_HEAP_MB * MB / sizeof(void*);
-  GcHeap* heap = &gc_state.heap;
 
   minor_gc_scenario("Grow on 2nd GC", 2.1, 200, 300, 0);
-  mu_expect_equal(
-      "heap should be twice original size", heap->end - heap->start, initial_size * 2);
+  assert_approx_heap_size("heap should be twice original size", 2 * initial_size);
 
   minor_gc_scenario("Complete after 1 GC", 1.25, 200, 300, 0);
-  mu_expect_equal("heap should be original size", heap->system_end - heap->start, initial_size);
+  assert_approx_heap_size("heap should be original size", 1 * initial_size);
 
   minor_gc_scenario("Grow on 1st GC due to fragmentation", 1.25, 200, 150, 150);
-  mu_expect_equal(
-      "heap should be twice original size", heap->end - heap->start, initial_size * 2);
+  assert_approx_heap_size("heap should be twice original size", 2 * initial_size);
 
   // PRINT_BITMAP();
   // print_state();

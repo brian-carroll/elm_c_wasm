@@ -1,20 +1,18 @@
 #include "internals.h"
 
-#ifdef _WIN32
-#include <heapapi.h>
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
-
 /* ====================================================
 
         HEAP
 
    ==================================================== */
 
+static void* get_initial_system_memory(size_t bytes);
+static void resize_system_memory(GcHeap* heap, size_t new_total_bytes);
+
 #ifdef _WIN32
+
+#include <heapapi.h>
+#include <windows.h>
 
 static HANDLE hHeap;
 static const DWORD dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
@@ -30,29 +28,91 @@ static void* get_initial_system_memory(size_t bytes) {
   return (void*)aligned_addr;
 }
 
-static void grow_system_memory(void* start, size_t new_total_bytes) {
+static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  size_t alignment_bytes = (size_t)start - (size_t)system_block;
+  size_t alignment_bytes = (size_t)heap->start - (size_t)system_block;
   size_t new_system_bytes = new_total_bytes + alignment_bytes;
   void* result = HeapReAlloc(hHeap, dwFlags, system_block, new_system_bytes);
   assert(result == system_block);
 }
 
-#else
+#elif defined(__EMSCRIPTEN__)
+
+#include <unistd.h>
 
 static void* get_initial_system_memory(size_t bytes) {
   size_t initial_break = (size_t)sbrk(0);
-  size_t aligned_break = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
-  size_t new_break = aligned_break + bytes;
-  int result = brk((void*)new_break);
-  assert(result == 0);
-  return (void*)aligned_break;
+  size_t aligned_addr = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
+  void* aligned_break = (void*)aligned_addr;
+  void* new_break = aligned_break + bytes;
+  brk(new_break);
+  assert(sbrk(0) == new_break);
+  return aligned_break;
 }
 
-static void grow_system_memory(void* start, size_t new_total_bytes) {
-  void* new_break = start + new_total_bytes;
-  int result = brk(new_break);
-  assert(result == 0);
+static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
+  void* new_break = ((void*)heap->start) + new_total_bytes;
+  brk(new_break);
+  assert(sbrk(0) == new_break);
+}
+
+#else
+
+#include <sys/mman.h>
+
+static void* get_initial_system_memory(size_t bytes) {
+  // mmap is for mapping files into memory but is also the main API for memory allocation.
+  assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
+  void *addr = NULL; // requested starting address
+  size_t length = bytes;
+  int prot = PROT_READ | PROT_WRITE;
+  int flags = MAP_PRIVATE | MAP_ANONYMOUS; // MAP_ANONYMOUS = memory not backed by a file
+  int fd = -1; // file descriptor for file-backed memory, or -1 for no file
+  off_t offset = 0; // file offset for the memory block to start at
+
+  void* allocated = mmap(addr, length, prot, flags, fd, offset);
+
+  printf("mmap %zd bytes at %p\n", length, allocated);
+  fflush(0);
+
+  assert(allocated != MAP_FAILED); // TODO
+  return allocated;
+}
+
+static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
+  assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
+  size_t old_total_bytes = (heap->system_end - heap->start) * sizeof(void*);
+  if (new_total_bytes == old_total_bytes) {
+    printf("resize_system_memory: nothing to do\n");
+  } else if (new_total_bytes > old_total_bytes) {
+    void *addr = heap->system_end; // requested starting address
+    size_t length = new_total_bytes - old_total_bytes;
+    int prot = PROT_READ | PROT_WRITE;
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED; // MAP_ANONYMOUS = memory not backed by a file
+    int fd = -1; // file descriptor for file-backed memory, or -1 for no file
+    off_t offset = 0; // file offset for the memory block to start at
+
+
+    printf("old_total_bytes %zd\n", old_total_bytes);
+    printf("new_total_bytes %zd\n", new_total_bytes);
+    printf("length %f MB\n", (1.0*length) / MB);
+    printf("heap->start %p\n", heap->start);
+    printf("heap->system_end %p\n", heap->system_end);
+    printf("addr %p\n", addr);
+
+
+    void* allocated = mmap(addr, length, prot, flags, fd, offset);
+    printf("mmap %zd bytes at %p\n", length, allocated);
+    fflush(0);
+    assert(allocated != MAP_FAILED); // TODO
+    assert(allocated == addr);
+  } else {
+    size_t length = old_total_bytes - new_total_bytes;
+    void* addr = ((void*)heap->system_end) - length;
+    int err = munmap(addr, length);
+    printf("munmap %zd bytes at %p\n", length, addr);
+    assert(!err);
+  }
 }
 
 #endif
@@ -90,10 +150,14 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
 }
 
 
-// Call exactly once on program startup
 int init_heap(GcHeap* heap) {
   size_t bytes = GC_INITIAL_HEAP_MB * MB;
-  void* start = get_initial_system_memory(bytes);
+  void* start = heap->start;
+  if (start) {
+    resize_system_memory(heap, bytes);
+  } else {
+    start = get_initial_system_memory(bytes);
+  }
 
   set_heap_layout(heap, start, bytes);
 
@@ -115,7 +179,7 @@ void grow_heap(GcHeap* heap, size_t current_alloc_words) {
   size_t new_total_bytes =
       GC_ROUND_UP(new_total_words * sizeof(void*), GC_SYSTEM_MEM_CHUNK);
 
-  grow_system_memory(heap->start, new_total_bytes);
+  resize_system_memory(heap, new_total_bytes);
   set_heap_layout(heap, heap->start, new_total_bytes);
 
   // GC bookkeeping data

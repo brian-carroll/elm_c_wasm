@@ -1,5 +1,18 @@
 ## TODO
 
+growing + staying in the same place is not going to happen!
+That's not how operating systems work.
+If you want to run on an OS properly you need to work with regions
+  - Turn the GcHeap into a GcRegion and have several of them, maybe 1MB each?
+  - Mark: Bitmap logic becomes harder. Extra step for looking up which region you're in.
+  - Compact: Need to handle `to` and `from` in different regions, and changeovers
+Kind of a lot of work for a use case I don't care about.
+
+Easier solutions for short term
+  - Never shrink the heap in tests
+  - Fixed size OS heap, Elm heap grows/shrinks within that
+  - Replace printf = stb_sprintf + fputs. Create a libs directory.
+
 - growing
   - [x] minor gc returns percentage_marked, and allocator does the growing
   - [x] grow function takes a min_space argument
