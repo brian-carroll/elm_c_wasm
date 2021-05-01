@@ -88,12 +88,21 @@ extern int Debug_ctors_size;
 extern int Debug_fields_size;
 extern int Debug_jsValues_size;
 char* Debug_evaluator_name(void*);
-extern char Debug_unknown_evaluator[];
 extern Closure Debug_toString;
 extern Closure Debug_log;
 extern Closure Debug_todo;
 
 void Debug_pause();
+
+#define LOG_ALWAYS 0x01
+#define LOG_GC 0x02
+#define LOG_GC_MARK 0x04
+#define LOG_GC_COMPACT 0x08
+#define LOG_GC_ALLOCATE 0x10
+
+#ifndef LOG_FLAGS
+#define LOG_FLAGS LOG_ALWAYS
+#endif
 
 bool is_marked(void* p);
 void print_value(void* p);
@@ -112,6 +121,8 @@ void print_gc_perf(void* perf_data, bool major);
 
 void log_error(char* fmt, ...);
 void log_debug(char* fmt, ...);
+
+void safe_printf(const char* format, ...);
 
 // =========================================
 

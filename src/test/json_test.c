@@ -9,11 +9,11 @@ void json_encoder_test();
 
 char* json_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("Json\n");
-    printf("====\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("Json\n");
+    safe_printf("====\n");
   }
 
   json_parser_test();

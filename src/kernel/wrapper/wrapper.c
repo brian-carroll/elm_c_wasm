@@ -1,10 +1,8 @@
 #include <assert.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
-#include <stdio.h>
 #else
 #define EMSCRIPTEN_KEEPALIVE
-#include <stdio.h>
 #endif
 #include "../core/core.h"
 #include "../core/gc/internals.h"
@@ -88,7 +86,7 @@ EMSCRIPTEN_KEEPALIVE void debugAddrRange(size_t start, size_t len) {
 }
 
 EMSCRIPTEN_KEEPALIVE void debugEvaluatorName(size_t addr) {
-  printf("\nevaluator %zd: %s\n\n", addr, Debug_evaluator_name((void*)addr));
+  safe_printf("\nevaluator %zd: %s\n\n", addr, Debug_evaluator_name((void*)addr));
 }
 
 EMSCRIPTEN_KEEPALIVE void debugStackMap() {

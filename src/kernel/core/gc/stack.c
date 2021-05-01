@@ -1,5 +1,4 @@
 #include <stdarg.h>
-#include <stdio.h>
 #include "internals.h"
 
 /* ====================================================
@@ -81,7 +80,7 @@ void GC_stack_push_value(void* value) {
   stack_values[sm->index] = value;
   stack_flags[sm->index] = 'A';
 #if GC_STACK_VERBOSE
-  printf("Pushing stack index %d in %s: %p\n", sm->index, Debug_evaluator_name(stack_values[sm->frame]), value);
+  safe_printf("Pushing stack index %d in %s: %p\n", sm->index, Debug_evaluator_name(stack_values[sm->frame]), value);
 #endif
   sm->index++;
   assert(sm->index < GC_STACK_MAP_SIZE);
@@ -98,7 +97,7 @@ void GC_stack_push_frame(EvalFunction evaluator) {
   stack_values[i] = evaluator;
   sm->index++;
 #if GC_STACK_VERBOSE
-  printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
+  safe_printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
 #endif
 }
 
@@ -120,7 +119,7 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
   sm->frame = parent;
 
 #if GC_STACK_VERBOSE
-  printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",
+  safe_printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",
       Debug_evaluator_name(evaluator),
       frame,
       parent);
@@ -143,6 +142,6 @@ void GC_stack_tailcall(int count, ...) {
   va_end(args);
 
 #if GC_STACK_VERBOSE
-  printf("Tail call in %s at stack index %d\n", Debug_evaluator_name(stack_values[sm->frame]), sm->frame);
+  safe_printf("Tail call in %s at stack index %d\n", Debug_evaluator_name(stack_values[sm->frame]), sm->frame);
 #endif
 }

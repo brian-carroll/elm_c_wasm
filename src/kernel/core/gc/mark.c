@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "internals.h"
 
 // Mark a value as live and return 'true' if previously marked
@@ -12,10 +11,10 @@ bool mark_words(GcState* state, void* p_void, size_t size) {
   if (size == 0) return true;
   assert(p < heap->end);
   if (p + size > heap->end) {
-    printf("Marking %p - %p, past heap end at %p\n", p, p+size, heap->end);
+    safe_printf("Marking %p - %p, past heap end at %p\n", p, p+size, heap->end);
     print_state();
     print_stack_map();
-    fflush(0);
+    // fflush(0);
   }
   assert(p + size <= heap->end);
 

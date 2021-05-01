@@ -1,10 +1,7 @@
-#include <stdio.h>  // sprintf
-
 #include "../core/core.h"
+#include "../../lib/stb/stb_sprintf.h"
 #include "json-internal.h"
 #include "json.h"
-
-#define GC_NOT_FULL NULL;
 
 // assumes nothing else gets allocated while stringifying
 static void grow(StringBuilder* sb) {
@@ -187,7 +184,7 @@ void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb) {
     copy_ascii("false", sb);
   } else if (tag == Tag_Float) {
     char buf[32];
-    sprintf(buf, "%g", v->elm_float.value);
+    stbsp_snprintf(buf, sizeof(buf), "%g", v->elm_float.value);
     copy_ascii(buf, sb);
   } else if (tag == Tag_String) {
     stringify_string(&v->elm_string16, sb);

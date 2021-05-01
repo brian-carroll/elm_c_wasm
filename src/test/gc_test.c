@@ -9,20 +9,15 @@
 #include "test.h"
 
 bool mark_words(GcState* state, void* p_void, size_t size);
-void resize_system_memory(void* start, size_t new_total_bytes);
-void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes);
 
 void gc_test_reset() {
-  const size_t bytes = GC_INITIAL_HEAP_MB * MB;
-  size_t* start = gc_state.heap.start ? gc_state.heap.start : sbrk(0);
-
-  resize_system_memory(start, bytes);
-
-  set_heap_layout(&gc_state.heap, start, bytes);
-  reset_state(&gc_state);
-  for (size_t* p = gc_state.heap.start; p < gc_state.heap.end; p++) {
-    *p = 0;
-  }
+  // GcState* state = &gc_state;
+  // for (size_t* p = state->heap.start; p < state->heap.end; p++) {
+  //   *p = 0;
+  // }
+  safe_printf("gc_test_reset\n");
+  GC_init();
+  print_state();
 }
 
 
@@ -40,7 +35,7 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes);
 
 char* test_heap_layout() {
   if (verbose) {
-    printf(
+    safe_printf(
         "\n"
         "## test_heap_layout\n"
         "\n");
@@ -69,12 +64,12 @@ char* test_heap_layout() {
     assertions_made++;
     if (!bitmap_ok || !offsets_ok) {
       tests_failed++;
-      printf(
+      safe_printf(
           "FAIL: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
-      printf("bitmap %f %%\n", percent_bitmap);
-      printf("offsets %f %%\n", percent_offsets);
+      safe_printf("bitmap %f %%\n", percent_bitmap);
+      safe_printf("offsets %f %%\n", percent_offsets);
     } else if (verbose) {
-      printf(
+      safe_printf(
           "PASS: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
     }
   }
@@ -98,7 +93,7 @@ void test_memcpy_reset(size_t* from, size_t* to) {
 
 void* test_memcpy() {
   if (verbose) {
-    printf(
+    safe_printf(
         "\n"
         "## test_memcpy\n");
   }
@@ -119,7 +114,7 @@ void* test_memcpy() {
 
 #ifndef TARGET_64BIT
   if (verbose) {
-    printf("\n32-bit aligned\n");
+    safe_printf("\n32-bit aligned\n");
   }
   src = from + 1;
   dest = to + 1;
@@ -132,7 +127,7 @@ void* test_memcpy() {
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description,
+    stbsp_snprintf(description,
         sizeof(description),
         "should correctly copy %zd 32-bit words, 32-bit aligned",
         size);
@@ -141,7 +136,7 @@ void* test_memcpy() {
 #endif
 
   if (verbose) {
-    printf("\n64-bit aligned\n");
+    safe_printf("\n64-bit aligned\n");
   }
   src = from;
   dest = to;
@@ -154,7 +149,7 @@ void* test_memcpy() {
     for (int i = 0; i < size; ++i) {
       if (dest[i] != src[i]) mismatches++;
     }
-    snprintf(description,
+    stbsp_snprintf(description,
         sizeof(description),
         "should correctly copy %zd 32-bit words, 64-bit aligned",
         size);
@@ -227,7 +222,7 @@ Closure listNonsense = {
 int count_gc_cycles;
 void assertions_test_callback() {
   count_gc_cycles++;
-  printf("assertions_test_callback %d\n", count_gc_cycles);
+  safe_printf("assertions_test_callback %d\n", count_gc_cycles);
 }
 
 
@@ -258,7 +253,7 @@ void* test_execute(Closure* c) {
 
 char* assertions_test() {
   if (verbose) {
-    printf(
+    safe_printf(
         "\n"
         "## assertions_test\n"
         "(run for long enough to do a few GCs, try to trigger assertions)\n"
@@ -301,7 +296,7 @@ tce_loop:;
   do {
     if (iterations->value == 0) {
       if (verbose) {
-        printf("Heap pattern generated. Calculating result\n");
+        safe_printf("Heap pattern generated. Calculating result\n");
         // PRINT_BITMAP();
         // print_state();
         // print_stack_map();
@@ -313,7 +308,7 @@ tce_loop:;
         Custom* live = liveList->head;
         ElmInt* iter = live->values[0];
         if (iter->value != expected) {
-          printf("Wrong value at %p: expected %d, got %d\n", iter, expected, iter->value);
+          safe_printf("Wrong value at %p: expected %d, got %d\n", iter, expected, iter->value);
           nErrors++;
         }
         expected++;
@@ -352,7 +347,7 @@ tce_loop:;
 
 void minor_gc_test_callback() {
   if (verbose) {
-    printf("\n\n minor_gc_test_callback \n\n");
+    safe_printf("\n\n minor_gc_test_callback \n\n");
     // PRINT_BITMAP();
     // print_heap();
     // print_state();
@@ -365,9 +360,9 @@ void minor_gc_scenario(char* test_name,
     i32 garbageChunkSize1,
     i32 garbageChunkSize2) {
   if (verbose) {
-    printf("\n");
-    printf("Scenario: %s\n", test_name);
-    printf("--------\n");
+    safe_printf("\n");
+    safe_printf("Scenario: %s\n", test_name);
+    safe_printf("--------\n");
   }
   gc_test_reset();
 
@@ -383,13 +378,13 @@ void minor_gc_scenario(char* test_name,
   i32 iterations = iterations_to_fill_heap * fill_factor;
 
   if (0 && verbose) {
-    printf("fill_factor = %.2f\n", fill_factor);
-    printf("heap_size = %zd\n", heap_size);
-    printf("liveChunkSize = %d\n", liveChunkSize);
-    printf("garbageChunkSize1 = %d\n", garbageChunkSize1);
-    printf("garbageChunkSize2 = %d\n", garbageChunkSize2);
-    printf("iterations_to_fill_heap = %d\n", iterations_to_fill_heap);
-    printf("iterations = %d\n", iterations);
+    safe_printf("fill_factor = %.2f\n", fill_factor);
+    safe_printf("heap_size = %zd\n", heap_size);
+    safe_printf("liveChunkSize = %d\n", liveChunkSize);
+    safe_printf("garbageChunkSize1 = %d\n", garbageChunkSize1);
+    safe_printf("garbageChunkSize2 = %d\n", garbageChunkSize2);
+    safe_printf("iterations_to_fill_heap = %d\n", iterations_to_fill_heap);
+    safe_printf("iterations = %d\n", iterations);
   }
 
   Closure* run = newClosure(4,
@@ -409,28 +404,34 @@ void minor_gc_scenario(char* test_name,
 }
 
 
+void assert_approx_heap_size(char* msg, size_t expected_size) {
+  GcHeap* heap = &gc_state.heap;
+
+  f32 final_size = heap->end - heap->start;
+  f32 rel_err = fabs((final_size / expected_size) - 1);
+
+  mu_assert(msg, rel_err < 0.1);
+}
+
+
 void minor_gc_test() {
   if (verbose) {
-    printf(
+    safe_printf(
         "\n"
         "## minor_gc_test\n"
         "\n");
   }
   // print_state();
-
   size_t initial_size = GC_INITIAL_HEAP_MB * MB / sizeof(void*);
-  GcHeap* heap = &gc_state.heap;
 
   minor_gc_scenario("Grow on 2nd GC", 2.1, 200, 300, 0);
-  mu_expect_equal(
-      "heap should be twice original size", heap->end - heap->start, initial_size * 2);
+  assert_approx_heap_size("heap should be twice original size", 2 * initial_size);
 
   minor_gc_scenario("Complete after 1 GC", 1.25, 200, 300, 0);
-  mu_expect_equal("heap should be original size", heap->system_end - heap->start, initial_size);
+  assert_approx_heap_size("heap should be original size", 1 * initial_size);
 
   minor_gc_scenario("Grow on 1st GC due to fragmentation", 1.25, 200, 150, 150);
-  mu_expect_equal(
-      "heap should be twice original size", heap->end - heap->start, initial_size * 2);
+  assert_approx_heap_size("heap should be twice original size", 2 * initial_size);
 
   // PRINT_BITMAP();
   // print_state();
@@ -473,7 +474,7 @@ char* Debug_evaluator_name(void* p) {
   } else if (p == eval_generateHeapPattern) {
     return "generateHeapPattern";
   } else {
-    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
+    stbsp_snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
     return unknown_function_address;
   }
 }
@@ -481,7 +482,7 @@ char* Debug_evaluator_name(void* p) {
 
 char* gc_test() {
   if (verbose)
-    printf(
+    safe_printf(
         "##############################################################################\n"
         "\n"
         "                              Garbage Collector tests\n"

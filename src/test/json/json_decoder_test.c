@@ -23,7 +23,7 @@ void* createJsValue(ElmString16* json) {
 }
 
 void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* expected) {
-  sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
+  stbsp_sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
   ElmString16* json = create_string(json_c_str);
 
   void* actual = runner == &Json_runOnString
@@ -37,7 +37,7 @@ void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* e
 
 void* test_decode_err(
     Closure* runner, Custom* decoder, char* json_c_str, Custom* expected_err) {
-  sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
+  stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
   ElmString16* json = create_string(json_c_str);
 
   void* actual_err;
@@ -55,7 +55,7 @@ void* test_decode_err(
 void* test_decode_errFailure(
     Closure* runner, Custom* decoder, char* json_c_str, char* msg_c_str) {
   ElmString16* json = create_string(json_c_str);
-  sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
+  stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
 
   void* actual_err = runner == &Json_runOnString
                          ? A2(&Json_runOnString, decoder, json)
@@ -227,7 +227,7 @@ void* test_Json_decodeArray(void* runner) {
 void* test_Json_decodeField(void* runner) {
   char* fld = "myField";
   if (verbose) {
-    printf("field = \"%s\"\n", fld);
+    safe_printf("field = \"%s\"\n", fld);
   }
   ElmString16* field = create_string(fld);
   Custom* decoder = A2(&Json_decodeField, field, &Json_decodeInt);
@@ -251,7 +251,7 @@ void* test_Json_decodeField(void* runner) {
 void* test_Json_decodeIndex(void* runner) {
   const i32 idx = 2;
   if (verbose) {
-    printf("index = %d\n", idx);
+    safe_printf("index = %d\n", idx);
   }
   ElmInt* index = newElmInt(idx);
   Custom* decoder = A2(&Json_decodeIndex, index, &Json_decodeInt);
@@ -345,7 +345,7 @@ void* test_Json_map(void* runner) {
     Closure* mapFn = mapFns[i];
     u32 n_args = i + 1;
 
-    json_index += sprintf(&json[json_index], "\"%c\":%d", 'a' + i, i + 1);
+    json_index += stbsp_sprintf(&json[json_index], "\"%c\":%d", 'a' + i, i + 1);
     json[json_index] = '}';
     json[json_index + 1] = 0;
 
@@ -429,7 +429,7 @@ void* test_Json_oneOf(void* runner) {
       oneOf [ int, null 0 ]
   */
   if (verbose) {
-    printf("decoder = oneOf [ int, null 0 ]\n");
+    safe_printf("decoder = oneOf [ int, null 0 ]\n");
   }
 
   Custom* decoder = A1(&Json_oneOf,
@@ -506,17 +506,17 @@ void json_runner_test(void* runner) {
 
 void json_decoder_test() {
   if (verbose) {
-    printf("\n");
-    printf("Json.Decode.decodeString\n");
-    printf("------------------------\n");
+    safe_printf("\n");
+    safe_printf("Json.Decode.decodeString\n");
+    safe_printf("------------------------\n");
   }
   describe("test_Json_decode_invalidJson", test_Json_decode_invalidJson);
   json_runner_test(&Json_runOnString);
 
   if (verbose) {
-    printf("\n");
-    printf("Json.Decode.decodeValue\n");
-    printf("------------------------\n");
+    safe_printf("\n");
+    safe_printf("Json.Decode.decodeValue\n");
+    safe_printf("------------------------\n");
   }
   json_runner_test(&Json_run);
 }

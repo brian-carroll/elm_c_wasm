@@ -1,5 +1,18 @@
 ## TODO
 
+growing + staying in the same place is not going to happen!
+That's not how operating systems work.
+If you want to run on an OS properly you need to work with regions
+  - Turn the GcHeap into a GcRegion and have several of them, maybe 1MB each?
+  - Mark: Bitmap logic becomes harder. Extra step for looking up which region you're in.
+  - Compact: Need to handle `to` and `from` in different regions, and changeovers
+Kind of a lot of work for a use case I don't care about.
+
+Easier solutions for short term
+  - Never shrink the heap in tests
+  - Fixed size OS heap, Elm heap grows/shrinks within that
+  - Replace printf = stb_sprintf + fputs. Create a libs directory.
+
 - growing
   - [x] minor gc returns percentage_marked, and allocator does the growing
   - [x] grow function takes a min_space argument
@@ -20,9 +33,9 @@
 
 ## what tests to do?
 - growing the heap
-  - low % free space on minor GC: *50% heap pattern, run for 2.1x heap size, wraps around*
-  - high % space with bad fragmentation after minor GC _heap pattern test with <50% garbage_
-  - mark stack overflow _long list_ (may need to use Tuple3's to grow fast enough)
+  - low % free space on minor GC
+  - bad fragmentation after minor GC
+  - mark stack overflow
 - major GC
   - check integrity after compactor moves stuff around
     - pointers both up and down (via minor GC?)

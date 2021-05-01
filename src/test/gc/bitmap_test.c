@@ -19,9 +19,9 @@ char gc_bitmap_next_test_str[100];
 
 char* gc_bitmap_next_test() {
   if (verbose) {
-    printf("\n");
-    printf("## gc_bitmap_next_test\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## gc_bitmap_next_test\n");
+    safe_printf("\n");
   }
   gc_test_reset();
 
@@ -31,7 +31,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 0;
   iter.mask = 1;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -41,7 +41,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 0;
   iter.mask = 2;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -51,7 +51,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 1;
   iter.mask = 1;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -61,7 +61,7 @@ char* gc_bitmap_next_test() {
 
   iter.index = 1;
   iter.mask = 2;
-  sprintf(gc_bitmap_next_test_str,
+  stbsp_sprintf(gc_bitmap_next_test_str,
       "bitmap_next assertion %d from word %zd mask %0zx",
       assertion++,
       iter.index,
@@ -82,7 +82,7 @@ char* gc_bitmap_next_test() {
   mu_assert("bitmap_next: highest bit is correctly set in test", (iter.mask << 1) == 0);
   assertion++;
 
-  sprintf(gc_bitmap_next_test_str, format_str, assertion++, iter.index, iter.mask);
+  stbsp_sprintf(gc_bitmap_next_test_str, format_str, assertion++, iter.index, iter.mask);
   bitmap_next(&iter);
   mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 1);
 
@@ -139,9 +139,9 @@ void test_bitmap_iter_example(char* description, size_t* p) {
 
 void test_bitmap_iter_conversions() {
   if (verbose) {
-    printf("\n");
-    printf("## test_bitmap_iter_conversions\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## test_bitmap_iter_conversions\n");
+    safe_printf("\n");
   }
   GcHeap* heap = &gc_state.heap;
   test_bitmap_iter_example("heap start", heap->start);
@@ -154,9 +154,9 @@ void test_bitmap_iter_conversions() {
 
 void test_bitmap_find() {
   if (verbose) {
-    printf("\n");
-    printf("## test_bitmap_find\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## test_bitmap_find\n");
+    safe_printf("\n");
   }
   GcHeap* heap = &gc_state.heap;
   GcBitmapIter iter;
@@ -197,9 +197,9 @@ void test_bitmap_find() {
 
 void test_bitmap_find_space() {
   if (verbose) {
-    printf("\n");
-    printf("## test_bitmap_find_space\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## test_bitmap_find_space\n");
+    safe_printf("\n");
   }
   GcHeap* heap = &gc_state.heap;
   size_t* end_of_space;
@@ -253,9 +253,9 @@ void test_bitmap_find_space() {
 
 void gc_bitmap_test() {
   if (verbose) {
-    printf("\n");
-    printf("gc_bitmap_test\n");
-    printf("-----------\n");
+    safe_printf("\n");
+    safe_printf("gc_bitmap_test\n");
+    safe_printf("-----------\n");
   }
 
   mu_run_test(gc_bitmap_next_test);

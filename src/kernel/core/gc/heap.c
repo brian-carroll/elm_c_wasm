@@ -1,20 +1,22 @@
 #include "internals.h"
 
-#ifdef _WIN32
-#include <heapapi.h>
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
-
 /* ====================================================
 
         HEAP
 
+  For simplicity & code size we have one region that we grow and shrink.
+  That's perfect for the Wasm platform, but not ideal for OS heap APIs.
+  There may be cases where the native executable would be slow or crash.
+
    ==================================================== */
 
+static void* get_initial_system_memory(size_t bytes);
+static void resize_system_memory(GcHeap* heap, size_t new_total_bytes);
+
 #ifdef _WIN32
+
+#include <heapapi.h>
+#include <windows.h>
 
 static HANDLE hHeap;
 static const DWORD dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
@@ -30,9 +32,9 @@ static void* get_initial_system_memory(size_t bytes) {
   return (void*)aligned_addr;
 }
 
-void resize_system_memory(void* start, size_t new_total_bytes) {
+static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  size_t alignment_bytes = (size_t)start - (size_t)system_block;
+  size_t alignment_bytes = (size_t)heap->start - (size_t)system_block;
   size_t new_system_bytes = new_total_bytes + alignment_bytes;
   void* result = HeapReAlloc(hHeap, dwFlags, system_block, new_system_bytes);
   assert(result == system_block);
@@ -40,21 +42,22 @@ void resize_system_memory(void* start, size_t new_total_bytes) {
 
 #else
 
+#include <unistd.h>
+
 static void* get_initial_system_memory(size_t bytes) {
   size_t initial_break = (size_t)sbrk(0);
   size_t aligned_addr = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
   void* aligned_break = (void*)aligned_addr;
   void* new_break = aligned_break + bytes;
-  int result = brk(new_break);
-  assert(result == 0);
+  brk(new_break);
+  assert(sbrk(0) == new_break);
   return aligned_break;
 }
 
-void resize_system_memory(void* start, size_t new_total_bytes) {
-  void* new_break = start + new_total_bytes;
-
-  int is_error = brk(new_break);
-  assert(!is_error);
+static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
+  void* new_break = ((void*)heap->start) + new_total_bytes;
+  brk(new_break);
+  assert(sbrk(0) == new_break);
 }
 
 #endif
@@ -92,10 +95,14 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
 }
 
 
-// Call exactly once on program startup
 int init_heap(GcHeap* heap) {
   size_t bytes = GC_INITIAL_HEAP_MB * MB;
-  void* start = get_initial_system_memory(bytes);
+  void* start = heap->start;
+  if (start) {
+    resize_system_memory(heap, bytes);
+  } else {
+    start = get_initial_system_memory(bytes);
+  }
 
   set_heap_layout(heap, start, bytes);
 
@@ -117,7 +124,7 @@ void grow_heap(GcHeap* heap, size_t current_alloc_words) {
   size_t new_total_bytes =
       GC_ROUND_UP(new_total_words * sizeof(void*), GC_SYSTEM_MEM_CHUNK);
 
-  resize_system_memory(heap->start, new_total_bytes);
+  resize_system_memory(heap, new_total_bytes);
   set_heap_layout(heap, heap->start, new_total_bytes);
 
   // GC bookkeeping data

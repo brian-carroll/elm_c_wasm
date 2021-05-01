@@ -15,9 +15,9 @@ int itest(ElmInt* actual, i32 expected) {
 
 char* test_number_binops() {
   if (verbose) {
-    printf("\n");
-    printf("## Numerical binary operators\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## Numerical binary operators\n");
+    safe_printf("\n");
   }
 
   ElmInt* i1 = newElmInt(1);
@@ -114,9 +114,9 @@ char* test_number_binops() {
 
 char* test_number_unops() {
   if (verbose) {
-    printf("\n");
-    printf("## Numerical unary operators\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## Numerical unary operators\n");
+    safe_printf("\n");
   }
   // Basics.negate
   mu_assert("-(3.14) == -3.14", ftest(A1(&Basics_negate, newElmFloat(3.14)), -3.14));
@@ -144,9 +144,9 @@ char* test_number_unops() {
 
 char* test_logical_ops() {
   if (verbose) {
-    printf("\n");
-    printf("## Logical operators\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## Logical operators\n");
+    safe_printf("\n");
   }
 
   // not
@@ -170,11 +170,11 @@ char* test_logical_ops() {
 
 char* basics_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("Basics\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("Basics\n");
+    safe_printf("------\n");
   }
 
   mu_run_test(test_number_binops);
