@@ -15,29 +15,67 @@ static void resize_system_memory(GcHeap* heap, size_t new_total_bytes);
 
 #ifdef _WIN32
 
-#include <heapapi.h>
 #include <windows.h>
+#include <memoryapi.h>
 
-static HANDLE hHeap;
-static const DWORD dwFlags = HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY;
-static void* system_block;
+
+#define GC_SYSTEM_RESERVED_BYTES (128 * MB)
+
+
+void ErrorExit(const char* calling_func, int line_no) {
+  // Retrieve the system error message for the last-error code
+  DWORD dw = GetLastError();
+  DWORD dwFlags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+  DWORD dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
+  char buf[1024];
+  DWORD count = FormatMessage(dwFlags, NULL, dw, dwLanguageId, buf, sizeof(buf), NULL);
+  safe_printf("%s:%d %s\n", calling_func, line_no, buf);
+  ExitProcess(dw);
+}
+
 
 static void* get_initial_system_memory(size_t bytes) {
-  // https://docs.microsoft.com/en-us/windows/win32/api/heapapi/
   assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  hHeap = GetProcessHeap();
-  system_block = HeapAlloc(hHeap, dwFlags, bytes + GC_BLOCK_BYTES);
-  size_t unaligned_addr = (size_t)system_block;
-  size_t aligned_addr = (unaligned_addr + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
-  return (void*)aligned_addr;
+  u8* reserved = VirtualAlloc(NULL, GC_SYSTEM_RESERVED_BYTES, MEM_RESERVE, PAGE_READWRITE);
+  if (!reserved) {
+    ErrorExit(__FUNCTION__, __LINE__);
+  }
+
+  // We need to commit one chunk at a time
+  // VirtualFree can only be called with an address we explicitly committed
+  for (size_t offset = 0; offset < GC_INITIAL_HEAP_MB * MB; offset += GC_SYSTEM_MEM_CHUNK) {
+    if (!VirtualAlloc(reserved + offset, GC_SYSTEM_MEM_CHUNK, MEM_COMMIT, PAGE_READWRITE)) {
+      ErrorExit(__FUNCTION__, __LINE__);
+    }
+  }
+  // safe_printf("committed initial memory at %p\n", reserved);
+
+  return reserved;
 }
 
 static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  size_t alignment_bytes = (size_t)heap->start - (size_t)system_block;
-  size_t new_system_bytes = new_total_bytes + alignment_bytes;
-  void* result = HeapReAlloc(hHeap, dwFlags, system_block, new_system_bytes);
-  assert(result == system_block);
+  u8* start = (u8*)heap->start;
+  u8* end = (u8*)heap->system_end;
+  size_t old_total_bytes = end - start;
+
+  if (new_total_bytes > old_total_bytes) {
+    // safe_printf("resize_system_memory: grow from %zx to %zx\n", old_total_bytes, new_total_bytes);
+    for (size_t offset = old_total_bytes; offset < new_total_bytes; offset += GC_SYSTEM_MEM_CHUNK) {
+      if (!VirtualAlloc(start + offset, GC_SYSTEM_MEM_CHUNK, MEM_COMMIT, PAGE_READWRITE)) {
+        ErrorExit(__FUNCTION__, __LINE__);
+      }
+    }
+  } else if (new_total_bytes < old_total_bytes) {
+    // safe_printf("resize_system_memory: shrink from %zx to %zx\n", old_total_bytes, new_total_bytes);
+    for (size_t offset = new_total_bytes; offset < old_total_bytes; offset += GC_SYSTEM_MEM_CHUNK) {
+      if (!VirtualFree(start + offset, GC_SYSTEM_MEM_CHUNK, MEM_DECOMMIT)) {
+        ErrorExit(__FUNCTION__, __LINE__);
+      }
+    }
+  } else {
+    safe_printf("resize_system_memory: nothing to do\n");
+  }
 }
 
 #else
@@ -56,6 +94,9 @@ static void* get_initial_system_memory(size_t bytes) {
 
 static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   void* new_break = ((void*)heap->start) + new_total_bytes;
+  if (new_break == (void*)heap->system_end) {
+    return;
+  }
   brk(new_break);
   assert(sbrk(0) == new_break);
 }

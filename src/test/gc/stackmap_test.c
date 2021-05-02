@@ -133,12 +133,25 @@ Closure stackmap_test = {
 void gc_stackmap_test_callback() {
   if (verbose) {
     safe_printf(__FUNCTION__);
-    print_stack_map();
-    print_state();
-    PRINT_BITMAP();
-    print_heap();
+    // print_stack_map();
+    // print_state();
+    // PRINT_BITMAP();
+    // print_heap();
   }
 }
+
+char* stackmap_test_expected[] = {
+    "LIVE eval_stack_tail_complete",
+    "LIVE eval_stack_tail_complete",
+    "LIVE eval_stack_tail_complete",
+    "LIVE eval_stack_normal_complete",
+    "LIVE eval_stack_normal_overflow",
+    "LIVE eval_stack_tail_overflow",
+    "LIVE eval_stack_tail_overflow",
+    "LIVE eval_stack_tail_overflow",
+    "LIVE eval_stack_normal_overflow",
+};
+#define stackmap_test_expected_len sizeof(stackmap_test_expected) / sizeof(char*)
 
 void gc_stackmap_test() {
   if (verbose) {
@@ -151,32 +164,20 @@ void gc_stackmap_test() {
 
   Cons* stringList = A1(&stackmap_test, &Nil);
 
-  char* expected[] = {
-      "LIVE eval_stack_tail_complete",
-      "LIVE eval_stack_tail_complete",
-      "LIVE eval_stack_tail_complete",
-      "LIVE eval_stack_normal_complete",
-      "LIVE eval_stack_normal_overflow",
-      "LIVE eval_stack_tail_overflow",
-      "LIVE eval_stack_tail_overflow",
-      "LIVE eval_stack_tail_overflow",
-      "LIVE eval_stack_normal_overflow",
-  };
-  const int len = sizeof(expected) / sizeof(expected[0]);
-  ElmString16* actual[len];
+  ElmString16* actual[stackmap_test_expected_len];
 
   // reverse the list of live strings, to get them in allocation order
   Cons* list = stringList;
-  int i = len - 1;
+  int i = stackmap_test_expected_len - 1;
   for (; list != pNil && i >= 0; list = list->tail, i--) {
     actual[i] = list->head;
   }
   mu_assert("should have the correct number of live values", list == pNil && i == -1);
 
   // test live strings in order
-  for (i = 0; i < len; i++) {
+  for (i = 0; i < stackmap_test_expected_len; i++) {
     char description[100];
     stbsp_snprintf(description, sizeof(description), "returned string %d", i);
-    expect_string(description, expected[i], actual[i]);
+    expect_string(description, stackmap_test_expected[i], actual[i]);
   }
 }

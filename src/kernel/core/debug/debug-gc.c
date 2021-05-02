@@ -291,7 +291,7 @@ void print_state() {
 
 
 void format_ptr_diff_size(char* buffer, size_t buf_size, void* start, void* end) {
-  size_t bytes = end - start;
+  size_t bytes = (char*)end - (char*)start;
   size_t words = bytes / sizeof(void*);
   format_mem_size(buffer, buf_size, words);
 }

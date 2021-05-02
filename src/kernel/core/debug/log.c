@@ -1,16 +1,26 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
-#include <unistd.h> // 'write' for safe_printf
 #define emscripten_run_script(x)
+#endif
+
+#ifdef __EMSCRIPTEN__
+#include <stdio.h>
+#define WRITE_BYTES_TO_STDOUT(buf, count) fwrite(buf, sizeof(char), count, stdout)
+#elif defined(_WIN32)
+#include <io.h>
+#define WRITE_BYTES_TO_STDOUT(buf, count) _write(1, buf, count)
+#else
+#include <unistd.h>
+#define WRITE_BYTES_TO_STDOUT(buf, count) write(STDOUT_FILENO, buf, count)
 #endif
 
 #define LOG_BUFFER_BYTES 1024
 
 /**
- * A 'printf' that doesn't call malloc
+ * A 'printf' that doesn't call malloc. (The stdio.h implementation does.)
  * Our GC needs to be the only memory manager in the program
- * stdio printf causes segfault after the GC resizes the heap
+ * Otherwise printf would segfault after the GC resizes the heap
  */
 void safe_printf(const char* format, ...) {
   va_list va;
@@ -19,11 +29,7 @@ void safe_printf(const char* format, ...) {
   char buf[LOG_BUFFER_BYTES];
   int count = stbsp_vsnprintf(buf, sizeof(buf), format, va);
 
-#ifdef __EMSCRIPTEN__
-  fwrite(buf, sizeof(char), count, stdout);
-#else
-  write(STDOUT_FILENO, buf, count);
-#endif
+  WRITE_BYTES_TO_STDOUT(buf, count);
 
   va_end(va);
 }

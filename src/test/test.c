@@ -1,6 +1,7 @@
 #include "test.h"
 
 #ifdef _WIN32
+#include <windows.h>
 #include "../lib/wingetopt/wingetopt.c"
 #else
 #include <getopt.h>

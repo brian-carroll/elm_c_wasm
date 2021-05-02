@@ -6,6 +6,12 @@
 #include "../wrapper/wrapper.h"
 #include "types.h"
 
+#ifdef _WIN32
+// Ensure windows.h is included very early in compilation
+// Otherwise we get vague errors about undefined architecture
+#include <windows.h>
+#endif
+
 /*
   , (+), (-), (*), (/), (//), (^)
   , toFloat, round, floor, ceiling, truncate

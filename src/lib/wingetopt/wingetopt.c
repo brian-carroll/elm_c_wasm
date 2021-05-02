@@ -52,6 +52,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "wingetopt.h"
 #include <stdarg.h>
