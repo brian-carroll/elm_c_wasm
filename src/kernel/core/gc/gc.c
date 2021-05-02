@@ -180,6 +180,8 @@ void GC_collect_major() {
   sweepJsRefs(true);
   PERF_TIMER(jsRefs);
 
+  // TODO: if marking already grew the heap (overflowed), then set_heap_layout and adjust bookkeeping
+
   size_t used = state->next_alloc - state->heap.start;
   size_t available = state->heap.end - state->heap.start;
   safe_printf("Major GC: %zd kB used, %zd kb available\n",

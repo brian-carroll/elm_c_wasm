@@ -151,12 +151,12 @@ int init_heap(GcHeap* heap) {
 }
 
 
+// Grow to 2x, or enough to fit the current allocation, whichever is larger
 void grow_heap(GcHeap* heap, size_t current_alloc_words) {
   size_t* old_offsets = heap->offsets;
   size_t* old_bitmap = heap->bitmap;
   size_t* old_system_end = heap->system_end;
 
-  // Grow to 2x, or enough to fit the current allocation, whichever is larger
   size_t old_total_words = heap->system_end - heap->start;
   size_t alloc_with_overhead = current_alloc_words + (current_alloc_words >> 4);
   size_t extra_words =

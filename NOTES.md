@@ -32,7 +32,13 @@ Easier solutions for short term
   - [x] minor gc returns percentage_marked, and allocator does the growing
   - [x] grow function takes a min_space argument
   - [ ] mark stack overflow
-    - first refactor the heap struct: remove layout assumptions, then put offsets on top
+    - first refactor the heap struct: remove layout assumptions, then put offsets ("gc_temp_data") on top
+    - at the end of mark_trace, when stack overflow detected
+      - call system resize function, but not set_heap_layout
+      - overwrite max_todos locally, maybe set system_end
+      - return some value to indicate we grew
+    - in minor and major functions, check if mark needed to grow
+      - if so, move the bitmap & clear offsets (extract to a small function taking old_heap and new_heap)
 
 - bitmap refactor
   - **get tests passing first!** or use a new branch from master?

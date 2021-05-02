@@ -91,6 +91,7 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
       todos[next_todo] = child;
       next_todo++;
       assert(next_todo < max_todos); // stack overflow!
+      // TODO: on overflow, resize and return a flag to adjust heap struct later
     }
   } while (next_todo);
 }
@@ -100,7 +101,6 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
  * state: The GC state
  * ignore_below: Lowest address to consider for marking
  *      (used to ignore the old generation in a minor GC)
- * return value: the percentage of words that were marked
  */
 void mark(GcState* state, size_t* ignore_below) {
   GcHeap* heap = &state->heap;
