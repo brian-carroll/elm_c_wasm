@@ -18,7 +18,7 @@ sscanf is 30kB! Only using it for floats. Could write something.
 - fix allocation hacks (they assume the old GC where there are no live values above `next_alloc`)
   - [ ] String.join needs a pre-pass to calculate the length
   - [ ] string builders: Debug.toString, Json.stringify, Json.parse_string
-  - [ ] JsArray.push needs to be refactored to allocate all at once
+  - [x] JsArray.push needs to be refactored to allocate all at once
   - [ ] List.map2 probably becomes a modulo-cons
 - logging improvements
   - use flags and log levels and stuff
