@@ -414,28 +414,44 @@ void* test_String_trim() {
 }
 
 void* test_String_trimLeft() {
-  expect_string("trim \" \\n a \\t \\r\\n\"",
+  expect_string("trimLeft \" \\n a \\t \\r\\n\"",
       "a \t \r\n",
       A1(&String_trimLeft, create_string(" \n a \t \r\n")));
 
-  expect_string(
-      "trim \" \\n \\t \\r\\n\"", "", A1(&String_trimLeft, create_string(" \n \t \r\n")));
+  expect_string("trimLeft \"a \\t \\r\\n\"",
+      "a \t \r\n",
+      A1(&String_trimLeft, create_string("a \t \r\n")));
 
-  expect_string("trim \"\"", "", A1(&String_trimLeft, create_string("")));
+  expect_string("trimLeft \" \\n a\"",
+      "a",
+      A1(&String_trimLeft, create_string(" \n a")));
+
+  expect_string(
+      "trimLeft \" \\n \\t \\r\\n\"", "", A1(&String_trimLeft, create_string(" \n \t \r\n")));
+
+  expect_string("trimLeft \"\"", "", A1(&String_trimLeft, create_string("")));
 
   return NULL;
 }
 
 void* test_String_trimRight() {
-  expect_string("trim \" \\n a \\t \\r\\n\"",
+  expect_string("trimRight \" \\n a \\t \\r\\n\"",
       " \n a",
       A1(&String_trimRight, create_string(" \n a \t \r\n")));
 
-  expect_string("trim \" \\n \\t \\r\\n\"",
+  expect_string("trimRight \" \\n a\"",
+      " \n a",
+      A1(&String_trimRight, create_string(" \n a")));
+
+  expect_string("trimRight \"a \\t \\r\\n\"",
+      "a",
+      A1(&String_trimRight, create_string("a \t \r\n")));
+
+  expect_string("trimRight \" \\n \\t \\r\\n\"",
       "",
       A1(&String_trimRight, create_string(" \n \t \r\n")));
 
-  expect_string("trim \"\"", "", A1(&String_trimRight, create_string("")));
+  expect_string("trimRight \"\"", "", A1(&String_trimRight, create_string("")));
 
   return NULL;
 }
