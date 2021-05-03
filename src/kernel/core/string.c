@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>  // sscanf
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> // memcpy
 
 #include "core.h"
 
@@ -21,6 +21,20 @@ size_t code_units(ElmString16* s) {
   size_t units = last_code_unit + 1 - s->words16;
   return units;
 }
+
+
+static u16* copy_contents(u16* to, ElmString16* s) {
+  u32 size = s->header.size;
+  size_t* words = (size_t*)s;
+  size_t* after = words + size;
+  u16* end = (u16*)after;
+  u16* from = s->words16;
+  for (; from < end && *from; to++, from++) {
+    *to = *from;
+  }
+  return to;
+}
+
 
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx) {
   for (;;) {
@@ -215,29 +229,28 @@ static void* eval_String_join(void* args[]) {
   if (strs == &Nil) {
     return newElmString16(0);
   }
-
-  ElmString16* s = strs->head;
-  u32 result_len = code_units(s);
-  Header h = HEADER_STRING(result_len);
-  ElmString16* result = GC_allocate(true, h.size);
-  result->header = h;
-  memcpy(result->words16, s->words16, result_len * 2);
-
-  u32 sep_len = code_units(sep);
-
-  for (strs = strs->tail; strs != &Nil; strs = strs->tail) {
-    u16* to = &result->words16[result_len];
-    s = strs->head;
-    u32 len = code_units(s);
-
-    result_len += sep_len + len;
-    h = (Header)HEADER_STRING(result_len);
-    GC_allocate(false, (h.size - result->header.size));
-    result->header = h;
-
-    memcpy(to, sep->words16, sep_len * 2);
-    memcpy(to + sep_len, s->words16, len * 2);
+  size_t sep_len = code_units(sep);
+  size_t len16 = 0;
+  for (Cons* cell = strs; cell != &Nil; cell = cell->tail) {
+    ElmString16* s = cell->head;
+    len16 += code_units(s);
+    if (cell->tail != pNil) {
+      len16 += sep_len;
+    }
   }
+
+  ElmString16* result = newElmString16(len16);
+
+  u16* cursor = result->words16;
+  for (Cons* cell = strs; cell != &Nil; cell = cell->tail) {
+    ElmString16* s = cell->head;
+    cursor = copy_contents(cursor, s);
+    if (cell->tail != &Nil) {
+      cursor = copy_contents(cursor, sep);
+    }
+  }
+  assert(cursor == result->words16 + len16);
+
   return result;
 }
 Closure String_join = {

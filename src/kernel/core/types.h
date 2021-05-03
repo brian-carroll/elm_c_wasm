@@ -175,7 +175,7 @@ struct ALIGN(8) elm_string16 {
   u16 words16[];
 };
 typedef struct elm_string16 ElmString16;
-ElmString16* newElmString16(size_t n);
+ElmString16* newElmString16(size_t len16);
 
 enum {
   UTF8,
