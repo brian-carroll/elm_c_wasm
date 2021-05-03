@@ -22,12 +22,43 @@ size_t code_units(ElmString16* s) {
 }
 
 
-static u16* copy_chars(u16* to, u16* start, u16* after) {
-  for (u16* from = start; from < after && *from; to++, from++) {
-    *to = *from;
+#if 0
+void print_chars(char* label, void* start, void* after) {
+  char buf[1024];
+  char* c = buf;
+  for (u16* p = (u16*)start; p < (u16*)after; p++, c++) {
+    *c = *p;
   }
-  return to;
+  *c = 0;
+  safe_printf("%s: '%s'\n", label, buf);
 }
+#endif
+
+
+#define not_aligned_64(ptr) ((size_t)ptr & (sizeof(u64) - 1))
+
+static u16* copy_chars(u16* to16, u16* from16, u16* after16) {
+  while (not_aligned_64(to16) && (from16 < after16) && *from16) {
+    *to16++ = *from16++;
+  }
+
+  u64* to64 = (u64*)to16;
+  u64* from64 = (u64*)from16;
+  u64* after64 = (u64*)after16;
+  while (from64 < (after64 - 1)) {
+    *to64++ = *from64++;
+  }
+
+  to16 = (u16*)to64;
+  from16 = (u16*)from64;
+  while ((from16 < after16) && *from16) {
+    *to16++ = *from16++;
+  }
+
+  return to16;
+}
+
+#undef not_aligned_64
 
 
 static u16* copy_string(u16* to, ElmString16* s) {
