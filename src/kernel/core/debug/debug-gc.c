@@ -8,6 +8,49 @@ extern GcState gc_state;
 extern char stack_flags[GC_STACK_MAP_SIZE];
 
 
+#ifndef DEBUG
+void Debug_print_offset(const char* label, void* p) {}
+#define Debug_is_target_addr(...) false
+#define Debug_is_target_in_range(...) false
+#else
+
+static size_t target_offsets[] = {
+    // 0x9b820,
+    // 0x40bd0,
+};
+
+void Debug_print_offset(const char* label, void* p) {
+  size_t offset = (u8*)p - (u8*)gc_state.heap.start;
+  safe_printf("%s @ offset 0x%zx\n", label, offset);
+}
+
+bool Debug_is_target_addr(void* p) {
+  if (!ARRAY_LEN(target_offsets)) {
+    return false;
+  }
+  size_t offset = (u8*)p - (u8*)gc_state.heap.start;
+  for (int i = 0; i < ARRAY_LEN(target_offsets); i++) {
+    if (offset == target_offsets[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Debug_is_target_in_range(void* from, void* to) {
+  if (!ARRAY_LEN(target_offsets)) {
+    return false;
+  }
+  for (void* p = from; p < to; p += sizeof(void*)) {
+    if (Debug_is_target_addr(p)) {
+      return true;
+    }
+  }
+  return false;
+}
+#endif
+
+
 bool is_marked(void* p) {
   GcState* state = &gc_state;
   size_t* pword = (size_t*)p;
@@ -28,7 +71,7 @@ void print_value(void* p) {
     return;
   }
   if (!sanity_check(p)) {
-    safe_printf("(corrupt data?)");
+    safe_printf("(corrupt data? " FORMAT_HEX ")", *(size_t*)p);
     return;
   }
   ElmValue* v = p;
@@ -147,12 +190,9 @@ void print_value_line(void* p) {
 
 
 void print_heap_range(size_t* start, size_t* end) {
-#ifdef _WIN32
+#if TARGET_64BIT
   safe_printf("|     Address      |       Hex        | Mark | Size | Value\n");
   safe_printf("| ---------------- | ---------------- | ---- | ---- | -----\n");
-#elif TARGET_64BIT
-  safe_printf("|    Address     |       Hex        | Mark | Size | Value\n");
-  safe_printf("| -------------- | ---------------- | ---- | ---- | -----\n");
 #else
   safe_printf("| Address  |   Hex    | Mark | Size | Value\n");
   safe_printf("| -------- | -------- | ---- | ---- | -----\n");
@@ -193,7 +233,8 @@ void print_heap_range(size_t* start, size_t* end) {
 void print_value_full(void* p) {
   Header* h = p;
   size_t* words = p;
-  print_heap_range(words, words + h->size);
+  size_t size = sanity_check(p) ? h->size : 4;
+  print_heap_range(words, words + size);
 }
 
 
@@ -277,7 +318,8 @@ void print_state() {
   safe_printf("%p system_end      (%zd kB total heap)\n", state->heap.system_end, total);
   safe_printf("%p end             (%zd kB app heap)\n", state->heap.end, available);
   safe_printf("%p next_alloc      (%zd kB used)\n", state->next_alloc, used);
-  safe_printf("%p end_of_old_gen  (%zd kB since last GC)\n", state->end_of_old_gen, since_gc);
+  safe_printf(
+      "%p end_of_old_gen  (%zd kB since last GC)\n", state->end_of_old_gen, since_gc);
   safe_printf("\n");
   safe_printf("%p offsets\n", state->heap.offsets);
   safe_printf("%p bitmap\n", state->heap.bitmap);
@@ -343,7 +385,8 @@ void print_gc_perf(void* untyped_perf_data, bool major) {
   if (dummy) safe_printf("  before:  %s\n", size_before);
   if (dummy) safe_printf("  after:   %s\n", size_after);
   if (dummy)
-    safe_printf("  mark:    %5lld k cycles\n", (perf_data->marked - perf_data->start) / 1000);
+    safe_printf(
+        "  mark:    %5lld k cycles\n", (perf_data->marked - perf_data->start) / 1000);
   if (major)
     safe_printf(
         "  compact: %5lld k cycles\n", (perf_data->compacted - perf_data->marked) / 1000);
@@ -351,6 +394,7 @@ void print_gc_perf(void* untyped_perf_data, bool major) {
     safe_printf("  sweep:   %5lld k cycles\n",
         (perf_data->swept - (major ? perf_data->compacted : perf_data->marked)) / 1000);
   if (major)
-    safe_printf("  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->swept) / 1000);
+    safe_printf(
+        "  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->swept) / 1000);
 }
 #endif

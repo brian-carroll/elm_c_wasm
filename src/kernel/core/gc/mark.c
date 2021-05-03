@@ -69,7 +69,13 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
   do {
     ElmValue* v = todos[--next_todo];  // pop
     size_t* words = (size_t*)v;
-    assert(sanity_check(v));
+    // assert(sanity_check(v)); // !!
+    if (!sanity_check(v)) {
+      print_stack_map();
+      print_heap_range(words - 64, words + 16);
+      Debug_print_offset("corrupt", v);
+      exit(1);
+    }
 
     bool already_marked = mark_words(state, v, v->header.size);
     if (already_marked) continue;
@@ -85,6 +91,15 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
     for (size_t i = 0; i < n_children; ++i) {
       ElmValue* child = children[i];
       size_t* child_words = (size_t*)child;
+
+      if (Debug_is_target_addr(child)) {
+        Debug_print_offset("parent", v);
+        print_value_full(v);
+        Debug_print_offset("child", child);
+        print_value_full(child);
+        Debug_pretty("child", child);
+      }
+
       if (child_words < ignore_below || child_words > heap->end) {
         continue;
       }

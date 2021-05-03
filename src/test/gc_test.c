@@ -21,13 +21,6 @@ void gc_test_reset() {
 }
 
 
-#define LARGE_ALLOCATION_WORDS 1024
-
-void gc_test_large_allocation() {
-  GC_allocate(false, 1024);
-}
-
-
 // --------------------------------------------------------------------------------
 
 

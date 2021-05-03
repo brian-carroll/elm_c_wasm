@@ -12,6 +12,8 @@
 #include <windows.h>
 #endif
 
+#define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
+
 /*
   , (+), (-), (*), (/), (//), (^)
   , toFloat, round, floor, ceiling, truncate
@@ -70,14 +72,10 @@ extern Closure Char_toCode;
 
 // =========================================
 
-#ifdef _WIN32
+#if TARGET_64BIT
 #define FORMAT_HEX "%016zx"
 #define FORMAT_PTR "%16p"
 #define FORMAT_PTR_LEN 16
-#elif TARGET_64BIT
-#define FORMAT_HEX "%016zx"
-#define FORMAT_PTR "%14p"
-#define FORMAT_PTR_LEN 14
 #else
 #define FORMAT_HEX "%08zx"
 #define FORMAT_PTR "%8p"
@@ -87,6 +85,9 @@ extern Closure Char_toCode;
 #define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->end <= (size_t*)p)
 
 void Debug_pretty(const char* label, void* p);
+void Debug_print_offset(const char* label, void* p);
+bool Debug_is_target_addr(void* p);
+bool Debug_is_target_in_range(void* from, void* to);
 extern char* Debug_ctors[];
 extern char* Debug_fields[];
 extern char* Debug_jsValues[];

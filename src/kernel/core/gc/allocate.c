@@ -48,6 +48,10 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
     }
     new_alloc = alloc + alloc_words;
     state->end_of_alloc_patch = end_of_alloc_patch;
+
+    if (Debug_is_target_in_range(alloc, end_of_alloc_patch)) {
+      safe_printf("target is in allocation range %p -> %p", alloc, end_of_alloc_patch);
+    }
   }
 
   if (push_to_stack) {
