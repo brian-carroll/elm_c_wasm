@@ -61,7 +61,7 @@ static u16* copy_chars(u16* to16, u16* from16, u16* after16) {
 #undef not_aligned_64
 
 
-static u16* copy_string(u16* to, ElmString16* s) {
+u16* String_copy(u16* to, ElmString16* s) {
   size_t* words = (size_t*)s;
   size_t* after = words + s->header.size;
   return copy_chars(to, s->words16, (u16*)after);
@@ -274,9 +274,9 @@ static void* eval_String_join(void* args[]) {
   u16* cursor = result->words16;
   for (Cons* cell = strs; cell != &Nil; cell = cell->tail) {
     ElmString16* s = cell->head;
-    cursor = copy_string(cursor, s);
+    cursor = String_copy(cursor, s);
     if (cell->tail != &Nil) {
-      cursor = copy_string(cursor, sep);
+      cursor = String_copy(cursor, sep);
     }
   }
   assert(cursor == result->words16 + len16);
