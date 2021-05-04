@@ -90,22 +90,25 @@ void* parse_string(u16** cursor, u16* end) {
   if (*from != '"') return NULL;
   from++;
 
-  size_t alloc_chunk_words = 4;  // Grow the output string in chunks this big
-  ElmString16* str = newElmString16(alloc_chunk_words / 2);
-  u16* str_end = GC_allocate(false, 0);
+  u16* endquote = from;
+  for (;;) {
+    if (endquote >= end) {
+      return NULL;
+    } else if (*endquote == '"') {
+      break;
+    } else if (*endquote == '\\') {
+      endquote += 2;
+    } else {
+      endquote++;
+    }
+  }
+
+  size_t max_len = endquote - from;
+  ElmString16* str = newElmString16(max_len);
 
   for (to = str->words16;; to++, from++) {
     if (from >= end) return NULL;
     if (*from == '"') break;
-
-    if (to >= str_end) {
-      // Grow output string as needed, taking advantage of GC 'bump allocation'
-      GC_allocate(false, alloc_chunk_words);
-      str->header.size += alloc_chunk_words;
-      str_end = GC_allocate(false, 0);
-      if (alloc_chunk_words < 256) alloc_chunk_words *= 2;
-    }
-
     if (*from == '\\') {
       from++;
       if (from >= end) return NULL;
@@ -163,7 +166,9 @@ void* parse_string(u16** cursor, u16* end) {
   // normalise the string length, chopping off any over-allocated space
   size_t truncated_str_end_addr = ((size_t)to + SIZE_UNIT - 1) & (-SIZE_UNIT);
   size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
+  size_t reclaim = str->header.size - final_size;
   str->header.size = (u32)final_size;
+  GC_allocate(false, reclaim);
   for (; to < (u16*)truncated_str_end_addr; to++) {
     *to = 0;
   }
