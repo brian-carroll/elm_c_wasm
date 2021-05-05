@@ -120,10 +120,10 @@ void* eval_Json_encode(void* args[]) {
   Custom* wrapped = args[1];
   void* value = wrapped->values[0];
 
-  StrBuilder sb;
-  StrBuilder_init(&sb);
+  StringBuilder sb;
+  StringBuilder_init(&sb);
   stringify(indentLevel->value, 0, value, &sb);
-  ElmString16* str = StrBuilder_toString(&sb);
+  ElmString16* str = StringBuilder_toString(&sb);
 
   return str;
 }

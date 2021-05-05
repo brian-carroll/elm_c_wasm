@@ -4,7 +4,7 @@
 #include "json.h"
 
 
-static void stringify_string(ElmString16* src, StrBuilder* sb) {
+static void stringify_string(ElmString16* src, StringBuilder* sb) {
   u16* from = src->words16;
   u16* to = sb->cursor;
 
@@ -16,8 +16,8 @@ static void stringify_string(ElmString16* src, StrBuilder* sb) {
 
   for (; from < from_end; to++, from++) {
     if (to > section_end) {
-      StrBuilder_finishSection(sb);
-      StrBuilder_startSection(sb, 0);
+      StringBuilder_finishSection(sb);
+      StringBuilder_startSection(sb, 0);
       section_end = sb->end - 5;
       to = sb->cursor;
     }
@@ -67,81 +67,81 @@ static void stringify_string(ElmString16* src, StrBuilder* sb) {
 }
 
 
-void stringify(u32 indent, u32 indent_current, void* p, StrBuilder* sb);
+void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb);
 
 static void stringify_array(
-    u32 indent, u32 indent_current, Custom* array, StrBuilder* sb) {
+    u32 indent, u32 indent_current, Custom* array, StringBuilder* sb) {
   u32 indent_next = indent_current + indent;
 
-  StrBuilder_writeChar(sb, '[');
+  StringBuilder_writeChar(sb, '[');
   if (indent) {
-    StrBuilder_writeChar(sb, '\n');
+    StringBuilder_writeChar(sb, '\n');
   }
 
   u32 len = custom_params(array);
   for (size_t i = 0; i < len; i++) {
-    StrBuilder_writeIndent(sb, indent_next);
+    StringBuilder_writeIndent(sb, indent_next);
     stringify(indent, indent_next, array->values[i], sb);
     if (i < len - 1) {
-      StrBuilder_writeChar(sb, ',');
+      StringBuilder_writeChar(sb, ',');
     }
     if (indent) {
-      StrBuilder_writeChar(sb, '\n');
+      StringBuilder_writeChar(sb, '\n');
     }
   }
 
-  StrBuilder_writeIndent(sb, indent_current);
-  StrBuilder_writeChar(sb, ']');
+  StringBuilder_writeIndent(sb, indent_current);
+  StringBuilder_writeChar(sb, ']');
 }
 
 
 static void stringify_object(
-    u32 indent, u32 indent_current, Custom* object, StrBuilder* sb) {
+    u32 indent, u32 indent_current, Custom* object, StringBuilder* sb) {
   u32 indent_next = indent_current + indent;
 
-  StrBuilder_writeChar(sb, '{');
+  StringBuilder_writeChar(sb, '{');
   if (indent) {
-    StrBuilder_writeChar(sb, '\n');
+    StringBuilder_writeChar(sb, '\n');
   }
 
   u32 len = custom_params(object);
   for (size_t i = 0; i < len; i += 2) {
     ElmString16* field = object->values[i];
     void* value = object->values[i + 1];
-    StrBuilder_writeIndent(sb, indent_next);
+    StringBuilder_writeIndent(sb, indent_next);
     stringify(indent, indent_next, field, sb);
-    StrBuilder_writeChar(sb, ':');
+    StringBuilder_writeChar(sb, ':');
     if (indent) {
-      StrBuilder_writeChar(sb, ' ');
+      StringBuilder_writeChar(sb, ' ');
     }
     stringify(indent, indent_next, value, sb);
     if (i < len - 2) {
-      StrBuilder_writeChar(sb, ',');
+      StringBuilder_writeChar(sb, ',');
     }
     if (indent) {
-      StrBuilder_writeChar(sb, '\n');
+      StringBuilder_writeChar(sb, '\n');
     }
   }
 
-  StrBuilder_writeIndent(sb, indent_current);
-  StrBuilder_writeChar(sb, '}');
+  StringBuilder_writeIndent(sb, indent_current);
+  StringBuilder_writeChar(sb, '}');
 }
 
 
-void stringify(u32 indent, u32 indent_current, void* p, StrBuilder* sb) {
+void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb) {
   ElmValue* v = p;
   Tag tag = v->header.tag;
 
   if (p == &Json_encodeNull) {
-    StrBuilder_copyAscii(sb, "null");
+    StringBuilder_copyAscii(sb, "null");
   } else if (p == &True) {
-    StrBuilder_copyAscii(sb, "true");
+    StringBuilder_copyAscii(sb, "true");
   } else if (p == &False) {
-    StrBuilder_copyAscii(sb, "false");
+    StringBuilder_copyAscii(sb, "false");
   } else if (tag == Tag_Float) {
     char buf[32];
     stbsp_snprintf(buf, sizeof(buf), "%g", v->elm_float.value);
-    StrBuilder_copyAscii(sb, buf);
+    StringBuilder_copyAscii(sb, buf);
   } else if (tag == Tag_String) {
     stringify_string(&v->elm_string16, sb);
   } else if (tag == Tag_Custom) {

@@ -251,16 +251,16 @@ struct str_builder {
   u16* end;
   u32 finished_sections_length;
 };
-typedef struct str_builder StrBuilder;
+typedef struct str_builder StringBuilder;
 
-void StrBuilder_init(StrBuilder* sb);
-ElmString16* StrBuilder_toString(StrBuilder* sb);
-void StrBuilder_ensureSpace(StrBuilder* sb, size_t need);
-void StrBuilder_copyAscii(StrBuilder* sb, char* src);
-void StrBuilder_writeChar(StrBuilder* sb, char c);
-void StrBuilder_writeIndent(StrBuilder* sb, u32 indent_current);
-void StrBuilder_startSection(StrBuilder* sb, size_t min_code_units);
-void StrBuilder_finishSection(StrBuilder* sb);
+void StringBuilder_init(StringBuilder* sb);
+ElmString16* StringBuilder_toString(StringBuilder* sb);
+void StringBuilder_ensureSpace(StringBuilder* sb, size_t need);
+void StringBuilder_copyAscii(StringBuilder* sb, char* src);
+void StringBuilder_writeChar(StringBuilder* sb, char c);
+void StringBuilder_writeIndent(StringBuilder* sb, u32 indent_current);
+void StringBuilder_startSection(StringBuilder* sb, size_t min_code_units);
+void StringBuilder_finishSection(StringBuilder* sb);
 
 // =========================================
 

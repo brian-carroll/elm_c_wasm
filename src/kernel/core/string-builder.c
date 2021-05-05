@@ -6,7 +6,7 @@ u16* String_copy(u16* to, ElmString16* s);
 #define STRING_BUILDER_MIN_CODE_UNITS 512
 
 
-void StrBuilder_startSection(StrBuilder* sb, size_t min_code_units) {
+void StringBuilder_startSection(StringBuilder* sb, size_t min_code_units) {
   GcState* state = &gc_state;
   Cons* cell = newCons(NULL, &Nil);  // allocate BEFORE the string to leave plenty of room
   sb->last_section->tail = cell;
@@ -26,7 +26,7 @@ void StrBuilder_startSection(StrBuilder* sb, size_t min_code_units) {
 }
 
 
-void StrBuilder_finishSection(StrBuilder* sb) {
+void StringBuilder_finishSection(StringBuilder* sb) {
   ElmString16* s = sb->last_section->head;
   u32 used_chars = sb->cursor - s->words16;
   s->header.size = SIZE_STRING(used_chars);
@@ -42,15 +42,15 @@ void StrBuilder_finishSection(StrBuilder* sb) {
 }
 
 
-void StrBuilder_init(StrBuilder* sb) {
+void StringBuilder_init(StringBuilder* sb) {
   sb->last_section = newCons(NULL, &Nil);
-  StrBuilder_startSection(sb, STRING_BUILDER_MIN_CODE_UNITS);
+  StringBuilder_startSection(sb, STRING_BUILDER_MIN_CODE_UNITS);
   sb->first_section = sb->last_section;
 }
 
 
-ElmString16* StrBuilder_toString(StrBuilder* sb) {
-  StrBuilder_finishSection(sb);
+ElmString16* StringBuilder_toString(StringBuilder* sb) {
+  StringBuilder_finishSection(sb);
 
   if (sb->first_section == sb->last_section) {
     return sb->first_section->head;
@@ -65,26 +65,26 @@ ElmString16* StrBuilder_toString(StrBuilder* sb) {
 }
 
 
-void StrBuilder_ensureSpace(StrBuilder* sb, size_t need) {
+void StringBuilder_ensureSpace(StringBuilder* sb, size_t need) {
   size_t available = sb->end - sb->cursor;
   if (available < need) {
-    StrBuilder_finishSection(sb);
+    StringBuilder_finishSection(sb);
     size_t len =
         need > STRING_BUILDER_MIN_CODE_UNITS ? need : STRING_BUILDER_MIN_CODE_UNITS;
-    StrBuilder_startSection(sb, len);
+    StringBuilder_startSection(sb, len);
   }
 }
 
 
-void StrBuilder_copyAscii(StrBuilder* sb, char* src) {
+void StringBuilder_copyAscii(StringBuilder* sb, char* src) {
   char* from = src;
   u16* to = sb->cursor;
   u16* end = sb->end;
 
   for (; *from; to++, from++) {
     if (to >= end) {
-      StrBuilder_finishSection(sb);
-      StrBuilder_startSection(sb, 0);
+      StringBuilder_finishSection(sb);
+      StringBuilder_startSection(sb, 0);
       to = sb->cursor;
       end = sb->end;
     }
@@ -95,19 +95,19 @@ void StrBuilder_copyAscii(StrBuilder* sb, char* src) {
 }
 
 
-void StrBuilder_writeChar(StrBuilder* sb, char c) {
+void StringBuilder_writeChar(StringBuilder* sb, char c) {
   if (sb->cursor >= sb->end) {
-    StrBuilder_finishSection(sb);
-    StrBuilder_startSection(sb, 0);
+    StringBuilder_finishSection(sb);
+    StringBuilder_startSection(sb, 0);
   }
   *(sb->cursor) = c;
   sb->cursor++;
 }
 
 
-void StrBuilder_writeIndent(StrBuilder* sb, u32 indent_current) {
+void StringBuilder_writeIndent(StringBuilder* sb, u32 indent_current) {
   if (!indent_current) return;
-  StrBuilder_ensureSpace(sb, indent_current);
+  StringBuilder_ensureSpace(sb, indent_current);
   u16* to = sb->cursor;
   for (size_t i = 0; i < indent_current; i++) {
     *to++ = ' ';

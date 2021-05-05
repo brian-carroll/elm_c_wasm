@@ -7,30 +7,30 @@
 #include <stdio.h> // putchar
 
 
-void Debug_toStringHelp(int depth, void* p, StrBuilder* sb) {
+void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
   ElmValue* v = p;
   char ascii_buf[25];
 
   if (!depth) {
-    StrBuilder_copyAscii(sb, "...");
+    StringBuilder_copyAscii(sb, "...");
     return;
   }
 
   switch (v->header.tag) {
     case Tag_Int: {
       stbsp_snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
-      StrBuilder_copyAscii(sb, ascii_buf);
+      StringBuilder_copyAscii(sb, ascii_buf);
       return;
     }
     case Tag_Float: {
       stbsp_snprintf(ascii_buf, sizeof(ascii_buf), "%.16g", v->elm_float.value);
-      StrBuilder_copyAscii(sb, ascii_buf);
+      StringBuilder_copyAscii(sb, ascii_buf);
       return;
     }
     case Tag_Char: {
       u16 lower = v->elm_char.words16[0];
       u16 upper = v->elm_char.words16[1];
-      StrBuilder_ensureSpace(sb, upper ? 4 : 3);
+      StringBuilder_ensureSpace(sb, upper ? 4 : 3);
       u16* write = sb->cursor;
       *write++ = '\'';
       *write++ = lower;
@@ -41,7 +41,7 @@ void Debug_toStringHelp(int depth, void* p, StrBuilder* sb) {
     }
     case Tag_String: {
       size_t len = code_units(&v->elm_string16);
-      StrBuilder_ensureSpace(sb, len + 2);
+      StringBuilder_ensureSpace(sb, len + 2);
       u16* write = sb->cursor;
       *write++ = '"';
       for (size_t i = 0; i < len; ++i) {
@@ -52,44 +52,44 @@ void Debug_toStringHelp(int depth, void* p, StrBuilder* sb) {
       return;
     }
     case Tag_List: {
-      StrBuilder_copyAscii(sb, "[");
+      StringBuilder_copyAscii(sb, "[");
       for (Cons* list = &v->cons; list != pNil; list = list->tail) {
         Debug_toStringHelp(depth - 1, list->head, sb);
-        if (list->tail != pNil) StrBuilder_copyAscii(sb, ", ");
+        if (list->tail != pNil) StringBuilder_copyAscii(sb, ", ");
       }
-      StrBuilder_copyAscii(sb, "]");
+      StringBuilder_copyAscii(sb, "]");
       return;
     }
     case Tag_Tuple2: {
       Tuple2* t = &v->tuple2;
-      StrBuilder_copyAscii(sb, "(");
+      StringBuilder_copyAscii(sb, "(");
       Debug_toStringHelp(depth - 1, t->a, sb);
-      StrBuilder_copyAscii(sb, ", ");
+      StringBuilder_copyAscii(sb, ", ");
       Debug_toStringHelp(depth - 1, t->b, sb);
-      StrBuilder_copyAscii(sb, ")");
+      StringBuilder_copyAscii(sb, ")");
       return;
     }
     case Tag_Tuple3: {
       Tuple3* t = &v->tuple3;
-      StrBuilder_copyAscii(sb, "(");
+      StringBuilder_copyAscii(sb, "(");
       Debug_toStringHelp(depth - 1, t->a, sb);
-      StrBuilder_copyAscii(sb, ", ");
+      StringBuilder_copyAscii(sb, ", ");
       Debug_toStringHelp(depth - 1, t->b, sb);
-      StrBuilder_copyAscii(sb, ", ");
+      StringBuilder_copyAscii(sb, ", ");
       Debug_toStringHelp(depth - 1, t->c, sb);
-      StrBuilder_copyAscii(sb, ")");
+      StringBuilder_copyAscii(sb, ")");
       return;
     }
     case Tag_Custom: {
       Custom* c = &v->custom;
       if (c == &True) {
-        StrBuilder_copyAscii(sb, "True");
+        StringBuilder_copyAscii(sb, "True");
         return;
       } else if (c == &False) {
-        StrBuilder_copyAscii(sb, "False");
+        StringBuilder_copyAscii(sb, "False");
         return;
       } else if (c == &Unit) {
-        StrBuilder_copyAscii(sb, "()");
+        StringBuilder_copyAscii(sb, "()");
         return;
       }
       char* ctor;
@@ -102,12 +102,12 @@ void Debug_toStringHelp(int depth, void* p, StrBuilder* sb) {
       } else {
         ctor = "<unknown ctor>";
       }
-      StrBuilder_copyAscii(sb, ctor);
-      StrBuilder_copyAscii(sb, " ");
+      StringBuilder_copyAscii(sb, ctor);
+      StringBuilder_copyAscii(sb, " ");
       int len = custom_params(c);
       for (int i = 0; i < len; ++i) {
         Debug_toStringHelp(depth - 1, c->values[i], sb);
-        if (i != len - 1) StrBuilder_copyAscii(sb, " ");
+        if (i != len - 1) StringBuilder_copyAscii(sb, " ");
       }
       return;
     }
@@ -115,30 +115,30 @@ void Debug_toStringHelp(int depth, void* p, StrBuilder* sb) {
       Record* r = &v->record;
       FieldGroup* fg = r->fieldgroup;
       u32 size = fg->size;
-      StrBuilder_copyAscii(sb, "{");
+      StringBuilder_copyAscii(sb, "{");
       for (int i = 0; i < size; ++i) {
         char* field = Debug_fields[fg->fields[i]];
-        StrBuilder_copyAscii(sb, field);
-        StrBuilder_copyAscii(sb, ": ");
+        StringBuilder_copyAscii(sb, field);
+        StringBuilder_copyAscii(sb, ": ");
         Debug_toStringHelp(depth - 1, r->values[i], sb);
-        if (i != size - 1) StrBuilder_copyAscii(sb, ",");
+        if (i != size - 1) StringBuilder_copyAscii(sb, ",");
       }
       return;
     }
     case Tag_FieldGroup: {
-      StrBuilder_copyAscii(sb, "<fieldgroup>");
+      StringBuilder_copyAscii(sb, "<fieldgroup>");
       return;
     }
     case Tag_Closure: {
-      StrBuilder_copyAscii(sb, "<function>");
+      StringBuilder_copyAscii(sb, "<function>");
       return;
     }
     case Tag_JsRef: {
-      StrBuilder_copyAscii(sb, "<JavaScript>");
+      StringBuilder_copyAscii(sb, "<JavaScript>");
       return;
     }
     default: {
-      StrBuilder_copyAscii(sb, "<unknown>");
+      StringBuilder_copyAscii(sb, "<unknown>");
       return;
     }
   }
@@ -146,10 +146,10 @@ void Debug_toStringHelp(int depth, void* p, StrBuilder* sb) {
 
 void* eval_Debug_toString(void* args[]) {
   void* value = args[0];
-  StrBuilder sb;
-  StrBuilder_init(&sb);
+  StringBuilder sb;
+  StringBuilder_init(&sb);
   Debug_toStringHelp(5, value, &sb);
-  ElmString16* str = StrBuilder_toString(&sb);
+  ElmString16* str = StringBuilder_toString(&sb);
 
   return str;
 }
