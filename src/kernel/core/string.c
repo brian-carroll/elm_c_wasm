@@ -62,9 +62,7 @@ static u16* copy_chars(u16* to16, u16* from16, u16* after16) {
 
 
 u16* String_copy(u16* to, ElmString16* s) {
-  size_t* words = (size_t*)s;
-  size_t* after = words + s->header.size;
-  return copy_chars(to, s->words16, (u16*)after);
+  return copy_chars(to, s->words16, s->words16 + code_units(s));
 }
 
 
