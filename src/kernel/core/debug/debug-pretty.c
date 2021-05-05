@@ -86,12 +86,12 @@ static void Debug_prettyHelp(int indent, void* p) {
       safe_printf("String \"");
       ElmString16* s = p;
       for (size_t i = 0; i < code_units(s); i++) {
-        u16 unit = s->words16[i];
-        if (unit) {
-          if (unit < 128) {
-            safe_printf("%c", (char)unit);
+        u16 chr = s->words16[i];
+        if (chr) {
+          if (chr < 128) {
+            putchar(chr);
           } else {
-            safe_printf("#");
+            putchar('#');
           }
         }
       }
