@@ -94,7 +94,7 @@ gh-pages: wasm codegen todo
 # Linux binary
 #----------------------------------------------
 
-$(BUILD)/bin/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/gc/*.c $(KERNEL)/core/gc/*.h
+$(BUILD)/bin/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/*/*.c $(KERNEL)/core/*/*.h
 	gcc -ggdb $(CFLAGS) -c $(KERNEL)/core/core.c -o $@
 
 $(BUILD)/bin/elm-test.o: $(KERNEL)/elm-test/*.c
