@@ -161,7 +161,7 @@ char* test_all(bool types,
   if (string) mu_run_test(string_test);
   if (chr) mu_run_test(char_test);
   if (list) mu_run_test(list_test);
-  if (debug) mu_run_test(list_test);
+  if (debug) mu_run_test(debug_test);
   if (json) mu_run_test(json_test);
   if (gc) mu_run_test(gc_test);
 
