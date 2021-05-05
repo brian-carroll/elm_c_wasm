@@ -1,71 +1,33 @@
-/*
-API:
-
-Debug.toString
-- init
-- grow
-- ensure_space (amortize a load of end-checks into one)
-- copy_ascii
-- builderToString
-
-Json.stringify
-- init
-- grow
-- copy_ascii
-- write_char (16-bit char, and without for loop)
-- write_indent
-- builderToString
-
-*/
+#include "core.h"
 #include "./gc/internals.h"
 u16* String_copy(u16* to, ElmString16* s);
 
-struct string_builder {
-  Cons* first_section;
-  Cons* last_section;
-  u16* cursor;
-  u16* end;
-  u32 prev_sections_length;
-};
-typedef struct string_builder StringBuilder;
+
+#define STRING_BUILDER_MIN_CODE_UNITS 512
 
 
-#define STRING_BUILDER_MIN_SECTION_BYTES 1024
-
-
-static void StringBuilder_addSection(StringBuilder* sb) {
-  Cons* cell = newCons(NULL, &Nil); // allocate BEFORE the string to leave plenty of room
-  sb->last_section.tail = cell;
+void StrBuilder_startSection(StrBuilder* sb, size_t min_code_units) {
+  GcState* state = &gc_state;
+  Cons* cell = newCons(NULL, &Nil);  // allocate BEFORE the string to leave plenty of room
+  sb->last_section->tail = cell;
 
   // Allocate a string at least min size and as large as we can get
-  ElmString16* s = newElmString16(STRING_BUILDER_MIN_SECTION_BYTES >> 1);
-  size_t* end = gc_state.end_of_alloc_patch;
+  ElmString16* s = newElmString16(min_code_units);
+  size_t* end = state->end_of_alloc_patch;
+  size_t extra_space = end - state->next_alloc - 1;
+  GC_allocate(false, extra_space);
   s->header.size = end - (size_t*)s;
 
   cell->head = s;
 
-  ElmString16* prev = sb->last_section.head;
   sb->last_section = cell;
   sb->cursor = s->words16;
   sb->end = (u16*)end;
-  if (prev) {
-    sb->prev_sections_length += code_units(prev);
-  }
 }
 
 
-StringBuilder StringBuilder_create() {
-  Cons* tmp = newCons(NULL, &Nil);
-  StringBuilder sb = { .last_section = tmp };
-  StringBuilder_addSection(&sb);
-  sb.first_section = sb.last_section;
-  return sb;
-}
-
-
-ElmString16* StringBuilder_toString(StringBuilder* sb) {
-  // Shrink the last string to actual used size
-  ElmString16* s = sb->last_section.head;
+void StrBuilder_finishSection(StrBuilder* sb) {
+  ElmString16* s = sb->last_section->head;
   u32 used_chars = sb->cursor - s->words16;
   s->header.size = SIZE_STRING(used_chars);
   size_t* after_string = (size_t*)s + s->header.size;
@@ -73,21 +35,82 @@ ElmString16* StringBuilder_toString(StringBuilder* sb) {
     *zero = 0;
   }
 
-  // Give back unused memory to the allocator
-  ptrdiff_t leftover_space = gc_state.end_of_alloc_patch - after_string;
+  ptrdiff_t leftover_space = (size_t*)sb->end - after_string - 1;
   GC_allocate(false, -leftover_space);
 
-  // Early-out for single section
+  sb->finished_sections_length += used_chars;
+}
+
+
+void StrBuilder_init(StrBuilder* sb) {
+  sb->last_section = newCons(NULL, &Nil);
+  StrBuilder_startSection(sb, STRING_BUILDER_MIN_CODE_UNITS);
+  sb->first_section = sb->last_section;
+}
+
+
+ElmString16* StrBuilder_toString(StrBuilder* sb) {
+  StrBuilder_finishSection(sb);
+
   if (sb->first_section == sb->last_section) {
-    return s;
+    return sb->first_section->head;
   }
 
-  // Concatenate the sections
-  u32 len = prev_sections_length + used_chars;
-  ElmString16* result = newElmString16(len);
+  ElmString16* result = newElmString16(sb->finished_sections_length);
   u16* dest = result->words16;
   for (Cons* cell = sb->first_section; cell != pNil; cell = cell->tail) {
     dest = String_copy(dest, cell->head);
   }
   return result;
+}
+
+
+void StrBuilder_ensureSpace(StrBuilder* sb, size_t need) {
+  size_t available = sb->end - sb->cursor;
+  if (available < need) {
+    StrBuilder_finishSection(sb);
+    size_t len =
+        need > STRING_BUILDER_MIN_CODE_UNITS ? need : STRING_BUILDER_MIN_CODE_UNITS;
+    StrBuilder_startSection(sb, len);
+  }
+}
+
+
+void StrBuilder_copyAscii(StrBuilder* sb, char* src) {
+  char* from = src;
+  u16* to = sb->cursor;
+  u16* end = sb->end;
+
+  for (; *from; to++, from++) {
+    if (to >= end) {
+      StrBuilder_finishSection(sb);
+      StrBuilder_startSection(sb, 0);
+      to = sb->cursor;
+      end = sb->end;
+    }
+    *to = *from;
+  }
+
+  sb->cursor = to;
+}
+
+
+void StrBuilder_writeChar(StrBuilder* sb, char c) {
+  if (sb->cursor >= sb->end) {
+    StrBuilder_finishSection(sb);
+    StrBuilder_startSection(sb, 0);
+  }
+  *(sb->cursor) = c;
+  sb->cursor++;
+}
+
+
+void StrBuilder_writeIndent(StrBuilder* sb, u32 indent_current) {
+  if (!indent_current) return;
+  StrBuilder_ensureSpace(sb, indent_current);
+  u16* to = sb->cursor;
+  for (size_t i = 0; i < indent_current; i++) {
+    *to++ = ' ';
+  }
+  sb->cursor = to;
 }

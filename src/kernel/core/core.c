@@ -11,4 +11,5 @@
 #include "types.c"
 #include "utils.c"
 #include "gc/gc.c"
+#include "string-builder.c"
 #include "debug/debug.c"

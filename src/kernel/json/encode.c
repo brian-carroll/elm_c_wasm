@@ -120,28 +120,10 @@ void* eval_Json_encode(void* args[]) {
   Custom* wrapped = args[1];
   void* value = wrapped->values[0];
 
-  stringify_alloc_chunk_words = 16;
-  size_t len = (stringify_alloc_chunk_words - 1) * SIZE_UNIT / sizeof(u16);
-  ElmString16* str = newElmString16(len);
-  StringBuilder sb = {
-    .s = str,
-    .cursor = str->words16,
-    .end = str->words16 + len,
-  };
-
+  StrBuilder sb;
+  StrBuilder_init(&sb);
   stringify(indentLevel->value, 0, value, &sb);
-
-  // Shrink the string
-  ptrdiff_t cursor_addr = (ptrdiff_t)(sb.cursor);
-  ptrdiff_t aligned_cursor_addr = (cursor_addr + SIZE_UNIT - 1) & (-SIZE_UNIT);
-  ptrdiff_t size = (aligned_cursor_addr - (ptrdiff_t)str) / SIZE_UNIT;
-  str->header.size = (u32)size;
-
-  // Give back unused memory to the allocator
-  ptrdiff_t end_addr = (ptrdiff_t)(sb.end);
-  ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
-
-  GC_allocate(false, negative_alloc / SIZE_UNIT);
+  ElmString16* str = StrBuilder_toString(&sb);
 
   return str;
 }

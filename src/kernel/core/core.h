@@ -243,6 +243,27 @@ extern Closure String_toFloat;
 
 // =========================================
 
+
+struct str_builder {
+  Cons* first_section;
+  Cons* last_section;
+  u16* cursor;
+  u16* end;
+  u32 finished_sections_length;
+};
+typedef struct str_builder StrBuilder;
+
+void StrBuilder_init(StrBuilder* sb);
+ElmString16* StrBuilder_toString(StrBuilder* sb);
+void StrBuilder_ensureSpace(StrBuilder* sb, size_t need);
+void StrBuilder_copyAscii(StrBuilder* sb, char* src);
+void StrBuilder_writeChar(StrBuilder* sb, char c);
+void StrBuilder_writeIndent(StrBuilder* sb, u32 indent_current);
+void StrBuilder_startSection(StrBuilder* sb, size_t min_code_units);
+void StrBuilder_finishSection(StrBuilder* sb);
+
+// =========================================
+
 extern Closure Utils_equal;
 extern Closure Utils_notEqual;
 extern Closure Utils_append;
