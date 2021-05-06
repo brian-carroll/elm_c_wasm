@@ -5,7 +5,6 @@
 #include <emscripten/emscripten.h>
 #else
 #define EMSCRIPTEN_KEEPALIVE
-#include <stdio.h>
 #endif
 
 #include "../core/core.h"

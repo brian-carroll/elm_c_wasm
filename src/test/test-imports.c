@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdio.h>
 
 #include "../kernel/core/core.h"
 #include "../kernel/json/json-internal.h"

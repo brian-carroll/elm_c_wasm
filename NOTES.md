@@ -1,3 +1,118 @@
+## GC size analysis
+
+2020-05-01: mark-sweep with dynamic resizing and compactor
+
+Bytes of wasm, compiling demo/language-test with -Oz, DEBUG undefined
+223445: full build
+223047: brk and sbrk commented out
+174378: All GC functions stubbed out in #define
+215315: All GC functions stubbed, GC_allocate replaced with a one-liner conditional (7.9 kB less than full build)
+215550: All public GC functions replaced with single statement (7.7 kB less than full build)
+
+**GC code size < 8kB**
+
+sscanf is 30kB! Only using it for floats. Could write something.
+
+## TODO
+
+- fix allocation hacks (they assume the old GC where there are no live values above `next_alloc`)
+  - [x] String.join needs a pre-pass to calculate the length
+  - [x] string builders: Debug.toString, Json.stringify, Json.parse_string
+  - [x] JsArray.push needs to be refactored to allocate all at once
+  - [x] List.map2 probably becomes a modulo-cons
+- logging improvements
+  - use flags and log levels and stuff
+- modulo cons
+  - would this make the language test easier to debug by shrinking the stack a bit?
+  - meh, probably doesn't _really_ improve much
+- growing
+  - [x] minor gc returns percentage_marked, and allocator does the growing
+  - [x] grow function takes a min_space argument
+  - [ ] mark stack overflow
+    - first refactor the heap struct: remove layout assumptions, then put offsets ("gc_temp_data") on top
+    - at the end of mark_trace, when stack overflow detected
+      - call system resize function, but not set_heap_layout
+      - overwrite max_todos locally, maybe set system_end
+      - return some value to indicate we grew
+    - in minor and major functions, check if mark needed to grow
+      - if so, move the bitmap & clear offsets (extract to a small function taking old_heap and new_heap)
+
+- bitmap refactor
+  - **get tests passing first!** or use a new branch from master?
+  - use new bitmap_find function in compactor
+  - compactor was using next_alloc as a max!
+  - bm_iter is related to `from`, not `to`. It works a bit ahead of `from`. It's a target for where `from` wants to get to.
+  - update bitmap_dead_between (popcount & make_bitmask)
+  - update mark_words
+- timers for grow_heap
+- better timers
+- test the basics of the new system
+  - when I grow, do I actually get contiguous memory?
+
+## what tests to do?
+- growing the heap
+  - low % free space on minor GC
+  - bad fragmentation after minor GC
+  - mark stack overflow
+- major GC
+  - check integrity after compactor moves stuff around
+    - pointers both up and down (via minor GC?)
+
+## debug ideas
+Casey Muratori made a huge debug system to visualise things. He went further with it than I would have even thought about. What ideas can I use from that?
+
+- Do something with __FILE__ and __LINE__ on allocations and function applications, to see who allocated what
+  - Build something into the data constructors (newElmInt and friends)
+  - Can have different number of args in DEBUG by defining macros
+  - I have a codemod script already, could put it there for now at least!
+  - could record this stuff in global vars. But at the allocation site we don't know where the allocated address will be.
+  - GC_stack_push_value is a good place to write the actual debug record
+
+- Have a way of visualising fragmentation
+  - print out the bitmap in rows of some kind of ASCII art?
+    ```
+    ***---**------*-----***---*--
+    --*-----******---**----***---
+    ----*--*------***-****----***
+    ```
+  - If it's different between snapshot and current, use a different character?
+    ```
+    ***##-**####--*####-***##-*--
+    ##*###--******###**###-***##-
+    ###-*##*#####-***-****##--***
+    ```
+  - Yeah this actually looks really useful!
+    - Here I drew * for old marked and # for new marked
+    - There are 4 possibilities, so use 4 characters
+    ```
+    X-xXXXXxx-
+    xX--x-x_-_
+    -X__Xxx__- 
+    _x--XXx___ 
+    ```
+
+- massive test data
+  - allocate a whole other heap area for debug data
+  - take test snapshots of the entire heap, to compare things over time
+  - store function & line number in an array the size of the heap
+  - Quadruple the memory usage. It's still only a few MB or tens of MB, not hundreds!
+    - actual heap
+    - previous heap
+    - actual heap line numbers
+    - snapshot line numbers
+
+- Dump debug data to file(s)! That sort of gets around the memory allocation issues I think
+  - Store as binary files and make some binary utils for pretty-printing if I want
+  - Log out loads of files at the same time to keep things separate?
+  - Or maybe I want just one big text file... I dunno
+
+What sort of issues do I want to find?
+- Fragmentation
+- Data corruption
+  - sweeping something I shouldn't have swept
+  - Maybe take a heap snapshot before sweeping, and track who allocated it?
+
+
 # Non-moving GC
 
 Getting tired of this replay GC, it's so damn confusing, I've been fighting it for literally years now.
@@ -51,31 +166,30 @@ size_t target_space = 3;
 for (int attempts = 0; attempts < 2; ++attempts) {
   size_t bm_word = state->alloc_idx;
   size_t bm_mask = state->alloc_mask;
-  size_t* after_alloc = state->next_alloc; // next heap slot after allocated space
+  size_t* found = state->next_alloc; // next heap slot after allocated space
 
   size_t max_word = state->heap.offsets - state->heap.bitmap;
-  size_t found_space = 0;
+  size_t words_found = 0;
 
-  while (after_alloc < heap->end) {
+  while (found < heap->end) {
     size_t is_live = heap->bitmap[bm_word] & bm_mask;
     if (is_live) {
-      found_space = 0;
-      found_word = bm_word;
+      words_found = 0;
     } else {
-      found_space++;
-      if (found_space == target_space) {
+      words_found++;
+      if (words_found == target_space) {
         break;
       }
     }
-    after_alloc++;
+    found++;
     bitmap_next(&bm_word, &bm_mask);
   }
 
-  if (found_space == target_space) {
+  if (words_found == target_space) {
     state->alloc_idx = bm_word;
     state->alloc_mask = bm_mask;
-    state->alloc_next = after_alloc;
-    return (after_alloc - target_space);
+    state->alloc_next = found;
+    return (found - target_space);
   }
 
   collect(); // will change state, grow heap, etc.

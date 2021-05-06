@@ -3,13 +3,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include <stdio.h>
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#else
-#define emscripten_run_script(x)
-#endif
 
 
 // Destructure by index
@@ -122,14 +115,7 @@ Closure Utils_append = {
 void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
   void** args;
   do {
-    Closure* replay = GC_stack_push_frame(c->evaluator);
-    if (replay) {
-      if (replay->header.tag != Tag_Closure) return replay;
-      if (replay->n_values < replay->max_values) return replay;
-      // If we get this far, we are resuming a tail-call thunk
-      assert(c->evaluator == replay->evaluator);
-      args = replay->values;
-    } else if (n_applied >= c->max_values) {
+    if (n_applied >= c->max_values) {
       // All args in one go (or too many args, expecting a function to be returned)
       args = applied;
     } else if (n_applied == 0) {
@@ -161,11 +147,12 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
 
 
     // Execute! (and let the GC know what the stack is doing)
+    GC_stack_push_frame(c->evaluator);
     GcStackMapIndex stack_frame = GC_get_stack_frame();
     void* result = c->evaluator(args);
 
     if (!result) {
-      printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
+      safe_printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
       char label[5] = "arg 0";
       for (int i=0; i< n_applied; i++) {
         Debug_pretty(label, args[i]);

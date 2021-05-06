@@ -3,21 +3,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 Cons* newCons(void* head, void* tail) {
   Cons* p = GC_allocate(true, SIZE_LIST);
   p->header = (Header)HEADER_LIST;
   p->head = head;
   p->tail = tail;
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
-};
+}
+
 
 Tuple2* newTuple2(void* a, void* b) {
   Tuple2* p = GC_allocate(true, SIZE_TUPLE2);
   p->header = (Header)HEADER_TUPLE2;
   p->a = a;
   p->b = b;
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
-};
+}
+
 
 Tuple3* newTuple3(void* a, void* b, void* c) {
   Tuple3* p = GC_allocate(true, SIZE_TUPLE3);
@@ -25,29 +34,43 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
   p->a = a;
   p->b = b;
   p->c = c;
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
-};
+}
+
 
 ElmInt* newElmInt(i32 value) {
   ElmInt* p = GC_allocate(true, SIZE_INT);
   p->header = (Header)HEADER_INT;
   p->value = value;
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
-};
+}
 
 ElmFloat* newElmFloat(f64 value) {
   ElmFloat* p = GC_allocate(true, SIZE_FLOAT);
   p->header = (Header)HEADER_FLOAT;
   p->value = value;
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
-};
+}
+
 
 ElmChar* newElmChar(u32 value) {
   ElmChar* p = GC_allocate(true, SIZE_CHAR);
   p->header = (Header)HEADER_CHAR;
   p->value = value;
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
-};
+}
 
 // Strings are padded to the next 32/64-bit boundary.
 
@@ -99,8 +122,12 @@ ElmString* newElmString(size_t payload_bytes, char* str) {
     }
   }
 
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
 }
+
 
 ElmString16* newElmString16(size_t len16) {
   size_t used_bytes = sizeof(Header) + len16 * sizeof(u16);
@@ -120,8 +147,12 @@ ElmString16* newElmString16(size_t len16) {
       .size = (u32)aligned_words,
   };
 
+  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
+    Debug_pretty("allocation at target address", p);
+  }
   return p;
 }
+
 
 Custom* newCustom(u32 ctor, u32 n_children, void* children[]) {
   Custom* c = GC_allocate(true, SIZE_CUSTOM(n_children));
@@ -133,8 +164,12 @@ Custom* newCustom(u32 ctor, u32 n_children, void* children[]) {
       c->values[i] = children[i];
     }
   }
+  if (Debug_is_target_in_range(c, (size_t*)c + c->header.size)) {
+    Debug_pretty("allocation at target address", c);
+  }
   return c;
 }
+
 
 Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   Record* r = GC_allocate(true, SIZE_RECORD(n_children));
@@ -143,8 +178,13 @@ Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]) {
   for (size_t i = 0; i < n_children; ++i) {
     r->values[i] = children[i];
   }
+  if (Debug_is_target_in_range(r, (size_t*)r + r->header.size)) {
+    Debug_pretty("allocation at target address", r);
+  }
   return r;
 }
+
+
 Closure* newClosure(
     u16 n_values, u16 max_values, void* (*evaluator)(void*[]), void* values[]) {
   Closure* c = GC_allocate(true, SIZE_CLOSURE(n_values));
@@ -156,6 +196,9 @@ Closure* newClosure(
     for (size_t i = 0; i < n_values; ++i) {
       c->values[i] = values[i];
     }
+  }
+  if (Debug_is_target_in_range(c, (size_t*)c + c->header.size)) {
+    Debug_pretty("allocation at target address", c);
   }
   return c;
 }

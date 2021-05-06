@@ -59,9 +59,10 @@ void* forwarding_address(GcHeap* heap, size_t* old_pointer) {
 
 void compact(GcState* state, size_t* compact_start) {
   GcHeap* heap = &state->heap;
-  size_t* compact_end = state->next_alloc;
+  size_t* compact_end = heap->end;
 
   // Find starting point in bitmap
+  // bm_iter acts as a target for the `from` pointer, working ahead of it
   GcBitmapIter bm_iter = ptr_to_bitmap_iter(heap, compact_start);
 
   // Find first garbage patch
@@ -73,6 +74,9 @@ void compact(GcState* state, size_t* compact_start) {
   if (first_move_to >= compact_end) return;
 
   calc_offsets(heap, compact_start, compact_end);
+
+  // The `to` pointer is where we're copying to.
+  // It just moves uniformly forward. Doesn't need to care about the mark bits.
   size_t* to = first_move_to;
   size_t garbage_so_far = 0;
 
@@ -82,7 +86,7 @@ void compact(GcState* state, size_t* compact_start) {
   size_t* from = to;
   while (from < compact_end) {
     // Next live patch (bitmap only)
-    while (!bitmap_is_live_at(heap, bm_iter) && (from < compact_end)) {
+    while ((from < compact_end) && !bitmap_is_live_at(heap, bm_iter)) {
       bitmap_next(&bm_iter);
       garbage_so_far++;
       from++;
@@ -91,7 +95,7 @@ void compact(GcState* state, size_t* compact_start) {
 
     // Next garbage patch (bitmap only)
     size_t* next_garbage = from;
-    while (bitmap_is_live_at(heap, bm_iter) && (next_garbage < compact_end)) {
+    while ((next_garbage < compact_end) && bitmap_is_live_at(heap, bm_iter)) {
       bitmap_next(&bm_iter);
       next_garbage++;
     }
@@ -127,8 +131,8 @@ void compact(GcState* state, size_t* compact_start) {
         if (child_old < first_move_to || child_old > heap->end) {
           // Child value has not been moved
           child_new = child_old;
-        } else if (child_old >= live_patch_start) {
-          // Optimisation for related values in the same patch
+        } else if (child_old >= live_patch_start && child_old < from) {
+          // Optimisation for parent and child both in the current live patch
           child_new = child_old - garbage_so_far;
         } else {
           // Calculate where child was moved to (using bitmap and block offsets)
@@ -144,11 +148,8 @@ void compact(GcState* state, size_t* compact_start) {
   // Compaction is finished. Update the GC state and roots.
 
   state->next_alloc = to;
-  state->nursery = to;
-
-  for (size_t i = 0; i < state->stack_map.index; ++i) {
-    stack_values[i] = forwarding_address(heap, stack_values[i]);
-  }
+  state->end_of_old_gen = to;
+  state->end_of_alloc_patch = heap->end;
 
   size_t* roots = (size_t*)state->roots;
   if (roots > first_move_to) {

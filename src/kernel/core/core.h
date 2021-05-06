@@ -6,6 +6,14 @@
 #include "../wrapper/wrapper.h"
 #include "types.h"
 
+#ifdef _WIN32
+// Ensure windows.h is included very early in compilation
+// Otherwise we get vague errors about undefined architecture
+#include <windows.h>
+#endif
+
+#define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
+
 /*
   , (+), (-), (*), (/), (//), (^)
   , toFloat, round, floor, ceiling, truncate
@@ -64,23 +72,22 @@ extern Closure Char_toCode;
 
 // =========================================
 
-#ifdef _WIN32
+#if TARGET_64BIT
 #define FORMAT_HEX "%016zx"
 #define FORMAT_PTR "%16p"
 #define FORMAT_PTR_LEN 16
-#elif defined(TARGET_64BIT)
-#define FORMAT_HEX "%016zx"
-#define FORMAT_PTR "%14p"
-#define FORMAT_PTR_LEN 14
 #else
 #define FORMAT_HEX "%08zx"
 #define FORMAT_PTR "%8p"
 #define FORMAT_PTR_LEN 8
 #endif
 
-#define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->system_end < (size_t*)p)
+#define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->end <= (size_t*)p)
 
 void Debug_pretty(const char* label, void* p);
+void Debug_print_offset(const char* label, void* p);
+bool Debug_is_target_addr(void* p);
+bool Debug_is_target_in_range(void* from, void* to);
 extern char* Debug_ctors[];
 extern char* Debug_fields[];
 extern char* Debug_jsValues[];
@@ -88,12 +95,21 @@ extern int Debug_ctors_size;
 extern int Debug_fields_size;
 extern int Debug_jsValues_size;
 char* Debug_evaluator_name(void*);
-extern char Debug_unknown_evaluator[];
 extern Closure Debug_toString;
 extern Closure Debug_log;
 extern Closure Debug_todo;
 
 void Debug_pause();
+
+#define LOG_ALWAYS 0x01
+#define LOG_GC 0x02
+#define LOG_GC_MARK 0x04
+#define LOG_GC_COMPACT 0x08
+#define LOG_GC_ALLOCATE 0x10
+
+#ifndef LOG_FLAGS
+#define LOG_FLAGS LOG_ALWAYS
+#endif
 
 bool is_marked(void* p);
 void print_value(void* p);
@@ -102,9 +118,18 @@ void print_heap_range(size_t* start, size_t* end);
 void print_heap();
 void print_state();
 void print_stack_map();
-void print_bitmap();
+void print_bitmap(const char* function, const char* filename, int line_no);
+#define PRINT_BITMAP() print_bitmap(__FUNCTION__, __FILE__, __LINE__)
+void format_ptr_diff_size(char* buffer, size_t buf_size, void* start, void* end);
+void format_mem_size(char* buffer, size_t buf_size, size_t words);
+void print_ptr_diff_size(void* start, void* end);
+void print_mem_size(size_t words);
+void print_gc_perf(void* perf_data, bool major);
+
 void log_error(char* fmt, ...);
 void log_debug(char* fmt, ...);
+
+void safe_printf(const char* format, ...);
 
 // =========================================
 
@@ -129,8 +154,8 @@ void* eval_elm_core_Result_isOk(void* args[]);
 int GC_init();
 void GC_register_root(void** root);
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)());
-void GC_collect_full();
-void GC_collect_nursery();
+void GC_collect_major();
+void GC_collect_minor();
 void* GC_execute(Closure* c);
 
 // allocate
@@ -143,9 +168,8 @@ typedef u32 GcStackMapIndex;
 void GC_stack_push_value(void* value);
 void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex push);
 GcStackMapIndex GC_get_stack_frame();
-Closure* GC_stack_tailcall(
-    GcStackMapIndex push, Closure* old, u32 n_explicit_args, void* explicit_args[]);
-void* GC_stack_push_frame(EvalFunction evaluator);
+void GC_stack_tailcall(int count, ...);
+void GC_stack_push_frame(EvalFunction evaluator);
 
 // =========================================
 
@@ -216,6 +240,27 @@ extern Closure String_fromNumber;
 extern Closure String_toInt;
 extern Closure String_toFloat;
 // extern Closure String_fromList;
+
+// =========================================
+
+
+struct str_builder {
+  Cons* first_section;
+  Cons* last_section;
+  u16* cursor;
+  u16* end;
+  u32 finished_sections_length;
+};
+typedef struct str_builder StringBuilder;
+
+void StringBuilder_init(StringBuilder* sb);
+ElmString16* StringBuilder_toString(StringBuilder* sb);
+void StringBuilder_ensureSpace(StringBuilder* sb, size_t need);
+void StringBuilder_copyAscii(StringBuilder* sb, char* src);
+void StringBuilder_writeChar(StringBuilder* sb, char c);
+void StringBuilder_writeIndent(StringBuilder* sb, u32 indent_current);
+void StringBuilder_startSection(StringBuilder* sb, size_t min_code_units);
+void StringBuilder_finishSection(StringBuilder* sb);
 
 // =========================================
 

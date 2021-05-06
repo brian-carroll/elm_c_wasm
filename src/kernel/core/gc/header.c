@@ -43,7 +43,7 @@ size_t child_count(ElmValue* v) {
 }
 
 
-#define SANITY_MAX_CHILDREN 32
+#define SANITY_MAX_CHILDREN 512
 
 bool sanity_check(void* p) {
   if (!p) return true;

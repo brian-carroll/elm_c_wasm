@@ -61,11 +61,11 @@ void* test_List_map2() {
 
 char* list_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("List\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("List\n");
+    safe_printf("------\n");
   }
 
   describe("test_List_create", test_List_create);

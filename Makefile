@@ -50,9 +50,6 @@ clean:
 	@mkdir -p $(BUILD)/bin $(BUILD)/wasm $(BUILD)/exe
 	@rm -f $(KERNEL)/wrapper/wrapper.js
 
-watch:
-	(while true ; do make build.log; sleep 1; done) | grep -v make
-
 benchmark:
 	cd $(ROOT)/demos/2019-08-benchmark && make clean && make
 
@@ -97,7 +94,7 @@ gh-pages: wasm codegen todo
 # Linux binary
 #----------------------------------------------
 
-$(BUILD)/bin/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/gc/*.c $(KERNEL)/core/gc/*.h
+$(BUILD)/bin/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/*/*.c $(KERNEL)/core/*/*.h
 	gcc -ggdb $(CFLAGS) -c $(KERNEL)/core/core.c -o $@
 
 $(BUILD)/bin/elm-test.o: $(KERNEL)/elm-test/*.c
@@ -109,7 +106,7 @@ $(BUILD)/bin/json.o: $(KERNEL)/json/*.c $(KERNEL)/json/*.h
 $(BUILD)/bin/wrapper.o: $(KERNEL)/wrapper/*.c $(KERNEL)/wrapper/*.h
 	gcc -ggdb $(CFLAGS) -c $(KERNEL)/wrapper/wrapper.c -o $@
 
-$(BUILD)/bin/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c
+$(BUILD)/bin/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c $(TEST)/gc/*.c
 	gcc -ggdb $(CFLAGS) -c $(TEST)/test.c -o $@
 
 

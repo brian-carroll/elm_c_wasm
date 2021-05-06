@@ -63,19 +63,19 @@ captureAcrossTwoScopes () =
     Expect.equal (middleFunc 10) 111
 
 
-globalRecursion : Int -> Int
-globalRecursion i =
+fibGlobalRec : Int -> Int
+fibGlobalRec i =
     if i <= 1 then
         1
 
     else
-        globalRecursion (i - 1) + globalRecursion (i - 2)
+        fibGlobalRec (i - 1) + fibGlobalRec (i - 2)
 
 
 testGlobalRecursion : Test
 testGlobalRecursion =
     test "non-tail recursion should work in top-level functions" <|
-        \() -> Expect.equal (globalRecursion 6) 13
+        \() -> Expect.equal (fibGlobalRec 6) 13
 
 
 testLocalRecursion : Test
@@ -83,41 +83,52 @@ testLocalRecursion =
     test "non-tail recursion should work in local functions" <|
         \() ->
             let
-                local i =
+                fibLocal i =
                     if i <= 1 then
                         1
 
                     else
-                        local (i - 1) + local (i - 2)
+                        fibLocal (i - 1) + fibLocal (i - 2)
             in
-            Expect.equal (local 6) 13
+            Expect.equal (fibLocal 6) 13
 
 
-globalTailRecursion : Int -> Int -> Int
-globalTailRecursion acc x =
-    if x <= 1 then
-        acc
+fibLocalTailRec : Int -> Int
+fibLocalTailRec n =
+    let
+        loop : Int -> Int -> Int -> Int
+        loop i a b =
+            if i == n then
+                a
 
-    else
-        globalTailRecursion (acc * x) (x - 1)
-
-
-testGlobalTailRecursion : Test
-testGlobalTailRecursion =
-    test "tail recursion should work in top-level functions" <|
-        \() -> Expect.equal (globalTailRecursion 1 5) 120
+            else
+                loop (i + 1) b (a + b)
+    in
+    loop 0 0 1
 
 
 testLocalTailRecursion : Test
 testLocalTailRecursion =
     test "tail recursion should work in local functions" <|
         \() ->
-            let
-                local acc x =
-                    if x <= 1 then
-                        acc
+            Expect.equal 55 (fibLocalTailRec 10)
 
-                    else
-                        local (acc * x) (x - 1)
-            in
-            Expect.equal (local 1 5) 120
+
+fibGlobalTailRec : Int -> Int
+fibGlobalTailRec n =
+    fibGlobalTailRecHelp n 0 0 1
+
+
+fibGlobalTailRecHelp : Int -> Int -> Int -> Int -> Int
+fibGlobalTailRecHelp n i a b =
+    if i == n then
+        a
+
+    else
+        fibGlobalTailRecHelp n (i + 1) b (a + b)
+
+
+testGlobalTailRecursion : Test
+testGlobalTailRecursion =
+    test "tail recursion should work in top-level functions" <|
+        \() -> Expect.equal 55 (fibGlobalTailRec 10)

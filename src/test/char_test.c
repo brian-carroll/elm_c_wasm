@@ -45,11 +45,11 @@ char* test_Char_toCode() {
 
 char* char_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("Char\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("Char\n");
+    safe_printf("------\n");
   }
 
   mu_run_test(test_Char_toCode);

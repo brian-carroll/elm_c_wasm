@@ -18,6 +18,23 @@ void bitmap_reset(GcHeap* heap) {
 }
 
 
+#ifdef _WIN32
+// #include <intrin.h>
+// #define popcount(w) __popcnt64(w)
+// TODO: figure out header files/options/whatever for MSVC
+int popcount(u64 word) {
+  u64 w = word;
+  int count;
+  for (count = 0; w; count++) {
+    w &= w - 1;  // clear the least significant bit set
+  }
+  return count;
+}
+#else
+#define popcount(w) __builtin_popcountll(w)
+#endif
+
+
 // Count garbage words between two heap pointers, using the bitmap
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
   GcBitmapIter first_iter = ptr_to_bitmap_iter(heap, first);
@@ -70,13 +87,73 @@ GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr) {
 
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
   size_t* ptr = heap->start + (iter.index * GC_WORD_BITS);
-  for (size_t mask = iter.mask; mask; mask >>= 1) {
-    ptr++;
+  size_t mask = iter.mask;
+
+#if TARGET_64BIT
+  size_t bit = 63;
+  if (mask & 0x00000000FFFFFFFF) bit -= 32;
+  if (mask & 0x0000FFFF0000FFFF) bit -= 16;
+  if (mask & 0x00FF00FF00FF00FF) bit -= 8;
+  if (mask & 0x0F0F0F0F0F0F0F0F) bit -= 4;
+  if (mask & 0x3333333333333333) bit -= 2;
+  if (mask & 0x5555555555555555) bit -= 1;
+#else
+  size_t bit = 31;
+  if (mask & 0x0000FFFF) bit -= 16;
+  if (mask & 0x00FF00FF) bit -= 8;
+  if (mask & 0x0F0F0F0F) bit -= 4;
+  if (mask & 0x33333333) bit -= 2;
+  if (mask & 0x55555555) bit -= 1;
+#endif
+
+  ptr += bit;
+
+  if (ptr > heap->end) {
+    return heap->end;
+  } else {
+    return ptr;
   }
-  return ptr;
 }
 
 
 size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter) {
   return heap->bitmap[iter.index] & iter.mask;
+}
+
+
+size_t bitmap_max_index(GcHeap* heap) {
+  return heap->system_end - heap->bitmap;
+}
+
+
+void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter *iter) {
+  size_t max_index = bitmap_max_index(heap);
+  for (; iter->index < max_index; bitmap_next(iter)) {
+    bool value = !!(heap->bitmap[iter->index] & iter->mask);
+    if (value == target_value) break;
+  }
+}
+
+
+size_t* bitmap_find_space(
+    GcHeap* heap, size_t* start, size_t min_size, size_t** end_of_space) {
+  if (start >= heap->end) {
+    return NULL;
+  }
+  GcBitmapIter iter = ptr_to_bitmap_iter(heap, start);
+
+  for (;;) {
+    bitmap_find(heap, false, &iter);
+    size_t* next_available = bitmap_iter_to_ptr(heap, iter);
+    if (next_available >= heap->end) {
+      return NULL;
+    }
+
+    bitmap_find(heap, true, &iter);
+    size_t* next_occupied = bitmap_iter_to_ptr(heap, iter);
+    if (next_occupied - next_available >= min_size) {
+      *end_of_space = next_occupied;
+      return next_available;
+    }
+  }
 }

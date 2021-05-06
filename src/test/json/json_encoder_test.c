@@ -83,7 +83,7 @@ void* test_Json_stringify_array() {
       "  2,\n"
       "  3\n"
       "]";
-  sprintf(buf, "encode 2 [1,2,3] = \n%s", expected);
+  stbsp_sprintf(buf, "encode 2 [1,2,3] = \n%s", expected);
   expect_equal(
       buf, A2(&Json_encode, newElmInt(2), WRAP(array123)), create_string(expected));
 
@@ -100,7 +100,7 @@ void* test_Json_stringify_array() {
       "    3\n"
       "  ]\n"
       "]";
-  sprintf(buf, "encode 2 [[1,2,3]] = \n%s", expected);
+  stbsp_sprintf(buf, "encode 2 [[1,2,3]] = \n%s", expected);
   expect_equal(buf,
       A2(&Json_encode,
           newElmInt(2),
@@ -140,7 +140,7 @@ void* test_Json_stringify_object() {
       "  \"b\": 2,\n"
       "  \"c\": 3\n"
       "}";
-  sprintf(buf, "encode 2 {a:1,b:2,c:3} = \n%s", expected);
+  stbsp_sprintf(buf, "encode 2 {a:1,b:2,c:3} = \n%s", expected);
   expect_equal(
       buf, A2(&Json_encode, newElmInt(2), WRAP(exampleObj)), create_string(expected));
 
@@ -157,7 +157,7 @@ void* test_Json_stringify_object() {
       "    \"c\": 3\n"
       "  }\n"
       "}";
-  sprintf(buf, "encode 2 {x:{a:1,b:2,c:3},y:{a:1,b:2,c:3}} = \n%s", expected);
+  stbsp_sprintf(buf, "encode 2 {x:{a:1,b:2,c:3},y:{a:1,b:2,c:3}} = \n%s", expected);
   expect_equal(buf,
       A2(&Json_encode,
           newElmInt(2),
@@ -279,9 +279,9 @@ void* test_Json_encode_object() {
 
 void json_encoder_test() {
   if (verbose) {
-    printf("\n");
-    printf("Json.Encode\n");
-    printf("-----------\n");
+    safe_printf("\n");
+    safe_printf("Json.Encode\n");
+    safe_printf("-----------\n");
   }
   describe("test_Json_encode_boolean", test_Json_encode_boolean);
   describe("test_Json_encode_null", test_Json_encode_null);

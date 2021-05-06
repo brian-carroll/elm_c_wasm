@@ -124,12 +124,15 @@ Closure JsArray_unsafeSet = {
 static void* eval_JsArray_push(void* args[]) {
   void* value = args[0];
   Custom* array = args[1];
-  size_t len = custom_params(array);
 
-  Custom* result = Utils_clone(array);
-  GC_allocate(false, 1);
-  result->header.size += 1;
-  result->values[len] = value;
+  u32 old_size = array->header.size;
+  u32 new_size = old_size + 1;
+  Custom* result = GC_allocate(true, new_size);
+  GC_memcpy(result, array, old_size);
+
+  result->header.size = new_size;
+  void** result_ptrs = (void**)result;
+  result_ptrs[new_size - 1] = value;
   return result;
 }
 Closure JsArray_push = {

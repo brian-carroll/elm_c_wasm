@@ -19,12 +19,12 @@ bool is_whitespace(u16 c);
 
 void print_elm_string(ElmString16* str) {
   size_t len = code_units(str);
-  printf("\"");
+  safe_printf("\"");
   for (size_t i = 0; i < len; i++) {
     u16 c = str->words16[i];
-    printf("%c", (char)c);
+    safe_printf("%c", (char)c);
   }
-  printf("\"");
+  safe_printf("\"");
 }
 
 void* expect_string(char* unit_description, char* expected_c_str, ElmString16* actual) {
@@ -32,21 +32,21 @@ void* expect_string(char* unit_description, char* expected_c_str, ElmString16* a
   bool ok = A2(&Utils_equal, actual, expected) == &True;
   if (!ok) {
     if (!verbose) {
-      printf("\n%s\n", current_describe_string);
+      safe_printf("\n%s\n", current_describe_string);
     }
-    printf("\n");
-    printf("%s\n", unit_description);
-    printf("Expected %s\n", expected_c_str);
+    safe_printf("\n");
+    safe_printf("%s\n", unit_description);
+    safe_printf("Expected %s\n", expected_c_str);
     print_value_full(expected);
-    printf("\n");
-    printf("Actual ");
+    safe_printf("\n");
+    safe_printf("Actual ");
     print_elm_string(actual);
-    printf("\n");
+    safe_printf("\n");
     print_value_full(actual);
-    printf("\n");
+    safe_printf("\n");
     tests_failed++;
   } else if (verbose) {
-    printf("PASS: %s == \"%s\"\n", unit_description, expected_c_str);
+    safe_printf("PASS: %s == \"%s\"\n", unit_description, expected_c_str);
   }
   assertions_made++;
   return NULL;
@@ -71,7 +71,7 @@ void* test_code_units() {
       buf[j] = '.';
     }
     buf[j] = 0;
-    sprintf(mu_message, "Expect code_units=%zu for \"%s\"", i, buf);
+    stbsp_sprintf(mu_message, "Expect code_units=%zu for \"%s\"", i, buf);
     mu_assert(mu_message, code_units(create_string(buf)) == i);
   }
   return NULL;
@@ -85,7 +85,7 @@ void* test_find_reverse() {
   ptrdiff_t result;
 
   if (verbose) {
-    printf("\ntest_find_reverse\n");
+    safe_printf("\ntest_find_reverse\n");
   }
 
   sub = create_string("z");
@@ -135,7 +135,7 @@ void* test_find_forward() {
   ptrdiff_t result;
 
   if (verbose) {
-    printf("\ntest_find_forward\n");
+    safe_printf("\ntest_find_forward\n");
   }
 
   sub = create_string("z");
@@ -226,7 +226,7 @@ void* test_is_whitespace() {
     }
     if (actual != expected) {
       incorrect_results++;
-      printf("FAIL: is_whitespace(0x%x) should be %x\n", c, expected);
+      safe_printf("FAIL: is_whitespace(0x%x) should be %x\n", c, expected);
     }
   }
   mu_assert("is_whitespace should be correct for all code units", incorrect_results == 0);
@@ -414,28 +414,44 @@ void* test_String_trim() {
 }
 
 void* test_String_trimLeft() {
-  expect_string("trim \" \\n a \\t \\r\\n\"",
+  expect_string("trimLeft \" \\n a \\t \\r\\n\"",
       "a \t \r\n",
       A1(&String_trimLeft, create_string(" \n a \t \r\n")));
 
-  expect_string(
-      "trim \" \\n \\t \\r\\n\"", "", A1(&String_trimLeft, create_string(" \n \t \r\n")));
+  expect_string("trimLeft \"a \\t \\r\\n\"",
+      "a \t \r\n",
+      A1(&String_trimLeft, create_string("a \t \r\n")));
 
-  expect_string("trim \"\"", "", A1(&String_trimLeft, create_string("")));
+  expect_string("trimLeft \" \\n a\"",
+      "a",
+      A1(&String_trimLeft, create_string(" \n a")));
+
+  expect_string(
+      "trimLeft \" \\n \\t \\r\\n\"", "", A1(&String_trimLeft, create_string(" \n \t \r\n")));
+
+  expect_string("trimLeft \"\"", "", A1(&String_trimLeft, create_string("")));
 
   return NULL;
 }
 
 void* test_String_trimRight() {
-  expect_string("trim \" \\n a \\t \\r\\n\"",
+  expect_string("trimRight \" \\n a \\t \\r\\n\"",
       " \n a",
       A1(&String_trimRight, create_string(" \n a \t \r\n")));
 
-  expect_string("trim \" \\n \\t \\r\\n\"",
+  expect_string("trimRight \" \\n a\"",
+      " \n a",
+      A1(&String_trimRight, create_string(" \n a")));
+
+  expect_string("trimRight \"a \\t \\r\\n\"",
+      "a",
+      A1(&String_trimRight, create_string("a \t \r\n")));
+
+  expect_string("trimRight \" \\n \\t \\r\\n\"",
       "",
       A1(&String_trimRight, create_string(" \n \t \r\n")));
 
-  expect_string("trim \"\"", "", A1(&String_trimRight, create_string("")));
+  expect_string("trimRight \"\"", "", A1(&String_trimRight, create_string("")));
 
   return NULL;
 }
@@ -593,11 +609,11 @@ void* test_String_toInt() {
 
 char* string_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("String\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("String\n");
+    safe_printf("------\n");
   }
 
   mu_run_test(test_code_units);

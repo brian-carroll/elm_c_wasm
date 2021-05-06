@@ -7,11 +7,11 @@
 
 char* test_records() {
   if (verbose) {
-    printf("\n");
-    printf("## Record access & update\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## Record access & update\n");
+    safe_printf("\n");
 
-    printf(
+    safe_printf(
         "type alias Record1 =\n"
         "    { someField: Int\n"
         "    , otherField: String\n"
@@ -99,19 +99,19 @@ char* test_records() {
       r2, 2, (u32[]){things, stuff}, (void*[]){updated_thing, updated_stuff});
 
   if (verbose) {
-    printf(
+    safe_printf(
         "r1: addr=%zx val=%s\n", (size_t)r1, hex(r1, sizeof(Record) + 2 * sizeof(void*)));
-    printf(
+    safe_printf(
         "r2: addr=%zx val=%s\n", (size_t)r2, hex(r2, sizeof(Record) + 3 * sizeof(void*)));
-    printf("fieldgroup Record1: addr=%zx val=%s\n",
+    safe_printf("fieldgroup Record1: addr=%zx val=%s\n",
         (size_t)fgRecord1,
         hex(fgRecord1, sizeof(FieldGroup) + 2 * sizeof(u32)));
-    printf("fieldgroup for r2: addr=%zx val=%s\n",
+    safe_printf("fieldgroup for r2: addr=%zx val=%s\n",
         (size_t)fgRecord2,
         hex(fgRecord2, sizeof(FieldGroup) + 3 * sizeof(u32)));
-    printf("Closure access_someField = %s\n",
+    safe_printf("Closure access_someField = %s\n",
         hex(access_someField, sizeof(Closure) + sizeof(void*)));
-    printf(
+    safe_printf(
         "r3: addr=%zx val=%s\n", (size_t)r3, hex(r3, sizeof(Record) + 3 * sizeof(void*)));
   }
 
@@ -159,9 +159,9 @@ void* eval_user_project_closure(void* args[]) {
 
 char* test_apply(void) {
   if (verbose) {
-    printf("\n\n");
-    printf("## Apply\n");
-    printf("\n");
+    safe_printf("\n\n");
+    safe_printf("## Apply\n");
+    safe_printf("\n");
   }
 
   Closure user_project_closure = (Closure){.header = HEADER_CLOSURE(0),
@@ -178,7 +178,7 @@ char* test_apply(void) {
   ElmInt* answer = A1(curried, &three);
 
   if (verbose) {
-    printf(
+    safe_printf(
         "Example Elm function exercising most code paths in `apply`:\n"
         "    outerScopeValue : Int\n"
         "    outerScopeValue =\n"
@@ -194,42 +194,42 @@ char* test_apply(void) {
         "        curried 3\n"
         "\n");
 
-    printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
+    safe_printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(&outerScopeValue),
         (int)outerScopeValue.header.tag,
         outerScopeValue.value,
         hex(&outerScopeValue, sizeof(ElmInt)));
 
-    printf("two addr=%s ctor=%d value=%d, hex=%s\n",
+    safe_printf("two addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(&two),
         (int)two.header.tag,
         two.value,
         hex(&two, sizeof(ElmInt)));
 
-    printf("three addr=%s ctor=%d value=%d, hex=%s\n",
+    safe_printf("three addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(&three),
         (int)three.header.tag,
         three.value,
         hex(&three, sizeof(ElmInt)));
 
-    printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n",
+    safe_printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n",
         hex_ptr(closure),
         (int)closure->n_values,
         (int)closure->max_values,
         hex(closure, sizeof(Closure) + closure->n_values * sizeof(void*)));
 
-    printf("curried addr=%s n_values=%d max_values=%d, hex=%s\n",
+    safe_printf("curried addr=%s n_values=%d max_values=%d, hex=%s\n",
         hex_ptr(curried),
         (int)curried->n_values,
         (int)curried->max_values,
         hex(curried, sizeof(Closure) + curried->n_values * sizeof(void*)));
 
-    printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
+    safe_printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(answer),
         (int)answer->header.tag,
         answer->value,
         hex(answer, sizeof(ElmInt)));
-    printf("\n");
+    safe_printf("\n");
   }
 
   ElmInt expected_answer = (ElmInt){.header = HEADER_INT, .value = 6};
@@ -240,9 +240,9 @@ char* test_apply(void) {
 
 char* test_eq(void) {
   if (verbose) {
-    printf("\n\n");
-    printf("## Equality\n");
-    printf("\n");
+    safe_printf("\n\n");
+    safe_printf("## Equality\n");
+    safe_printf("\n");
   }
 
   mu_assert("Expect: () == ()", A2(&Utils_equal, &Unit, &Unit) == &True);
@@ -273,8 +273,8 @@ char* test_eq(void) {
   mu_assert("Expect: 'A' /= 'B'", A2(&Utils_equal, &a1, &b) == &False);
 
   if (verbose) {
-    printf("\n");
-    printf("Different types: compiler will reject, but `==` can give False anyway\n");
+    safe_printf("\n");
+    safe_printf("Different types: compiler will reject, but `==` can give False anyway\n");
   }
   mu_assert("Expect: True /= 3", A2(&Utils_equal, &True, &three) == &False);
 
@@ -284,17 +284,17 @@ char* test_eq(void) {
   ElmString* world = newElmString(5, "world");
 
   if (verbose) {
-    printf("\nString equality\n");
-    printf("hello1 str=\"%s\" hex=%s\n",
+    safe_printf("\nString equality\n");
+    safe_printf("hello1 str=\"%s\" hex=%s\n",
         hello1->bytes,
         hex(hello1, hello1->header.size * 4));
-    printf("hello2 str=\"%s\" hex=%s\n",
+    safe_printf("hello2 str=\"%s\" hex=%s\n",
         hello2->bytes,
         hex(hello2, hello2->header.size * 4));
-    printf("hello_ str=\"%s\" hex=%s\n",
+    safe_printf("hello_ str=\"%s\" hex=%s\n",
         hello_->bytes,
         hex(hello_, hello_->header.size * 4));
-    printf("world str=\"%s\" hex=%s\n", world->bytes, hex(world, world->header.size * 4));
+    safe_printf("world str=\"%s\" hex=%s\n", world->bytes, hex(world, world->header.size * 4));
   }
 
   mu_assert("Expect: \"hello\" == \"hello\" (by reference)",
@@ -307,7 +307,7 @@ char* test_eq(void) {
   mu_assert(
       "Expect: \"hello_\" /= \"hello\"", A2(&Utils_equal, hello_, hello1) == &False);
 
-  if (verbose) printf("\nList equality\n");
+  if (verbose) safe_printf("\nList equality\n");
   Cons* cons2 = newCons(&two, &Nil);
   Cons* cons2a = newCons(&two, &Nil);
   Cons* cons3 = newCons(&three, &Nil);
@@ -329,7 +329,7 @@ char* test_eq(void) {
   mu_assert("Expect: [3,2] /= [2,2]", A2(&Utils_equal, cons32, cons22) == &False);
   mu_assert("Expect: [2,3] /= [2,2]", A2(&Utils_equal, cons23, cons22) == &False);
 
-  if (verbose) printf("\nTuple equality\n");
+  if (verbose) safe_printf("\nTuple equality\n");
   Tuple2* tuple23 = newTuple2(&two, &three);
   Tuple2* tuple23a = newTuple2(&two, &three);
   Tuple2* tuple32 = newTuple2(&three, &two);
@@ -359,7 +359,7 @@ char* test_eq(void) {
   mu_assert("Expect: (1,1,1) /= (1,1,2)", A2(&Utils_equal, tuple111, tuple112) == &False);
 
   u32 big_list_size = 123;
-  if (verbose) printf("\nLong list equality (recursive, %d elements)\n", big_list_size);
+  if (verbose) safe_printf("\nLong list equality (recursive, %d elements)\n", big_list_size);
   Cons* bigList1 = newCons(&one, &Nil);
   Cons* bigList2 = newCons(&one, &Nil);
   Cons* bigList3 = cons2;
@@ -373,7 +373,7 @@ char* test_eq(void) {
   mu_assert("Expect: [1,1,1, ... ,1] /= [1,1,1, ... ,2]",
       A2(&Utils_equal, bigList1, bigList3) == &False);
 
-  if (verbose) printf("\nCustom type equality\n");
+  if (verbose) safe_printf("\nCustom type equality\n");
   u8 mem_1_1A[sizeof(Custom) + 2 * sizeof(void*)];
   Custom* custom_1_1A = (Custom*)mem_1_1A;
 
@@ -404,7 +404,7 @@ char* test_eq(void) {
   mu_assert("Expect: Ctor1 1 'A' /= Ctor1 1 'B'",
       A2(&Utils_equal, custom_1_1A, custom_1_1B) == &False);
 
-  if (verbose) printf("\nRecord equality\n");
+  if (verbose) safe_printf("\nRecord equality\n");
   u8 mem_fs[sizeof(FieldGroup) + 2 * sizeof(void*)];
   FieldGroup* fg = (FieldGroup*)mem_fs;
   fg->size = 2;
@@ -425,10 +425,10 @@ char* test_eq(void) {
   rec13->values[1] = &three;
 
   if (verbose) {
-    printf("rec12  = %s\n", hex(rec12, sizeof(mem_rec12)));
-    printf("rec12a = %s\n", hex(rec12a, sizeof(mem_rec12)));
-    printf("rec22  = %s\n", hex(rec22, sizeof(mem_rec12)));
-    printf("rec13  = %s\n", hex(rec13, sizeof(mem_rec12)));
+    safe_printf("rec12  = %s\n", hex(rec12, sizeof(mem_rec12)));
+    safe_printf("rec12a = %s\n", hex(rec12a, sizeof(mem_rec12)));
+    safe_printf("rec22  = %s\n", hex(rec22, sizeof(mem_rec12)));
+    safe_printf("rec13  = %s\n", hex(rec13, sizeof(mem_rec12)));
   }
   mu_assert(
       "Expect: {a=1, b=2} == {a=1, b=2} (ref)", A2(&Utils_equal, rec12, rec12) == &True);
@@ -442,9 +442,9 @@ char* test_eq(void) {
 
 char* test_compare() {
   if (verbose) {
-    printf("\n\n");
-    printf("## Compare\n");
-    printf("\nElmInt\n");
+    safe_printf("\n\n");
+    safe_printf("## Compare\n");
+    safe_printf("\nElmInt\n");
   }
   ElmInt* i123 = newElmInt(123);
   ElmInt* i123a = newElmInt(123);
@@ -454,7 +454,7 @@ char* test_compare() {
   mu_assert("compare: 123 == 123 (ref)", A2(&Utils_compare, i123, i123) == &g_elm_core_Basics_EQ);
   mu_assert("compare: 123 == 123 (value)", A2(&Utils_compare, i123, i123a) == &g_elm_core_Basics_EQ);
 
-  if (verbose) printf("\nElmFloat\n");
+  if (verbose) safe_printf("\nElmFloat\n");
   ElmFloat* f1 = newElmFloat(123.456);
   ElmFloat* f1a = newElmFloat(123.456);
   ElmFloat* f2 = newElmFloat(456.789);
@@ -464,7 +464,7 @@ char* test_compare() {
   mu_assert(
       "compare: 123.456 == 123.456 (value)", A2(&Utils_compare, f1, f1a) == &g_elm_core_Basics_EQ);
 
-  if (verbose) printf("\nElmChar\n");
+  if (verbose) safe_printf("\nElmChar\n");
   ElmChar a1 = (ElmChar){.header = HEADER_CHAR, .value = 'A'};
   ElmChar a2 = (ElmChar){.header = HEADER_CHAR, .value = 'A'};
   ElmChar b = (ElmChar){.header = HEADER_CHAR, .value = 'B'};
@@ -474,7 +474,7 @@ char* test_compare() {
   mu_assert("Expect: 'A' < 'B'", A2(&Utils_compare, &a1, &b) == &g_elm_core_Basics_LT);
   mu_assert("Expect: 'B' > 'A'", A2(&Utils_compare, &b, &a1) == &g_elm_core_Basics_GT);
 
-  if (verbose) printf("\nTuple2\n");
+  if (verbose) safe_printf("\nTuple2\n");
   ElmInt one = (ElmInt){.header = HEADER_INT, .value = 1};
   ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
   ElmInt three = (ElmInt){.header = HEADER_INT, .value = 3};
@@ -493,7 +493,7 @@ char* test_compare() {
   mu_assert("Expect: (2,2) < (3,2)", A2(&Utils_compare, tuple22, tuple32) == &g_elm_core_Basics_LT);
   mu_assert("Expect: (2,2) < (2,3)", A2(&Utils_compare, tuple22, tuple23) == &g_elm_core_Basics_LT);
 
-  if (verbose) printf("\nTuple3\n");
+  if (verbose) safe_printf("\nTuple3\n");
   Tuple3* tuple123 = newTuple3(&one, &two, &three);
   Tuple3* tuple123a = newTuple3(&one, &two, &three);
   Tuple3* tuple111 = newTuple3(&one, &one, &one);
@@ -518,7 +518,7 @@ char* test_compare() {
   mu_assert(
       "Expect: (1,1,2) > (1,1,1)", A2(&Utils_compare, tuple112, tuple111) == &g_elm_core_Basics_GT);
 
-  if (verbose) printf("\nList\n");
+  if (verbose) safe_printf("\nList\n");
   Cons* cons2 = newCons(&two, &Nil);
   Cons* cons2a = newCons(&two, &Nil);
   Cons* cons3 = newCons(&three, &Nil);
@@ -546,7 +546,7 @@ char* test_compare() {
   mu_assert("Expect: [2,2] < [3,2]", A2(&Utils_compare, cons22, cons32) == &g_elm_core_Basics_LT);
   mu_assert("Expect: [2,2] < [2,3]", A2(&Utils_compare, cons22, cons23) == &g_elm_core_Basics_LT);
 
-  if (verbose) printf("\nLong list (recursive)\n");
+  if (verbose) safe_printf("\nLong list (recursive)\n");
   Cons* bigList1 = newCons(&one, &Nil);
   Cons* bigList2 = newCons(&one, &Nil);
   Cons* bigList3 = cons2;
@@ -562,7 +562,7 @@ char* test_compare() {
   mu_assert("Expect: [1,1,1, ... ,2] > [1,1,1, ... ,1]",
       A2(&Utils_compare, bigList3, bigList1) == &g_elm_core_Basics_GT);
 
-  if (verbose) printf("\nTest <, <=, >, >=\n");
+  if (verbose) safe_printf("\nTest <, <=, >, >=\n");
   mu_assert("Utils_lt: 123 < 456 == True", A2(&Utils_lt, i123, i456) == &True);
   mu_assert("Utils_lt: 456 < 123 == False", A2(&Utils_lt, i456, i123) == &False);
   mu_assert("Utils_lt: 123 < 123 == False", A2(&Utils_lt, i123, i123a) == &False);
@@ -584,11 +584,11 @@ char* test_compare() {
 
 char* utils_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("Utils\n");
-    printf("-----\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("Utils\n");
+    safe_printf("-----\n");
   }
   mu_run_test(test_records);
   mu_run_test(test_apply);
