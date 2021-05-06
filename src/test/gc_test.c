@@ -11,13 +11,7 @@
 bool mark_words(GcState* state, void* p_void, size_t size);
 
 void gc_test_reset() {
-  // GcState* state = &gc_state;
-  // for (size_t* p = state->heap.start; p < state->heap.end; p++) {
-  //   *p = 0;
-  // }
-  safe_printf("gc_test_reset\n");
   GC_init();
-  print_state();
 }
 
 

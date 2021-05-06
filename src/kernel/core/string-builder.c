@@ -1,5 +1,5 @@
-#include "core.h"
 #include "./gc/internals.h"
+#include "core.h"
 u16* String_copy(u16* to, ElmString16* s);
 
 
@@ -43,7 +43,10 @@ void StringBuilder_finishSection(StringBuilder* sb) {
 
 
 void StringBuilder_init(StringBuilder* sb) {
-  sb->last_section = newCons(NULL, &Nil);
+  Cons* dummyCons = newCons(NULL, &Nil);
+  *sb = (StringBuilder){
+      .last_section = dummyCons,
+  };
   StringBuilder_startSection(sb, STRING_BUILDER_MIN_CODE_UNITS);
   sb->first_section = sb->last_section;
 }
