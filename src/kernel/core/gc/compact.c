@@ -86,7 +86,7 @@ void compact(GcState* state, size_t* compact_start) {
   size_t* from = to;
   while (from < compact_end) {
     // Next live patch (bitmap only)
-    while (!bitmap_is_live_at(heap, bm_iter) && (from < compact_end)) {
+    while ((from < compact_end) && !bitmap_is_live_at(heap, bm_iter)) {
       bitmap_next(&bm_iter);
       garbage_so_far++;
       from++;
@@ -95,7 +95,7 @@ void compact(GcState* state, size_t* compact_start) {
 
     // Next garbage patch (bitmap only)
     size_t* next_garbage = from;
-    while (bitmap_is_live_at(heap, bm_iter) && (next_garbage < compact_end)) {
+    while ((next_garbage < compact_end) && bitmap_is_live_at(heap, bm_iter)) {
       bitmap_next(&bm_iter);
       next_garbage++;
     }
