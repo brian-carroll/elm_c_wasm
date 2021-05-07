@@ -11,7 +11,6 @@
    ==================================================== */
 
 static void* get_initial_system_memory(size_t bytes);
-static void resize_system_memory(GcHeap* heap, size_t new_total_bytes);
 
 #ifdef _WIN32
 
@@ -53,7 +52,7 @@ static void* get_initial_system_memory(size_t bytes) {
   return reserved;
 }
 
-static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
+void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
   u8* start = (u8*)heap->start;
   u8* end = (u8*)heap->system_end;
@@ -92,7 +91,7 @@ static void* get_initial_system_memory(size_t bytes) {
   return aligned_break;
 }
 
-static void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
+void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   void* new_break = ((void*)heap->start) + new_total_bytes;
   if (new_break == (void*)heap->system_end) {
     return;
@@ -157,24 +156,31 @@ int init_heap(GcHeap* heap) {
 }
 
 
-// Grow to 2x, or enough to fit the current allocation, whichever is larger
-void grow_heap(GcHeap* heap, size_t current_alloc_words) {
-  GcHeap old_heap = *heap;
-  size_t old_total_words = heap->system_end - heap->start;
+void move_metadata_after_resize(GcHeap* old_heap, GcHeap* new_heap) {
+  GC_memcpy(new_heap->bitmap, old_heap->bitmap, old_heap->bitmap_size);
+  for (size_t i = 0; i < old_heap->gc_temp_size; ++i) {
+    old_heap->gc_temp[i] = 0;
+  }
+}
 
+
+size_t next_heap_size_bytes(GcHeap* heap, size_t current_alloc_words) {
+  size_t old_total_words = heap->system_end - heap->start;
   size_t alloc_with_overhead = current_alloc_words + (current_alloc_words >> 4);
   size_t extra_words =
       (alloc_with_overhead > old_total_words) ? alloc_with_overhead : old_total_words;
   size_t new_total_words = old_total_words + extra_words;
   size_t new_total_bytes =
       GC_ROUND_UP(new_total_words * sizeof(void*), GC_SYSTEM_MEM_CHUNK);
+  return new_total_bytes;
+}
 
+
+// Grow to 2x, or enough to fit the current allocation, whichever is larger
+void grow_heap(GcHeap* heap, size_t current_alloc_words) {
+  GcHeap old_heap = *heap;
+  size_t new_total_bytes = next_heap_size_bytes(heap, current_alloc_words);
   resize_system_memory(heap, new_total_bytes);
   set_heap_layout(heap, heap->start, new_total_bytes);
-
-  // GC bookkeeping data
-  GC_memcpy(heap->bitmap, old_heap.bitmap, old_heap.bitmap_size);
-  for (size_t i = 0; i < old_heap.gc_temp_size; ++i) {
-    old_heap.gc_temp[i] = 0;
-  }
+  move_metadata_after_resize(&old_heap, heap);
 }

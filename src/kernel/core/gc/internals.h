@@ -65,6 +65,10 @@ void compact(GcState* state, size_t* compact_start);
 void reset_state(GcState* state);
 int init_heap(GcHeap* heap);
 void grow_heap(GcHeap* heap, size_t current_alloc_words);
+void resize_system_memory(GcHeap* heap, size_t new_total_bytes);
+void move_metadata_after_resize(GcHeap* old_heap, GcHeap* new_heap);
+void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes);
+size_t next_heap_size_bytes(GcHeap* heap, size_t current_alloc_words);
 
 void stack_clear();
 void stack_enter(void* evaluator, Closure* c);

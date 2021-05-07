@@ -62,14 +62,14 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
     return;
   }
 
-  // Use GC temporary memory area as a stack of values to be traced
-  ElmValue** todos = (ElmValue**)heap->gc_temp;
-  todos[0] = root;
-  size_t max_todos = heap->gc_temp_size;
-  size_t next_todo = 1;
+  // Use GC temporary memory area as a stack of pointers to trace
+  ElmValue** mark_stack = (ElmValue**)heap->gc_temp;
+  mark_stack[0] = root;
+  size_t mark_stack_size = heap->gc_temp_size;
+  size_t next_index = 1;
 
   do {
-    ElmValue* v = todos[--next_todo];  // pop
+    ElmValue* v = mark_stack[--next_index];  // pop
     size_t* words = (size_t*)v;
     // assert(sanity_check(v)); // !!
     if (!sanity_check(v)) {
@@ -105,12 +105,22 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
       if (child_words < ignore_below || child_words > heap->end) {
         continue;
       }
-      todos[next_todo] = child;
-      next_todo++;
-      assert(next_todo < max_todos); // stack overflow!
-      // TODO: on overflow, resize and return a flag to adjust heap struct later
+      mark_stack[next_index] = child;
+      next_index++;
+
+      if (next_index >= mark_stack_size) {
+        safe_printf("mark stack overflowed! Get more memory to grow it\n");
+        // mark stack overflowed! Get more memory to grow it
+        size_t new_total_bytes = next_heap_size_bytes(heap, 0);
+        resize_system_memory(heap, new_total_bytes);
+        // For now, allocate all of the new space to the mark stack.
+        // Params related to the bitmap and app data must stay where they are.
+        heap->system_end = heap->start + (new_total_bytes / sizeof(void*));
+        heap->gc_temp_size = heap->system_end - heap->gc_temp;
+        mark_stack_size = heap->gc_temp_size;
+      }
     }
-  } while (next_todo);
+  } while (next_index);
 }
 
 /**
@@ -121,6 +131,7 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
  */
 void mark(GcState* state, size_t* ignore_below) {
   GcHeap* heap = &state->heap;
+  GcHeap heap_copy = *heap;
 
   // Clear all mark bits
   bitmap_reset(heap);
@@ -145,5 +156,13 @@ void mark(GcState* state, size_t* ignore_below) {
     ElmValue** root_mutable_pointer = (ElmValue**)root_cell->head;
     ElmValue* live_heap_value = *root_mutable_pointer;
     mark_trace(state, live_heap_value, ignore_below);
+  }
+
+  if (heap->system_end != heap_copy.system_end) {
+    // We grew the heap to prevent overflowing the mark stack
+    // The gc_temp area got all the extra space, but now we redistribute normally
+    size_t already_resized_bytes = (heap->system_end - heap->start) * sizeof(void*);
+    set_heap_layout(heap, heap->start, already_resized_bytes);
+    move_metadata_after_resize(&heap_copy, heap);
   }
 }
