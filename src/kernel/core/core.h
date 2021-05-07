@@ -163,7 +163,7 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t words);
 void* GC_memcpy(void* dest, void* src, size_t words);
 
 
-typedef u32 GcStackMapIndex;
+typedef u16 GcStackMapIndex;
 
 void GC_stack_push_value(void* value);
 void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex push);
