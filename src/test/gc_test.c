@@ -260,6 +260,8 @@ char* assertions_test() {
 
   test_execute(c);
 
+  GC_collect_major();
+
   mu_assert("should complete without triggering any assertions", true);
   return NULL;
 }

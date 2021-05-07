@@ -66,11 +66,8 @@ void compact(GcState* state, size_t* compact_start) {
   GcBitmapIter bm_iter = ptr_to_bitmap_iter(heap, compact_start);
 
   // Find first garbage patch
-  size_t* first_move_to = compact_start;
-  while (bitmap_is_live_at(heap, bm_iter) && (first_move_to < compact_end)) {
-    bitmap_next(&bm_iter);
-    first_move_to++;
-  }
+  bitmap_find(heap, false, &bm_iter);
+  size_t* first_move_to = bitmap_iter_to_ptr(heap, bm_iter);
   if (first_move_to >= compact_end) return;
 
   calc_offsets(heap, compact_start, compact_end);
@@ -86,19 +83,14 @@ void compact(GcState* state, size_t* compact_start) {
   size_t* from = to;
   while (from < compact_end) {
     // Next live patch (bitmap only)
-    while ((from < compact_end) && !bitmap_is_live_at(heap, bm_iter)) {
-      bitmap_next(&bm_iter);
-      garbage_so_far++;
-      from++;
-    }
-    size_t* live_patch_start = from;
+    bitmap_find(heap, true, &bm_iter);
+    size_t* live_patch_start = bitmap_iter_to_ptr(heap, bm_iter);
+    garbage_so_far += live_patch_start - from;
+    from = live_patch_start;
 
     // Next garbage patch (bitmap only)
-    size_t* next_garbage = from;
-    while ((next_garbage < compact_end) && bitmap_is_live_at(heap, bm_iter)) {
-      bitmap_next(&bm_iter);
-      next_garbage++;
-    }
+    bitmap_find(heap, false, &bm_iter);
+    size_t* next_garbage = bitmap_iter_to_ptr(heap, bm_iter);
 
     log_debug("Moving %zd words down by %zd from (%p - %p) to %p\n",
         next_garbage - live_patch_start,
