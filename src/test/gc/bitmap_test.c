@@ -104,24 +104,23 @@ char* gc_dead_between_test() {
   heap->bitmap[0] = 0xf0f;
   first = heap->start + 4;
   last = heap->start + 8;
-  mu_assert("bitmap_dead_between with 4 words dead",
-      bitmap_dead_between(heap, first, last) == 4);
+  size_t result = bitmap_dead_between(heap, first, last);
+  mu_expect_equal("bitmap_dead_between with 4 words dead", result, 4);
 
   first--;
   last++;
 
-  mu_assert("bitmap_dead_between with 4 dead and 2 live",
-      bitmap_dead_between(heap, first, last) == 4);
+  result = bitmap_dead_between(heap, first, last);
+  mu_expect_equal("bitmap_dead_between with 4 dead and 2 live", result, 4);
 
-  heap->bitmap[0] = 0xf0;
-  heap->bitmap[1] = 0x00;
-  heap->bitmap[2] = 0xf0;
-  first = heap->start + 2;
-  last = heap->start + (2 * GC_WORD_BITS) + 10;
+  heap->bitmap[0] = -16; // 4 dead
+  heap->bitmap[1] = -16;
+  heap->bitmap[2] = -16;
+  first = heap->start + 2; // skip 2 dead slots
+  last = heap->start + (2 * GC_WORD_BITS) + 2; // skip 2 dead slots
 
-  mu_assert("bitmap_dead_between across 3 bitmap words",
-      bitmap_dead_between(heap, first, last) ==
-          ((GC_WORD_BITS - 2 - 4) + GC_WORD_BITS + 10 - 4));
+  result = bitmap_dead_between(heap, first, last);
+  mu_expect_equal("bitmap_dead_between across 3 bitmap words", result, 8);
 
   return NULL;
 }

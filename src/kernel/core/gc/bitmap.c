@@ -31,28 +31,44 @@ int popcount(u64 word) {
   }
   return count;
 }
-#else
+#elif TARGET_64BIT
 #define popcount(w) __builtin_popcountll(w)
+#else
+#define popcount(w) __builtin_popcountl(w)
 #endif
 
 
 // Count garbage words between two heap pointers, using the bitmap
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
-  GcBitmapIter first_iter = ptr_to_bitmap_iter(heap, first);
-  GcBitmapIter last_iter = ptr_to_bitmap_iter(heap, last);
+  size_t* bitmap = heap->bitmap;
 
-  size_t count = 0;
-  GcBitmapIter iter = first_iter;
+  size_t first_index = first - heap->start;
+  size_t first_word = first_index / GC_WORD_BITS;
+  size_t first_bit = first_index % GC_WORD_BITS;
 
-  while (iter.index < last_iter.index) {
-    if (!bitmap_is_live_at(heap, iter)) count++;
-    bitmap_next(&iter);
+  size_t last_index = last - heap->start;
+  size_t last_word = last_index / GC_WORD_BITS;
+  size_t last_bit = last_index % GC_WORD_BITS;
+
+  if (first_word == last_word) {
+    size_t bitmask = make_bitmask(first_bit, last_bit - 1);
+    size_t masked = bitmap[first_word] & bitmask;
+    size_t live_count = popcount(masked);
+    size_t dead_count = last_bit - first_bit - live_count;
+    return dead_count;
+  } else {
+    size_t first_mask = make_bitmask(first_bit, GC_WORD_BITS - 1);
+    size_t live_count = popcount(bitmap[first_word] & first_mask);
+
+    for (size_t word = first_word + 1; word < last_word; ++word) {
+      live_count += popcount(bitmap[word]);
+    }
+
+    size_t last_mask = make_bitmask(0, last_bit - 1);
+    live_count += popcount(bitmap[last_word] & last_mask);
+    size_t dead_count = last - first - live_count;
+    return dead_count;
   }
-  while (iter.mask < last_iter.mask) {
-    if (!bitmap_is_live_at(heap, iter)) count++;
-    iter.mask <<= 1;
-  }
-  return count;
 }
 
 
@@ -122,7 +138,7 @@ size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter) {
 }
 
 
-void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter *iter) {
+void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter* iter) {
   size_t size = heap->bitmap_size;
   for (; iter->index < size; bitmap_next(iter)) {
     bool value = !!(heap->bitmap[iter->index] & iter->mask);
