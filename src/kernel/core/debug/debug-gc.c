@@ -4,6 +4,8 @@
 //
 // =======================================================================
 
+#include "../gc/internals.h"
+
 extern GcState gc_state;
 extern char stack_flags[GC_STACK_MAP_SIZE];
 
@@ -250,14 +252,13 @@ void print_bitmap(const char* function, const char* filename, int line_no) {
   size_t* bitmap = gc_state.heap.bitmap;
 
   // find last non-zero word in the bitmap
-  size_t bitmap_size = heap->system_end - heap->bitmap;
-  size_t last_word = bitmap_size;
+  size_t last_word = heap->bitmap_size;
   while (bitmap[--last_word] == 0)
     ;
 
   safe_printf("Bitmap at %s:%d (%s)\n", filename, line_no, function);
   size_t* p = heap->start;
-  for (size_t word = 0; word <= last_word && word < bitmap_size;
+  for (size_t word = 0; word <= last_word && word < heap->bitmap_size;
        word++, p += GC_WORD_BITS) {
     size_t value = bitmap[word];
     char s[GC_WORD_BITS + 1];
@@ -321,7 +322,8 @@ void print_state() {
   safe_printf(
       "%p end_of_old_gen  (%zd kB since last GC)\n", state->end_of_old_gen, since_gc);
   safe_printf("\n");
-  safe_printf("%p offsets\n", state->heap.offsets);
+  safe_printf("%p gc_temp\n", state->heap.gc_temp);
+  safe_printf("%p gc_temp_size\n", state->heap.gc_temp_size);
   safe_printf("%p bitmap\n", state->heap.bitmap);
   safe_printf("%p roots\n", state->roots);
   safe_printf("\n");

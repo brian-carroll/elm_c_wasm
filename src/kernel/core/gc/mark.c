@@ -1,4 +1,6 @@
 #include "internals.h"
+#include "../core.h"
+#include "../types.h"
 
 // Mark a value as live and return 'true' if previously marked
 bool mark_words(GcState* state, void* p_void, size_t size) {
@@ -60,10 +62,10 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
     return;
   }
 
-  // reuse the compactor's "offsets" area as a stack of values to be traced
-  ElmValue** todos = (ElmValue**)heap->offsets;
+  // Use GC temporary memory area as a stack of values to be traced
+  ElmValue** todos = (ElmValue**)heap->gc_temp;
   todos[0] = root;
-  size_t max_todos = heap->bitmap - heap->offsets;
+  size_t max_todos = heap->gc_temp_size;
   size_t next_todo = 1;
 
   do {

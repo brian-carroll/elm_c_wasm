@@ -40,13 +40,13 @@ char* test_heap_layout() {
 
     set_heap_layout(heap, original_start, bytes);
 
-    float percent_bitmap = 100.0 * (heap->system_end - heap->bitmap) / words;
-    float percent_offsets = 100.0 * (heap->bitmap - heap->offsets) / words;
+    float percent_bitmap = (100.0 * heap->bitmap_size) / words;
+    float percent_temp = (100.0 * heap->gc_temp_size) / words;
 
     bool bitmap_ok = (sizeof(void*) == sizeof(u64))
                          ? (percent_bitmap > 1.5 && percent_bitmap < 1.6)
                          : (percent_bitmap > 2.95 && percent_bitmap < 3.05);
-    bool offsets_ok = (percent_offsets > 1.45 && percent_offsets < 1.6);
+    bool offsets_ok = (percent_temp > 1.45 && percent_temp < 1.6);
 
     assertions_made++;
     if (!bitmap_ok || !offsets_ok) {
@@ -54,7 +54,7 @@ char* test_heap_layout() {
       safe_printf(
           "FAIL: GC overhead should be the right fraction of the heap at %zu kB\n", kb);
       safe_printf("bitmap %f %%\n", percent_bitmap);
-      safe_printf("offsets %f %%\n", percent_offsets);
+      safe_printf("gc_temp %f %%\n", percent_temp);
     } else if (verbose) {
       safe_printf(
           "PASS: GC overhead should be the right fraction of the heap at %zu kB\n", kb);

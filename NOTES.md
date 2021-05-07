@@ -15,6 +15,25 @@ sscanf is 30kB! Only using it for floats. Could write something.
 
 ## TODO
 
+### heap struct refactor
+- usages of system_end as end of bitmap
+  - bitmap_reset: wants pointer, could be array
+  - bitmap_find: wants index
+  - print_bitmap: index
+  - set_heap_layout
+  - test_heap_layout
+- usages of system_end for its own sake
+  - print_state
+  - Debug_prettyHelp
+  - heap.c
+
+- usages of bitmap as top of offsets
+  - mark_trace (array)
+
+
+
+
+
 - fix allocation hacks (they assume the old GC where there are no live values above `next_alloc`)
   - [x] String.join needs a pre-pass to calculate the length
   - [x] string builders: Debug.toString, Json.stringify, Json.parse_string
@@ -29,6 +48,13 @@ sscanf is 30kB! Only using it for floats. Could write something.
   - [x] minor gc returns percentage_marked, and allocator does the growing
   - [x] grow function takes a min_space argument
   - [ ] mark stack overflow
+    - refactor
+
+
+
+
+
+
     - first refactor the heap struct: remove layout assumptions, then put offsets ("gc_temp_data") on top
     - at the end of mark_trace, when stack overflow detected
       - call system resize function, but not set_heap_layout

@@ -5,7 +5,7 @@
 void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
   size_t ndead = 0;
   size_t offset_index = (compact_start - heap->start) / GC_BLOCK_WORDS;
-  heap->offsets[offset_index] = ndead;
+  heap->gc_temp[offset_index] = ndead;
 
   size_t* prev_block = compact_start;
   size_t prev_block_start_addr = (size_t)prev_block & GC_BLOCK_MASK;
@@ -20,7 +20,7 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
 
   while (current_block < compact_end) {
     ndead += bitmap_dead_between(heap, prev_block, current_block);
-    heap->offsets[++offset_index] = ndead;
+    heap->gc_temp[++offset_index] = ndead;
 
     prev_block = current_block;
     current_block += GC_BLOCK_WORDS;
@@ -33,7 +33,7 @@ void* forwarding_address(GcHeap* heap, size_t* old_pointer) {
   if (IS_OUTSIDE_HEAP(old_pointer)) return old_pointer;
 
   size_t block_index = (old_pointer - heap->start) / GC_BLOCK_WORDS;
-  size_t block_offset = heap->offsets[block_index];
+  size_t block_offset = heap->gc_temp[block_index];
 
   size_t* old_block_start = heap->start + (block_index * GC_BLOCK_WORDS);
   size_t offset_in_block = bitmap_dead_between(heap, old_block_start, old_pointer);

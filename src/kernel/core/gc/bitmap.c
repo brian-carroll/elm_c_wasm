@@ -12,8 +12,9 @@
    ==================================================== */
 
 void bitmap_reset(GcHeap* heap) {
-  for (size_t* bm_word = heap->bitmap; bm_word < heap->system_end; bm_word++) {
-    *bm_word = 0;
+  size_t* bitmap = heap->bitmap;
+  for (size_t i = 0; i < heap->bitmap_size; i++) {
+    bitmap[i] = 0;
   }
 }
 
@@ -121,14 +122,9 @@ size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter) {
 }
 
 
-size_t bitmap_max_index(GcHeap* heap) {
-  return heap->system_end - heap->bitmap;
-}
-
-
 void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter *iter) {
-  size_t max_index = bitmap_max_index(heap);
-  for (; iter->index < max_index; bitmap_next(iter)) {
+  size_t size = heap->bitmap_size;
+  for (; iter->index < size; bitmap_next(iter)) {
     bool value = !!(heap->bitmap[iter->index] & iter->mask);
     if (value == target_value) break;
   }

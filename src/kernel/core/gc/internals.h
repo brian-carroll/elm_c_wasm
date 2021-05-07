@@ -26,10 +26,12 @@
 
 typedef struct {
   size_t* start;
-  size_t* end;  // end of usable heap area
-  size_t* offsets;
-  size_t* bitmap;
-  size_t* system_end;  // end of heap including GC reserved area (bitmap & offsets)
+  size_t* end;  // end of application heap area
+  size_t* bitmap;  // GC mark bits
+  size_t bitmap_size;
+  size_t* gc_temp;  // GC internal working memory area
+  size_t gc_temp_size;
+  size_t* system_end;  // end of entire heap including GC reserved areas
 } GcHeap;
 
 typedef struct {

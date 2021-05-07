@@ -128,11 +128,17 @@ void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
   size_t bitmap_words = GC_DIV_ROUND_UP(bitmap_bytes, bytes_per_word);
   size_t offset_words = GC_DIV_ROUND_UP(offset_bytes, bytes_per_word);
 
-  heap->start = start;
-  heap->bitmap = system_end - bitmap_words;
-  heap->offsets = heap->bitmap - offset_words;
-  heap->end = heap->offsets;
+  // fill out metadata from the top down
   heap->system_end = system_end;
+
+  heap->gc_temp_size = offset_words;
+  heap->gc_temp = system_end - offset_words;
+
+  heap->bitmap_size = bitmap_words;
+  heap->bitmap = heap->gc_temp - bitmap_words;
+
+  heap->end = heap->bitmap;
+  heap->start = start;
 }
 
 
@@ -153,11 +159,9 @@ int init_heap(GcHeap* heap) {
 
 // Grow to 2x, or enough to fit the current allocation, whichever is larger
 void grow_heap(GcHeap* heap, size_t current_alloc_words) {
-  size_t* old_offsets = heap->offsets;
-  size_t* old_bitmap = heap->bitmap;
-  size_t* old_system_end = heap->system_end;
-
+  GcHeap old_heap = *heap;
   size_t old_total_words = heap->system_end - heap->start;
+
   size_t alloc_with_overhead = current_alloc_words + (current_alloc_words >> 4);
   size_t extra_words =
       (alloc_with_overhead > old_total_words) ? alloc_with_overhead : old_total_words;
@@ -169,8 +173,8 @@ void grow_heap(GcHeap* heap, size_t current_alloc_words) {
   set_heap_layout(heap, heap->start, new_total_bytes);
 
   // GC bookkeeping data
-  GC_memcpy(heap->bitmap, old_bitmap, old_system_end - old_bitmap);
-  for (u64* p = (u64*)old_offsets; p < (u64*)old_system_end; ++p) {
-    *p = 0;
+  GC_memcpy(heap->bitmap, old_heap.bitmap, old_heap.bitmap_size);
+  for (size_t i = 0; i < old_heap.gc_temp_size; ++i) {
+    old_heap.gc_temp[i] = 0;
   }
 }
