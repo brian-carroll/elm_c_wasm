@@ -1,3 +1,31 @@
+## TODO
+
+- [x] fix allocation hacks (they assume the old GC where there are no live values above `next_alloc`)
+  - [x] String.join needs a pre-pass to calculate the length
+  - [x] string builders: Debug.toString, Json.stringify, Json.parse_string
+  - [x] JsArray.push needs to be refactored to allocate all at once
+  - [x] List.map2 probably becomes a modulo-cons
+- logging improvements
+  - use flags and log levels and stuff
+- modulo cons
+  - would this make the language test easier to debug by shrinking the stack a bit?
+  - meh, probably doesn't _really_ improve much
+- growing
+
+  - [x] minor gc returns percentage_marked, and allocator does the growing
+  - [x] grow function takes a min_space argument
+  - [x] mark stack overflow
+
+- bitmap refactor
+  - **get tests passing first!** or use a new branch from master?
+  - use new bitmap_find function in compactor
+  - compactor was using next_alloc as a max!
+  - bm_iter is related to `from`, not `to`. It works a bit ahead of `from`. It's a target for where `from` wants to get to.
+  - update bitmap_dead_between (popcount & make_bitmask)
+  - update mark_words
+- timers for grow_heap
+- better timers
+
 ## GC size analysis
 
 2020-05-01: mark-sweep with dynamic resizing and compactor
@@ -13,47 +41,12 @@ Bytes of wasm, compiling demo/language-test with -Oz, DEBUG undefined
 
 sscanf is 30kB! Only using it for floats. Could write something.
 
-## TODO
-
-
-- [x] fix allocation hacks (they assume the old GC where there are no live values above `next_alloc`)
-  - [x] String.join needs a pre-pass to calculate the length
-  - [x] string builders: Debug.toString, Json.stringify, Json.parse_string
-  - [x] JsArray.push needs to be refactored to allocate all at once
-  - [x] List.map2 probably becomes a modulo-cons
-- logging improvements
-  - use flags and log levels and stuff
-- modulo cons
-  - would this make the language test easier to debug by shrinking the stack a bit?
-  - meh, probably doesn't _really_ improve much
-- growing
-  - [x] minor gc returns percentage_marked, and allocator does the growing
-  - [x] grow function takes a min_space argument
-  - [x] mark stack overflow
-
-- bitmap refactor
-  - **get tests passing first!** or use a new branch from master?
-  - use new bitmap_find function in compactor
-  - compactor was using next_alloc as a max!
-  - bm_iter is related to `from`, not `to`. It works a bit ahead of `from`. It's a target for where `from` wants to get to.
-  - update bitmap_dead_between (popcount & make_bitmask)
-  - update mark_words
-- timers for grow_heap
-- better timers
-
-## what tests to do?
-- growing the heap
-  - low % free space on minor GC
-  - bad fragmentation after minor GC
-  - mark stack overflow
-- major GC
-  - check integrity after compactor moves stuff around
-    - pointers both up and down (via minor GC?)
-
 ## debug ideas
+
 Casey Muratori made a huge debug system to visualise things. He went further with it than I would have even thought about. What ideas can I use from that?
 
-- Do something with __FILE__ and __LINE__ on allocations and function applications, to see who allocated what
+- Do something with **FILE** and **LINE** on allocations and function applications, to see who allocated what
+
   - Build something into the data constructors (newElmInt and friends)
   - Can have different number of args in DEBUG by defining macros
   - I have a codemod script already, could put it there for now at least!
@@ -61,6 +54,7 @@ Casey Muratori made a huge debug system to visualise things. He went further wit
   - GC_stack_push_value is a good place to write the actual debug record
 
 - Have a way of visualising fragmentation
+
   - print out the bitmap in rows of some kind of ASCII art?
     ```
     ***---**------*-----***---*--
@@ -74,16 +68,17 @@ Casey Muratori made a huge debug system to visualise things. He went further wit
     ###-*##*#####-***-****##--***
     ```
   - Yeah this actually looks really useful!
-    - Here I drew * for old marked and # for new marked
+    - Here I drew \* for old marked and # for new marked
     - There are 4 possibilities, so use 4 characters
     ```
     X-xXXXXxx-
     xX--x-x_-_
-    -X__Xxx__- 
-    _x--XXx___ 
+    -X__Xxx__-
+    _x--XXx___
     ```
 
 - massive test data
+
   - allocate a whole other heap area for debug data
   - take test snapshots of the entire heap, to compare things over time
   - store function & line number in an array the size of the heap
@@ -99,11 +94,11 @@ Casey Muratori made a huge debug system to visualise things. He went further wit
   - Or maybe I want just one big text file... I dunno
 
 What sort of issues do I want to find?
+
 - Fragmentation
 - Data corruption
   - sweeping something I shouldn't have swept
   - Maybe take a heap snapshot before sweeping, and track who allocated it?
-
 
 # Non-moving GC
 
@@ -113,22 +108,25 @@ Try mark/sweep with an allocator.
 Simplest allocator is "next fit", just scroll up through the bitmap to find enough space. It's a bit fragmenty but we can do some compaction too.
 
 Do a compaction at the end (or beginning) of `execute`
-  - only if it did a GC?
-Use some heuristics?
+
+- only if it did a GC?
+  Use some heuristics?
 - Count number of wrap-arounds?
 - Count number of patches skipped because too small?
 
 Consequences of out-of-order heap for compaction
+
 - when I move an upward-pointing pointer, I don't know what to set it to!
 - well that's not true, it's deterministic from the mark bits
 - might need to do "offset calculation" pass before "move" pass
   - already doing this!
 
 ## bonus
+
 recursion modulo cons, and maybe other tricks!
 
-
 ## TODO
+
 - GC_malloc does a check to see if next_alloc > end
 - if so
   - do mark cycle
@@ -141,8 +139,10 @@ recursion modulo cons, and maybe other tricks!
     - set next_alloc to lowest garbage address
 
 What's the check when reusing swept space?
+
 - look at how many words we need
 - find the next gap in the bitmap that has enough space
+
   - use an algo that happens to be trivial in the "top-of-heap" case?
   - or have some mode-switch to optimise that case?
 
@@ -152,6 +152,7 @@ What's the check when reusing swept space?
   - meh probably not worth it, certainly to start!
 
 Find space
+
 ```c
 size_t target_space = 3;
 
@@ -191,7 +192,6 @@ assert(false);
 return NULL;
 ```
 
-
 # Multi-region heap / arbitrary layout
 
 - It's a lot nicer than expanding when running on the OS
@@ -200,10 +200,12 @@ return NULL;
   - Yeah kinda. See next section on Linear memory layout
 
 ## Allocate
+
 - when next_alloc hits top of region, maybe we start a new region
 - do a mark first and if we're >75% live data then start new region
 
 ## Mark
+
 - `mark_words`
   - needs to figure out what region it's in to look at the right bitmap
 - `mark_trace`
@@ -214,6 +216,7 @@ return NULL;
   - when clearing mark bits, needs to loop over all regions
 
 ## Compact
+
 - `calc_offsets`
   - needs an outer loop over region
 - `forwarding_address`
@@ -222,10 +225,10 @@ return NULL;
   - finding next live/dead patch needs an outer loop over regions
   - main loop needs to keep track of two regions, `from` and `to`
 
-
 # Linear memory layout
 
 ## Non-Wasm platforms
+
 - Linux
   - just use old-school brk, sbrk
   - or give mmap a requested starting address at system_end
@@ -235,6 +238,7 @@ return NULL;
   - assert that the actual allocated address matches
 
 ## Growing stuff
+
 - growing the heap
   - ask system for more overall memory
   - move the vdom region
@@ -244,6 +248,7 @@ return NULL;
   - write a new vdom page
 
 ## Moving the VDOM
+
 - nodes
   - facts and children are internal => add an offset to each address
   - extras can be heap values => no change
@@ -253,10 +258,11 @@ return NULL;
 - patches
   - never alive when we're moving the vdom
 - page metadata
+
   - doesn't change, just copy to new address
 
-
 - per-bucket copying
+
   - for each bucket
     - if it's patches, skip
     - if it's facts, blindly copy N words
@@ -270,7 +276,6 @@ return NULL;
   - copy node tree
     - start at root node
     - traverse the tree
-
 
 # Virtual DOM
 
@@ -297,9 +302,10 @@ struct bucket_array {
 
 ```
 
-
 ### SOA for VDOM?
+
 Might not be the best.
+
 - SOA is optimal for cases where you only operate on one or two fields at a time
 - But for vdom diff, typically both vdom's match, in which case we end up comparing all fields anyway.
 - SOA gives savings in the case of mismatching tags for example. Avoids loading other fields of the old vdom node.
@@ -309,8 +315,8 @@ Might not be the best.
   - Could actually return an `Int` to the app, with an index in it!
 
 ### group nodes/facts by type?
-OK but we don't really have any operations that get better.
 
+OK but we don't really have any operations that get better.
 
 ### Interface to elm/browser
 
@@ -793,17 +799,21 @@ typedef struct {
 ```
 
 ## Non-TEA crazy edge cases
+
 App devs can do crazy things that nonetheless have to work in the language semantics.
 
 ### Creating Vdom nodes from the update function
+
 In case someone calls `div` from `update`, we have to make sure that the Vdom functions are using the main heap allocator during that time.
 Need to structure it to be swappable.
 Vdom constructors need to have an extra `if` even for normal use, which is unfortunate.
 
 ### Passing Vdom nodes into update via event handlers
+
 When someone gives us a Closure for event handling, we need to trace it for Vdom nodes and copy them to the main heap if we see them.
 
 ## Managing pointers from main heap to vdom
+
 - Maintain some buckets in the vdom region for this kind of thing
 - During main GC compaction, check if pointer is in vdom area. If so, copy it to a new bucket.
   - This can only really be done on a major GC. In a minor GC we can't drop a bucket.
@@ -811,7 +821,6 @@ When someone gives us a Closure for event handling, we need to trace it for Vdom
   - We don't want refs from both vdom and heap! Lifetime too complex.
   - When diffing event handlers, just make copies into this vdom heap bucket. The copy's lifetime is determined by the GC
   - Internal vdom links will be within the vdom area with that lifetime
-
 
 # Memory management with regions
 
@@ -826,31 +835,37 @@ When someone gives us a Closure for event handling, we need to trace it for Vdom
 - Elm core lib allocator gets switched out for this new one during `view`
 
 ## Top level memory manager
+
 - when main heap runs out of room, we have two choices
   - if there's some free buckets at the bottom of vdom, take them now and request more memory later
   - get more memory and move the whole vdom area up
 
-
 =======
+
 # Build system
 
 ## Port to Windows
+
 - So I can do debugging more easily
   - gdb is awful and VS Code on WSL is not good.
 - GC will need Windows heap allocation https://docs.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate
 
 Steps
+
 1. Rewrite "GC Full" handling
-  - Needed for Microsoft compiler compatibility since my custom exception thing uses non-standard GNU-C "statement expression".
-  - use standard longjmp instead of basically rolling my own version of that.
-    - Emscripten says that longjmp and C++ exceptions are v expensive. But my thing is the same so also slow!
-    - This is really the cost imposed by Wasm for not being able to examine stack or registers.
-  - redo string growing for Debug.toString and Json.encode
-    - need to update the size every time, can't capture the exception value anymore
-  - check everywhere with `GC_malloc(false, x)` for similar size update stuff
-  - Get rid of CAN_THROW
+
+- Needed for Microsoft compiler compatibility since my custom exception thing uses non-standard GNU-C "statement expression".
+- use standard longjmp instead of basically rolling my own version of that.
+  - Emscripten says that longjmp and C++ exceptions are v expensive. But my thing is the same so also slow!
+  - This is really the cost imposed by Wasm for not being able to examine stack or registers.
+- redo string growing for Debug.toString and Json.encode
+  - need to update the size every time, can't capture the exception value anymore
+- check everywhere with `GC_malloc(false, x)` for similar size update stuff
+- Get rid of CAN_THROW
+
 2. Get compiler to work with new "GC full" stuff
 3. Get GC working on Windows
+
 ```c
 #include <heapapi.h>
 size_t heap_init_bytes = GC_INITIAL_HEAP_MB * 1024 * 1024;
@@ -858,8 +873,8 @@ HANDLE hHeap = HeapCreate(0, heap_init_bytes, heap_init_bytes);
 void* heap = HeapAlloc(hHeap, 0, heap_init_bytes);
 ```
 
-
 ## Speed up
+
 - "Unity build"
   - Have a core.c that includes all the other core .c files in one translation unit
   - Move all the header file stuff into core.h
@@ -867,18 +882,17 @@ void* heap = HeapAlloc(hHeap, 0, heap_init_bytes);
   - .pch files for things like types.h
 
 ## Lib paths
+
 - remove the need for code mods
 
-
-
 # Replay rewrite
-
 
 ## Notes after stack map v3, before v4!
 
 Things are a lot better, but not there yet. Gradually learning what I really need!
 This keeps getting closer to a normal stack structure and needs to go a bit further.
 Currently:
+
 - I have a value stack that I push all allocations to. This is good.
 - Plus a separate call stack to track what function I'm currently in, "for debug only"...
 - Also Kernel code is now forced to admit to any tricks like dynamically growing arrays/strings/etc.
@@ -898,7 +912,6 @@ Currently:
     - But the door is open to refactor eval functions to use varargs, and to inline saturated function calls.
 - I do want stack frames to keep everything together
   - Keep the flags array idea. Introduce a "start of frame" flag and put the eval function pointer there.
-
 
 ## Notes after stack map v2, before v3!
 
@@ -922,13 +935,12 @@ I don't really need to track which parts are from which functions but it would b
 Maybe separate call and value stacks
 
 What to do with tailcalls?
-  - At the top of the loop, inside it, do NEW_CLOSURE(stuff)
-  - Assign the arguments from the Closure, not from args
-  - On replay this will be a fake replayed allocation with the right stuff in it
-  - Boom, that's it
-  - There's no situation where you actually want to return the full Closure. It's always a local.
 
-
+- At the top of the loop, inside it, do NEW_CLOSURE(stuff)
+- Assign the arguments from the Closure, not from args
+- On replay this will be a fake replayed allocation with the right stuff in it
+- Boom, that's it
+- There's no situation where you actually want to return the full Closure. It's always a local.
 
 ## Notes before building stack map v2
 
@@ -957,7 +969,9 @@ Closure* entry;
 ```
 
 - run mode
+
   - evalClosure
+
     - live_section_index = 0
     - replay_section_index = -1
     - initialise live_sections[0]
@@ -984,6 +998,7 @@ Closure* entry;
       - but no real need for buckets, just unmap the current thing and request twice as much
 
 - GC
+
   - mark the entry point
   - loop over the live sections
     - within each section, iterate using header sizes
@@ -994,13 +1009,14 @@ Closure* entry;
   - update stackmap & entry with relocated pointers
 
 - replay mode
+
   - refactor so evalClosure is in the GC module rather than passing control back
   - set replay mode
     - need two stackmap indices, replay and real. When replay gets to real, exit replay mode.
   - Utils_apply
     - call GC_stack_push_frame
     - if NULL, continue
-    - if not, 
+    - if not,
   - GC_stack_push_frame
     - check if replay mode, if not return NULL
     - assert that the section is one pointer wide (hmm unless we are merging live sections after compression)
@@ -1022,10 +1038,10 @@ Closure* entry;
       - could get that ref using an outer TCE wrapper, or with a GC function call before the `while`
       - allocating unneccessary closure at start? could test address just below args array to see if it's a Closure pointing at this eval fn. hackology. Will go wrong, don't.
 
-
 # Other GC improvements
 
 ## Heap regions
+
 - would enable all sorts of fancier GC stuff: the vdom region, dynamically growing improved stackmap
 - allocation
   - when we overspill the current region, bump next_alloc up to next region
@@ -1040,7 +1056,9 @@ Closure* entry;
   - each region looks roughly like what our current heap struct is. Maybe that's the region header.
 
 # Enable modulo cons mutation
+
 - special region
+
   - not compacted, can support limited local mutation with the freshest values
   - instead of compact, use a depth-first copy (it's a bit like a mark and compact in one)
   - need somewhere to copy into - the newest non-nursery region needs to have room, or if not, we create a new region
@@ -1052,6 +1070,7 @@ Closure* entry;
     - Probably can, if you grow the copying space indefinitely until the call ends
 
 - stack-based mutation?
+
   - can it work?
   - nope! Too much stuff. We're going the wrong way down the list so of course you get old-to-new pointers
 
@@ -1062,8 +1081,8 @@ Closure* entry;
   - at the end, create a list of that length and fill it from the bucket array
     - content will be in reverse order from the cons cells (but then modulo-cons has weird heap shape too)
 
-
 # Prevent stack overflow in mark algo for deep structures
+
 - Reuse offset area for a "work list" as the GC Handbook calls it
 - As you visit each node, mark it, and mark its children
 - Move to first child, putting the other children in the worklist
@@ -1074,13 +1093,12 @@ Closure* entry;
   - So when tracing these partially-traced things, only put their children in the worklist if they are below the cursor
   - If not below cursor, we'll get to them later - we'll find them in the bitmap!
 
-
 # Recording/streaming issues
+
 - switching windows
 - I'm mumbling
 - slow build time
 - doing too hard a task
-
 
 # Generate Wasm encoder for Msg
 
