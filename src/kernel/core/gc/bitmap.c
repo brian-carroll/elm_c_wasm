@@ -39,7 +39,7 @@ int popcount(u64 word) {
 
 
 // Count garbage words between two heap pointers, using the bitmap
-size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) { // , bool is_testcase) {
+size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
   size_t* bitmap = heap->bitmap;
 
   size_t first_index = first - heap->start;
@@ -59,77 +59,20 @@ size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) { // , boo
   } else {
     size_t first_mask = make_bitmask(first_bit, GC_WORD_BITS - 1);
     size_t live_count = popcount(bitmap[first_word] & first_mask);
-    // size_t live_count_first = live_count;
 
     for (size_t word = first_word + 1; word < last_word; ++word) {
       live_count += popcount(bitmap[word]);
     }
-    // size_t live_count_middle = live_count;
 
     size_t last_mask = make_bitmask(0, last_bit);
     last_mask &= (last_mask >> 1); // clear highest bit (if any are set)
     live_count += popcount(bitmap[last_word] & last_mask);
     size_t dead_count = last - first - live_count;
 
-    // if (is_testcase) {
-    //   safe_printf("\n-----many------\n");
-    //   safe_printf("start       %p\n", heap->start);
-    //   safe_printf("first       %p\n", first);
-    //   safe_printf("last        %p\n", last);
-    //   safe_printf("\n");
-    //   safe_printf("first_index %zd\n", first_index);
-    //   safe_printf("last_index  %zd\n", last_index);
-    //   safe_printf("\n");
-    //   safe_printf("first_word  %zx\n", first_word);
-    //   safe_printf("first_bit   %zx\n", first_bit);
-    //   safe_printf("\n");
-    //   safe_printf("last_word   %zx\n", last_word);
-    //   safe_printf("last_bit    %zx\n", last_bit);
-    //   safe_printf("\n");
-    //   safe_printf("first_bitmap %016zx\n", bitmap[first_word]);
-    //   safe_printf("first_mask   %016zx\n", first_mask);
-    //   safe_printf("first_masked %016zx\n", bitmap[first_word] & first_mask);
-    //   safe_printf("last_bitmap  %016zx\n", bitmap[last_word]);
-    //   safe_printf("last_mask    %016zx\n", last_mask);
-    //   safe_printf("last_masked  %016zx\n", bitmap[last_word] & last_mask);
-    //   safe_printf("\n");
-    //   safe_printf("live_count_first  %zd\n", live_count_first);
-    //   safe_printf("live_count_middle  %zd\n", live_count_middle);
-    //   safe_printf("live_count  %zd\n", live_count);
-    //   safe_printf("dead_count  %zd\n", dead_count);
-    // }
-
     return dead_count;
   }
 }
 
-// size_t bitmap_dead_between_slow(GcHeap* heap, size_t* first, size_t* last) {
-//   GcBitmapIter first_iter = ptr_to_bitmap_iter(heap, first);
-//   GcBitmapIter last_iter = ptr_to_bitmap_iter(heap, last);
-
-//   size_t count = 0;
-//   GcBitmapIter iter = first_iter;
-
-//   while (iter.index < last_iter.index) {
-//     if (!bitmap_is_live_at(heap, iter)) count++;
-//     bitmap_next(&iter);
-//   }
-//   while (iter.mask < last_iter.mask) {
-//     if (!bitmap_is_live_at(heap, iter)) count++;
-//     iter.mask <<= 1;
-//   }
-//   return count;
-// }
-
-// size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
-//   size_t fast = bitmap_dead_between_fast(heap, first, last, false);
-//   size_t slow = bitmap_dead_between_slow(heap, first, last);
-//   if (fast != slow) {
-//     bitmap_dead_between_fast(heap, first, last, true);
-//     safe_printf("slow      %zd\n", slow);
-//   }
-//   return slow;
-// }
 
 // Make a mask to test selected bits in a bitmap word
 size_t make_bitmask(size_t first_bit, size_t last_bit) {
