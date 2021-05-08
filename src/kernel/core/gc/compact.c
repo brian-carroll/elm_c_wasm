@@ -11,13 +11,6 @@ void calc_offsets(GcHeap* heap, size_t* compact_start, size_t* compact_end) {
   size_t prev_block_start_addr = (size_t)prev_block & GC_BLOCK_MASK;
   size_t* current_block = (size_t*)(prev_block_start_addr + GC_BLOCK_BYTES);
 
-  log_debug("\n");
-  log_debug("calc_offsets\n");
-  log_debug("compact_start %p\n", compact_start);
-  log_debug("heap->start %p\n", heap->start);
-  log_debug("current_block %p\n", current_block);
-  log_debug("\n");
-
   while (current_block < compact_end) {
     ndead += bitmap_dead_between(heap, prev_block, current_block);
     heap->gc_temp[++offset_index] = ndead;
@@ -39,19 +32,6 @@ void* forwarding_address(GcHeap* heap, size_t* old_pointer) {
   size_t offset_in_block = bitmap_dead_between(heap, old_block_start, old_pointer);
 
   size_t* new_pointer = old_pointer - block_offset - offset_in_block;
-
-  log_debug("\nforwarding_address:\n");
-  log_debug("old_pointer %p\n", old_pointer);
-  log_debug("heap->start %p\n", heap->start);
-  log_debug("block_index %zd\n", block_index);
-  log_debug("block_offset %zd\n", block_offset);
-  log_debug("old_block_start %p\n", old_block_start);
-  log_debug("offset_in_block %zd\n", offset_in_block);
-  log_debug("new_pointer %p\n", new_pointer);
-  log_debug("old_pointer - new_pointer %zd\n", old_pointer - new_pointer);
-  log_debug("\n");
-
-  assert(new_pointer >= heap->start && new_pointer < heap->end);
 
   return new_pointer;
 }
@@ -76,8 +56,6 @@ void compact(GcState* state, size_t* compact_start) {
   // It just moves uniformly forward. Doesn't need to care about the mark bits.
   size_t* to = first_move_to;
   size_t garbage_so_far = 0;
-
-  log_debug("compact: first available space at %p\n", first_move_to);
 
   // Iterate over live patches of data
   size_t* from = to;
@@ -153,9 +131,6 @@ void compact(GcState* state, size_t* compact_start) {
     size_t* current_root_value = *root_mutable_pointer;
     if (current_root_value > first_move_to && current_root_value < heap->end) {
       current_root_value = forwarding_address(heap, current_root_value);
-
-      log_debug("Changing root from %p to %p\n", *root_mutable_pointer, current_root_value);
-
       *root_mutable_pointer = current_root_value;
     }
   }
