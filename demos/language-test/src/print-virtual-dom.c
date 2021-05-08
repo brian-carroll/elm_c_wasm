@@ -15,6 +15,17 @@ extern Closure VirtualDom_text;
 // extern Closure VirtualDom_style;
 // extern Closure VirtualDom_property;
 
+// Custom string printer
+// Not using puts because it adds '\n'
+// Not using our safe printf because it's buffered differently from putchar,
+//   so when you mix both, and then pipe stdout to a file, it gets mangled
+void put_str(char* str) {
+  for (int i = 0; str[i]; i++) {
+    putchar(str[i]);
+  }
+}
+
+
 bool is_html_tag(char* c_tag, ElmString16* elm_tag) {
   size_t c_len = strlen(c_tag);
   size_t elm_len = code_units(elm_tag);
@@ -42,10 +53,10 @@ void print_virtual_dom_help(int indent, Closure* vdom) {
     bool newline = false;
 
     if (is_html_tag("h2", tag)) {
-      safe_printf("\n## ");
+      put_str("\n## ");
       newline = true;
     } else if (is_html_tag("h3", tag)) {
-      safe_printf("### ");
+      put_str("### ");
       newline = true;
     } else if (is_html_tag("ul", tag)) {
       indent += 2;
@@ -53,7 +64,7 @@ void print_virtual_dom_help(int indent, Closure* vdom) {
       for (int i = 0; i < indent; ++i) {
         putchar(' ');
       }
-      safe_printf("- ");
+      put_str("- ");
       newline = true;
     } else if (is_html_tag("br", tag)) {
       newline = true;
