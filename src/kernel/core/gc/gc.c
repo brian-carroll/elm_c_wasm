@@ -138,12 +138,12 @@ void GC_collect_minor() {
 
   size_t new_gen_size = state->heap.end - ignore_below;
   size_t used = state->n_marked_words;
-  size_t percent_marked = (100 * used) / new_gen_size;
+  f32 percent_marked = (100.0 * used) / (f32)new_gen_size;
   char marked[20];
   char available[20];
   format_mem_size(marked, sizeof(marked), used);
   format_mem_size(available, sizeof(available), new_gen_size);
-  safe_printf("Minor GC marked %zd%% (%s / %s)\n", percent_marked, marked, available);
+  safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
 
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);

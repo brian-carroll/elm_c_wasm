@@ -1,25 +1,24 @@
 ## TODO
 
-- [x] fix allocation hacks (they assume the old GC where there are no live values above `next_alloc`)
-  - [x] String.join needs a pre-pass to calculate the length
-  - [x] string builders: Debug.toString, Json.stringify, Json.parse_string
-  - [x] JsArray.push needs to be refactored to allocate all at once
-  - [x] List.map2 probably becomes a modulo-cons
+- run language-test in Wasm
+
+- fix elm-spa-example
+  - it keeps trying to grow the heap larger and larger. Crashes at 2GB.
+  - It's getting into an infinite loop decoding a JSON response with a Time.Posix.
+  - Time lib is broken. Uses 32-bit Int for 41-bit values. Need to make it Float instead.
+    - Replacing official Elm code rather than JS code. Haven't actually done this much! Would also unlock some other things.
+    - Maybe I should look at jailbreaking the kernel code and copying libs
+    - The come up with a proper way to structure them etc.
+
 - logging improvements
   - use flags and log levels and stuff
+
 - modulo cons
   - would this make the language test easier to debug by shrinking the stack a bit?
   - meh, probably doesn't _really_ improve much
-- growing
 
-  - [x] minor gc returns percentage_marked, and allocator does the growing
-  - [x] grow function takes a min_space argument
-  - [x] mark stack overflow
-
-- bitmap refactor
-  - update bitmap_dead_between (popcount & make_bitmask)
-  - update mark_words
 - timers for grow_heap
+
 - better timers
 
 ## GC size analysis

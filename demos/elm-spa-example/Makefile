@@ -2,8 +2,8 @@ MAKEFLAGS := --jobs=$(shell nproc)
 
 SUBMODULE_DIR := "repo"
 ELM_SOURCES := $(shell find $(SUBMODULE_DIR)/src -name '*.elm')
-KERNELC := $(shell find ../../src/kernel -name '*.c')
-KERNELH := $(shell find ../../src/kernel -name '*.h')
+KERNELC := $(shell find ../../src/kernel -name '*.c') # only for detecting changes
+KERNELH := $(shell find ../../src/kernel -name '*.h') # only for detecting changes
 WRAPPER := ../../src/kernel/wrapper/wrapper
 
 .PHONY: all clean
