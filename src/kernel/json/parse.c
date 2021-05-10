@@ -1,8 +1,7 @@
 // Parse JSON values from a UTF-16 string
 // https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
-#include <stdio.h>  // sscanf
-
+#include <math.h>  // isnan
 #include "../core/core.h"
 #include "json.h"
 
@@ -58,27 +57,22 @@ void* parse_number(u16** cursor, u16* end) {
   u16* chars = *cursor;
 
   size_t max = end - chars;
-  if (max > 31) max = 31;
-
-  char digits[32];
-  size_t d = 0;
-  for (size_t i = 0; i < max; i++) {
-    u16 c = chars[i];
-    if ((c >= '0' && c <= '9') || c == '-' || c == '+' || c == 'e' || c == 'E' ||
-        c == '.') {
-      digits[d++] = (char)c;
-    } else {
-      break;
-    }
+  if (max > 31) {
+    max = 31;
   }
-  if (d == 0) return NULL;
-  digits[d] = '\0';
+  u32 len16 = 0;
+  for (; len16 < max; len16++) {
+    u16 c = chars[len16];
+    bool isValid = (c >= '0' && c <= '9') || c == '-' || c == '+' || c == 'e' ||
+                   c == 'E' || c == '.';
+    if (!isValid) break;
+  }
+  if (len16 == 0) return NULL;
 
-  f64 f;
-  int success = sscanf(digits, "%lg", &f); // TODO: sscanf is 30kB of wasm with -Oz !
-  if (!success) return NULL;
+  f64 f = parseFloat(chars, len16);
+  if (isnan(f)) return NULL;
 
-  *cursor += d;
+  *cursor += len16;
   return newElmFloat(f);
 }
 

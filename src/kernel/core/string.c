@@ -1,6 +1,5 @@
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>  // sscanf
 #include <stdlib.h>
 
 #include "core.h"
@@ -627,26 +626,14 @@ Closure String_toInt = {
  * String.toFloat
  */
 static void* eval_String_toFloat(void* args[]) {
-  char ascii[MAX_FLOAT_LEN];
   ElmString16* s = args[0];
-
   size_t len = code_units(s);
-  if (len >= MAX_FLOAT_LEN) len = MAX_FLOAT_LEN - 1;
-
-  size_t i = 0;
-  for (; i < len; i++) {
-    u16 word = s->words16[i];
-    if (word > 127) break;
-    ascii[i] = word;
+  if (len >= MAX_FLOAT_LEN) {
+    len = MAX_FLOAT_LEN - 1;
   }
-  ascii[i] = 0;
-
-  f64 value;
-  int successChars =
-      sscanf(ascii, "%lf", &value);  // TODO: sscanf is 30kB of wasm with -Oz !
-
-  return (successChars > 0) ? A1(&g_elm_core_Maybe_Just, newElmFloat(value))
-                            : &g_elm_core_Maybe_Nothing;
+  f64 value = parseFloat(s->words16, len);
+  return isnan(value) ? &g_elm_core_Maybe_Nothing
+                      : A1(&g_elm_core_Maybe_Just, newElmFloat(value));
 }
 Closure String_toFloat = {
     .header = HEADER_CLOSURE(0),

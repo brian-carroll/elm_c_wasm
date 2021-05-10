@@ -1006,6 +1006,12 @@ function wrapWasmElmApp(
     getJsRefObjectField,
     getJsRefValue,
     markJsRef,
-    sweepJsRefs
+    sweepJsRefs,
+    parseFloat: (addr: number, len16: number) => {
+      const idx16 = addr >> 1;
+      const words16 = mem16.slice(idx16, idx16 + len16);
+      const jsString = textDecoder.decode(words16);
+      return parseFloat(jsString);
+    }
   };
 }

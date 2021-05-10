@@ -4,6 +4,8 @@
 //
 // =======================================================================
 
+#include <stdio.h> // putchar
+
 static void print_indent(int indent) {
   for (int i = 0; i < indent; i++) {
     safe_printf(" ");

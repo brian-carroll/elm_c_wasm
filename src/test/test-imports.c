@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>  // sscanf
 
 #include "../kernel/core/core.h"
 #include "../kernel/json/json-internal.h"
@@ -172,6 +173,19 @@ size_t testJsonValueRoundTrip(size_t jsonStringAddr) {
   void* value = parse_json((ElmString16*)jsonStringAddr);
   void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
   return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
+}
+
+f64 parseFloat(u16* chars16, size_t len16) {
+  assert(len16 <= 32);
+  char ascii[32];
+  int i = 0;
+  for (; i < len16; i++) {
+    ascii[i] = chars16[i];
+  }
+  ascii[i] = '\0';
+  f64 f;
+  int successCount = sscanf(ascii, "%lg", &f);
+  return successCount ? f : (0.0 / 0.0);
 }
 
 #endif
