@@ -13,7 +13,7 @@
 
 #define MB (1024 * 1024)
 #define GC_INITIAL_HEAP_MB 1
-#define GC_SYSTEM_MEM_CHUNK 65536  // allocation granularity for Wasm, and also my Windows machine
+#define GC_SYSTEM_MEM_CHUNK 65536  // allocation granularity for Wasm, and for Windows
 #define GC_BLOCK_WORDS 64
 #define GC_BLOCK_BYTES (GC_BLOCK_WORDS * sizeof(size_t))
 #define GC_BLOCK_MASK (-GC_BLOCK_BYTES)
@@ -110,6 +110,17 @@ TODO:
     - call begin and end functions with marcro args
     - Put identifying info in the counter struct __FUNCTION__, __LINE__, __FILE__
   - PERF_TIMER_PRINT
+
+  Wasm
+  emscripten_performance_now
+
+  Windows
+  QueryPerformanceCounter https://docs.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter
+  LARGE_INTEGER (64)
+
+  Linux
+  gettimeofday (based on tsc)
+
 */
 
 struct gc_perf_data {

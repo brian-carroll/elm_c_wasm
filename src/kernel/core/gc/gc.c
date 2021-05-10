@@ -83,11 +83,11 @@ int GC_init() {
 ==================================================== */
 
 /*
-  There are two types of GC root
+  Register a GC root. We use the same code for two kinds of root:
   - Global vars that require Elm code to run to initialise them
-    - known at compile time
+    - Could be registered at compile time, but we do it at run time
   - Mutable state in Kernel code that points to heap values
-    - Hard for the compiler to know about
+    - Easier to do at run time. Hard for the compiler to know about.
     - We're not actually using this yet since most kernel code is in JS
     - Using a list instead of a C array supports this case.
 */
@@ -136,18 +136,19 @@ void GC_collect_minor() {
   // PRINT_BITMAP();
   // print_heap();
 
-  size_t new_gen_size = state->heap.end - ignore_below;
-  size_t used = state->n_marked_words;
-  f32 percent_marked = (100.0 * used) / (f32)new_gen_size;
-  char marked[20];
-  char available[20];
-  format_mem_size(marked, sizeof(marked), used);
-  format_mem_size(available, sizeof(available), new_gen_size);
-  safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
-
+  {
+    size_t new_gen_size = state->heap.end - ignore_below;
+    size_t used = state->n_marked_words;
+    f32 percent_marked = (100.0 * used) / (f32)new_gen_size;
+    char marked[20];
+    char available[20];
+    format_mem_size(marked, sizeof(marked), used);
+    format_mem_size(available, sizeof(available), new_gen_size);
+    safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
+  }
   sweepJsRefs(false);
   PERF_TIMER(jsRefs);
-  // PERF_TIMER_PRINT_MINOR();
+  PERF_TIMER_PRINT_MINOR();
 }
 
 
@@ -179,8 +180,6 @@ void GC_collect_major() {
 
   sweepJsRefs(true);
   PERF_TIMER(jsRefs);
-
-  // TODO: if marking already grew the heap (overflowed), then set_heap_layout and adjust bookkeeping
 
   size_t used = state->next_alloc - state->heap.start;
   size_t available = state->heap.end - state->heap.start;
