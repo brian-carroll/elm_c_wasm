@@ -1,6 +1,13 @@
 ## TODO
 
+- 64-bit stuff for Wasm
+
+  - In wasm, bitmap_find_space is called a lot more times, and takes up a much higher proportion of the time
+  - sweeping is slower than marking on both targets but even more so in Wasm (1.7 * mark rather than 1.55 * mark)
+    - Going 64-bit for sweep takes us from 87.1 to 56.7! 35% faster!
+
 - fix elm-spa-example
+
   - it keeps trying to grow the heap larger and larger. Crashes at 2GB.
   - It's getting into an infinite loop decoding a JSON response with a Time.Posix.
   - Time lib is broken. Uses 32-bit Int for 41-bit values. Need to make it Float instead.
@@ -9,15 +16,70 @@
     - The come up with a proper way to structure them etc.
 
 - logging improvements
+
   - use flags and log levels and stuff
 
 - modulo cons
   - would this make the language test easier to debug by shrinking the stack a bit?
   - meh, probably doesn't _really_ improve much
 
-- timers for grow_heap
+# Performance profiling
 
-- better timers
+GC_stack_push_value dominates for Wasm! Though Wasm has a lot more overhead, and this is a quick function. Could do a specific test on it to measure overhead?
+bitmap_find_space is _way_ slower than marking for Wasm but about the same in native => 64 bit is a big win?
+
+
+Performance profile
+===================
+      Total    Average    Hits   Function          Line  Code
+  94.939999   0.000480  197593        GC_allocate    58  GC_stack_push_value(alloc)
+  88.835000  12.690714       7        GC_allocate    25  GC_collect_minor()
+  56.710000   8.101429       7   GC_collect_minor   134  sweep(&state->heap, ignore_below)
+  46.160001   0.010101    4570        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+  32.040000   4.577143       7   GC_collect_minor   131  mark(state, ignore_below)
+   8.700000   8.700000       1   GC_collect_major   164  compact(state, ignore_below)
+   2.650000   2.650000       1   GC_collect_major   161  mark(state, ignore_below)
+   0.880000   0.880000       1   GC_collect_major   169  for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) { *p = 0; }
+   0.055000   0.007857       7   GC_collect_minor   146  sweepJsRefs(false)
+   0.040000   0.040000       1   GC_collect_major   170  bitmap_reset(&state->heap)
+   0.025000   0.003571       7        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+   0.005000   0.005000       1   GC_collect_major   172  sweepJsRefs(true)
+
+
+## Performance profile - Wasm
+
+| Total      | Average   | Hits   | Function         | Line | Code                                                                                     |
+| ---------- | --------- | ------ | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
+| 156.849989 | 0.000794  | 197593 | GC_allocate      | 58   | GC_stack_push_value(alloc)                                                               |
+| 133.230000 | 19.032857 | 7      | GC_allocate      | 25   | GC_collect_minor()                                                                       |
+| 87.060000  | 12.437143 | 7      | GC_collect_minor | 126  | sweep(&state->heap, ignore_below)                                                        |
+| 75.840000  | 0.016595  | 4570   | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
+| 46.040000  | 6.577143  | 7      | GC_collect_minor | 123  | mark(state, ignore_below)                                                                |
+| 11.190000  | 11.190000 | 1      | GC_collect_major | 156  | compact(state, ignore_below)                                                             |
+| 4.205000   | 4.205000  | 1      | GC_collect_major | 153  | mark(state, ignore_below)                                                                |
+| 1.035000   | 1.035000  | 1      | GC_collect_major | 161  | for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) { *p = 0; }            |
+| 0.065000   | 0.009286  | 7      | GC_collect_minor | 138  | sweepJsRefs(false)                                                                       |
+| 0.065000   | 0.009286  | 7      | GC_allocate      | 36   | alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch) |
+| 0.050000   | 0.050000  | 1      | GC_collect_major | 162  | bitmap_reset(&state->heap)                                                               |
+| 0.010000   | 0.010000  | 1      | GC_collect_major | 164  | sweepJsRefs(true)                                                                        |
+
+## Performance profile - Linux binary
+
+| Total      | Average    | Hits   | Function         | Line | Code                                                                                     |
+| ---------- | ---------- | ------ | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
+| 51,320,673 | 10,264,134 | 5      | GC_allocate      | 25   | GC_collect_minor()                                                                       |
+| 31,130,849 | 6,226,169  | 5      | GC_collect_minor | 126  | sweep(&state->heap, ignore_below)                                                        |
+| 20,184,126 | 4,036,825  | 5      | GC_collect_minor | 123  | mark(state, ignore_below)                                                                |
+| 19,836,411 | 14,639     | 1355   | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
+| 12,409,133 | 63         | 196695 | GC_allocate      | 58   | GC_stack_push_value(alloc)                                                               |
+| 6,151,482  | 6,151,482  | 1      | GC_collect_major | 156  | compact(state, ignore_below)                                                             |
+| 5,349,154  | 1,069,830  | 5      | GC_allocate      | 36   | alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch) |
+| 2,097,200  | 2,097,200  | 1      | GC_collect_major | 153  | mark(state, ignore_below)                                                                |
+| 1,845,973  | 1,845,973  | 1      | GC_collect_major | 161  | for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) { *p = 0; }            |
+| 103,722    | 103,722    | 1      | GC_allocate      | 41   | grow_heap(heap, alloc_words)                                                             |
+| 34,297     | 34,297     | 1      | GC_collect_major | 162  | bitmap_reset(&state->heap)                                                               |
+| 2,499      | 499        | 5      | GC_collect_minor | 138  | sweepJsRefs(false)                                                                       |
+| 637        | 637        | 1      | GC_collect_major | 164  | sweepJsRefs(true)                                                                        |
 
 ## GC size analysis
 
