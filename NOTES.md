@@ -1,7 +1,5 @@
 ## TODO
 
-- run language-test in Wasm
-
 - fix elm-spa-example
   - it keeps trying to grow the heap larger and larger. Crashes at 2GB.
   - It's getting into an infinite loop decoding a JSON response with a Time.Posix.
