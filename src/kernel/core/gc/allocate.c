@@ -20,9 +20,9 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
   size_t* new_alloc = alloc + alloc_words;
 
   if (new_alloc >= end_of_alloc_patch) {
-    alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch);
+    PERF_TIMED_STATEMENT(alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch));
     if (!alloc) {
-      GC_collect_minor();
+      PERF_TIMED_STATEMENT(GC_collect_minor());
 
       size_t new_gen_size = state->heap.end - state->end_of_old_gen;
       size_t used_size = state->n_marked_words;
@@ -33,29 +33,29 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
       bool should_grow = too_full || large_alloc;
 
       if (!should_grow) {
-        alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch);
+        PERF_TIMED_STATEMENT(alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch));
         should_grow = !alloc;  // handle failure due to fragmentation
       }
       if (should_grow) {
         size_t* old_end = heap->end;
-        grow_heap(heap, alloc_words);
+        PERF_TIMED_STATEMENT(grow_heap(heap, alloc_words));
         alloc = old_end;
         end_of_alloc_patch = heap->end;
-        safe_printf("grew heap by ");
-        print_ptr_diff_size(old_end, heap->end);
-        safe_printf("\n");
+        // safe_printf("grew heap by ");
+        // print_ptr_diff_size(old_end, heap->end);
+        // safe_printf("\n");
       }
     }
     new_alloc = alloc + alloc_words;
     state->end_of_alloc_patch = end_of_alloc_patch;
 
-    if (Debug_is_target_in_range(alloc, end_of_alloc_patch)) {
-      safe_printf("target is in allocation range %p -> %p", alloc, end_of_alloc_patch);
-    }
+    // if (Debug_is_target_in_range(alloc, end_of_alloc_patch)) {
+    //   safe_printf("target is in allocation range %p -> %p", alloc, end_of_alloc_patch);
+    // }
   }
 
   if (push_to_stack) {
-    GC_stack_push_value(alloc);
+    PERF_TIMED_STATEMENT(GC_stack_push_value(alloc));
   }
 
   state->next_alloc = new_alloc;

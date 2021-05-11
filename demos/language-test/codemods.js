@@ -9,7 +9,9 @@ const withKernelPath = orig.replace(find, replace);
 
 const withPrintVdom = withKernelPath.replace(
   'GC_collect_major();',
-  'GC_collect_major();\n    print_virtual_dom(gptr_author_project_Main_main);',
+  `GC_collect_major();
+    perf_print();
+    print_virtual_dom(gptr_author_project_Main_main);`,
 );
 
 const updated = withPrintVdom;

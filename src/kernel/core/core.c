@@ -13,3 +13,8 @@
 #include "gc/gc.c"
 #include "string-builder.c"
 #include "debug/debug.c"
+
+#if PERF_TIMER_ENABLED
+PerfCounter perf_counters[__COUNTER__];
+u32 perf_counters_len = ARRAY_LEN(perf_counters);
+#endif

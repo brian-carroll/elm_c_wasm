@@ -2,7 +2,7 @@ var wasmWrapper;
 Module = {
   arguments: typeof process !== 'undefined'
     ? process.argv.slice(2)
-    : new URL(window.location).searchParams.get('argv') || '',
+    : [new URL(window.location).searchParams.get('argv')],
   postRun: [],
   preRun: function () {
     const wasmBuffer = Module.HEAPU32.buffer;

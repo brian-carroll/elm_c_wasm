@@ -8,6 +8,9 @@
 #include "../../json/json.h" // for pretty printing JSON values
 
 #include "./log.c"
-#include "./debug-pretty.c"
-#include "./debug-gc.c"
+#include "./debug-c.c"
 #include "./debug-elm.c"
+
+#if PERF_TIMER_ENABLED
+#include "./debug-perf.c"
+#endif

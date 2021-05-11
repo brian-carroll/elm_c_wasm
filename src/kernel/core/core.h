@@ -1,10 +1,9 @@
-// Declarations of values defined in Elm code
-// that are referenced from C code
 #ifndef CORE_H
 #define CORE_H
 
 #include "../wrapper/wrapper.h"
 #include "types.h"
+#include "./debug/debug.h"
 
 #ifdef _WIN32
 // Ensure windows.h is included very early in compilation
@@ -72,44 +71,6 @@ extern Closure Char_toCode;
 
 // =========================================
 
-#if TARGET_64BIT
-#define FORMAT_HEX "%016zx"
-#define FORMAT_PTR "%16p"
-#define FORMAT_PTR_LEN 16
-#else
-#define FORMAT_HEX "%08zx"
-#define FORMAT_PTR "%8p"
-#define FORMAT_PTR_LEN 8
-#endif
-
-#define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->end <= (size_t*)p)
-
-void Debug_pretty(const char* label, void* p);
-void Debug_print_offset(const char* label, void* p);
-bool Debug_is_target_addr(void* p);
-bool Debug_is_target_in_range(void* from, void* to);
-extern char* Debug_ctors[];
-extern char* Debug_fields[];
-extern char* Debug_jsValues[];
-extern int Debug_ctors_size;
-extern int Debug_fields_size;
-extern int Debug_jsValues_size;
-char* Debug_evaluator_name(void*);
-extern Closure Debug_toString;
-extern Closure Debug_log;
-extern Closure Debug_todo;
-
-void Debug_pause();
-
-#define LOG_ALWAYS 0x01
-#define LOG_GC 0x02
-#define LOG_GC_MARK 0x04
-#define LOG_GC_COMPACT 0x08
-#define LOG_GC_ALLOCATE 0x10
-
-#ifndef LOG_FLAGS
-#define LOG_FLAGS LOG_ALWAYS
-#endif
 
 bool is_marked(void* p);
 void print_value(void* p);

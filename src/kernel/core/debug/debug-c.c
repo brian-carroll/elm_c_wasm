@@ -374,34 +374,6 @@ void print_mem_size(size_t words) {
   safe_printf("%s", buf);
 }
 
-#if PERF_TIMER_ENABLED
-void print_gc_perf(void* untyped_perf_data, bool major) {
-  struct gc_perf_data* perf_data = untyped_perf_data;
-  char size_before[20];
-  char size_after[20];
-  format_mem_size(size_before, sizeof(size_before), perf_data->size);
-  format_ptr_diff_size(
-      size_after, sizeof(size_after), gc_state.heap.start, gc_state.next_alloc);
-
-  bool dummy = true;
-  if (dummy) safe_printf("GC performance:\n");
-  if (dummy) safe_printf("  before:  %s\n", size_before);
-  if (dummy) safe_printf("  after:   %s\n", size_after);
-  if (dummy)
-    safe_printf(
-        "  mark:    %5lld k cycles\n", (perf_data->marked - perf_data->start) / 1000);
-  if (major)
-    safe_printf(
-        "  compact: %5lld k cycles\n", (perf_data->compacted - perf_data->marked) / 1000);
-  if (dummy)
-    safe_printf("  sweep:   %5lld k cycles\n",
-        (perf_data->swept - (major ? perf_data->compacted : perf_data->marked)) / 1000);
-  if (major)
-    safe_printf(
-        "  jsRefs:  %5lld k cycles\n", (perf_data->jsRefs - perf_data->swept) / 1000);
-}
-#endif
-
 
 // =======================================================================
 //

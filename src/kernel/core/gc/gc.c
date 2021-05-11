@@ -44,11 +44,6 @@ void (*gc_test_mark_callback)();
 #define TEST_MARK_CALLBACK()
 #endif
 
-#if PERF_TIMER_ENABLED
-struct gc_perf_data perf_data;
-#endif
-
-
 GcState gc_state;
 
 /* ====================================================
@@ -123,20 +118,14 @@ void GC_collect_minor() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->end_of_old_gen;
 
-  safe_printf("\nStarting minor GC from %p\n", ignore_below);
-  PERF_START();
+  // safe_printf("\nStarting minor GC from %p\n", ignore_below);
 
-  mark(state, ignore_below);
-  PERF_TIMER(marked);
+  PERF_TIMED_STATEMENT(mark(state, ignore_below));
   TEST_MARK_CALLBACK();
 
-  sweep(&state->heap, ignore_below);
-  PERF_TIMER(swept);
+  PERF_TIMED_STATEMENT(sweep(&state->heap, ignore_below));
 
-  // PRINT_BITMAP();
-  // print_heap();
-
-  {
+  if (0) {
     size_t new_gen_size = state->heap.end - ignore_below;
     size_t used = state->n_marked_words;
     f32 percent_marked = (100.0 * used) / (f32)new_gen_size;
@@ -146,9 +135,7 @@ void GC_collect_minor() {
     format_mem_size(available, sizeof(available), new_gen_size);
     safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
   }
-  sweepJsRefs(false);
-  PERF_TIMER(jsRefs);
-  PERF_TIMER_PRINT_MINOR();
+  PERF_TIMED_STATEMENT(sweepJsRefs(false));
 }
 
 
@@ -161,37 +148,30 @@ void GC_collect_major() {
   size_t* ignore_below = state->heap.start;
 
   safe_printf("\nStarting major GC\n");
-  PERF_START();
 
   stack_clear();
-  mark(state, ignore_below);
-  PERF_TIMER(marked);
+  PERF_TIMED_STATEMENT(mark(state, ignore_below));
   TEST_MARK_CALLBACK();
 
-  compact(state, ignore_below);
-  PERF_TIMER(compacted);
+  PERF_TIMED_STATEMENT(compact(state, ignore_below));
 
-  // sweep
+  PERF_TIMED_STATEMENT(
   for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) {
     *p = 0;
-  }
-  bitmap_reset(&state->heap);
-  PERF_TIMER(swept);
+  });
+  PERF_TIMED_STATEMENT(bitmap_reset(&state->heap));
 
-  sweepJsRefs(true);
-  PERF_TIMER(jsRefs);
+  PERF_TIMED_STATEMENT(sweepJsRefs(true));
 
   size_t used = state->next_alloc - state->heap.start;
   size_t available = state->heap.end - state->heap.start;
-  safe_printf("Major GC: %zd kB used, %zd kb available\n",
-      used * SIZE_UNIT / 1024,
-      available * SIZE_UNIT / 1024);
+  // safe_printf("Major GC: %zd kB used, %zd kb available\n",
+      // used * SIZE_UNIT / 1024,
+      // available * SIZE_UNIT / 1024);
 
   if (used * 2 > available) {
     grow_heap(&state->heap, 0);
   }
-
-  PERF_TIMER_PRINT_MAJOR();
 }
 
 

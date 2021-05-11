@@ -119,7 +119,7 @@ $(DIST)/bin/test: $(BIN_OBJ)
 # WebAssembly module
 #----------------------------------------------
 
-$(BUILD)/wasm/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/gc/*.c $(KERNEL)/core/gc/*.h
+$(BUILD)/wasm/core.o: $(KERNEL)/core/*.c $(KERNEL)/core/*.h $(KERNEL)/core/*/*.c $(KERNEL)/core/*/*.h
 	emcc $(CFLAGS) -c $(KERNEL)/core/core.c -o $@
 
 $(BUILD)/wasm/elm-test.o: $(KERNEL)/elm-test/*.c

@@ -84,65 +84,7 @@ void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter* iter);
 size_t* bitmap_find_space(GcHeap* heap, size_t* start, size_t min_size, size_t** end_of_space);
 
 size_t child_count(ElmValue* v);
-bool sanity_check(void* v);
 
-
-#if !defined(DEBUG) || defined(__EMSCRIPTEN__)
-#define PERF_TIMER_ENABLED 0
-#define PERF_START()
-#define PERF_TIMER(field)
-#define PERF_TIMER_PRINT_MINOR()
-#define PERF_TIMER_PRINT_MAJOR()
-#else
-#define PERF_TIMER_ENABLED 1
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-
-/*
-TODO:
-  - Support an arbitrary number of counters
-  - Have an array of counter structs
-  - __COUNTER__ for the array index
-  - Create macros BEGIN_TIMED_BLOCK and END_TIMED_BLOCK
-    - call begin and end functions with marcro args
-    - Put identifying info in the counter struct __FUNCTION__, __LINE__, __FILE__
-  - PERF_TIMER_PRINT
-
-  Wasm
-  emscripten_performance_now
-
-  Windows
-  QueryPerformanceCounter https://docs.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter
-  LARGE_INTEGER (64)
-
-  Linux
-  gettimeofday (based on tsc)
-
-*/
-
-struct gc_perf_data {
-  size_t size;
-  u64 start;
-  u64 marked;
-  u64 swept;
-  u64 compacted;
-  u64 jsRefs;
-};
-
-extern struct gc_perf_data perf_data;
-
-#define PERF_START()           \
-  perf_data.start = __rdtsc(); \
-  perf_data.size = (gc_state.next_alloc - gc_state.heap.start)
-
-#define PERF_TIMER(field) perf_data.field = __rdtsc()
-
-#define PERF_TIMER_PRINT_MINOR() print_gc_perf(&perf_data, false)
-#define PERF_TIMER_PRINT_MAJOR() print_gc_perf(&perf_data, true)
-
-#endif
+#define IS_OUTSIDE_HEAP(p) (heap->start > (size_t*)p || heap->end <= (size_t*)p)
 
 #endif

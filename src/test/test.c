@@ -258,6 +258,11 @@ int main(int argc, char** argv) {
   safe_printf("Native Binary Tests\n");
   safe_printf("===================\n");
 #endif
+  safe_printf("argument list: ");
+  for (int i = 1; i < argc; i++) {
+    safe_printf("'%s' ", argv[i]);
+  }
+  safe_printf("\n");
 
   test_all(types, utils, basics, string, chr, list, debug, json, gc);
   int exit_code;
