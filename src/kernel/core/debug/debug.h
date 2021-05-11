@@ -66,7 +66,7 @@ bool sanity_check(void* v);
 #include <emscripten.h>
 #define PERF_GET_TIME() emscripten_get_now()
 typedef f64 PerfTime;
-#define PERF_FORMAT "%'10lf"
+#define PERF_FORMAT "%'11lf"
 #elif _MSC_VER
 #include <intrin.h>
 #define PERF_GET_TIME() __rdtsc()
