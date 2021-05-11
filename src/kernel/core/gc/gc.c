@@ -94,21 +94,39 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
 /* ====================================================
 
-                COLLECT
+                SWEEP
 
    ==================================================== */
 
+void sweep_space(size_t* start_of_space, size_t* end_of_space) {
+  size_t* w = start_of_space;
+  if (!TARGET_64BIT && ((size_t)w & 7) && (w < end_of_space)) {
+    *w++ = 0;
+  }
+  u64* p = (u64*)w;
+  for (; p < (u64*)(end_of_space - 1); p++) {
+    *p = 0;
+  }
+  for (w = (size_t*)p; w < end_of_space; w++) {
+    *w = 0;
+  }
+}
+
 void sweep(GcHeap* heap, size_t* start) {
   size_t* end_of_space = start;
+  size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
   for (;;) {
     size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
     if (!start_of_space) break;
-    // safe_printf("sweeping %p -> %p\n", start_of_space, end_of_space);
-    for (size_t* p = start_of_space; p < end_of_space; p++) {
-      *p = 0;
-    }
+    sweep_space(start_of_space, end_of_space);
   }
 }
+
+/* ====================================================
+
+                COLLECT
+
+   ==================================================== */
 
 /**
  * Minor collection
@@ -155,10 +173,8 @@ void GC_collect_major() {
 
   PERF_TIMED_STATEMENT(compact(state, ignore_below));
 
-  PERF_TIMED_STATEMENT(
-  for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) {
-    *p = 0;
-  });
+  PERF_TIMED_STATEMENT(sweep_space(state->end_of_old_gen, state->heap.end));
+
   PERF_TIMED_STATEMENT(bitmap_reset(&state->heap));
 
   PERF_TIMED_STATEMENT(sweepJsRefs(true));
@@ -166,8 +182,8 @@ void GC_collect_major() {
   size_t used = state->next_alloc - state->heap.start;
   size_t available = state->heap.end - state->heap.start;
   // safe_printf("Major GC: %zd kB used, %zd kb available\n",
-      // used * SIZE_UNIT / 1024,
-      // available * SIZE_UNIT / 1024);
+  // used * SIZE_UNIT / 1024,
+  // available * SIZE_UNIT / 1024);
 
   if (used * 2 > available) {
     grow_heap(&state->heap, 0);
