@@ -5,6 +5,7 @@
   - In wasm, bitmap_find_space is called a lot more times, and takes up a much higher proportion of the time
   - sweeping is slower than marking on both targets but even more so in Wasm (1.7 * mark rather than 1.55 * mark)
     - Going 64-bit for sweep takes us from 87.1 to 56.7! 35% faster!
+    - But also, it's even faster if you don't do it, and we don't need to!
 
 - fix elm-spa-example
 
@@ -26,24 +27,9 @@
 # Performance profiling
 
 GC_stack_push_value dominates for Wasm! Though Wasm has a lot more overhead, and this is a quick function. Could do a specific test on it to measure overhead?
+  - just take out the measurement and check effect on the timing of the higher-scope stuff
 bitmap_find_space is _way_ slower than marking for Wasm but about the same in native => 64 bit is a big win?
 
-
-Performance profile
-===================
-      Total    Average    Hits   Function          Line  Code
-  94.939999   0.000480  197593        GC_allocate    58  GC_stack_push_value(alloc)
-  88.835000  12.690714       7        GC_allocate    25  GC_collect_minor()
-  56.710000   8.101429       7   GC_collect_minor   134  sweep(&state->heap, ignore_below)
-  46.160001   0.010101    4570        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
-  32.040000   4.577143       7   GC_collect_minor   131  mark(state, ignore_below)
-   8.700000   8.700000       1   GC_collect_major   164  compact(state, ignore_below)
-   2.650000   2.650000       1   GC_collect_major   161  mark(state, ignore_below)
-   0.880000   0.880000       1   GC_collect_major   169  for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) { *p = 0; }
-   0.055000   0.007857       7   GC_collect_minor   146  sweepJsRefs(false)
-   0.040000   0.040000       1   GC_collect_major   170  bitmap_reset(&state->heap)
-   0.025000   0.003571       7        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
-   0.005000   0.005000       1   GC_collect_major   172  sweepJsRefs(true)
 
 
 ## Performance profile - Wasm

@@ -98,6 +98,8 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
    ==================================================== */
 
+#if GC_DO_SWEEP
+
 void sweep_space(size_t* start_of_space, size_t* end_of_space) {
   size_t* w = start_of_space;
   if (!TARGET_64BIT && ((size_t)w & 7) && (w < end_of_space)) {
@@ -112,6 +114,8 @@ void sweep_space(size_t* start_of_space, size_t* end_of_space) {
   }
 }
 
+// Sweep up the garbage by writing zeros to all the unused spaces in the heap
+// This is not actually necessary, it's just nice for debug
 void sweep(GcHeap* heap, size_t* start) {
   size_t* end_of_space = start;
   size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
@@ -121,6 +125,8 @@ void sweep(GcHeap* heap, size_t* start) {
     sweep_space(start_of_space, end_of_space);
   }
 }
+
+#endif
 
 /* ====================================================
 
@@ -141,7 +147,9 @@ void GC_collect_minor() {
   PERF_TIMED_STATEMENT(mark(state, ignore_below));
   TEST_MARK_CALLBACK();
 
+#if GC_DO_SWEEP
   PERF_TIMED_STATEMENT(sweep(&state->heap, ignore_below));
+#endif
 
   if (0) {
     size_t new_gen_size = state->heap.end - ignore_below;
@@ -173,7 +181,9 @@ void GC_collect_major() {
 
   PERF_TIMED_STATEMENT(compact(state, ignore_below));
 
+#if GC_DO_SWEEP
   PERF_TIMED_STATEMENT(sweep_space(state->end_of_old_gen, state->heap.end));
+#endif
 
   PERF_TIMED_STATEMENT(bitmap_reset(&state->heap));
 

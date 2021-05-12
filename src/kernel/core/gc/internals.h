@@ -21,6 +21,7 @@
 #define GC_DIV_ROUND_UP(num, den) ((num + den - 1) / den)
 #define GC_ROUND_UP(num, pow2) ((num & (-(size_t)pow2)) + pow2)
 #define GC_STACK_MAP_SIZE (10 * 1024)
+#define GC_DO_SWEEP 0
 
 #define ALL_ONES -1
 
