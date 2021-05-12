@@ -34,20 +34,37 @@ bitmap_find_space is _way_ slower than marking for Wasm but about the same in na
 
 ## Performance profile - Wasm
 
-| Total      | Average   | Hits   | Function         | Line | Code                                                                                     |
-| ---------- | --------- | ------ | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
-| 156.849989 | 0.000794  | 197593 | GC_allocate      | 58   | GC_stack_push_value(alloc)                                                               |
-| 133.230000 | 19.032857 | 7      | GC_allocate      | 25   | GC_collect_minor()                                                                       |
-| 87.060000  | 12.437143 | 7      | GC_collect_minor | 126  | sweep(&state->heap, ignore_below)                                                        |
-| 75.840000  | 0.016595  | 4570   | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
-| 46.040000  | 6.577143  | 7      | GC_collect_minor | 123  | mark(state, ignore_below)                                                                |
-| 11.190000  | 11.190000 | 1      | GC_collect_major | 156  | compact(state, ignore_below)                                                             |
-| 4.205000   | 4.205000  | 1      | GC_collect_major | 153  | mark(state, ignore_below)                                                                |
-| 1.035000   | 1.035000  | 1      | GC_collect_major | 161  | for (size_t* p = state->end_of_old_gen; p < state->heap.end; p++) { *p = 0; }            |
-| 0.065000   | 0.009286  | 7      | GC_collect_minor | 138  | sweepJsRefs(false)                                                                       |
-| 0.065000   | 0.009286  | 7      | GC_allocate      | 36   | alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch) |
-| 0.050000   | 0.050000  | 1      | GC_collect_major | 162  | bitmap_reset(&state->heap)                                                               |
-| 0.010000   | 0.010000  | 1      | GC_collect_major | 164  | sweepJsRefs(true)                                                                        |
+Um, this goes the opposite way around from what I'd expected!
+64-bit bitmap in Wasm actually slows things down!
+Because of having more work to convert from pointer to iterator and back?
+I wonder what happens for 8 bits?
+
+Performance profile - Wasm, 64-bit bitmap
+===================
+      Total    Average    Hits   Function          Line  Code
+  57.555000   0.012594    4570        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+  31.360000   4.480000       7        GC_allocate    25  GC_collect_minor()
+  31.315000   4.473571       7   GC_collect_minor   147  mark(state, ignore_below)
+   9.750000   9.750000       1   GC_collect_major   182  compact(state, ignore_below)
+   2.595000   2.595000       1   GC_collect_major   179  mark(state, ignore_below)
+   0.025000   0.025000       1   GC_collect_major   188  bitmap_reset(&state->heap)
+   0.025000   0.003571       7        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+   0.025000   0.003571       7   GC_collect_minor   164  sweepJsRefs(false)
+   0.000000   0.000000       1   GC_collect_major   190  sweepJsRefs(true)
+
+Performance profile - Wasm
+===================
+      Total    Average    Hits   Function          Line  Code
+  45.045003   0.009857    4570        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+  31.490000   4.498571       7        GC_allocate    25  GC_collect_minor()
+  31.440000   4.491429       7   GC_collect_minor   147  mark(state, ignore_below)
+   8.505000   8.505000       1   GC_collect_major   182  compact(state, ignore_below)
+   2.580000   2.580000       1   GC_collect_major   179  mark(state, ignore_below)
+   0.050000   0.007143       7   GC_collect_minor   164  sweepJsRefs(false)
+   0.040000   0.040000       1   GC_collect_major   188  bitmap_reset(&state->heap)
+   0.035000   0.005000       7        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+   0.000000   0.000000       1   GC_collect_major   190  sweepJsRefs(true)
+
 
 ## Performance profile - Linux binary
 
