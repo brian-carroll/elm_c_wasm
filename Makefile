@@ -131,7 +131,7 @@ $(BUILD)/wasm/json.o: $(KERNEL)/json/*.c $(KERNEL)/json/*.h
 $(BUILD)/wasm/wrapper.o: $(KERNEL)/wrapper/*.c $(KERNEL)/wrapper/*.h
 	emcc $(CFLAGS) -c $(KERNEL)/wrapper/wrapper.c -o $@
 
-$(BUILD)/wasm/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/json/*.c
+$(BUILD)/wasm/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/*/*.c
 	emcc $(CFLAGS) -c $(TEST)/test.c -o $@
 
 
