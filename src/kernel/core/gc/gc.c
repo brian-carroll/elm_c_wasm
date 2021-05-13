@@ -62,11 +62,22 @@ void reset_state(GcState* state) {
   stack_clear();
 }
 
+#if PERF_TIMER_ENABLED
+void perf_get_baseline() {
+  for (int i = 0; i < 3000000; i++) {}
+}
+#endif
+
 // Call exactly once on program startup
 int GC_init() {
   GcState* state = &gc_state;  // local reference for debugger to see
   int err = init_heap(&state->heap);
   reset_state(state);
+
+#if PERF_TIMER_ENABLED
+  PERF_TIMED_STATEMENT(perf_get_baseline());
+#endif
+
   return err;
 }
 
