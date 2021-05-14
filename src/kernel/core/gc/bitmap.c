@@ -1,5 +1,5 @@
-#include "internals.h"
 #include "../types.h"
+#include "internals.h"
 
 /* ====================================================
 
@@ -50,7 +50,7 @@ size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
 
   if (first_bmp_index == last_bmp_index) {
     u64 bitmask = make_bitmask(first_bit, last_bit);
-    bitmask &= (bitmask >> 1); // clear highest bit (if any are set)
+    bitmask &= (bitmask >> 1);  // clear highest bit (if any are set)
     u64 masked = bitmap[first_bmp_index] & bitmask;
     size_t live_count = popcount(masked);
     size_t dead_count = last_bit - first_bit - live_count;
@@ -64,7 +64,7 @@ size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
     }
 
     u64 last_mask = make_bitmask(0, last_bit);
-    last_mask &= (last_mask >> 1); // clear highest bit (if any are set)
+    last_mask &= (last_mask >> 1);  // clear highest bit (if any are set)
     live_count += popcount(bitmap[last_bmp_index] & last_mask);
     size_t dead_count = last - first - live_count;
 
@@ -139,20 +139,37 @@ size_t* bitmap_find_space(
   if (start >= heap->end) {
     return NULL;
   }
-  GcBitmapIter iter = ptr_to_bitmap_iter(heap, start);
+  size_t start_index = (start - heap->start) / 64;
+  u64* bitmap = heap->bitmap;
+  size_t i = start_index + 1;
 
   for (;;) {
-    bitmap_find(heap, false, &iter);
-    size_t* next_available = bitmap_iter_to_ptr(heap, iter);
-    if (next_available >= heap->end) {
+    for (; i < heap->bitmap_size; i++) {
+      if (!bitmap[i]) break;
+    }
+    if (i >= heap->bitmap_size) {
       return NULL;
     }
+    size_t* free_ptr = heap->start + i * 64;
 
-    bitmap_find(heap, true, &iter);
-    size_t* next_occupied = bitmap_iter_to_ptr(heap, iter);
-    if (next_occupied - next_available >= min_size) {
-      *end_of_space = next_occupied;
-      return next_available;
+    for (i++; i < heap->bitmap_size; i++) {
+      if (bitmap[i]) break;
     }
+
+    size_t* live_ptr;
+    if (i >= heap->bitmap_size) {
+      live_ptr = heap->end;
+      if (live_ptr - free_ptr < min_size) {
+        return NULL;
+      }
+    } else {
+      live_ptr = heap->start + i * 64;
+      if (live_ptr - free_ptr < min_size) {
+        continue;
+      }
+    }
+
+    *end_of_space = live_ptr;
+    return free_ptr;
   }
 }
