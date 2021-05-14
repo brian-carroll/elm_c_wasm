@@ -1,20 +1,18 @@
 ## TODO
 
-- 64-bit stuff for Wasm
-
-  - In wasm, bitmap_find_space is called a lot more times, and takes up a much higher proportion of the time
-  - sweeping is slower than marking on both targets but even more so in Wasm (1.7 * mark rather than 1.55 * mark)
-    - Going 64-bit for sweep takes us from 87.1 to 56.7! 35% faster!
-    - But also, it's even faster if you don't do it, and we don't need to!
-
-- fix elm-spa-example
-
-  - it keeps trying to grow the heap larger and larger. Crashes at 2GB.
-  - It's getting into an infinite loop decoding a JSON response with a Time.Posix.
-  - Time lib is broken. Uses 32-bit Int for 41-bit values. Need to make it Float instead.
-    - Replacing official Elm code rather than JS code. Haven't actually done this much! Would also unlock some other things.
-    - Maybe I should look at jailbreaking the kernel code and copying libs
-    - The come up with a proper way to structure them etc.
+- Speed up bitmap_find_space
+  - Perf measurements are too variable, try racing different impementations against each other directly
+  - Try searching in coarse chunks of 64 mark bits
+    - No fiddling about with tiny amounts of space, or finding exactly the *first* free address. Who cares?
+    - It'll cost some fragmentation but at 25% to 50% heap utilisation, there'll be enough free space
+  - optimisation setup
+    - Make lots of versions of the function, keeping the old one as reference
+    - make a test for it
+    - mark_words some pattern in the heap after resetting it
+    - get the first version to find all the gaps
+    - get the 2nd one to do the same
+    - loop that 100x
+    - use the perf timer stuff - it has to be in core, so do the full version, not the statement macro
 
 - logging improvements
 
