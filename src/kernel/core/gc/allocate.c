@@ -55,7 +55,7 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
   }
 
   if (push_to_stack) {
-    PERF_TIMED_STATEMENT(GC_stack_push_value(alloc));
+    GC_stack_push_value(alloc);
   }
 
   state->next_alloc = new_alloc;

@@ -59,8 +59,8 @@ bool is_marked(void* p) {
   size_t* pword = (size_t*)p;
   if (pword < state->heap.start || pword > state->heap.end) return true;
   size_t slot = pword - state->heap.start;
-  size_t word = slot / GC_WORD_BITS;
-  size_t bit = slot % GC_WORD_BITS;
+  size_t word = slot / 64;
+  size_t bit = slot & 63;
   size_t mask = (size_t)1 << bit;
   size_t masked = state->heap.bitmap[word] & mask;
   size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
@@ -250,20 +250,22 @@ void print_heap() {
 
 void print_bitmap(const char* function, const char* filename, int line_no) {
   GcHeap* heap = &gc_state.heap;
-  size_t* bitmap = gc_state.heap.bitmap;
+  u64* bitmap = gc_state.heap.bitmap;
 
   // find last non-zero word in the bitmap
   size_t last_word = heap->bitmap_size;
-  while (bitmap[--last_word] == 0)
+  while (bitmap[--last_word] == 0 && last_word > 0)
     ;
 
   safe_printf("Bitmap at %s:%d (%s)\n", filename, line_no, function);
   size_t* p = heap->start;
   for (size_t word = 0; word <= last_word && word < heap->bitmap_size;
-       word++, p += GC_WORD_BITS) {
-    size_t value = bitmap[word];
-    char s[GC_WORD_BITS + 1];
-    for (size_t bit = 0, mask = 1; bit < GC_WORD_BITS; bit++, mask <<= 1) {
+       word++, p += 64) {
+    u64 value = bitmap[word];
+    char s[65];
+    size_t bit = 0;
+    u64 mask = 1;
+    for (; bit < 64; bit++, mask <<= 1) {
       if (value & mask) {
         s[bit] = 'X';
       } else {
@@ -271,7 +273,7 @@ void print_bitmap(const char* function, const char* filename, int line_no) {
         s[bit] = (*addr) ? '|' : '-';
       }
     }
-    s[GC_WORD_BITS] = 0;
+    s[64] = '\0';
     safe_printf("%3zd | " FORMAT_PTR " %s\n", word, p, s);
   }
   safe_printf("\n");

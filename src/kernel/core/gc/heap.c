@@ -14,8 +14,8 @@ static void* get_initial_system_memory(size_t bytes);
 
 #ifdef _WIN32
 
-#include <windows.h>
 #include <memoryapi.h>
+#include <windows.h>
 
 
 #define GC_SYSTEM_RESERVED_BYTES (128 * MB)
@@ -35,15 +35,18 @@ void ErrorExit(const char* calling_func, int line_no) {
 
 static void* get_initial_system_memory(size_t bytes) {
   assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
-  u8* reserved = VirtualAlloc(NULL, GC_SYSTEM_RESERVED_BYTES, MEM_RESERVE, PAGE_READWRITE);
+  u8* reserved =
+      VirtualAlloc(NULL, GC_SYSTEM_RESERVED_BYTES, MEM_RESERVE, PAGE_READWRITE);
   if (!reserved) {
     ErrorExit(__FUNCTION__, __LINE__);
   }
 
   // We need to commit one chunk at a time
   // VirtualFree can only be called with an address we explicitly committed
-  for (size_t offset = 0; offset < GC_INITIAL_HEAP_MB * MB; offset += GC_SYSTEM_MEM_CHUNK) {
-    if (!VirtualAlloc(reserved + offset, GC_SYSTEM_MEM_CHUNK, MEM_COMMIT, PAGE_READWRITE)) {
+  for (size_t offset = 0; offset < GC_INITIAL_HEAP_MB * MB;
+       offset += GC_SYSTEM_MEM_CHUNK) {
+    if (!VirtualAlloc(
+            reserved + offset, GC_SYSTEM_MEM_CHUNK, MEM_COMMIT, PAGE_READWRITE)) {
       ErrorExit(__FUNCTION__, __LINE__);
     }
   }
@@ -59,15 +62,20 @@ void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   size_t old_total_bytes = end - start;
 
   if (new_total_bytes > old_total_bytes) {
-    // safe_printf("resize_system_memory: grow from %zx to %zx\n", old_total_bytes, new_total_bytes);
-    for (size_t offset = old_total_bytes; offset < new_total_bytes; offset += GC_SYSTEM_MEM_CHUNK) {
-      if (!VirtualAlloc(start + offset, GC_SYSTEM_MEM_CHUNK, MEM_COMMIT, PAGE_READWRITE)) {
+    // safe_printf("resize_system_memory: grow from %zx to %zx\n", old_total_bytes,
+    // new_total_bytes);
+    for (size_t offset = old_total_bytes; offset < new_total_bytes;
+         offset += GC_SYSTEM_MEM_CHUNK) {
+      if (!VirtualAlloc(
+              start + offset, GC_SYSTEM_MEM_CHUNK, MEM_COMMIT, PAGE_READWRITE)) {
         ErrorExit(__FUNCTION__, __LINE__);
       }
     }
   } else if (new_total_bytes < old_total_bytes) {
-    // safe_printf("resize_system_memory: shrink from %zx to %zx\n", old_total_bytes, new_total_bytes);
-    for (size_t offset = new_total_bytes; offset < old_total_bytes; offset += GC_SYSTEM_MEM_CHUNK) {
+    // safe_printf("resize_system_memory: shrink from %zx to %zx\n", old_total_bytes,
+    // new_total_bytes);
+    for (size_t offset = new_total_bytes; offset < old_total_bytes;
+         offset += GC_SYSTEM_MEM_CHUNK) {
       if (!VirtualFree(start + offset, GC_SYSTEM_MEM_CHUNK, MEM_DECOMMIT)) {
         ErrorExit(__FUNCTION__, __LINE__);
       }
@@ -104,39 +112,36 @@ void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
 
 
 void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes) {
-  size_t heap_words = bytes / SIZE_UNIT;
+  size_t heap_words = bytes / sizeof(void*);
   size_t* system_end = start + heap_words;
 
   // This calculation is in bytes, not words, to prevent
   // truncation errors for smaller blocks (<1 word of bitmap)
-  size_t bytes_per_word = sizeof(void*);
-  size_t heap_bytes = heap_words * bytes_per_word;
-
-  size_t bitmap_bytes_per_block = GC_BLOCK_BYTES / GC_WORD_BITS;
-  size_t offset_bytes_per_block = bytes_per_word;
+  size_t bitmap_bytes_per_block = GC_BLOCK_WORDS / 8; // 1 bit per heap word / 8 bits per byte
+  size_t offset_bytes_per_block = sizeof(void*);
   size_t block_plus_overhead_bytes =
       GC_BLOCK_BYTES + bitmap_bytes_per_block + offset_bytes_per_block;
 
   // A fractional block needs the overhead of a full block
-  size_t heap_blocks = GC_DIV_ROUND_UP(heap_bytes, block_plus_overhead_bytes);
+  size_t heap_blocks = GC_DIV_ROUND_UP(bytes, block_plus_overhead_bytes);
 
   size_t bitmap_bytes = heap_blocks * bitmap_bytes_per_block;
   size_t offset_bytes = heap_blocks * offset_bytes_per_block;
 
   // Now convert to words, rounding up
-  size_t bitmap_words = GC_DIV_ROUND_UP(bitmap_bytes, bytes_per_word);
-  size_t offset_words = GC_DIV_ROUND_UP(offset_bytes, bytes_per_word);
+  size_t bitmap_size = GC_DIV_ROUND_UP(bitmap_bytes, sizeof(u64));
+  size_t gc_temp_size = GC_DIV_ROUND_UP(offset_bytes, sizeof(void*));
 
   // fill out metadata from the top down
   heap->system_end = system_end;
 
-  heap->gc_temp_size = offset_words;
-  heap->gc_temp = system_end - offset_words;
+  heap->gc_temp_size = gc_temp_size;
+  heap->gc_temp = system_end - gc_temp_size;
 
-  heap->bitmap_size = bitmap_words;
-  heap->bitmap = heap->gc_temp - bitmap_words;
+  heap->bitmap_size = bitmap_size;
+  heap->bitmap = (u64*)heap->gc_temp - bitmap_size;
 
-  heap->end = heap->bitmap;
+  heap->end = (size_t*)heap->bitmap;
   heap->start = start;
 }
 

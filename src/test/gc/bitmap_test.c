@@ -32,7 +32,7 @@ char* gc_bitmap_next_test() {
   iter.index = 0;
   iter.mask = 1;
   stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %0zx",
+      "bitmap_next assertion %d from word %zd mask %016x",
       assertion++,
       iter.index,
       iter.mask);
@@ -42,7 +42,7 @@ char* gc_bitmap_next_test() {
   iter.index = 0;
   iter.mask = 2;
   stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %0zx",
+      "bitmap_next assertion %d from word %zd mask %016x",
       assertion++,
       iter.index,
       iter.mask);
@@ -52,7 +52,7 @@ char* gc_bitmap_next_test() {
   iter.index = 1;
   iter.mask = 1;
   stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %0zx",
+      "bitmap_next assertion %d from word %zd mask %016x",
       assertion++,
       iter.index,
       iter.mask);
@@ -62,7 +62,7 @@ char* gc_bitmap_next_test() {
   iter.index = 1;
   iter.mask = 2;
   stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %0zx",
+      "bitmap_next assertion %d from word %zd mask %016x",
       assertion++,
       iter.index,
       iter.mask);
@@ -71,15 +71,10 @@ char* gc_bitmap_next_test() {
 
   iter.index = 0;
   char* format_str;
-#if TARGET_64BIT
   iter.mask = 0x8000000000000000;
   format_str = "bitmap_next assertion %d from word %zd mask %016zx";
-#else
-  iter.mask = 0x80000000;
-  format_str = "bitmap_next assertion %d from word %zd mask %08zx";
-#endif
 
-  mu_assert("bitmap_next: highest bit is correctly set in test", (iter.mask << 1) == 0);
+  mu_expect_equal("bitmap_next: highest bit is correctly set in test", iter.mask << 1, 0);
   assertion++;
 
   stbsp_sprintf(gc_bitmap_next_test_str, format_str, assertion++, iter.index, iter.mask);
@@ -113,11 +108,11 @@ char* gc_dead_between_test() {
   result = bitmap_dead_between(heap, first, last);
   mu_expect_equal("bitmap_dead_between with 4 dead and 2 live", result, 4);
 
-  heap->bitmap[0] = -16; // 4 dead
+  heap->bitmap[0] = -16;  // 4 dead
   heap->bitmap[1] = -16;
   heap->bitmap[2] = -16;
-  first = heap->start + 2; // skip 2 dead slots
-  last = heap->start + (2 * GC_WORD_BITS) + 2; // skip 2 dead slots
+  first = heap->start + 2;            // skip 2 dead slots
+  last = heap->start + (2 * 64) + 2;  // skip 2 dead slots
 
   result = bitmap_dead_between(heap, first, last);
   mu_expect_equal("bitmap_dead_between across 3 bitmap words", result, 8);
@@ -177,7 +172,8 @@ void test_bitmap_find() {
     iter = start_iter;
     mark_words(&gc_state, p, 1);
     bitmap_find(heap, true, &iter);
-    mu_expect_equal(descriptions[i], bitmap_iter_to_ptr(heap, iter), p);
+    size_t* found = bitmap_iter_to_ptr(heap, iter);
+    mu_expect_equal(descriptions[i], found, p);
   }
 
   // Nothing to find
@@ -186,8 +182,7 @@ void test_bitmap_find() {
   bitmap_find(heap, true, &iter);
   size_t* actual = bitmap_iter_to_ptr(heap, iter);
   size_t* expected = heap->end;
-  mu_expect_equal(
-      "should return heap.end when nothing is marked", actual, expected);
+  mu_expect_equal("should return heap.end when nothing is marked", actual, expected);
 }
 
 

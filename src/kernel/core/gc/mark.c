@@ -20,37 +20,37 @@ bool mark_words(GcState* state, void* p_void, size_t size) {
   }
   assert(p + size <= heap->end);
 
-  size_t first_index = (size_t)(p - heap->start);
-  size_t first_word = first_index / GC_WORD_BITS;
-  size_t first_bit = first_index % GC_WORD_BITS;
+  size_t first_heap_index = (size_t)(p - heap->start);
+  size_t first_bmp_index = first_heap_index / 64;
+  size_t first_bit = first_heap_index & 63;
 
-  size_t last_index = first_index + (size - 1);  // requires size>0
-  size_t last_word = last_index / GC_WORD_BITS;
-  size_t last_bit = last_index % GC_WORD_BITS;
+  size_t last_heap_index = first_heap_index + (size - 1);  // requires size>0
+  size_t last_bmp_index = last_heap_index / 64;
+  size_t last_bit = last_heap_index & 63;
 
-  size_t* bitmap = heap->bitmap;
+  u64* bitmap = heap->bitmap;
   bool already_marked;
 
-  if (first_word == last_word) {
-    size_t bitmask = make_bitmask(first_bit, last_bit);
-    already_marked = !!(bitmap[first_word] & bitmask);
+  if (first_bmp_index == last_bmp_index) {
+    u64 bitmask = make_bitmask(first_bit, last_bit);
+    already_marked = !!(bitmap[first_bmp_index] & bitmask);
     if (!already_marked) {
       state->n_marked_words += size;
-      bitmap[first_word] |= bitmask;
+      bitmap[first_bmp_index] |= bitmask;
     }
   } else {
-    size_t first_mask = make_bitmask(first_bit, GC_WORD_BITS - 1);
-    already_marked = !!(bitmap[first_word] & first_mask);
+    u64 first_mask = make_bitmask(first_bit, 63);
+    already_marked = !!(bitmap[first_bmp_index] & first_mask);
     if (!already_marked) {
       state->n_marked_words += size;
-      bitmap[first_word] |= first_mask;
+      bitmap[first_bmp_index] |= first_mask;
 
       // Loop for values spanning >2 words in bitmap. Rare. ElmString only.
-      for (size_t word = first_word + 1; word < last_word; ++word) {
-        bitmap[word] = ALL_ONES;
+      for (size_t i = first_bmp_index + 1; i < last_bmp_index; ++i) {
+        bitmap[i] = ALL_ONES;
       }
 
-      bitmap[last_word] |= make_bitmask(0, last_bit);
+      bitmap[last_bmp_index] |= make_bitmask(0, last_bit);
     }
   }
   return already_marked;

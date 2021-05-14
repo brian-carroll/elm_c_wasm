@@ -1,4 +1,5 @@
 #include "internals.h"
+#include "../types.h"
 
 /* ====================================================
 
@@ -12,7 +13,7 @@
    ==================================================== */
 
 void bitmap_reset(GcHeap* heap) {
-  size_t* bitmap = heap->bitmap;
+  u64* bitmap = heap->bitmap;
   for (size_t i = 0; i < heap->bitmap_size; i++) {
     bitmap[i] = 0;
   }
@@ -31,42 +32,40 @@ int popcount(u64 word) {
   }
   return count;
 }
-#elif TARGET_64BIT
-#define popcount(w) __builtin_popcountll(w)
 #else
-#define popcount(w) __builtin_popcountl(w)
+#define popcount(w) __builtin_popcountll(w)
 #endif
 
 
 // Count garbage words between two heap pointers, using the bitmap
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
-  size_t* bitmap = heap->bitmap;
+  u64* bitmap = heap->bitmap;
 
-  size_t first_index = first - heap->start;
-  size_t first_word = first_index / GC_WORD_BITS;
-  size_t first_bit = first_index % GC_WORD_BITS;
-  size_t last_index = last - heap->start;
-  size_t last_word = last_index / GC_WORD_BITS;
-  size_t last_bit = last_index % GC_WORD_BITS;
+  size_t first_heap_index = first - heap->start;
+  size_t first_bmp_index = first_heap_index / 64;
+  size_t first_bit = first_heap_index % 64;
+  size_t last_heap_index = last - heap->start;
+  size_t last_bmp_index = last_heap_index / 64;
+  size_t last_bit = last_heap_index % 64;
 
-  if (first_word == last_word) {
-    size_t bitmask = make_bitmask(first_bit, last_bit);
+  if (first_bmp_index == last_bmp_index) {
+    u64 bitmask = make_bitmask(first_bit, last_bit);
     bitmask &= (bitmask >> 1); // clear highest bit (if any are set)
-    size_t masked = bitmap[first_word] & bitmask;
+    u64 masked = bitmap[first_bmp_index] & bitmask;
     size_t live_count = popcount(masked);
     size_t dead_count = last_bit - first_bit - live_count;
     return dead_count;
   } else {
-    size_t first_mask = make_bitmask(first_bit, GC_WORD_BITS - 1);
-    size_t live_count = popcount(bitmap[first_word] & first_mask);
+    u64 first_mask = make_bitmask(first_bit, 64 - 1);
+    size_t live_count = popcount(bitmap[first_bmp_index] & first_mask);
 
-    for (size_t word = first_word + 1; word < last_word; ++word) {
-      live_count += popcount(bitmap[word]);
+    for (size_t i = first_bmp_index + 1; i < last_bmp_index; ++i) {
+      live_count += popcount(bitmap[i]);
     }
 
-    size_t last_mask = make_bitmask(0, last_bit);
+    u64 last_mask = make_bitmask(0, last_bit);
     last_mask &= (last_mask >> 1); // clear highest bit (if any are set)
-    live_count += popcount(bitmap[last_word] & last_mask);
+    live_count += popcount(bitmap[last_bmp_index] & last_mask);
     size_t dead_count = last - first - live_count;
 
     return dead_count;
@@ -75,10 +74,10 @@ size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last) {
 
 
 // Make a mask to test selected bits in a bitmap word
-size_t make_bitmask(size_t first_bit, size_t last_bit) {
-  size_t mask = ALL_ONES;
-  mask <<= GC_WORD_BITS - 1 - last_bit;
-  mask >>= GC_WORD_BITS - 1 - (last_bit - first_bit);
+u64 make_bitmask(size_t first_bit, size_t last_bit) {
+  u64 mask = ALL_ONES;
+  mask <<= 63 - last_bit;
+  mask >>= 63 - (last_bit - first_bit);
   mask <<= first_bit;
   return mask;
 }
@@ -97,18 +96,17 @@ void bitmap_next(GcBitmapIter* iter) {
 GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr) {
   size_t heap_index = ptr - heap->start;
   GcBitmapIter iter = {
-      .index = heap_index / GC_WORD_BITS,
-      .mask = (size_t)1 << (heap_index % GC_WORD_BITS),
+      .index = heap_index / 64,
+      .mask = (u64)1 << (heap_index % 64),
   };
   return iter;
 }
 
 
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
-  size_t* ptr = heap->start + (iter.index * GC_WORD_BITS);
-  size_t mask = iter.mask;
+  size_t* ptr = heap->start + (iter.index * 64);
+  u64 mask = iter.mask;
 
-#if TARGET_64BIT
   size_t bit = 63;
   if (mask & 0x00000000FFFFFFFF) bit -= 32;
   if (mask & 0x0000FFFF0000FFFF) bit -= 16;
@@ -116,14 +114,6 @@ size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
   if (mask & 0x0F0F0F0F0F0F0F0F) bit -= 4;
   if (mask & 0x3333333333333333) bit -= 2;
   if (mask & 0x5555555555555555) bit -= 1;
-#else
-  size_t bit = 31;
-  if (mask & 0x0000FFFF) bit -= 16;
-  if (mask & 0x00FF00FF) bit -= 8;
-  if (mask & 0x0F0F0F0F) bit -= 4;
-  if (mask & 0x33333333) bit -= 2;
-  if (mask & 0x55555555) bit -= 1;
-#endif
 
   ptr += bit;
 
@@ -132,11 +122,6 @@ size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
   } else {
     return ptr;
   }
-}
-
-
-size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter) {
-  return heap->bitmap[iter.index] & iter.mask;
 }
 
 

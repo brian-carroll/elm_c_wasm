@@ -36,12 +36,15 @@ char* test_heap_layout() {
 
   for (size_t kb = 16; kb <= 1024; kb *= 2) {
     size_t bytes = kb * 1024;
-    size_t words = bytes / sizeof(void*);
 
     set_heap_layout(heap, original_start, bytes);
 
-    float percent_bitmap = (100.0 * heap->bitmap_size) / words;
-    float percent_temp = (100.0 * heap->gc_temp_size) / words;
+
+    size_t bitmap_bytes = heap->bitmap_size * sizeof(heap->bitmap[0]);
+    size_t gc_temp_bytes = heap->gc_temp_size * sizeof(heap->gc_temp[0]);
+
+    float percent_bitmap = (100.0 * bitmap_bytes) / bytes;
+    float percent_temp = (100.0 * gc_temp_bytes) / bytes;
 
     bool bitmap_ok = (sizeof(void*) == sizeof(u64))
                          ? (percent_bitmap > 1.5 && percent_bitmap < 1.6)

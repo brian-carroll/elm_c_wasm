@@ -17,7 +17,6 @@
 #define GC_BLOCK_WORDS 64
 #define GC_BLOCK_BYTES (GC_BLOCK_WORDS * sizeof(size_t))
 #define GC_BLOCK_MASK (-GC_BLOCK_BYTES)
-#define GC_WORD_BITS (sizeof(size_t) * 8)
 #define GC_DIV_ROUND_UP(num, den) ((num + den - 1) / den)
 #define GC_ROUND_UP(num, pow2) ((num & (-(size_t)pow2)) + pow2)
 #define GC_STACK_MAP_SIZE (10 * 1024)
@@ -28,7 +27,7 @@
 typedef struct {
   size_t* start;
   size_t* end;  // end of application heap area
-  size_t* bitmap;  // GC mark bits
+  u64* bitmap;  // GC mark bits
   size_t bitmap_size;
   size_t* gc_temp;  // GC internal working memory area
   size_t gc_temp_size;
@@ -41,8 +40,8 @@ typedef struct {
 } GcStackMap;
 
 typedef struct {
+  u64 mask;
   size_t index;
-  size_t mask;
 } GcBitmapIter;
 
 typedef struct {
@@ -77,10 +76,9 @@ void stack_enter(void* evaluator, Closure* c);
 void bitmap_reset(GcHeap*);
 void bitmap_next(GcBitmapIter* iter);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
-size_t make_bitmask(size_t first_bit, size_t last_bit);
+u64 make_bitmask(size_t first_bit, size_t last_bit);
 GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr);
 size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter);
-size_t bitmap_is_live_at(GcHeap* heap, GcBitmapIter iter);
 void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter* iter);
 size_t* bitmap_find_space(GcHeap* heap, size_t* start, size_t min_size, size_t** end_of_space);
 
