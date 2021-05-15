@@ -77,6 +77,49 @@ bitmap_find_space was the top item on the list, now it's down in the noise! Holy
 | 0.001812     | 0.001812     | 0.020000     | 1    | GC_collect_major | 199  | bitmap_reset(&state->heap)                                                               |
 | 0.000453     | 0.000453     | 0.005000     | 1    | GC_collect_major | 201  | sweepJsRefs(true)                                                                        |
 
+## 64 bit chunks
+
+```
+Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
+ 3.896034      0.487004        4.543750         8   GC_collect_minor   158  mark(state, ignore_below)
+ 0.268489      0.268489        2.505000         1   GC_collect_major   190  mark(state, ignore_below)
+ 0.257771      0.257771        2.405000         1   GC_collect_major   193  compact(state, ignore_below)
+ *0.153269*    0.000088        0.000817      1750        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+ 0.005895      0.000737        0.006875         8   GC_collect_minor   175  sweepJsRefs(false)
+ 0.004287      0.000536        0.005000         8        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+ 0.002680      0.002680        0.025000         1   GC_collect_major   199  bitmap_reset(&state->heap)
+ 0.000000      0.000000        0.000000         1   GC_collect_major   201  sweepJsRefs(true)
+```
+
+## reclaiming up to 8 bits
+
+```
+Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
+ 2.642755      0.440459        4.635833         6   GC_collect_minor   158  mark(state, ignore_below)
+ 0.334917      0.334917        3.525000         1   GC_collect_major   193  compact(state, ignore_below)
+ 0.305463      0.305463        3.215000         1   GC_collect_major   190  mark(state, ignore_below)
+ *0.080760*    0.000089        0.000938       906        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+ 0.008551      0.008551        0.090000         1        GC_allocate    41  grow_heap(heap, alloc_words)
+ 0.008076      0.001346        0.014167         6        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+ 0.004276      0.000713        0.007500         6   GC_collect_minor   175  sweepJsRefs(false)
+ 0.004276      0.004276        0.045000         1   GC_collect_major   199  bitmap_reset(&state->heap)
+ 0.000475      0.000475        0.005000         1   GC_collect_major   201  sweepJsRefs(true)
+```
+
+## reclaiming all
+
+```
+Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
+ 3.021702      0.503617        8.934167         6   GC_collect_minor   158  mark(state, ignore_below)
+ 0.327790      0.327790        5.815000         1   GC_collect_major   193  compact(state, ignore_below)
+ 0.296223      0.296223        5.255000         1   GC_collect_major   190  mark(state, ignore_below)
+ *0.088782*    0.000098        0.001744       903        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+ 0.005073      0.005073        0.090000         1        GC_allocate    41  grow_heap(heap, alloc_words)
+ 0.005073      0.005073        0.090000         1   GC_collect_major   199  bitmap_reset(&state->heap)
+ 0.004791      0.000799        0.014167         6   GC_collect_minor   175  sweepJsRefs(false)
+ 0.004510      0.000752        0.013333         6        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+ 0.000000      0.000000        0.000000         1   GC_collect_major   201  sweepJsRefs(true)
+```
 
 ## GC size analysis
 

@@ -173,12 +173,14 @@ retry:
   if (i >= heap->bitmap_size) {
     return NULL;
   }
+  size_t free_bitmap_index = i;
   size_t* free_ptr = heap->start + i * 64;
 
   for (i++; i < heap->bitmap_size; i++) {
     if (bitmap[i]) break;
   }
 
+  size_t live_bitmap_index = i;
   size_t* live_ptr;
   if (i >= heap->bitmap_size) {
     live_ptr = heap->end;
@@ -190,6 +192,26 @@ retry:
     if (live_ptr - free_ptr < min_size) {
       goto retry;
     }
+  }
+
+  // Reduce the amount of wasted space due to chunking
+
+  if (free_bitmap_index && bitmap[free_bitmap_index - 1] != ALL_ONES) {
+    u64 mark_bits = bitmap[free_bitmap_index - 1];
+    size_t extra = 0;
+    if (!(mark_bits & 0xFFFFFFFF00000000)) extra += 32;
+    if (!(mark_bits & 0xFFFF0000FFFF0000)) extra += 16;
+    if (!(mark_bits & 0xFF00FF00FF00FF00)) extra += 8;
+    free_ptr -= extra;
+  }
+
+  if (bitmap[live_bitmap_index] != ALL_ONES) {
+    u64 mark_bits = bitmap[live_bitmap_index];
+    size_t extra = 0;
+    if (!(mark_bits & 0x00000000FFFFFFFF)) extra += 32;
+    if (!(mark_bits & 0x0000FFFF0000FFFF)) extra += 16;
+    if (!(mark_bits & 0x00FF00FF00FF00FF)) extra += 8;
+    live_ptr += extra;
   }
 
   *end_of_space = live_ptr;

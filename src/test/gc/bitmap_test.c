@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include "../../kernel/core/core.h"
 #include "../../kernel/core/gc/internals.h"
@@ -202,8 +203,10 @@ void test_bitmap_find_space() {
 
   bitmap_reset(heap);
   alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_expect_equal("space should begin at heap->start when heap is empty", alloc, heap->start);
-  mu_expect_equal("space should finish at heap->end when heap is empty", end_of_space, heap->end);
+  mu_expect_equal(
+      "space should begin at heap->start when heap is empty", alloc, heap->start);
+  mu_expect_equal(
+      "space should finish at heap->end when heap is empty", end_of_space, heap->end);
 
   bitmap_reset(heap);
   mark_words(&gc_state, heap->start + 1, 1);
@@ -241,6 +244,74 @@ void test_bitmap_find_space() {
 }
 
 
+#define bitmap_find_space_old bitmap_find_space
+
+void perf_bitmap_find_space() {
+  if (verbose) {
+    safe_printf("\n");
+    safe_printf("perf_bitmap_find_space\n");
+    safe_printf("----------------------\n");
+  }
+  gc_test_reset();
+
+  GcState* state = &gc_state;
+  GcHeap* heap = &gc_state.heap;
+  size_t heap_size = heap->end - heap->start;
+
+  // fill up the bitmap with a random pattern
+  while (state->n_marked_words < heap_size / 2) {
+    size_t* p = heap->start + (rand() % heap_size);
+    size_t size = rand() % 100;
+    if (p + size > heap->end) {
+      size = heap->end - p;
+    }
+    mark_words(&gc_state, p, size);
+  }
+  // PRINT_BITMAP();
+
+  PerfTime time_new = 0;
+  PerfTime time_old = 0;
+  size_t space_new;
+  size_t space_old;
+
+  for (int i = 0; i < 10; i++) {
+    PerfTime time_start = PERF_GET_TIME();
+
+    space_new = 0;
+    for (size_t *end_of_alloc_patch = heap->start, *alloc = heap->start; alloc;
+         alloc = bitmap_find_space(heap, end_of_alloc_patch, 0, &end_of_alloc_patch)) {
+      space_new += end_of_alloc_patch - alloc;
+    }
+
+    PerfTime time_middle = PERF_GET_TIME();
+
+    space_old = 0;
+    for (size_t *end_of_alloc_patch = heap->start, *alloc = heap->start; alloc;
+         alloc =
+             bitmap_find_space_old(heap, end_of_alloc_patch, 0, &end_of_alloc_patch)) {
+      space_old += end_of_alloc_patch - alloc;
+    }
+
+    PerfTime time_end = PERF_GET_TIME();
+
+    time_new += time_middle - time_start;
+    time_old += time_end - time_middle;
+  }
+
+  // Can easily get ~10% "speedup" with the same function! :(
+  float speedup = 100.0 * (((float)time_old / (float)time_new) - 1.0);
+  float extra_space = 100.0 * (((float)space_new / (float)space_old) - 1.0);
+
+  safe_printf("space_new   %zd\n", space_new);
+  safe_printf("space_old   %zd\n", space_old);
+  safe_printf("extra_space %.2f%%\n", extra_space);
+  safe_printf("\n");
+  safe_printf("time_new " PERF_FORMAT "\n", time_new);
+  safe_printf("time_old " PERF_FORMAT "\n", time_old);
+  safe_printf("speedup %.2f%%\n", speedup);
+}
+
+
 // --------------------------------------------------------------------------------
 
 
@@ -255,5 +326,6 @@ void gc_bitmap_test() {
   mu_run_test(gc_dead_between_test);
   mu_run_test(test_bitmap_iter_conversions);
   mu_run_test(test_bitmap_find);
-  // mu_run_test(test_bitmap_find_space);
+  mu_run_test(test_bitmap_find_space);
+  // mu_run_test(perf_bitmap_find_space);
 }
