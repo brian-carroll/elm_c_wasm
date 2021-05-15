@@ -139,9 +139,8 @@ size_t* bitmap_find_space(
   if (start >= heap->end) {
     return NULL;
   }
-  size_t start_index = (start - heap->start) / 64;
   u64* bitmap = heap->bitmap;
-  size_t i = start_index + 1;
+  size_t i = (start - heap->start) / 64;
 
 retry:
   for (; i < heap->bitmap_size; i++) {

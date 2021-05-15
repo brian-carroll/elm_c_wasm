@@ -300,7 +300,8 @@ tce_loop:;
         Custom* live = liveList->head;
         ElmInt* iter = live->values[0];
         if (iter->value != expected) {
-          safe_printf("Wrong value at %p: expected %d, got %d\n", iter, expected, iter->value);
+          safe_printf(
+              "Wrong value at %p: expected %d, got %d\n", iter, expected, iter->value);
           nErrors++;
         }
         expected++;
@@ -339,7 +340,7 @@ tce_loop:;
 
 void minor_gc_test_callback() {
   if (verbose) {
-    safe_printf("\n\n minor_gc_test_callback \n\n");
+    safe_printf("minor_gc_test_callback\n");
     // PRINT_BITMAP();
     // print_heap();
     // print_state();
@@ -399,10 +400,20 @@ void minor_gc_scenario(char* test_name,
 void assert_approx_heap_size(char* msg, size_t expected_size) {
   GcHeap* heap = &gc_state.heap;
 
-  f32 final_size = heap->end - heap->start;
-  f32 rel_err = fabs((final_size / expected_size) - 1);
+  f32 actual_size = heap->end - heap->start;
+  f32 rel_err = fabs((actual_size / expected_size) - 1);
 
-  mu_assert(msg, rel_err < 0.1);
+  assertions_made++;
+  if (rel_err > 0.1) {
+    tests_failed++;
+    char actual[20];
+    char expected[20];
+    format_mem_size(actual, sizeof(actual), actual_size);
+    format_mem_size(expected, sizeof(expected), expected_size);
+    safe_printf("FAIL: %s: expected %s but got %s\n", msg, expected, actual);
+  } else if (verbose) {
+    safe_printf("PASS: %s\n", msg);
+  }
 }
 
 

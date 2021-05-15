@@ -202,9 +202,8 @@ void test_bitmap_find_space() {
 
   bitmap_reset(heap);
   alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_assert("should find whole heap when heap is empty",
-      (alloc == heap->start) && (end_of_space == end_of_bitmap));
-
+  mu_expect_equal("space should begin at heap->start when heap is empty", alloc, heap->start);
+  mu_expect_equal("space should finish at heap->end when heap is empty", end_of_space, heap->end);
 
   bitmap_reset(heap);
   mark_words(&gc_state, heap->start + 1, 1);
