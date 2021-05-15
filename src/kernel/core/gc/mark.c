@@ -158,9 +158,9 @@ void mark(GcState* state, size_t* ignore_below) {
     mark_trace(state, live_heap_value, ignore_below);
   }
 
+  // Fix up the heap layout if we grew gc_temp_data while tracing
+  // (if the app allocated huge data structures that were both deep and wide)
   if (heap->system_end != heap_copy.system_end) {
-    // We grew the heap to prevent overflowing the mark stack
-    // The gc_temp area got all the extra space, but now we redistribute normally
     size_t already_resized_bytes = (heap->system_end - heap->start) * sizeof(void*);
     set_heap_layout(heap, heap->start, already_resized_bytes);
     move_metadata_after_resize(&heap_copy, heap);

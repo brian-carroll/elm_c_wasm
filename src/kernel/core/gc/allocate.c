@@ -22,7 +22,7 @@ void* GC_allocate(bool push_to_stack, ptrdiff_t alloc_words) {
   if (new_alloc >= end_of_alloc_patch) {
     PERF_TIMED_STATEMENT(alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch));
     if (!alloc) {
-      PERF_TIMED_STATEMENT(GC_collect_minor());
+      GC_collect_minor();
 
       size_t new_gen_size = state->heap.end - state->end_of_old_gen;
       size_t used_size = state->n_marked_words;

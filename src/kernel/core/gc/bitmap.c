@@ -124,16 +124,40 @@ size_t* bitmap_iter_to_ptr(GcHeap* heap, GcBitmapIter iter) {
   }
 }
 
-
+// Used in compactor
 void bitmap_find(GcHeap* heap, bool target_value, GcBitmapIter* iter) {
-  size_t size = heap->bitmap_size;
-  for (; iter->index < size; bitmap_next(iter)) {
-    bool value = !!(heap->bitmap[iter->index] & iter->mask);
-    if (value == target_value) break;
+  size_t i = iter->index;
+
+  // Scan mark bits in current bitmap word
+  u64 mark_bits = target_value ? heap->bitmap[i] : ~heap->bitmap[i];
+  u64 mask;
+  for (mask = iter->mask; mask; mask <<= 1) {
+    if (mark_bits & mask) break;
   }
+  if (mask) {
+    iter->mask = mask;
+    return;
+  }
+
+  // Quickly skip over large garbage chunks
+  u64 skip = target_value ? 0 : ALL_ONES;
+  for (i = iter->index + 1; i < heap->bitmap_size; i++) {
+    if (heap->bitmap[i] != skip) break;
+  }
+  if (i == heap->bitmap_size) {
+    *iter = ptr_to_bitmap_iter(heap, heap->end);
+    return;
+  }
+
+  mark_bits = target_value ? heap->bitmap[i] : ~heap->bitmap[i];
+  mask = mark_bits & (~(mark_bits - 1));  // isolate the lowest bit set to '1'
+
+  iter->index = i;
+  iter->mask = mask;
 }
 
 
+// Used in allocator
 size_t* bitmap_find_space(
     GcHeap* heap, size_t* start, size_t min_size, size_t** end_of_space) {
   if (start >= heap->end) {

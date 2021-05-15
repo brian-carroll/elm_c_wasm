@@ -22,7 +22,7 @@
 #define GC_STACK_MAP_SIZE (10 * 1024)
 #define GC_DO_SWEEP 0
 
-#define ALL_ONES -1
+#define ALL_ONES ((u64)(-1))
 
 typedef struct {
   size_t* start;

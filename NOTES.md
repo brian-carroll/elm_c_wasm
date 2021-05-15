@@ -53,7 +53,7 @@ There is some waste at the beginning and end of the space. Mostly don't care. Wi
 | ------------ | ------------ | ------------ | -------- | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
 | 3.391488     | 0.423936     | 6.026250     | 8        | GC_allocate      | 25   | GC_collect_minor()                                                                       |
 | 3.381991     | 0.422749     | 6.009375     | 8        | GC_collect_minor | 158  | mark(state, ignore_below)                                                                |
-| 0.776293     | 0.776293     | 11.035000    | 1        | GC_collect_major | 193  | compact(state, ignore_below)                                                             |
+| **0.776293** | 0.776293     | 11.035000    | 1        | GC_collect_major | 193  | compact(state, ignore_below)                                                             |
 | 0.186775     | 0.186775     | 2.655000     | 1        | GC_collect_major | 190  | mark(state, ignore_below)                                                                |
 | **0.117130** | 0.000067     | 0.000951     | **1750** | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
 | 0.008090     | 0.001011     | 0.014375     | 8        | GC_collect_minor | 175  | sweepJsRefs(false)                                                                       |
@@ -62,6 +62,21 @@ There is some waste at the beginning and end of the space. Mostly don't care. Wi
 | 0.000000     | 0.000000     | 0.000000     | 1        | GC_collect_major | 201  | sweepJsRefs(true)                                                                        |
 
 bitmap_find_space was the top item on the list, now it's down in the noise! Holy crap.
+
+## Coarse/fine searching in compactor
+
+| Total(rel)   | Average(rel) | Average(abs) | Hits | Function         | Line | Code                                                                                     |
+| ------------ | ------------ | ------------ | ---- | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
+| 3.433424     | 0.429178     | 4.738125     | 8    | GC_allocate      | 25   | GC_collect_minor()                                                                       |
+| 3.426630     | 0.428329     | 4.728750     | 8    | GC_collect_minor | 158  | mark(state, ignore_below)                                                                |
+| **0.244565** | 0.244565     | 2.700000     | 1    | GC_collect_major | 193  | compact(state, ignore_below)                                                             |
+| 0.228261     | 0.228261     | 2.520000     | 1    | GC_collect_major | 190  | mark(state, ignore_below)                                                                |
+| 0.121377     | 0.000069     | 0.000766     | 1750 | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
+| 0.004982     | 0.000623     | 0.006875     | 8    | GC_collect_minor | 175  | sweepJsRefs(false)                                                                       |
+| 0.004076     | 0.000510     | 0.005625     | 8    | GC_allocate      | 36   | alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch) |
+| 0.001812     | 0.001812     | 0.020000     | 1    | GC_collect_major | 199  | bitmap_reset(&state->heap)                                                               |
+| 0.000453     | 0.000453     | 0.005000     | 1    | GC_collect_major | 201  | sweepJsRefs(true)                                                                        |
+
 
 ## GC size analysis
 
