@@ -1,27 +1,12 @@
 ## TODO
 
-- Speed up bitmap_find_space
-
-  - Perf measurements are too variable, try racing different impementations against each other directly
-  - Try searching in coarse chunks of 64 mark bits
-    - No fiddling about with tiny amounts of space, or finding exactly the _first_ free address. Who cares?
-    - It'll cost some fragmentation but at 25% to 50% heap utilisation, there'll be enough free space
-  - optimisation setup
-    - Make lots of versions of the function, keeping the old one as reference
-    - make a test for it
-    - mark_words some pattern in the heap after resetting it
-    - get the first version to find all the gaps
-    - get the 2nd one to do the same
-    - loop that 100x
-    - use the perf timer stuff - it has to be in core, so do the full version, not the statement macro
-
+- virtual DOM
+  - Integrate VDOM allocator into the GC
+  - Make a test app and render stuff
+  - Do benchmarks
 - logging improvements
-
   - use flags and log levels and stuff
-
 - modulo cons
-  - would this make the language test easier to debug by shrinking the stack a bit?
-  - meh, probably doesn't _really_ improve much
 
 # Allocator 50x speedup!!
 
