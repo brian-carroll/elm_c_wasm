@@ -74,7 +74,6 @@ void stack_clear();
 void stack_enter(void* evaluator, Closure* c);
 
 void bitmap_reset(GcHeap*);
-void bitmap_next(GcBitmapIter* iter);
 size_t bitmap_dead_between(GcHeap* heap, size_t* first, size_t* last);
 u64 make_bitmask(size_t first_bit, size_t last_bit);
 GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr);

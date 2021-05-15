@@ -83,16 +83,6 @@ u64 make_bitmask(size_t first_bit, size_t last_bit) {
 }
 
 
-// advance to the next bit in the bitmap (for loops)
-void bitmap_next(GcBitmapIter* iter) {
-  iter->mask <<= 1;
-  if (iter->mask == 0) {
-    iter->index++;
-    iter->mask = 1;
-  }
-}
-
-
 GcBitmapIter ptr_to_bitmap_iter(GcHeap* heap, size_t* ptr) {
   size_t heap_index = ptr - heap->start;
   GcBitmapIter iter = {

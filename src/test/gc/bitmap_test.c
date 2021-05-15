@@ -16,79 +16,6 @@ GcBitmapIter start_iter = {
 // --------------------------------------------------------------------------------
 
 
-char gc_bitmap_next_test_str[100];
-
-char* gc_bitmap_next_test() {
-  if (verbose) {
-    safe_printf("\n");
-    safe_printf("## gc_bitmap_next_test\n");
-    safe_printf("\n");
-  }
-  gc_test_reset();
-
-  GcBitmapIter iter;
-
-  int assertion = 1;
-
-  iter.index = 0;
-  iter.mask = 1;
-  stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %016x",
-      assertion++,
-      iter.index,
-      iter.mask);
-  bitmap_next(&iter);
-  mu_assert(gc_bitmap_next_test_str, iter.index == 0 && iter.mask == 2);
-
-  iter.index = 0;
-  iter.mask = 2;
-  stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %016x",
-      assertion++,
-      iter.index,
-      iter.mask);
-  bitmap_next(&iter);
-  mu_assert(gc_bitmap_next_test_str, iter.index == 0 && iter.mask == 4);
-
-  iter.index = 1;
-  iter.mask = 1;
-  stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %016x",
-      assertion++,
-      iter.index,
-      iter.mask);
-  bitmap_next(&iter);
-  mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 2);
-
-  iter.index = 1;
-  iter.mask = 2;
-  stbsp_sprintf(gc_bitmap_next_test_str,
-      "bitmap_next assertion %d from word %zd mask %016x",
-      assertion++,
-      iter.index,
-      iter.mask);
-  bitmap_next(&iter);
-  mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 4);
-
-  iter.index = 0;
-  char* format_str;
-  iter.mask = 0x8000000000000000;
-  format_str = "bitmap_next assertion %d from word %zd mask %016zx";
-
-  mu_expect_equal("bitmap_next: highest bit is correctly set in test", iter.mask << 1, 0);
-  assertion++;
-
-  stbsp_sprintf(gc_bitmap_next_test_str, format_str, assertion++, iter.index, iter.mask);
-  bitmap_next(&iter);
-  mu_assert(gc_bitmap_next_test_str, iter.index == 1 && iter.mask == 1);
-
-  return NULL;
-}
-
-
-// --------------------------------------------------------------------------------
-
-
 char* gc_dead_between_test() {
   gc_test_reset();
   GcState* state = &gc_state;
@@ -412,7 +339,6 @@ void gc_bitmap_test() {
     safe_printf("-----------\n");
   }
 
-  mu_run_test(gc_bitmap_next_test);
   mu_run_test(gc_dead_between_test);
   mu_run_test(test_bitmap_iter_conversions);
   mu_run_test(test_bitmap_find);
