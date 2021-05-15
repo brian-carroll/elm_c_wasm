@@ -143,33 +143,32 @@ size_t* bitmap_find_space(
   u64* bitmap = heap->bitmap;
   size_t i = start_index + 1;
 
-  for (;;) {
-    for (; i < heap->bitmap_size; i++) {
-      if (!bitmap[i]) break;
-    }
-    if (i >= heap->bitmap_size) {
+retry:
+  for (; i < heap->bitmap_size; i++) {
+    if (!bitmap[i]) break;
+  }
+  if (i >= heap->bitmap_size) {
+    return NULL;
+  }
+  size_t* free_ptr = heap->start + i * 64;
+
+  for (i++; i < heap->bitmap_size; i++) {
+    if (bitmap[i]) break;
+  }
+
+  size_t* live_ptr;
+  if (i >= heap->bitmap_size) {
+    live_ptr = heap->end;
+    if (live_ptr - free_ptr < min_size) {
       return NULL;
     }
-    size_t* free_ptr = heap->start + i * 64;
-
-    for (i++; i < heap->bitmap_size; i++) {
-      if (bitmap[i]) break;
+  } else {
+    live_ptr = heap->start + i * 64;
+    if (live_ptr - free_ptr < min_size) {
+      goto retry;
     }
-
-    size_t* live_ptr;
-    if (i >= heap->bitmap_size) {
-      live_ptr = heap->end;
-      if (live_ptr - free_ptr < min_size) {
-        return NULL;
-      }
-    } else {
-      live_ptr = heap->start + i * 64;
-      if (live_ptr - free_ptr < min_size) {
-        continue;
-      }
-    }
-
-    *end_of_space = live_ptr;
-    return free_ptr;
   }
+
+  *end_of_space = live_ptr;
+  return free_ptr;
 }
