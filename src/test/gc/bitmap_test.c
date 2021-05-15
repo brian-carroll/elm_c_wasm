@@ -147,6 +147,9 @@ void test_bitmap_iter_conversions() {
 }
 
 
+// --------------------------------------------------------------------------------
+
+
 void test_bitmap_find() {
   if (verbose) {
     safe_printf("\n");
@@ -189,6 +192,35 @@ void test_bitmap_find() {
 
 // --------------------------------------------------------------------------------
 
+const size_t ALLOC_CHUNK = 8;
+
+void expect_alloc(char* message,
+    size_t* expected_start,
+    size_t* expected_end,
+    size_t* actual_start,
+    size_t* actual_end) {
+  assertions_made++;
+  if (actual_start != expected_start || actual_end != expected_end) {
+    tests_failed++;
+    safe_printf("FAIL: %s\n  expected: 0x%zx -> 0x%zx\n    actual: 0x%zx -> 0x%zx\n",
+        message,
+        expected_start,
+        expected_end,
+        actual_start,
+        actual_end);
+  } else if (verbose) {
+    safe_printf("PASS: %s\n", message);
+  }
+}
+
+
+void* align_up(size_t align_bytes, void* p) {
+  size_t addr = (size_t)p;
+  addr |= align_bytes - 1;
+  addr++;
+  return (void*)addr;
+}
+
 
 void test_bitmap_find_space() {
   if (verbose) {
@@ -199,49 +231,107 @@ void test_bitmap_find_space() {
   GcHeap* heap = &gc_state.heap;
   size_t* end_of_space;
   size_t* alloc;
-  size_t* end_of_bitmap = heap->end;
+
 
   bitmap_reset(heap);
+  end_of_space = NULL;
   alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_expect_equal(
-      "space should begin at heap->start when heap is empty", alloc, heap->start);
-  mu_expect_equal(
-      "space should finish at heap->end when heap is empty", end_of_space, heap->end);
-
-  bitmap_reset(heap);
-  mark_words(&gc_state, heap->start + 1, 1);
-  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_assert("should find a one-word gap at start of heap",
-      (alloc == heap->start) && (end_of_space == heap->start + 1));
+  expect_alloc("should find entire heap when it is empty",
+      heap->start,
+      heap->end,
+      alloc,
+      end_of_space);
 
 
-  bitmap_reset(heap);
-  mark_words(&gc_state, heap->start, 63);
-  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_assert("should find space just before a bitmap boundary",
-      (alloc == heap->start + 63) && (end_of_space == end_of_bitmap));
-
-
-  bitmap_reset(heap);
-  mark_words(&gc_state, heap->start, 64);
-  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_assert("should find space just after a bitmap boundary",
-      (alloc == heap->start + 64) && (end_of_space == end_of_bitmap));
-
-
-  bitmap_reset(heap);
-  mark_words(&gc_state, heap->start + 63, 1);
-  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_assert("should find space from start to before a bitmap boundary",
-      (alloc == heap->start) && (end_of_space == heap->start + 63));
-
-
-  bitmap_reset(heap);
+  bitmap_reset(heap); 
+  end_of_space = NULL;
   mark_words(&gc_state, heap->start + 64, 1);
   alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
-  mu_assert("should find space from start to after a bitmap boundary",
-      (alloc == heap->start) && (end_of_space == heap->start + 64));
+  expect_alloc("should find a 64-word space at the start",
+      heap->start,
+      heap->start + 64,
+      alloc,
+      end_of_space);
+
+
+  bitmap_reset(heap); 
+  end_of_space = NULL;
+  mark_words(&gc_state, heap->start, 64);
+  mark_words(&gc_state, heap->start + 128, 1);
+  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
+  expect_alloc("should find a 64-word space after a 64-word live section",
+      heap->start + 64,
+      heap->start + 128,
+      alloc,
+      end_of_space);
+
+
+  bitmap_reset(heap); 
+  end_of_space = NULL;
+  mark_words(&gc_state, heap->start, 68);
+  mark_words(&gc_state, heap->start + 128, 64);
+  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
+  expect_alloc("should skip over a 60-word space",
+      heap->start + 192,
+      heap->end,
+      alloc,
+      end_of_space);
+
+
+  bitmap_reset(heap); 
+  end_of_space = NULL;
+  mark_words(&gc_state, heap->start + 1, 1);
+  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
+  expect_alloc("should skip over one space and one allocation",
+      heap->start + ALLOC_CHUNK,
+      heap->end,
+      alloc,
+      end_of_space);
+
+
+  size_t* last_word = align_up(64 * sizeof(size_t), heap->end - 64);
+  size_t* before_last_word = align_up(64 * sizeof(size_t), heap->end - 128);
+
+  bitmap_reset(heap); 
+  end_of_space = NULL;
+  mark_words(&gc_state, heap->start, last_word - heap->start);
+  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
+  expect_alloc("should find space in the last word of the bitmap",
+      last_word,
+      heap->end,
+      alloc,
+      end_of_space);
+
+
+  bitmap_reset(heap);
+  end_of_space = NULL;
+  mark_words(&gc_state, heap->start, before_last_word - heap->start);
+  mark_words(&gc_state, last_word, heap->end - last_word);
+  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
+
+  expect_alloc("should find a 64-word space just before the end of the heap",
+      before_last_word,
+      last_word,
+      alloc,
+      end_of_space);
+
+
+  bitmap_reset(heap); 
+  end_of_space = NULL;
+  mark_words(&gc_state, heap->start, 4);
+  mark_words(&gc_state, heap->end - 4, 4);
+  alloc = bitmap_find_space(heap, heap->start, 1, &end_of_space);
+  size_t last_chunk = (size_t)heap->end & (-ALLOC_CHUNK * sizeof(size_t));
+  expect_alloc(
+      "should be able to expand into free space in the first and last bitmap words",
+      heap->start + ALLOC_CHUNK,
+      (size_t*)last_chunk,
+      alloc,
+      end_of_space);
 }
+
+
+// --------------------------------------------------------------------------------
 
 
 #define bitmap_find_space_old bitmap_find_space
@@ -327,5 +417,6 @@ void gc_bitmap_test() {
   mu_run_test(test_bitmap_iter_conversions);
   mu_run_test(test_bitmap_find);
   mu_run_test(test_bitmap_find_space);
+
   // mu_run_test(perf_bitmap_find_space);
 }

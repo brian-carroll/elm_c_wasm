@@ -1,4 +1,4 @@
-#include <stdio.h> // putchar
+#include <stdio.h>  // putchar
 #include "../gc/internals.h"
 
 // =======================================================================
@@ -258,23 +258,26 @@ void print_bitmap(const char* function, const char* filename, int line_no) {
     ;
 
   safe_printf("Bitmap at %s:%d (%s)\n", filename, line_no, function);
-  size_t* p = heap->start;
-  for (size_t word = 0; word <= last_word && word < heap->bitmap_size;
-       word++, p += 64) {
+  for (size_t word = 0; word <= last_word; word++) {
+    size_t* p = heap->start + (word * 64);
     u64 value = bitmap[word];
     char s[65];
-    size_t bit = 0;
+
     u64 mask = 1;
-    for (; bit < 64; bit++, mask <<= 1) {
+    for (size_t bit = 0; bit < 64; bit++, mask <<= 1) {
+      size_t* addr = p + bit;
+      if (addr == heap->end) {
+        s[bit] = '\0';
+        break;
+      };
       if (value & mask) {
         s[bit] = 'X';
       } else {
-        size_t* addr = p + bit;
         s[bit] = (*addr) ? '|' : '-';
       }
     }
     s[64] = '\0';
-    safe_printf("%3zd | " FORMAT_PTR " %s\n", word, p, s);
+    safe_printf("%4zd | " FORMAT_PTR " %s\n", word, p, s);
   }
   safe_printf("\n");
 }
@@ -305,29 +308,25 @@ void print_stack_map() {
 
 void print_state() {
   GcState* state = &gc_state;
+  GcHeap* heap = &gc_state.heap;
 
-  size_t start = (size_t)state->heap.start;
-  size_t end = (size_t)state->heap.end;
-  size_t system_end = (size_t)state->heap.system_end;
-  size_t next_alloc = (size_t)state->next_alloc;
-  size_t end_of_old_gen = (size_t)state->end_of_old_gen;
+  size_t total = ((u8*)heap->system_end - (u8*)heap->start + 512) / 1024;
+  size_t available = ((u8*)heap->end - (u8*)heap->start + 512) / 1024;
+  size_t used = ((u8*)state->next_alloc - (u8*)heap->start + 512) / 1024;
+  size_t old_gen = ((u8*)state->end_of_old_gen - (u8*)heap->start + 512) / 1024;
 
-  size_t total = (system_end - start + 512) / 1024;
-  size_t available = (end - start + 512) / 1024;
-  size_t used = (next_alloc - start + 512) / 1024;
-  size_t since_gc = (next_alloc - end_of_old_gen + 512) / 1024;
+  size_t gc_temp_bits = sizeof(heap->gc_temp[0]) * 8;
+  size_t bitmap_bits = sizeof(heap->bitmap[0]) * 8;
 
   safe_printf("\n");
-  safe_printf("%p start\n", state->heap.start);
-  safe_printf("%p system_end      (%zd kB total heap)\n", state->heap.system_end, total);
-  safe_printf("%p end             (%zd kB app heap)\n", state->heap.end, available);
+  safe_printf("%p start\n", heap->start);
+  safe_printf("%p system_end      (%zd kB total heap)\n", heap->system_end, total);
+  safe_printf("%p end             (%zd kB app heap)\n", heap->end, available);
   safe_printf("%p next_alloc      (%zd kB used)\n", state->next_alloc, used);
-  safe_printf(
-      "%p end_of_old_gen  (%zd kB since last GC)\n", state->end_of_old_gen, since_gc);
+  safe_printf("%p end_of_old_gen  (%zd kB)\n", state->end_of_old_gen, old_gen);
   safe_printf("\n");
-  safe_printf("%p gc_temp\n", state->heap.gc_temp);
-  safe_printf("%p gc_temp_size\n", state->heap.gc_temp_size);
-  safe_printf("%p bitmap\n", state->heap.bitmap);
+  safe_printf("%p gc_temp (%zd %db)\n", heap->gc_temp, heap->gc_temp_size, gc_temp_bits);
+  safe_printf("%p bitmap (%zd %db)\n", heap->bitmap, heap->bitmap_size, bitmap_bits);
   safe_printf("%p roots\n", state->roots);
   safe_printf("\n");
   safe_printf("%d stack_index\n", state->stack_map.index);

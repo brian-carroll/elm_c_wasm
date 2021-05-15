@@ -196,7 +196,7 @@ retry:
 
   // Reduce the amount of wasted space due to chunking
 
-  if (free_bitmap_index && bitmap[free_bitmap_index - 1] != ALL_ONES) {
+  if (free_bitmap_index > 0 && bitmap[free_bitmap_index - 1] != ALL_ONES) {
     u64 mark_bits = bitmap[free_bitmap_index - 1];
     size_t extra = 0;
     if (!(mark_bits & 0xFFFFFFFF00000000)) extra += 32;
@@ -205,7 +205,7 @@ retry:
     free_ptr -= extra;
   }
 
-  if (bitmap[live_bitmap_index] != ALL_ONES) {
+  if (live_bitmap_index < heap->bitmap_size && bitmap[live_bitmap_index] != ALL_ONES) {
     u64 mark_bits = bitmap[live_bitmap_index];
     size_t extra = 0;
     if (!(mark_bits & 0x00000000FFFFFFFF)) extra += 32;
