@@ -71,29 +71,6 @@ extern Closure Char_toCode;
 
 // =========================================
 
-
-bool is_marked(void* p);
-void print_value(void* p);
-void print_value_full(void* p);
-void print_heap_range(size_t* start, size_t* end);
-void print_heap();
-void print_state();
-void print_stack_map();
-void print_bitmap(const char* function, const char* filename, int line_no);
-#define PRINT_BITMAP() print_bitmap(__FUNCTION__, __FILE__, __LINE__)
-void format_ptr_diff_size(char* buffer, size_t buf_size, void* start, void* end);
-void format_mem_size(char* buffer, size_t buf_size, size_t words);
-void print_ptr_diff_size(void* start, void* end);
-void print_mem_size(size_t words);
-void print_gc_perf(void* perf_data, bool major);
-
-void log_error(char* fmt, ...);
-void log_debug(char* fmt, ...);
-
-void safe_printf(const char* format, ...);
-
-// =========================================
-
 extern Custom g_elm_core_Basics_LT;
 extern Custom g_elm_core_Basics_EQ;
 extern Custom g_elm_core_Basics_GT;
@@ -123,7 +100,6 @@ void* GC_execute(Closure* c);
 void* GC_allocate(bool push_to_stack, ptrdiff_t words);
 void* GC_memcpy(void* dest, void* src, size_t words);
 
-
 typedef u16 GcStackMapIndex;
 
 void GC_stack_push_value(void* value);
@@ -150,7 +126,6 @@ extern Closure JsArray_slice;
 extern Closure JsArray_appendN;
 
 // =========================================
-
 
 void* List_create(size_t len, void* values[]);
 void* eval_List_append(void* args[]);
@@ -203,7 +178,6 @@ extern Closure String_toFloat;
 // extern Closure String_fromList;
 
 // =========================================
-
 
 struct str_builder {
   Cons* first_section;
