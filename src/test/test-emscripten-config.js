@@ -4,16 +4,14 @@ Module = {
     ? process.argv.slice(2)
     : [new URL(window.location).searchParams.get('argv')],
   postRun: [],
-  preRun: function () {
-    const wasmBuffer = Module.HEAPU32.buffer;
-    const wasmExports = Module.asm;
+  onRuntimeInitialized: function () {
     const generatedAppTypes = {
       ctors: ["CTOR_Nothing", "CTOR_Just", "CTOR_Ok", "CTOR_Err", "CTOR_Failure", "CTOR_Field", "CTOR_Index", "CTOR_OneOf"],
       fields: [],
       fieldGroups: [],
     };
     const kernelFuncRecord = {};
-    wasmWrapper = wrapWasmElmApp(elmImports, wasmBuffer, wasmExports, generatedAppTypes, kernelFuncRecord);
+    wasmWrapper = wrapWasmElmApp(Module, elmImports, generatedAppTypes, kernelFuncRecord);
   },
   print: function (text) {
     if (arguments.length > 1)

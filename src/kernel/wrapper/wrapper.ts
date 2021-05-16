@@ -18,25 +18,27 @@ interface ElmImports {
 /**
  * Functions exported from the Wasm module
  */
-interface ElmWasmExports {
-  getMains: () => number;
-  getJsNull: () => number;
-  getUnit: () => number;
-  getNil: () => number;
-  getTrue: () => number;
-  getFalse: () => number;
-  getFieldGroups: () => number;
-  getMaxWriteAddr: () => number;
-  getWriteAddr: () => number;
-  finishWritingAt: (addr: number) => void;
-  readF64: (addr: number) => number;
-  writeF64: (addr: number, value: number) => void;
-  evalClosure: (addr: number) => number;
-  collectGarbage: () => void;
-  debugHeapState: () => void;
-  debugAddrRange: (start: number, size: number) => void;
-  debugStackMap: () => void;
-  debugEvaluatorName: (evalId: number) => void;
+interface EmscriptenModule {
+  HEAPU16: Uint16Array;
+  HEAPU32: Uint32Array;
+  _getMains: () => number;
+  _getJsNull: () => number;
+  _getUnit: () => number;
+  _getNil: () => number;
+  _getTrue: () => number;
+  _getFalse: () => number;
+  _getFieldGroups: () => number;
+  _getMaxWriteAddr: () => number;
+  _getWriteAddr: () => number;
+  _finishWritingAt: (addr: number) => void;
+  _readF64: (addr: number) => number;
+  _writeF64: (addr: number, value: number) => void;
+  _evalClosure: (addr: number) => number;
+  _collectGarbage: () => void;
+  _debugHeapState: () => void;
+  _debugAddrRange: (start: number, size: number) => void;
+  _debugStackMap: () => void;
+  _debugEvaluatorName: (evalId: number) => void;
 }
 
 /**
@@ -63,17 +65,15 @@ interface ElmCurriedFunction {
  * This needs to be compiled from TypeScript to JavaScript in a build step.
  * Then Emscripten bundles it along with its own code and the Elm compiler output.
  *
+ * @param emscriptenModule        Object of exported functions from the Wasm module
  * @param elmImports         Values imported into the wrapper from Elm app
- * @param wasmBuffer         The `ArrayBuffer` memory block shared between JS and Wasm
- * @param wasmExports        Object of exported functions from the Wasm module
  * @param generatedAppTypes  App-specific type info passed from Elm compiler to this wrapper
  * @param kernelFuncRecord   Record of all JS kernel functions called by the Elm Wasm module
  *
  /********************************************************************************************/
 function wrapWasmElmApp(
+  emscriptenModule: EmscriptenModule,
   elmImports: ElmImports,
-  wasmBuffer: ArrayBuffer,
-  wasmExports: ElmWasmExports,
   generatedAppTypes: GeneratedAppTypes,
   kernelFuncRecord: Record<string, ElmCurriedFunction>
 ) {
@@ -83,15 +83,15 @@ function wrapWasmElmApp(
 
   -------------------------------------------------- */
 
-  const mem32 = new Uint32Array(wasmBuffer);
-  const mem16 = new Uint16Array(wasmBuffer);
+  const mem32: Uint32Array = emscriptenModule.HEAPU32;
+  const mem16: Uint16Array = emscriptenModule.HEAPU16;
 
   const wasmConstAddrs = (function () {
-    const Unit = wasmExports.getUnit();
-    const Nil = wasmExports.getNil();
-    const True = wasmExports.getTrue();
-    const False = wasmExports.getFalse();
-    const JsNull = wasmExports.getJsNull();
+    const Unit = emscriptenModule._getUnit();
+    const Nil = emscriptenModule._getNil();
+    const True = emscriptenModule._getTrue();
+    const False = emscriptenModule._getFalse();
+    const JsNull = emscriptenModule._getJsNull();
     return {
       Unit,
       Nil,
@@ -149,7 +149,7 @@ function wrapWasmElmApp(
     fieldGroups: mapFieldGroups(),
   };
   function mapFieldGroups(): NameToInt & IntToNames {
-    let fgPointersAddr = wasmExports.getFieldGroups();
+    let fgPointersAddr = emscriptenModule._getFieldGroups();
     return generatedAppTypes.fieldGroups.reduce(
       (enumObj: NameToInt & IntToNames, name: string) => {
         const fgIndex = fgPointersAddr >> 2;
@@ -241,7 +241,7 @@ function wrapWasmElmApp(
         return mem32[index + 1];
       }
       case Tag.Float: {
-        return wasmExports.readF64(addr + 2 * WORD);
+        return emscriptenModule._readF64(addr + 2 * WORD);
       }
       case Tag.Char:
       case Tag.String: {
@@ -398,7 +398,7 @@ function wrapWasmElmApp(
       const closureAddr = handleWasmWrite((startIndex: number) => {
         return writeFromBuilder(startIndex, builder, Tag.Closure);
       });
-      const resultAddr = wasmExports.evalClosure(closureAddr);
+      const resultAddr = emscriptenModule._evalClosure(closureAddr);
       const resultValue = readWasmValue(resultAddr);
       return resultValue;  
     }
@@ -435,19 +435,19 @@ function wrapWasmElmApp(
 
   function handleWasmWrite(writer: (nextIndex: number) => WriteResult): number {
     for (let attempts = 0; attempts < 2; attempts++) {
-      const maxAddr = wasmExports.getMaxWriteAddr();
+      const maxAddr = emscriptenModule._getMaxWriteAddr();
       maxWriteIndex16 = maxAddr >> 1;
       maxWriteIndex32 = maxAddr >> 2;
-      const startAddr = wasmExports.getWriteAddr();
+      const startAddr = emscriptenModule._getWriteAddr();
       const startIndex = startAddr >> 2;
       try {
         const result: WriteResult = writer(startIndex);
-        wasmExports.finishWritingAt(result.nextIndex << 2);
+        emscriptenModule._finishWritingAt(result.nextIndex << 2);
         return result.addr;
       } catch (e) {
         if (e === heapOverflowError) {
           console.log('Wrapper handleWasmWrite heap overflow, running GC', {startAddr, maxAddr});
-          wasmExports.collectGarbage();
+          emscriptenModule._collectGarbage();
         } else {
           console.error(e);
           throw e;
@@ -611,7 +611,7 @@ function wrapWasmElmApp(
           bodyWriter: (bodyAddr: number) => {
             write32(bodyAddr >> 2, 0);
             const afterPadding = bodyAddr + WORD;
-            wasmExports.writeF64(afterPadding, value);
+            emscriptenModule._writeF64(afterPadding, value);
             return 3; // words written
           }
         };
@@ -969,7 +969,7 @@ function wrapWasmElmApp(
     const closureAddr = handleWasmWrite(nextIndex =>
       writeWasmValue(nextIndex, thunk)
     );
-    const resultAddr = wasmExports.evalClosure(closureAddr);
+    const resultAddr = emscriptenModule._evalClosure(closureAddr);
     return readWasmValue(resultAddr);
   }
 
@@ -982,7 +982,7 @@ function wrapWasmElmApp(
   const mains: any[] = [];
 
   const deref = (addr: number) => mem32[addr >> 2];
-  let mainsArrayEntryAddr = wasmExports.getMains();
+  let mainsArrayEntryAddr = emscriptenModule._getMains();
   while (true) {
     const gcRootAddr = deref(mainsArrayEntryAddr);
     if (!gcRootAddr) break;
