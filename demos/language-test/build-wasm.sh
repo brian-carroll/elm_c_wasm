@@ -28,7 +28,6 @@ emcc $CFLAGS \
   -s ASSERTIONS=1 \
   -s EXPORT_NAME='EmscriptenModule' \
   -s EXPORTED_FUNCTIONS="$(cat $WRAPPER_DIR/exported-functions.json)" \
-  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
   -s EXIT_RUNTIME=1 \
   -ferror-limit=10000 \
   $extra_opt \

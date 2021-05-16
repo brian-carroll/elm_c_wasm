@@ -5,6 +5,7 @@
   - make a config.h for DEBUG and perf and whatever else
   - collect platform stuff together
   - define out `assert`
+  - perf profiling in release mode in SPA example
 - virtual DOM
   - Integrate VDOM allocator into the GC
   - Make a test app and render stuff
