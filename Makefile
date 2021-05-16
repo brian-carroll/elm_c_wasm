@@ -1,5 +1,5 @@
 MAKEFLAGS := --jobs=$(shell nproc)
-CFLAGS=-Wall -DDEBUG
+CFLAGS=-Wall -DDEBUG -DTEST
 ARGS=-a
 
 ROOT := .
@@ -35,8 +35,12 @@ check-wasm: $(DIST)/wasm/test.js
 wasm: $(DIST)/wasm/test.js
 	@:
 
-wasm-release: CFLAGS = -Wall -Oz
+wasm-release: CFLAGS = -Wall -O3 -DTEST
 wasm-release: wasm
+	@:
+
+release: CFLAGS = -Wall -O3 -DTEST
+release: $(DIST)/bin/test
 	@:
 
 gc-size:
@@ -138,7 +142,7 @@ $(BUILD)/wasm/test.o: $(TEST)/*.c $(TEST)/*.h $(TEST)/*/*.c
 $(KERNEL)/wrapper/wrapper.js: $(KERNEL)/wrapper/wrapper.ts
 	npx tsc $<
 
-$(DIST)/wasm/test.js: $(WASM_OBJ) $(KERNEL)/wrapper/wrapper.js $(KERNEL)/wrapper/imports.js $(TEST)/test-imports.js
+$(DIST)/wasm/test.js: $(WASM_OBJ) $(KERNEL)/wrapper/*.js $(TEST)/test-imports.js
 	@mkdir -p $(DIST)/wasm
 	emcc $(CFLAGS) $(WASM_OBJ) -ferror-limit=0 -s NO_EXIT_RUNTIME=0 --pre-js $(TEST)/test-emscripten-config.js --pre-js $(KERNEL)/wrapper/wrapper.js --js-library $(KERNEL)/wrapper/imports.js --js-library $(TEST)/test-imports.js -o $@
 

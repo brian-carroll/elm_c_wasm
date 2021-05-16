@@ -71,21 +71,23 @@ int count_flags(u32 flags) {
 char* test_header_layout() {
   Header mask_tag = (Header){.tag = -1, .size = 0};
   Header mask_size = (Header){.tag = 0, .size = -1};
+  u32* mask_tag_u32 = (u32*)&mask_tag;
+  u32* mask_size_u32 = (u32*)&mask_size;
 
   if (verbose) {
     safe_printf("\n");
     safe_printf("## test_header_layout\n");
-    safe_printf("mask_tag  BE=%08x, LE=%s\n", *(u32*)&mask_tag, hex(&mask_tag, 4));
-    safe_printf("mask_size BE=%08x, LE=%s\n", *(u32*)&mask_size, hex(&mask_size, 4));
+    safe_printf("mask_tag  BE=%08x, LE=%s\n", *mask_tag_u32, hex(&mask_tag, 4));
+    safe_printf("mask_size BE=%08x, LE=%s\n", *mask_size_u32, hex(&mask_size, 4));
   }
 
   mu_assert("Header size should be 4 bytes", sizeof(Header) == 4);
 #ifdef _WIN32
-  mu_assert("Tag field should have 5 bits", count_flags(*(u32*)&mask_tag) == 5);
-  mu_assert("Size field should have 27 bits", count_flags(*(u32*)&mask_size) == 27);
+  mu_assert("Tag field should have 5 bits", count_flags(*mask_tag_u32) == 5);
+  mu_assert("Size field should have 27 bits", count_flags(*mask_size_u32) == 27);
 #else
-  mu_assert("Tag field should have 4 bits", count_flags(*(u32*)&mask_tag) == 4);
-  mu_assert("Size field should have 28 bits", count_flags(*(u32*)&mask_size) == 28);
+  mu_assert("Tag field should have 4 bits", count_flags(*mask_tag_u32) == 4);
+  mu_assert("Size field should have 28 bits", count_flags(*mask_size_u32) == 28);
 #endif
 
   return NULL;

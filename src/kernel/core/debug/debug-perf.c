@@ -19,10 +19,18 @@ void perf_section_end(PerfCounter* counter) {
 
 
 void perf_print() {
+  const bool is_relative_to_baseline = false;
+
   safe_printf("\n");
   safe_printf("Performance profile\n");
   safe_printf("===================\n");
-  safe_printf("Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code\n");
+  if (is_relative_to_baseline) {
+    safe_printf(
+        "Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  "
+        "Code\n");
+  } else {
+    safe_printf("   Total       Average      Hits   Function          Line  Code\n");
+  }
 
   PerfCounter* sorted[perf_counters_len];
   PerfCounter* baseline_counter = NULL;
@@ -55,14 +63,25 @@ void perf_print() {
     if (counter->hits == 0 || counter == baseline_counter) {
       continue;
     }
-    safe_printf(" %f      %f     " PERF_FORMAT "    %6d   %16s  %4d  %s\n",
-        counter->total / baseline,
-        counter->total / (baseline * counter->hits),
-        counter->total / counter->hits,
-        counter->hits,
-        counter->function,
-        counter->start_line,
-        counter->code);
+
+    if (is_relative_to_baseline) {
+      safe_printf(" %f      %f     " PERF_FORMAT "    %6d   %16s  %4d  %s\n",
+          counter->total / baseline,
+          counter->total / (baseline * counter->hits),
+          counter->total / counter->hits,
+          counter->hits,
+          counter->function,
+          counter->start_line,
+          counter->code);
+    } else {
+      safe_printf(PERF_FORMAT " " PERF_FORMAT "   %6d   %16s  %4d  %s\n",
+          counter->total,
+          counter->total / counter->hits,
+          counter->hits,
+          counter->function,
+          counter->start_line,
+          counter->code);
+    }
   }
   safe_printf("\n");
 }

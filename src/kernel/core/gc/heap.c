@@ -80,8 +80,6 @@ void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
         ErrorExit(__FUNCTION__, __LINE__);
       }
     }
-  } else {
-    safe_printf("resize_system_memory: nothing to do\n");
   }
 }
 
@@ -94,7 +92,7 @@ static void* get_initial_system_memory(size_t bytes) {
   size_t aligned_addr = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
   void* aligned_break = (void*)aligned_addr;
   void* new_break = aligned_break + bytes;
-  brk(new_break);
+  assert(brk(new_break) != -1);
   assert(sbrk(0) == new_break);
   return aligned_break;
 }
@@ -104,7 +102,7 @@ void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   if (new_break == (void*)heap->system_end) {
     return;
   }
-  brk(new_break);
+  assert(brk(new_break) != -1);
   assert(sbrk(0) == new_break);
 }
 

@@ -10,12 +10,7 @@
 extern GcState gc_state;
 extern char stack_flags[GC_STACK_MAP_SIZE];
 
-
-#ifndef DEBUG
-void Debug_print_offset(const char* label, void* p) {}
-#define Debug_is_target_addr(...) false
-#define Debug_is_target_in_range(...) false
-#else
+#ifdef DEBUG
 
 static size_t target_offsets[] = {
     // 0x9b820,

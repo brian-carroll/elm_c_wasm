@@ -264,6 +264,11 @@ int main(int argc, char** argv) {
   }
   safe_printf("\n");
 
+#ifndef TEST
+  safe_printf("TEST macro not defined\n");
+  exit(EXIT_FAILURE);
+#endif
+
   test_all(types, utils, basics, string, chr, list, debug, json, gc);
   int exit_code;
 

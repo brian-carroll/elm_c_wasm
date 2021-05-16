@@ -1,10 +1,10 @@
 ## TODO
 
 - Build
-  - Make sure compile works with DEBUG undefined
   - Try debugging in VS Code on Windows
   - make a config.h for DEBUG and perf and whatever else
   - collect platform stuff together
+  - define out `assert`
 - virtual DOM
   - Integrate VDOM allocator into the GC
   - Make a test app and render stuff

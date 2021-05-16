@@ -2,14 +2,12 @@ FILENAME='elm'
 KDIR=../../src/kernel
 KERNELS="${KDIR}/core/core.c ${KDIR}/elm-test/elm-test.c ${KDIR}/json/json.c ${KDIR}/wrapper/wrapper.c"
 WRAPPER_DIR=../../src/kernel/wrapper
+CFLAGS=$@
 
 extra_opt=""
-extra_opt="$extra_opt -DDEBUG"
-# extra_opt="$extra_opt -DDEBUG_LOG"
-# extra_opt="$extra_opt -O1"
 
-extra_opt="$extra_opt -g4"
-extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/dist/"
+# extra_opt="$extra_opt -g4"
+# extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/dist/"
 
 mkdir -p dist
 
@@ -18,7 +16,8 @@ echo "" > emcc.log
 set -x
 
 
-emcc build/codemods/$FILENAME.c \
+emcc $CFLAGS \
+  build/codemods/$FILENAME.c \
   $KERNELS \
   --pre-js $WRAPPER_DIR/emscripten-module.js \
   --pre-js $WRAPPER_DIR/wrapper.js \

@@ -34,7 +34,7 @@
 #include "mark.c"
 #include "stack.c"
 
-#ifdef DEBUG
+#ifdef TEST
 
 void (*gc_test_mark_callback)();
 #define TEST_MARK_CALLBACK() \
@@ -183,8 +183,6 @@ void GC_collect_minor() {
 void GC_collect_major() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->heap.start;
-
-  safe_printf("\nStarting major GC\n");
 
   stack_clear();
   PERF_TIMED_STATEMENT(mark(state, ignore_below));

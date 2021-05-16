@@ -1,9 +1,7 @@
 #ifndef __EMSCRIPTEN__
 
 /*
-  Non-Wasm target => JS imports don't exist
-  Need equivalent C implementations instead
-  C-only version makes it easier to use C debug tools
+  Emulate JavaScript functions in C, for non-Wasm platforms
 */
 
 #include <assert.h>
@@ -175,6 +173,7 @@ size_t testJsonValueRoundTrip(size_t jsonStringAddr) {
   return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
 }
 
+// emulate the JS parseFloat function in C
 f64 parseFloat(u16* chars16, size_t len16) {
   assert(len16 <= 32);
   char ascii[32];
@@ -185,7 +184,14 @@ f64 parseFloat(u16* chars16, size_t len16) {
   ascii[i] = '\0';
   f64 f;
   int successCount = sscanf(ascii, "%lg", &f);
-  return successCount ? f : (0.0 / 0.0);
+
+#ifdef _MSC_VER
+  f64 not_a_number = nan(NULL);
+#else
+  f64 not_a_number = 0.0 / 0.0;
+#endif
+
+  return successCount ? f : not_a_number;
 }
 
 #endif

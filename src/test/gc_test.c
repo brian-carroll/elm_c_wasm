@@ -212,7 +212,9 @@ Closure listNonsense = {
 int count_gc_cycles;
 void assertions_test_callback() {
   count_gc_cycles++;
-  safe_printf("assertions_test_callback %d\n", count_gc_cycles);
+  if (verbose) {
+    safe_printf("assertions_test_callback %d\n", count_gc_cycles);
+  }
 }
 
 

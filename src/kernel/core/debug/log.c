@@ -29,7 +29,8 @@ void safe_printf(const char* format, ...) {
   char buf[LOG_BUFFER_BYTES];
   int count = stbsp_vsnprintf(buf, sizeof(buf), format, va);
 
-  WRITE_BYTES_TO_STDOUT(buf, count);
+  int written = WRITE_BYTES_TO_STDOUT(buf, count);
+  assert(written == count);
 
   va_end(va);
 }

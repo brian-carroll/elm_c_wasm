@@ -23,13 +23,13 @@ void* parse_bool(u16** cursor, u16* end) {
 
   const u16 chars_true[4] = {'t', 'r', 'u', 'e'};
   const u16 chars_fals[4] = {'f', 'a', 'l', 's'};
-  const u64 fast_compare_true = *(u64*)chars_true;
-  const u64 fast_compare_false = *(u64*)chars_fals;
+  const u64* fast_compare_true = (u64*)chars_true;
+  const u64* fast_compare_false = (u64*)chars_fals;
 
-  if (len >= 4 && bytes64[0] == fast_compare_true) {
+  if (len >= 4 && bytes64[0] == *fast_compare_true) {
     *cursor += 4;
     return &True;
-  } else if (len >= 5 && bytes64[0] == fast_compare_false && chars[4] == 'e') {
+  } else if (len >= 5 && bytes64[0] == *fast_compare_false && chars[4] == 'e') {
     *cursor += 5;
     return &False;
   } else {
@@ -43,9 +43,9 @@ void* parse_null(u16** cursor, u16* end) {
   u64* bytes64 = (u64*)chars;
 
   const u16 chars_null[4] = {'n', 'u', 'l', 'l'};
-  const u64 fast_compare_null = *(u64*)chars_null;
+  const u64* fast_compare_null = (u64*)chars_null;
 
-  if (len >= 4 && bytes64[0] == fast_compare_null) {
+  if (len >= 4 && bytes64[0] == *fast_compare_null) {
     *cursor += 4;
     return &Json_encodeNull;
   } else {

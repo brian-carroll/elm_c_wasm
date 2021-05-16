@@ -23,10 +23,17 @@ extern Closure Debug_todo;
 #define FORMAT_PTR_LEN 8
 #endif
 
-void Debug_pretty(const char* label, void* p);
+#ifndef DEBUG
+#define Debug_print_offset(...)
+#define Debug_is_target_addr(...) false
+#define Debug_is_target_in_range(...) false
+#else
 void Debug_print_offset(const char* label, void* p);
 bool Debug_is_target_addr(void* p);
 bool Debug_is_target_in_range(void* from, void* to);
+#endif
+
+void Debug_pretty(const char* label, void* p);
 extern char* Debug_ctors[];
 extern char* Debug_fields[];
 extern char* Debug_jsValues[];
@@ -76,6 +83,9 @@ void safe_printf(const char* format, ...);
 #define PERF_TIMER_ENABLED 0
 #define PERF_TIMED_STATEMENT(statement) statement
 #define perf_print()
+#define PERF_FORMAT ""
+typedef u64 PerfTime;
+#define PERF_GET_TIME() 0
 
 #else
 
