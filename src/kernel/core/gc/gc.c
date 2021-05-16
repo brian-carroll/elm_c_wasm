@@ -64,7 +64,8 @@ void reset_state(GcState* state) {
 
 #if PERF_TIMER_ENABLED
 void perf_get_baseline() {
-  for (int i = 0; i < 3000000; i++) {}
+  for (int i = 0; i < 3000000; i++) {
+  }
 }
 #endif
 
@@ -173,6 +174,9 @@ void GC_collect_minor() {
     safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
   }
   PERF_TIMED_STATEMENT(sweepJsRefs(false));
+#if PERF_TIMER_ENABLED
+  perf_print();
+#endif
 }
 
 
@@ -205,8 +209,12 @@ void GC_collect_major() {
   // available * SIZE_UNIT / 1024);
 
   if (used * 2 > available) {
-    grow_heap(&state->heap, 0);
+    PERF_TIMED_STATEMENT(grow_heap(&state->heap, 0));
   }
+
+#if PERF_TIMER_ENABLED
+  perf_print();
+#endif
 }
 
 
@@ -221,7 +229,14 @@ void GC_collect_major() {
 void* GC_execute(Closure* c) {
   stack_clear();
   stack_enter(c->evaluator, c);
-  return Utils_apply(c, 0, NULL);
+  void* result = Utils_apply(c, 0, NULL);
+#if 0
+  if (is_major_gc_needed()) {
+    GC_collect_major();
+    result = forwarding_address(&gc_state.heap, result);
+  }
+#endif
+  return result;
 }
 
 

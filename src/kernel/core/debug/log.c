@@ -22,16 +22,18 @@
  * Our GC needs to be the only memory manager in the program
  * Otherwise printf would segfault after the GC resizes the heap
  */
-void safe_printf(const char* format, ...) {
-  va_list va;
-  va_start(va, format);
-
+void safe_vprintf(const char* format, va_list va) {
   char buf[LOG_BUFFER_BYTES];
   int count = stbsp_vsnprintf(buf, sizeof(buf), format, va);
 
   int written = WRITE_BYTES_TO_STDOUT(buf, count);
   assert(written == count);
+}
 
+void safe_printf(const char* format, ...) {
+  va_list va;
+  va_start(va, format);
+  safe_vprintf(format, va);
   va_end(va);
 }
 
@@ -49,7 +51,7 @@ void log_error(char* fmt, ...) {
   // print_heap();
   print_state();
   // fprintf(stderr, fmt, args);
-  safe_printf(fmt, args);
+  safe_vprintf(fmt, args);
   va_end(args);
   // emscripten_run_script("debugger;");
   exit(EXIT_FAILURE);
@@ -58,7 +60,7 @@ void log_error(char* fmt, ...) {
 void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  safe_printf(fmt, args);
+  safe_vprintf(fmt, args);
   va_end(args);
   exit(EXIT_FAILURE);
 }
@@ -69,7 +71,7 @@ void log_error(char* fmt, ...) {
 void log_debug(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  safe_printf(fmt, args);
+  safe_vprintf(fmt, args);
   va_end(args);
 }
 #else

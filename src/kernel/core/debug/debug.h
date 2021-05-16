@@ -78,9 +78,8 @@ void safe_printf(const char* format, ...);
 // Performance profiling
 //
 
-#ifndef DEBUG
+#if !PERF_TIMER_ENABLED
 
-#define PERF_TIMER_ENABLED 0
 #define PERF_TIMED_STATEMENT(statement) statement
 #define perf_print()
 #define PERF_FORMAT ""
@@ -88,8 +87,6 @@ typedef u64 PerfTime;
 #define PERF_GET_TIME() 0
 
 #else
-
-#define PERF_TIMER_ENABLED 1
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>

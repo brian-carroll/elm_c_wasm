@@ -310,8 +310,13 @@ void print_state() {
   size_t used = ((u8*)state->next_alloc - (u8*)heap->start + 512) / 1024;
   size_t old_gen = ((u8*)state->end_of_old_gen - (u8*)heap->start + 512) / 1024;
 
-  size_t gc_temp_bits = sizeof(heap->gc_temp[0]) * 8;
+  size_t temp_bits = sizeof(heap->gc_temp[0]) * 8;
   size_t bitmap_bits = sizeof(heap->bitmap[0]) * 8;
+
+  int n_roots = 0;
+  for (Cons* r = state->roots; r != pNil; r = r->tail) {
+    n_roots++;
+  }
 
   safe_printf("\n");
   safe_printf("%p start\n", heap->start);
@@ -320,14 +325,11 @@ void print_state() {
   safe_printf("%p next_alloc      (%zd kB used)\n", state->next_alloc, used);
   safe_printf("%p end_of_old_gen  (%zd kB)\n", state->end_of_old_gen, old_gen);
   safe_printf("\n");
-  safe_printf("%p gc_temp (%zd %db)\n", heap->gc_temp, heap->gc_temp_size, gc_temp_bits);
-  safe_printf("%p bitmap (%zd %db)\n", heap->bitmap, heap->bitmap_size, bitmap_bits);
-  safe_printf("%p roots\n", state->roots);
+  safe_printf("%p gc_temp (%zd x %db)\n", heap->gc_temp, heap->gc_temp_size, temp_bits);
+  safe_printf("%p bitmap (%zd x %db)\n", heap->bitmap, heap->bitmap_size, bitmap_bits);
+  safe_printf("%p roots (%d)\n", state->roots, n_roots);
+  safe_printf("%8d stack_index\n", state->stack_map.index);
   safe_printf("\n");
-  safe_printf("%d stack_index\n", state->stack_map.index);
-  safe_printf("\n");
-
-  // PRINT_BITMAP();
 }
 
 

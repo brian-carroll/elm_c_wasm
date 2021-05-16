@@ -72,7 +72,7 @@ EMSCRIPTEN_KEEPALIVE size_t evalClosure(size_t addr) {
 }
 
 EMSCRIPTEN_KEEPALIVE void collectGarbage() {
-  GC_collect_major();
+  GC_collect_minor();
 }
 
 EMSCRIPTEN_KEEPALIVE void debugHeapState() {

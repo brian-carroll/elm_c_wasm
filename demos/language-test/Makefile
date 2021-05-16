@@ -22,7 +22,7 @@ wasm-release: CFLAGS = -Wall -O3
 wasm-release: dist/elm.wasm
 	@:
 
-release: CFLAGS = -Wall -O3
+release: CFLAGS = -Wall -O3 -DPERF_TIMER_ENABLED=1
 release: dist/test
 	@:
 
