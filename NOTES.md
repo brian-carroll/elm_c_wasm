@@ -1,5 +1,10 @@
 ## TODO
 
+- Build
+  - Make sure compile works with DEBUG undefined
+  - Try debugging in VS Code on Windows
+  - make a config.h for DEBUG and perf and whatever else
+  - collect platform stuff together
 - virtual DOM
   - Integrate VDOM allocator into the GC
   - Make a test app and render stuff
@@ -105,6 +110,21 @@ Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
  0.004510      0.000752        0.013333         6        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
  0.000000      0.000000        0.000000         1   GC_collect_major   201  sweepJsRefs(true)
 ```
+
+## OPTIMISATIONS ON -O3
+```
+   Total(ms)   Average(ms)  Hits   Function          Line  Code
+   8.515000    1.419167        6   GC_collect_minor   158  mark(state, ignore_below)
+   0.860000    0.000949      906        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+   0.665000    0.665000        1   GC_collect_major   190  mark(state, ignore_below)
+   0.590000    0.590000        1   GC_collect_major   193  compact(state, ignore_below)
+   0.045000    0.007500        6   GC_collect_minor   175  sweepJsRefs(false)
+   0.025000    0.004167        6        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+   0.020000    0.020000        1        GC_allocate    41  grow_heap(heap, alloc_words)
+   0.010000    0.010000        1   GC_collect_major   199  bitmap_reset(&state->heap)
+   0.005000    0.005000        1   GC_collect_major   201  sweepJsRefs(true)
+```
+
 
 ## GC size analysis
 
