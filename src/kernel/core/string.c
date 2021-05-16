@@ -576,7 +576,7 @@ static void* String_fromNumber_eval(void* args[1]) {
   int n_chars;
 
   if (box->i.header.tag == Tag_Int) {
-    n_chars = stbsp_snprintf(buf, sizeof(buf), "%d", box->i.value);
+    n_chars = stbsp_snprintf(buf, sizeof(buf), "%ld", (i64)box->i.value);
   } else {
     n_chars = stbsp_snprintf(buf, sizeof(buf), "%.16g", box->f.value);
   }

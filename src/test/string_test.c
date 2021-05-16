@@ -556,6 +556,12 @@ void* test_String_fromNumber() {
   expect_string("fromNumber -2147483648",
       "-2147483648",
       A1(&String_fromNumber, newElmInt(-2147483648)));
+  expect_string("fromNumber -2147483647",
+      "-2147483647",
+      A1(&String_fromNumber, newElmInt(-2147483647)));
+  expect_string("fromNumber -1",
+      "-1",
+      A1(&String_fromNumber, newElmInt(-1)));
   expect_string("fromNumber -3.141592653589793",
       "-3.141592653589793",
       A1(&String_fromNumber, newElmFloat(-3.141592653589793)));
