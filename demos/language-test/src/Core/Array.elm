@@ -33,20 +33,17 @@ threeLevelTree =
 
 bigSlice : Int
 bigSlice =
-    -- 10000
-    1
+    10000
 
 
 smallSlice : Int
 smallSlice =
-    -- 100
-    1
+    100
 
 
 smallerSlice : Int
 smallerSlice =
-    -- 50
-    1
+    50
 
 
 {-|
@@ -62,16 +59,15 @@ defaultSizeRange =
 initTests : Test
 initTests =
     describe "Initialization"
-        [ -- fuzz defaultSizeRange "initialize" <|
-          -- \size ->
-          -- toList (initialize size identity)
-          -- |> Expect.equal (List.range 0 (size - 1))
-          -- , fuzz defaultSizeRange "push" <|
-          -- \size ->
-          -- List.foldl push empty (List.range 0 (size - 1))
-          -- |> Expect.equal (initialize size identity)
-          -- ,
-          test "initialize non-identity" <|
+        [ fuzz defaultSizeRange "initialize" <|
+            \size ->
+                toList (initialize size identity)
+                    |> Expect.equal (List.range 0 (size - 1))
+        , fuzz defaultSizeRange "push" <|
+            \size ->
+                List.foldl push empty (List.range 0 (size - 1))
+                    |> Expect.equal (initialize size identity)
+        , test "initialize non-identity" <|
             \() ->
                 toList (initialize 4 (\n -> n * n))
                     |> Expect.equal [ 0, 1, 4, 9 ]

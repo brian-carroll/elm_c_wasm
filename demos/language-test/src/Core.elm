@@ -21,24 +21,18 @@ tests =
     describe "Elm Standard Library Tests" <|
         []
             ++ [ Array.tests ]
-            -- ++ [ Dict.tests ]
-            -- ++ [ Set.tests ]
+            ++ [ Dict.tests ]
+            ++ [ Set.tests ]
             ++ [ List.tests ]
-            ++ mostlyWorking
-
-
-mostlyWorking : List Test
-mostlyWorking =
-    []
-        ++ [ Basics.tests ]
-        ++ [ Bitwise.tests ]
-        ++ [ Char.tests ]
-        ++ [ CodeGen.tests ]
-        ++ [ Equality.tests ]
-        ++ [ Result.tests ]
-        ++ [ String.tests ]
-        ++ [ Maybe.tests ]
-        ++ [ Tuple.tests ]
+            ++ [ Basics.tests ]
+            ++ [ Bitwise.tests ]
+            ++ [ Char.tests ]
+            ++ [ CodeGen.tests ]
+            ++ [ Equality.tests ]
+            ++ [ Result.tests ]
+            ++ [ String.tests ]
+            ++ [ Maybe.tests ]
+            ++ [ Tuple.tests ]
 
 
 {-| mostly just broken because of GC!
