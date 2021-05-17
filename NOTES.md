@@ -1,5 +1,15 @@
 ## TODO
 
+- wrapper
+  - bad memory management for writes due to new GC
+- unit tests working in all 4 builds
+- language test
+  - Wasm release: tests pass but Emscripten not initialised
+  - Wasm normal: tests pass but Emscripten not initialised
+  - binary release: segfault
+    - Debug_toString > StringBuilder_toString > String_copy > copy_chars
+  - binary normal: OK
+
 - Build
   - Try debugging in VS Code on Windows
   - make a config.h for DEBUG and perf and whatever else

@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-
+#include "./gc/internals.h"
 #include "core.h"
 
 #define IS_LEADING_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
@@ -22,7 +22,7 @@ size_t code_units(ElmString16* s) {
 
 
 #if 0
-void print_chars(char* label, void* start, void* after) {
+void debug_print_chars(char* label, void* start, void* after) {
   char buf[1024];
   char* c = buf;
   for (u16* p = (u16*)start; p < (u16*)after; p++, c++) {
@@ -43,8 +43,9 @@ static u16* copy_chars(u16* to16, u16* from16, u16* after16) {
 
   u64* to64 = (u64*)to16;
   u64* from64 = (u64*)from16;
-  u64* after64 = (u64*)after16;
-  while (from64 < (after64 - 1)) {
+  ptrdiff_t len64 = (after16 - from16) / 4;
+  u64* after64 = from64 + len64;
+  while (from64 < after64 && *from64) { // zero check prevents a bug in optimised build
     *to64++ = *from64++;
   }
 
