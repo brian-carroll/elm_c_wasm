@@ -77,7 +77,7 @@ Closure elm_core_Task_succeed = {
     .max_values = NEVER_EVALUATE,
     .evaluator = (void*)JS_Scheduler_succeed,
 };
-ElmString16 literal_string_Task = {
+ElmString literal_string_Task = {
     .header = HEADER_STRING(4),
     .words16 =
         {
@@ -191,7 +191,7 @@ Closure elm_virtual_dom_VirtualDom_Normal = {
 
 // Html
 
-ElmString16 literal_string_h1 = {
+ElmString literal_string_h1 = {
     .header = HEADER_STRING(2),
     .words16 =
         {
@@ -200,7 +200,7 @@ ElmString16 literal_string_h1 = {
         },
 };
 
-ElmString16 literal_string_br = {
+ElmString literal_string_br = {
     .header = HEADER_STRING(2),
     .words16 =
         {
@@ -208,7 +208,7 @@ ElmString16 literal_string_br = {
             (u16)'r',
         },
 };
-ElmString16 literal_string_button = {
+ElmString literal_string_button = {
     .header = HEADER_STRING(6),
     .words16 =
         {
@@ -220,7 +220,7 @@ ElmString16 literal_string_button = {
             (u16)'n',
         },
 };
-ElmString16 literal_string_div = {
+ElmString literal_string_div = {
     .header = HEADER_STRING(3),
     .words16 =
         {
@@ -229,7 +229,7 @@ ElmString16 literal_string_div = {
             (u16)'v',
         },
 };
-ElmString16 literal_string_click = {
+ElmString literal_string_click = {
     .header = HEADER_STRING(5),
     .words16 =
         {
@@ -378,7 +378,7 @@ Closure author_project_Main_update = {
 
 // view
 
-ElmString16 literal_string_ClickTheButton = {
+ElmString literal_string_ClickTheButton = {
     .header = HEADER_STRING(17),
     .words16 =
         {
@@ -402,7 +402,7 @@ ElmString16 literal_string_ClickTheButton = {
         },
 };
 
-ElmString16 literal_string_StartCountdown = {
+ElmString literal_string_StartCountdown = {
     .header = HEADER_STRING(15),
     .words16 =
         {

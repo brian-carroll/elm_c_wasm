@@ -1,7 +1,7 @@
 #include "../kernel/core/core.h"
 #include "test.h"
 
-void* expect_string(char* unit_description, char* expected_c_str, ElmString16* actual);
+void* expect_string(char* unit_description, char* expected_c_str, ElmString* actual);
 
 
 void test_Debug_toString() {
@@ -58,7 +58,7 @@ void* eval_buildString(void* args[]) {
     StringBuilder_writeChar(&sb, test_sequence[idx]);
   }
 
-  ElmString16* str = StringBuilder_toString(&sb);
+  ElmString* str = StringBuilder_toString(&sb);
   return str;
 }
 
@@ -73,7 +73,7 @@ void test_StringBuilder() {
 
   Closure* buildString =
       newClosure(1, 1, eval_buildString, (void*[]){newElmInt(6 * 164 * sizeof(void*))});
-  ElmString16* longString = GC_execute(buildString);
+  ElmString* longString = GC_execute(buildString);
 
   int errors = 0;
   for (int i = 0; i < code_units(longString); i++) {

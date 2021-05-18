@@ -4,7 +4,7 @@
 #include "../../kernel/json/json.h"
 #include "../test.h"
 
-void* parse_json(ElmString16* json);
+void* parse_json(ElmString* json);
 #define WRAP(ptr) A1(&Json_wrap, ptr)
 
 //=================================================================================================
@@ -13,7 +13,7 @@ void* parse_json(ElmString16* json);
 char test_decode_buf[1024];
 
 i32 latest_jsref_index = -1;
-void* createJsValue(ElmString16* json) {
+void* createJsValue(ElmString* json) {
   Custom* wrapped = (Custom*)testJsonValueRoundTrip((size_t)json);
   JsRef* jsRef = wrapped->values[0];
   if (jsRef->header.tag == Tag_JsRef) {
@@ -24,7 +24,7 @@ void* createJsValue(ElmString16* json) {
 
 void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* expected) {
   stbsp_sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
-  ElmString16* json = create_string(json_c_str);
+  ElmString* json = create_string(json_c_str);
 
   void* actual = runner == &Json_runOnString
                      ? A2(&Json_runOnString, decoder, json)
@@ -38,7 +38,7 @@ void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* e
 void* test_decode_err(
     Closure* runner, Custom* decoder, char* json_c_str, Custom* expected_err) {
   stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
-  ElmString16* json = create_string(json_c_str);
+  ElmString* json = create_string(json_c_str);
 
   void* actual_err;
   if (runner == &Json_runOnString) {
@@ -54,7 +54,7 @@ void* test_decode_err(
 
 void* test_decode_errFailure(
     Closure* runner, Custom* decoder, char* json_c_str, char* msg_c_str) {
-  ElmString16* json = create_string(json_c_str);
+  ElmString* json = create_string(json_c_str);
   stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
 
   void* actual_err = runner == &Json_runOnString
@@ -229,7 +229,7 @@ void* test_Json_decodeField(void* runner) {
   if (verbose) {
     safe_printf("field = \"%s\"\n", fld);
   }
-  ElmString16* field = create_string(fld);
+  ElmString* field = create_string(fld);
   Custom* decoder = A2(&Json_decodeField, field, &Json_decodeInt);
 
   test_decode_ok(runner,
@@ -373,7 +373,7 @@ void* test_Json_map(void* runner) {
 }
 
 void* eval_selectField(void* args[]) {
-  ElmString16* name = args[0];
+  ElmString* name = args[0];
   return A2(&Json_decodeField, name, &Json_decodeInt);
 }
 Closure selectField = {

@@ -149,7 +149,7 @@ void* eval_Debug_toString(void* args[]) {
   StringBuilder sb;
   StringBuilder_init(&sb);
   Debug_toStringHelp(5, value, &sb);
-  ElmString16* str = StringBuilder_toString(&sb);
+  ElmString* str = StringBuilder_toString(&sb);
 
   return str;
 }
@@ -164,7 +164,7 @@ Closure Debug_toString = {
 
 
 void* eval_Debug_log(void* args[]) {
-  ElmString16* label = args[0];
+  ElmString* label = args[0];
   void* value = args[1];
 
   size_t label_len = code_units(label);
@@ -175,7 +175,7 @@ void* eval_Debug_log(void* args[]) {
   putchar(':');
   putchar(' ');
 
-  ElmString16* s = eval_Debug_toString(args + 1);
+  ElmString* s = eval_Debug_toString(args + 1);
   size_t s_len = code_units(s);
   for (size_t i = 0; i < s_len; ++i) {
     putchar(s->words16[i]);
@@ -195,7 +195,7 @@ Closure Debug_log = {
 
 
 void* eval_Debug_todo(void* args[]) {
-  ElmString16* message = args[0];
+  ElmString* message = args[0];
   size_t len = code_units(message);
   for (size_t i = 0; i < len; ++i) {
     putchar(message->words16[i]);

@@ -80,6 +80,6 @@ extern void* test_heap_ptr;
 void describe(char* description, void* (*test)());
 void describe_arg(char* description, void* (*test)(void* arg), void* arg);
 void* expect_equal(char* expect_description, void* left, void* right);
-ElmString16* create_string(char* c_string);
+ElmString* create_string(char* c_string);
 
 #endif

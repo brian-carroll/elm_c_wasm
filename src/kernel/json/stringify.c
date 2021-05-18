@@ -4,7 +4,7 @@
 #include "json.h"
 
 
-static void stringify_string(ElmString16* src, StringBuilder* sb) {
+static void stringify_string(ElmString* src, StringBuilder* sb) {
   u16* from = src->words16;
   u16* to = sb->cursor;
 
@@ -106,7 +106,7 @@ static void stringify_object(
 
   u32 len = custom_params(object);
   for (size_t i = 0; i < len; i += 2) {
-    ElmString16* field = object->values[i];
+    ElmString* field = object->values[i];
     void* value = object->values[i + 1];
     StringBuilder_writeIndent(sb, indent_next);
     stringify(indent, indent_next, field, sb);

@@ -26,7 +26,7 @@ void put_str(char* str) {
 }
 
 
-bool is_html_tag(char* c_tag, ElmString16* elm_tag) {
+bool is_html_tag(char* c_tag, ElmString* elm_tag) {
   size_t c_len = strlen(c_tag);
   size_t elm_len = code_units(elm_tag);
   if (c_len != elm_len) return false;
@@ -39,14 +39,14 @@ bool is_html_tag(char* c_tag, ElmString16* elm_tag) {
 
 void print_virtual_dom_help(int indent, Closure* vdom) {
   if (vdom->evaluator == VirtualDom_text.evaluator) {
-    ElmString16* text = vdom->values[0];
+    ElmString* text = vdom->values[0];
     u32 len = code_units(text);
     for (u32 i = 0; i < len; ++i) {
       u16 w = text->words16[i];
       if (w <= 0xff) putchar(w);
     }
   } else {
-    ElmString16* tag = vdom->values[0];
+    ElmString* tag = vdom->values[0];
     // Cons* facts = vdom->values[1];
     Cons* children = vdom->values[2];
 

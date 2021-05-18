@@ -166,8 +166,8 @@ struct ALIGN(8) elm_string16 {
   Header header;
   u16 words16[];
 };
-typedef struct elm_string16 ElmString16;
-ElmString16* newElmString16(size_t len16);
+typedef struct elm_string16 ElmString;
+ElmString* newElmString(size_t len16);
 
 enum {
   UTF8,
@@ -240,7 +240,7 @@ typedef union {
   ElmInt elm_int;
   ElmFloat elm_float;
   ElmChar elm_char;
-  ElmString16 elm_string16;
+  ElmString elm_string16;
   Cons cons;
   Tuple2 tuple2;
   Tuple3 tuple3;

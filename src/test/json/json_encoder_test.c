@@ -239,9 +239,9 @@ Closure g_elm_json_Json_Encode_object = {
 };
 
 void* test_Json_encode_object() {
-  ElmString16* name = create_string("name");
-  ElmString16* brian = create_string("Brian");
-  ElmString16* age = create_string("age");
+  ElmString* name = create_string("name");
+  ElmString* brian = create_string("Brian");
+  ElmString* age = create_string("age");
   ElmInt int42 = {
       .header = HEADER_INT,
       .value = 42,

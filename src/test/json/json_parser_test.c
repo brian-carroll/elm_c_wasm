@@ -11,7 +11,7 @@
 char parse_test_msg[PARSE_TEST_MSG_LEN];
 
 char* parse_test(void* (*parse_func)(u16** cursor, u16* end),
-    ElmString16* json,
+    ElmString* json,
     void* expect_val,
     size_t expect_chars_consumed) {
   // ---
@@ -88,7 +88,7 @@ void* test_Json_parse_number() {
 
 #define DQUOTE "\""
 void* parse_string(u16** cursor, u16* end);
-ElmString16 unicode_test_string = {
+ElmString unicode_test_string = {
     .header = HEADER_STRING(2), .words16 = {0xD852, 0xDF62},  // 𤭢
 };
 
@@ -162,7 +162,7 @@ void* test_Json_parse_string() {
 
 void skip_whitespace(u16** cursor, u16* end);
 void* test_Json_skip_whitespace() {
-  ElmString16* json;
+  ElmString* json;
   u16* cursor;
 
   json = create_string("\t\r\n true \t\r\n");

@@ -92,9 +92,9 @@ void* expect_equal(char* expect_description, void* left, void* right) {
   return NULL;
 }
 
-ElmString16* create_string(char* c_string) {
+ElmString* create_string(char* c_string) {
   size_t len = (size_t)strlen(c_string);
-  ElmString16* s = newElmString16(len);
+  ElmString* s = newElmString(len);
   for (size_t i = 0; i < len; i++) {
     s->words16[i] = (u16)c_string[i];
   }

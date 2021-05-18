@@ -73,12 +73,12 @@ ElmChar* newElmChar(u32 value) {
 }
 
 // Strings are padded to the next 32/64-bit boundary.
-ElmString16* newElmString16(size_t len16) {
+ElmString* newElmString(size_t len16) {
   size_t used_bytes = sizeof(Header) + len16 * sizeof(u16);
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
   size_t aligned_bytes = aligned_words * SIZE_UNIT;
 
-  ElmString16* p = GC_allocate(true, aligned_words);
+  ElmString* p = GC_allocate(true, aligned_words);
 
   if (aligned_bytes != used_bytes) {
     size_t* words = (size_t*)p;

@@ -64,7 +64,7 @@ Closure Json_emptyObject = {
 
 
 void* eval_Json_addField(void* args[]) {
-  ElmString16* key = args[0];
+  ElmString* key = args[0];
   Custom* wrappedValue = args[1];
   Custom* old_object = args[2];
 
@@ -123,7 +123,7 @@ void* eval_Json_encode(void* args[]) {
   StringBuilder sb;
   StringBuilder_init(&sb);
   stringify(indentLevel->value, 0, value, &sb);
-  ElmString16* str = StringBuilder_toString(&sb);
+  ElmString* str = StringBuilder_toString(&sb);
 
   return str;
 }

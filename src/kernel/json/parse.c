@@ -98,7 +98,7 @@ void* parse_string(u16** cursor, u16* end) {
   }
 
   size_t max_len = endquote - from;
-  ElmString16* str = newElmString16(max_len);
+  ElmString* str = newElmString(max_len);
 
   for (to = str->words16;; to++, from++) {
     if (from >= end) return NULL;
@@ -246,7 +246,7 @@ void* parse_object(u16** cursor, u16* end) {
   size_t n_pairs = 0;
   for (;;) {
     // field
-    ElmString16* field = parse_string(&c, end);
+    ElmString* field = parse_string(&c, end);
     if (c >= end || field == NULL) return NULL;
 
     // colon
@@ -314,7 +314,7 @@ void* parse_recurse(u16** cursor, u16* end) {
   }
 }
 
-void* parse_json(ElmString16* json) {
+void* parse_json(ElmString* json) {
   u16* cursor = json->words16;
   u16* end = json->words16 + code_units(json);
   skip_whitespace(&cursor, end);

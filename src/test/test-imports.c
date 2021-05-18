@@ -111,7 +111,7 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
   void* value = &Json_encodeNull;
   u32 i;
   for (i = 0; i < len; i += 2) {
-    ElmString16* field = obj->values[i];
+    ElmString* field = obj->values[i];
     if (Utils_apply(&Utils_equal, 2, (void*[]){field, (void*)fieldStringAddr}) == &True) {
       value = obj->values[i + 1];
       break;
@@ -131,11 +131,11 @@ ptrdiff_t getJsRefValue(u32 jsRefId) {
 // Circular values must be outside the GC-managed heap
 // ---------------------------------------------------
 
-static ElmString16 str_a = {
+static ElmString str_a = {
     .header = HEADER_STRING(1),
     .words16 = {'a'},
 };
-static ElmString16 str_b = {
+static ElmString str_b = {
     .header = HEADER_STRING(1),
     .words16 = {'b'},
 };
@@ -168,7 +168,7 @@ size_t testCircularJsValue(bool isArray) {
 };
 
 size_t testJsonValueRoundTrip(size_t jsonStringAddr) {
-  void* value = parse_json((ElmString16*)jsonStringAddr);
+  void* value = parse_json((ElmString*)jsonStringAddr);
   void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
   return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
 }

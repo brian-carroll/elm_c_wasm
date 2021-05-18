@@ -1,6 +1,6 @@
 #include "./gc/internals.h"
 #include "core.h"
-u16* String_copy(u16* to, ElmString16* s);
+u16* String_copy(u16* to, ElmString* s);
 
 
 #define STRING_BUILDER_MIN_CODE_UNITS 512
@@ -12,7 +12,7 @@ void StringBuilder_startSection(StringBuilder* sb, size_t min_code_units) {
   sb->last_section->tail = cell;
 
   // Allocate a string at least min size and as large as we can get
-  ElmString16* s = newElmString16(min_code_units);
+  ElmString* s = newElmString(min_code_units);
   size_t* end = state->end_of_alloc_patch;
   size_t extra_space = end - state->next_alloc - 1;
   GC_allocate(false, extra_space);
@@ -27,7 +27,7 @@ void StringBuilder_startSection(StringBuilder* sb, size_t min_code_units) {
 
 
 void StringBuilder_finishSection(StringBuilder* sb) {
-  ElmString16* s = sb->last_section->head;
+  ElmString* s = sb->last_section->head;
   u32 used_chars = sb->cursor - s->words16;
   s->header.size = SIZE_STRING(used_chars);
   size_t* after_string = (size_t*)s + s->header.size;
@@ -52,14 +52,14 @@ void StringBuilder_init(StringBuilder* sb) {
 }
 
 
-ElmString16* StringBuilder_toString(StringBuilder* sb) {
+ElmString* StringBuilder_toString(StringBuilder* sb) {
   StringBuilder_finishSection(sb);
 
   if (sb->first_section == sb->last_section) {
     return sb->first_section->head;
   }
 
-  ElmString16* result = newElmString16(sb->finished_sections_length);
+  ElmString* result = newElmString(sb->finished_sections_length);
   u16* dest = result->words16;
   for (Cons* cell = sb->first_section; cell != pNil; cell = cell->tail) {
     dest = String_copy(dest, cell->head);

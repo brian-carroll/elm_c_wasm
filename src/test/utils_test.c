@@ -281,10 +281,10 @@ char* test_eq(void) {
   if (verbose) {
     safe_printf("\nString equality\n");
   }
-  ElmString16* hello1 = create_string("hello");
-  ElmString16* hello2 = create_string("hello");
-  ElmString16* hello_ = create_string("hello_");
-  ElmString16* world = create_string("world");
+  ElmString* hello1 = create_string("hello");
+  ElmString* hello2 = create_string("hello");
+  ElmString* hello_ = create_string("hello_");
+  ElmString* world = create_string("world");
   mu_assert("Expect: \"hello\" == \"hello\" (by reference)",
       A2(&Utils_equal, hello1, hello1) == &True);
   mu_assert("Expect: \"hello\" == \"hello\" (by value)",

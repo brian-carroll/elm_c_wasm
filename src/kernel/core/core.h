@@ -145,7 +145,7 @@ extern Closure List_sortBy;
 // =========================================
 
 void* eval_String_append(void* args[]);  // exposed for `++` (Utils_append)
-size_t code_units(ElmString16* s);
+size_t code_units(ElmString* s);
 
 // extern Closure String_cons;
 extern Closure String_uncons;
@@ -189,7 +189,7 @@ struct str_builder {
 typedef struct str_builder StringBuilder;
 
 void StringBuilder_init(StringBuilder* sb);
-ElmString16* StringBuilder_toString(StringBuilder* sb);
+ElmString* StringBuilder_toString(StringBuilder* sb);
 void StringBuilder_ensureSpace(StringBuilder* sb, size_t need);
 void StringBuilder_copyAscii(StringBuilder* sb, char* src);
 void StringBuilder_writeChar(StringBuilder* sb, char c);

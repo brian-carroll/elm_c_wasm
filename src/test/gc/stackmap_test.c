@@ -4,7 +4,7 @@
 
 void gc_test_reset();
 
-ElmString16* create_test_string(char* prefix, const char* function_name) {
+ElmString* create_test_string(char* prefix, const char* function_name) {
   char buf[100];
   stbsp_snprintf(buf, sizeof(buf), "%s %s", prefix, function_name);
   return create_string(buf);
@@ -31,8 +31,8 @@ void* eval_stack_tail_overflow(void* args[]) {
         // fill up the heap with junk to trigger GC
         count = newElmInt(count->value - 1);
         for (;;) {
-          ElmString16* last_alloc = (ElmString16*)list;
-          ElmString16* junk = JUNK_STRING();
+          ElmString* last_alloc = (ElmString*)list;
+          ElmString* junk = JUNK_STRING();
           if (junk < last_alloc) {
             if (verbose) {
               safe_printf("allocation pointer wrapped around to %p\n", junk);
@@ -65,11 +65,11 @@ Closure stack_tail_overflow = {
 
 void* eval_stack_normal_overflow(void* args[]) {
   Cons* list = args[0];
-  ElmString16* live1 = LIVE_STRING();
+  ElmString* live1 = LIVE_STRING();
 
   Cons* listAfterMinorGC = A2(&stack_tail_overflow, newCons(live1, list), newElmInt(3));
 
-  ElmString16* live2 = LIVE_STRING();
+  ElmString* live2 = LIVE_STRING();
   Cons* result = newCons(live2, listAfterMinorGC);
   return result;
 }
@@ -85,7 +85,7 @@ void* eval_stack_tail_complete(void* args[]) {
 
   for (int i = 0; i < 3; ++i) {
     JUNK_STRING();
-    ElmString16* live = LIVE_STRING();
+    ElmString* live = LIVE_STRING();
     list = newCons(live, list);
     GC_stack_tailcall(1, list);
   }
@@ -101,7 +101,7 @@ Closure stack_tail_complete = {
 
 void* eval_stack_normal_complete(void* args[]) {
   Cons* list = args[0];
-  ElmString16* live = LIVE_STRING();
+  ElmString* live = LIVE_STRING();
   JUNK_STRING();
   Cons* result = newCons(live, list);
   return result;
@@ -164,7 +164,7 @@ void gc_stackmap_test() {
 
   Cons* stringList = A1(&stackmap_test, &Nil);
 
-  ElmString16* actual[stackmap_test_expected_len];
+  ElmString* actual[stackmap_test_expected_len];
 
   // reverse the list of live strings, to get them in allocation order
   Cons* list = stringList;

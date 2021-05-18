@@ -459,7 +459,7 @@ static void Debug_prettyHelp(int indent, void* p) {
       break;
     case Tag_String: {
       safe_printf("String \"");
-      ElmString16* s = p;
+      ElmString* s = p;
       for (size_t i = 0; i < code_units(s); i++) {
         u16 chr = s->words16[i];
         if (chr) {
