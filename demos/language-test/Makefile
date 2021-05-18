@@ -1,5 +1,5 @@
 MAKEFLAGS := --jobs=$(shell nproc)
-CFLAGS=-Wall -DDEBUG
+CFLAGS=-DDEBUG -Wall -Wno-unused-variable -Wno-incompatible-pointer-types
 
 ELM_SOURCES := $(shell find ./src -name '*.elm')
 KERNEL := ../../src/kernel
@@ -48,4 +48,4 @@ $(WRAPPER).js: $(WRAPPER).ts
 	../../node_modules/.bin/tsc $(WRAPPER).ts
 
 dist/test: $(KERNELC) $(KERNELH) build/codemods/elm.c ../../src/test/test-imports.c
-	gcc $(CFLAGS) -g $(ENTRY) build/codemods/elm.c ../../src/test/test-imports.c -o $@ -lm -Wno-unused-variable -Wno-incompatible-pointer-types
+	gcc $(CFLAGS) -g $(ENTRY) build/codemods/elm.c ../../src/test/test-imports.c -o $@ -lm
