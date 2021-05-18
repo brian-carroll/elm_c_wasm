@@ -261,60 +261,6 @@ char* test_char() {
   return NULL;
 }
 
-char* test_strings() {
-  ElmString* str0 = newElmString(0, "");
-  ElmString* str1 = newElmString(1, "1");
-  ElmString* str2 = newElmString(2, "12");
-  ElmString* str3 = newElmString(3, "123");
-  ElmString* str4 = newElmString(4, "1234");
-  ElmString* str5 = newElmString(5, "12345");
-  ElmString* str7 = newElmString(7, "1234567");
-  ElmString* str8 = newElmString(8, "12345678");
-  ElmString* str9 = newElmString(9, "123456789");
-  char s[] = "The quick brown fox jumped over the lazy dog, yeah.";
-  size_t n = strlen(s);
-  ElmString* strN = newElmString(n, s);
-
-  if (verbose) {
-    safe_printf("\n");
-    safe_printf("## test_strings\n");
-    safe_printf("\n");
-    safe_printf("sizeof(ElmString) = %zd\n", sizeof(ElmString));
-    safe_printf("\n");
-  }
-
-#if TARGET_64BIT
-  mu_expect_equal("0-byte string should have correct size field", str0->header.size, 1);
-  mu_expect_equal("1-byte string should have correct size field", str1->header.size, 1);
-  mu_expect_equal("2-byte string should have correct size field", str2->header.size, 1);
-  mu_expect_equal("3-byte string should have correct size field", str3->header.size, 1);
-  mu_expect_equal("4-byte string should have correct size field", str4->header.size, 1);
-  mu_expect_equal("5-byte string should have correct size field", str5->header.size, 2);
-  mu_expect_equal("7-byte string should have correct size field", str7->header.size, 2);
-  mu_expect_equal("8-byte string should have correct size field", str8->header.size, 2);
-  mu_expect_equal("9-byte string should have correct size field", str9->header.size, 2);
-  mu_expect_equal("N-byte string should have correct size field", strN->header.size, 7);
-#else
-  mu_expect_equal("0-byte string should have correct size field", str0->header.size, 1);
-  mu_expect_equal("1-byte string should have correct size field", str1->header.size, 2);
-  mu_expect_equal("2-byte string should have correct size field", str2->header.size, 2);
-  mu_expect_equal("3-byte string should have correct size field", str3->header.size, 2);
-  mu_expect_equal("4-byte string should have correct size field", str4->header.size, 2);
-  mu_expect_equal("5-byte string should have correct size field", str5->header.size, 3);
-  mu_expect_equal("7-byte string should have correct size field", str7->header.size, 3);
-  mu_expect_equal("8-byte string should have correct size field", str8->header.size, 3);
-  mu_expect_equal("9-byte string should have correct size field", str9->header.size, 4);
-  mu_expect_equal("51-byte string should have correct size field",
-      strN->header.size,
-      1 + ((n + 3) / 4));
-#endif
-
-  mu_assert("newElmString should insert the correct type tag",
-      str9->header.tag == Tag_String);
-
-  return NULL;
-}
-
 char* test_custom() {
   u8 memory[sizeof(Custom) + 2 * sizeof(void*)];
   Custom* c = (Custom*)memory;
@@ -447,7 +393,6 @@ char* types_test() {
   mu_run_test(test_char);
   if (verbose) safe_printf("\n");
 
-  mu_run_test(test_strings);
   mu_run_test(test_custom);
   mu_run_test(test_record);
   mu_run_test(test_closure);

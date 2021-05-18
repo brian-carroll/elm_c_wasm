@@ -310,14 +310,12 @@ static void* eval_String_slice(void* args[]) {
   i32 start = slice_wrap_index(argStart->value, (i32)len);
   i32 end = slice_wrap_index(argEnd->value, (i32)len);
   if (start > end) {
-    return newElmString(0, NULL);
+    return newElmString16(0);
   }
 
-  size_t n_words = (size_t)(end - start);
-  size_t n_bytes = n_words * 2;
-  u16* words_to_copy = &str->words16[start];
-
-  return newElmString(n_bytes, (char*)words_to_copy);
+  ElmString16* result = newElmString16(end - start);
+  copy_chars(result->words16, str->words16 + start, str->words16 + end);
+  return result;
 }
 Closure String_slice = {
     .header = HEADER_CLOSURE(0),

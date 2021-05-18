@@ -88,7 +88,7 @@ void print_value(void* p) {
       safe_printf("String \"");
       size_t body_bytes = (v->header.size * SIZE_UNIT) - sizeof(Header);
       for (size_t i = 0; i < body_bytes; i = i + 2) {
-        char c = v->elm_string.bytes[i];
+        char c = v->elm_string16.words16[i];
         if (c) safe_printf("%c", c);
       }
       safe_printf("\"");

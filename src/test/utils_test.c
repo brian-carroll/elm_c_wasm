@@ -67,7 +67,7 @@ char* test_records() {
   r1->header = (Header)HEADER_RECORD(2);
   r1->fieldgroup = fgRecord1;
   r1->values[0] = newElmInt(123);
-  r1->values[1] = newElmString(5, "hello");
+  r1->values[1] = create_string("hello");
 
   r2->header = (Header)HEADER_RECORD(3);
   r2->fieldgroup = fgRecord2;
@@ -278,25 +278,13 @@ char* test_eq(void) {
   }
   mu_assert("Expect: True /= 3", A2(&Utils_equal, &True, &three) == &False);
 
-  ElmString* hello1 = newElmString(5, "hello");
-  ElmString* hello2 = newElmString(5, "hello");
-  ElmString* hello_ = newElmString(6, "hello_");
-  ElmString* world = newElmString(5, "world");
-
   if (verbose) {
     safe_printf("\nString equality\n");
-    safe_printf("hello1 str=\"%s\" hex=%s\n",
-        hello1->bytes,
-        hex(hello1, hello1->header.size * 4));
-    safe_printf("hello2 str=\"%s\" hex=%s\n",
-        hello2->bytes,
-        hex(hello2, hello2->header.size * 4));
-    safe_printf("hello_ str=\"%s\" hex=%s\n",
-        hello_->bytes,
-        hex(hello_, hello_->header.size * 4));
-    safe_printf("world str=\"%s\" hex=%s\n", world->bytes, hex(world, world->header.size * 4));
   }
-
+  ElmString16* hello1 = create_string("hello");
+  ElmString16* hello2 = create_string("hello");
+  ElmString16* hello_ = create_string("hello_");
+  ElmString16* world = create_string("world");
   mu_assert("Expect: \"hello\" == \"hello\" (by reference)",
       A2(&Utils_equal, hello1, hello1) == &True);
   mu_assert("Expect: \"hello\" == \"hello\" (by value)",

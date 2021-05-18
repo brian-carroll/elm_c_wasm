@@ -73,62 +73,6 @@ ElmChar* newElmChar(u32 value) {
 }
 
 // Strings are padded to the next 32/64-bit boundary.
-
-ElmString* newElmString(size_t payload_bytes, char* str) {
-  size_t used_bytes = sizeof(Header) + payload_bytes +
-                      (STRING_ENCODING == UTF8);  // 1 byte for padding size
-  size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil
-
-  ElmString* p = GC_allocate(true, aligned_words);
-  size_t* words = (size_t*)p;  // the ElmString as an array of words
-
-#if STRING_ENCODING == UTF16
-  if (payload_bytes & 2) {
-    words[aligned_words - 1] = 0;  // odd number of UTF-16 words => zero out the last word
-  }
-#elif STRING_ENCODING == UTF8
-  // Insert zero padding, and last byte indicating size of padding
-  // Store padding size minus 1, so that if there's only 1 byte of padding,
-  // it's a zero. (Zero-terminated strings are handy for debug etc.)
-  size_t padding_bytes = aligned_bytes - (used_bytes - 1);
-  size_t last_byte_value = padding_bytes - 1;
-  words[aligned_words - 1] = last_byte_value << (SIZE_UNIT - 1) * 8;
-#else
-  static_assert(0, "Unknown STRING_ENCODING, don't know how to add padding.");
-#endif
-
-  // Write header _after_ padding to avoid it getting overwritten for empty string
-  p->header = (Header){
-      .tag = Tag_String,
-      .size = (u32)aligned_words,
-  };
-
-  // Copy the string body if provided
-  if (str != NULL) {
-    // Header is 32 bits => ElmString body is 32-bit aligned
-    u32* i_from = (u32*)str;
-    u32* i_end = i_from + (payload_bytes / 4);
-    u32* i_to = (u32*)p->bytes;
-    while (i_from < i_end) {
-      *i_to++ = *i_from++;
-    }
-
-    // Last few bytes (<4)
-    char* c_from = (char*)i_from;
-    char* c_end = str + payload_bytes;
-    char* c_to = (char*)i_to;
-    while (c_from < c_end) {
-      *c_to++ = *c_from++;
-    }
-  }
-
-  if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
-    Debug_pretty("allocation at target address", p);
-  }
-  return p;
-}
-
-
 ElmString16* newElmString16(size_t len16) {
   size_t used_bytes = sizeof(Header) + len16 * sizeof(u16);
   size_t aligned_words = (used_bytes + SIZE_UNIT - 1) / SIZE_UNIT;  // ceil

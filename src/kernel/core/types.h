@@ -162,14 +162,6 @@ ElmChar* newElmChar(u32 value);
 #define ALIGN(X) __attribute__ ((aligned(X)))
 #endif
 
-struct ALIGN(8) elm_string {
-  Header header;
-  u8 bytes[];
-};
-typedef struct elm_string ElmString;
-
-ElmString* newElmString(size_t n, char* str);
-
 struct ALIGN(8) elm_string16 {
   Header header;
   u16 words16[];
@@ -248,7 +240,6 @@ typedef union {
   ElmInt elm_int;
   ElmFloat elm_float;
   ElmChar elm_char;
-  ElmString elm_string;
   ElmString16 elm_string16;
   Cons cons;
   Tuple2 tuple2;
