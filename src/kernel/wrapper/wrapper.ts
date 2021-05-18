@@ -65,7 +65,7 @@ interface ElmCurriedFunction {
  * This needs to be compiled from TypeScript to JavaScript in a build step.
  * Then Emscripten bundles it along with its own code and the Elm compiler output.
  *
- * @param emscriptenModule        Object of exported functions from the Wasm module
+ * @param emscriptenModule   Emscripten toolchain output
  * @param elmImports         Values imported into the wrapper from Elm app
  * @param generatedAppTypes  App-specific type info passed from Elm compiler to this wrapper
  * @param kernelFuncRecord   Record of all JS kernel functions called by the Elm Wasm module
