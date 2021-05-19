@@ -28,13 +28,10 @@ interface EmscriptenModule {
   _getTrue: () => number;
   _getFalse: () => number;
   _getFieldGroups: () => number;
-  _getMaxWriteAddr: () => number;
-  _getWriteAddr: () => number;
-  _finishWritingAt: (addr: number) => void;
+  _allocate: (size: number) => number;
   _readF64: (addr: number) => number;
   _writeF64: (addr: number, value: number) => void;
   _evalClosure: (addr: number) => number;
-  _collectGarbage: () => void;
   _debugHeapState: () => void;
   _debugAddrRange: (start: number, size: number) => void;
   _debugStackMap: () => void;
@@ -111,7 +108,7 @@ function wrapWasmElmApp(
     _List_Nil,
     _Utils_Tuple2,
     _Utils_Tuple3,
-    _Utils_chr,
+    _Utils_chr
   } = elmImports;
 
   /**
@@ -146,7 +143,7 @@ function wrapWasmElmApp(
   const appTypes: AppTypes = {
     ctors: arrayToEnum(generatedAppTypes.ctors),
     fields: arrayToEnum(generatedAppTypes.fields),
-    fieldGroups: mapFieldGroups(),
+    fieldGroups: mapFieldGroups()
   };
   function mapFieldGroups(): NameToInt & IntToNames {
     let fgPointersAddr = emscriptenModule._getFieldGroups();
@@ -161,7 +158,7 @@ function wrapWasmElmApp(
         return enumObj;
       },
       {}
-    )
+    );
   }
 
   function arrayToEnum(names: string[]): NameToInt & IntToName {
@@ -390,17 +387,18 @@ function wrapWasmElmApp(
           `Trying to call a Wasm Closure with ${n_values} args instead of ${max_values}!`
         );
       }
-      const builder: WasmBuilder = {
-        body: [(max_values << 16) | n_values, evaluator],
-        jsChildren: args,
-        bodyWriter: null
-      };
-      const closureAddr = handleWasmWrite((startIndex: number) => {
-        return writeFromBuilder(startIndex, builder, Tag.Closure);
-      });
+      const size = 3 + n_values;
+      const closureAddr = emscriptenModule._allocate(size);
+      const index = closureAddr >> 2;
+      mem32[index] = encodeHeader(Tag.Closure, size);
+      mem32[index + 1] = (max_values << 16) | n_values;
+      mem32[index + 2] = evaluator;
+      for (let i = 0; i < args.length; i++) {
+        mem32[index + 3 + i] = writeWasmValue(args[i]);
+      }
       const resultAddr = emscriptenModule._evalClosure(closureAddr);
       const resultValue = readWasmValue(resultAddr);
-      return resultValue;  
+      return resultValue;
     }
     // Attach info in case we have to write this Closure back to Wasm
     wasmCallback.freeVars = freeVars;
@@ -417,126 +415,11 @@ function wrapWasmElmApp(
 
   -------------------------------------------------- */
 
-  let maxWriteIndex32: number;
-  let maxWriteIndex16: number;
-  const heapOverflowError = new Error('Wasm heap overflow');
+  type Address = number;
 
-  function write32(index: number, value: number) {
-    if (index > maxWriteIndex32) {
-      throw heapOverflowError;
-    }
-    mem32[index] = value;
-  }
-
-  interface WriteResult {
-    addr: number; // address the value was written to (8-bit resolution, handy for pointers)
-    nextIndex: number; // next available index for writing (32-bit resolution, handy for alignment)
-  }
-
-  function handleWasmWrite(writer: (nextIndex: number) => WriteResult): number {
-    for (let attempts = 0; attempts < 2; attempts++) {
-      const maxAddr = emscriptenModule._getMaxWriteAddr();
-      maxWriteIndex16 = maxAddr >> 1;
-      maxWriteIndex32 = maxAddr >> 2;
-      const startAddr = emscriptenModule._getWriteAddr();
-      const startIndex = startAddr >> 2;
-      try {
-        const result: WriteResult = writer(startIndex);
-        emscriptenModule._finishWritingAt(result.nextIndex << 2);
-        return result.addr;
-      } catch (e) {
-        if (e === heapOverflowError) {
-          console.log('Wrapper handleWasmWrite heap overflow, running GC', {startAddr, maxAddr});
-          emscriptenModule._collectGarbage();
-        } else {
-          console.error(e);
-          throw e;
-        }
-      }
-    }
-    throw new Error('Failed to write to Wasm');
-  }
-
-  /**
-   * Write an Elm value to the Wasm memory
-   * Serialises to bytes before writing
-   * May throw an error
-   */
-  function writeWasmValue(nextIndex: number, value: any): WriteResult {
-    const typeInfo: TypeInfo = detectElmType(value);
-    switch (typeInfo.kind) {
-      case 'constAddr':
-        return { addr: typeInfo.value, nextIndex };
-      case 'tag': {
-        const tag: Tag = typeInfo.value;
-        const builder: WasmBuilder = wasmBuilder(tag, value);
-        return writeFromBuilder(nextIndex, builder, tag);
-      }
-      case 'jsonWrap': {
-        const unwrapped = value.a;
-        const unwrappedResult = writeJsonValue(
-          nextIndex,
-          unwrapped,
-          JsShape.MAYBE_CIRCULAR
-        );
-        nextIndex = unwrappedResult.nextIndex;
-        const tag = Tag.Custom;
-        const builder: WasmBuilder = {
-          body: [JsonValue.WRAP, unwrappedResult.addr],
-          jsChildren: [],
-          bodyWriter: null
-        };
-        return writeFromBuilder(nextIndex, builder, tag);
-      }
-      case 'kernelArray': {
-        const tag = Tag.Custom;
-        const builder: WasmBuilder = {
-          body: [JsonValue.ARRAY],
-          jsChildren: value,
-          bodyWriter: null
-        };
-        return writeFromBuilder(nextIndex, builder, tag);
-      }
-    }
-  }
-
-  // Info needed to build any Elm Wasm value
-  // The shape is always the same, which helps JS engines to optimise
-  type WasmBuilder =
-    | {
-        body: [];
-        jsChildren: [];
-        bodyWriter: (bodyAddr: number) => number;
-      }
-    | {
-        body: number[];
-        jsChildren: any[];
-        bodyWriter: null;
-      };
-
-  type TypeInfo =
-    | {
-        kind: 'tag';
-        value: Tag;
-      }
-    | {
-        kind: 'constAddr';
-        value: number;
-      }
-    | {
-        kind: 'jsonWrap';
-      }
-    | {
-        kind: 'kernelArray';
-      };
-
-  class FieldGroup {
-    constructor(public fieldNames: string[]) {}
-  }
-
-  function detectElmType(elmValue: any): TypeInfo {
+  function writeWasmValue(elmValue: any): Address {
     if (elmValue === null || elmValue === undefined) {
-      return { kind: 'constAddr', value: wasmConstAddrs.JsNull };
+      return wasmConstAddrs.JsNull;
     }
     switch (typeof elmValue) {
       case 'number': {
@@ -545,50 +428,91 @@ function wrapWasmElmApp(
         // Not cool. This is Elm! Long term, the ambiguity needs to be solved at some higher level.
         // Maybe some lib like `JSON.Encode` so the app dev decides? Pity for it not to be automatic though!
         const isRoundNumberSoGuessInt = elmValue === Math.round(elmValue);
-        return {
-          kind: 'tag',
-          value: isRoundNumberSoGuessInt ? Tag.Int : Tag.Float
-        };
+        if (isRoundNumberSoGuessInt) {
+          const addr = emscriptenModule._allocate(2);
+          const index = addr >> 2;
+          mem32[index] = encodeHeader(Tag.Int, 2);
+          mem32[index + 1] = elmValue;
+          return addr;
+        } else {
+          const addr = emscriptenModule._allocate(4);
+          const index = addr >> 2;
+          mem32[index] = encodeHeader(Tag.Float, 4);
+          mem32[index + 1] = 0;
+          emscriptenModule._writeF64(addr + 8, elmValue);
+          return addr;
+        }
       }
-      case 'string':
-        return { kind: 'tag', value: Tag.String };
+
+      case 'string': {
+        const len = elmValue.length;
+        const size = 1 + Math.ceil(len / 2);
+        const addr = emscriptenModule._allocate(size);
+        const index = addr >> 2;
+        mem32[index] = encodeHeader(Tag.String, size);
+        const words16 = (index + 1) << 1;
+        for (let i = 0; i < len; i++) {
+          mem16[words16 + i] = elmValue.charCodeAt(i);
+        }
+        if (len & 1) {
+          mem16[words16 + len] = 0;
+        }
+        return addr;
+      }
 
       case 'boolean':
-        return {
-          kind: 'constAddr',
-          value: elmValue ? wasmConstAddrs.True : wasmConstAddrs.False
-        };
+        return elmValue ? wasmConstAddrs.True : wasmConstAddrs.False;
 
       case 'function':
-        return { kind: 'tag', value: Tag.Closure };
+        return writeClosure(elmValue);
 
       case 'object': {
         if (elmValue instanceof String) {
-          return { kind: 'tag', value: Tag.Char };
-        }
-        if (elmValue instanceof FieldGroup) {
-          return { kind: 'tag', value: Tag.FieldGroup };
+          const addr = emscriptenModule._allocate(2);
+          const index = addr >> 2;
+          mem32[index] = encodeHeader(Tag.Char, 2);
+          mem32[index + 1] =
+            elmValue.charCodeAt(0) | (elmValue.charCodeAt(1) << 16);
+          return addr;
         }
         if (Array.isArray(elmValue)) {
-          return { kind: 'kernelArray' };
+          return writeJsonArray(elmValue, JsShape.NOT_CIRCULAR);
         }
         switch (elmValue.$) {
           case undefined:
-            return { kind: 'tag', value: Tag.Record };
+            return writeRecord(elmValue);
           case '[]':
-            return { kind: 'constAddr', value: wasmConstAddrs.Nil };
-          case '::':
-            return { kind: 'tag', value: Tag.List };
+            return wasmConstAddrs.Nil;
           case '#0':
-            return { kind: 'constAddr', value: wasmConstAddrs.Unit };
-          case '#2':
-            return { kind: 'tag', value: Tag.Tuple2 };
-          case '#3':
-            return { kind: 'tag', value: Tag.Tuple3 };
-          case JsonValue.WRAP:
-            return { kind: 'jsonWrap' };
+            return wasmConstAddrs.Unit;
+          case '::':
+          case '#2': {
+            const a = writeWasmValue(elmValue.a);
+            const b = writeWasmValue(elmValue.b);
+            const addr = emscriptenModule._allocate(3);
+            const index = addr >> 2;
+            const tag = elmValue.$ === '::' ? Tag.List : Tag.Tuple2;
+            mem32[index] = encodeHeader(tag, 3);
+            mem32[index + 1] = a;
+            mem32[index + 2] = b;
+            return addr;
+          }
+          case '#3': {
+            const a = writeWasmValue(elmValue.a);
+            const b = writeWasmValue(elmValue.b);
+            const c = writeWasmValue(elmValue.b);
+            const addr = emscriptenModule._allocate(4);
+            const index = addr >> 2;
+            mem32[index] = encodeHeader(Tag.Tuple3, 4);
+            mem32[index + 1] = a;
+            mem32[index + 2] = b;
+            mem32[index + 3] = c;
+            return addr;
+          }
           default:
-            return { kind: 'tag', value: Tag.Custom };
+            return typeof elmValue.$ === 'string'
+              ? writeUserCustom(elmValue)
+              : writeKernelCustom(elmValue);
         }
       }
     }
@@ -596,187 +520,130 @@ function wrapWasmElmApp(
     throw new Error('Cannot determine type of Elm value');
   }
 
-  function wasmBuilder(tag: Tag, value: any): WasmBuilder {
-    switch (tag) {
-      case Tag.Int:
-        return {
-          body: [value],
-          jsChildren: [],
-          bodyWriter: null
-        };
-      case Tag.Float:
-        return {
-          body: [],
-          jsChildren: [],
-          bodyWriter: (bodyAddr: number) => {
-            write32(bodyAddr >> 2, 0);
-            const afterPadding = bodyAddr + WORD;
-            emscriptenModule._writeF64(afterPadding, value);
-            return 3; // words written
-          }
-        };
-      case Tag.Char:
-      case Tag.String:
-        return {
-          body: [],
-          jsChildren: [],
-          bodyWriter: (bodyAddr: number) => {
-            const s: string = value;
-            const offset16 = bodyAddr >> 1;
-            const lenAligned = s.length + (s.length % 2); // for odd length, write an extra word (gets coerced to 0)
-            if (offset16 + lenAligned > maxWriteIndex16) {
-              throw heapOverflowError;
-            }
-            for (let i = 0; i < lenAligned; i++) {
-              mem16[offset16 + i] = s.charCodeAt(i);
-            }
-            const wordsWritten = lenAligned >> 1;
-            return wordsWritten;
-          }
-        };
-      case Tag.Tuple2:
-      case Tag.List:
-        return {
-          body: [],
-          jsChildren: [value.a, value.b],
-          bodyWriter: null
-        };
-      case Tag.Tuple3:
-        return {
-          body: [],
-          jsChildren: [value.a, value.b, value.c],
-          bodyWriter: null
-        };
-      case Tag.Custom: {
-        const jsCtor: string | number = value.$;
-        const keys = Object.keys(value).filter(k => k !== '$');
-        if (typeof jsCtor === 'string') {
-          return {
-            body: [appTypes.ctors[jsCtor]],
-            jsChildren: keys.map(k => value[k]),
-            bodyWriter: null
-          };
-        } else {
-          const jsChildren: any[] = [];
-          const fieldNames = 'abcdefghijklmnopqrstuvwxyz'.split('');
-          keys.forEach(k => {
-            const i = fieldNames.indexOf(k);
-            if (i === -1) {
-              throw new Error(`Unsupported Kernel Custom field '${k}'`);
-            }
-            jsChildren[i] = value[k];
-          });
-          return {
-            body: [KERNEL_CTOR_OFFSET + jsCtor],
-            jsChildren,
-            bodyWriter: null
-          };
-        }
-      }
-      case Tag.Record: {
-        const body: number[] = [];
-        const jsChildren: any[] = [];
-        const keys = Object.keys(value).sort();
-        const fgName = keys.join(' ');
-        const fgAddrStatic = appTypes.fieldGroups[fgName];
-        if (fgAddrStatic) {
-          body.push(fgAddrStatic);
-        } else {
-          jsChildren.push(new FieldGroup(keys));
-        }
-        keys.forEach(k => jsChildren.push(value[k]));
-        return {
-          body,
-          jsChildren,
-          bodyWriter: null
-        };
-      }
-      case Tag.FieldGroup: {
-        const fieldNames: string[] = value.fieldNames;
-        const body = [fieldNames.length];
-        fieldNames.forEach(name => body.push(appTypes.fields[name]));
-        return {
-          body,
-          jsChildren: [],
-          bodyWriter: null
-        };
-      }
-      case Tag.Closure: {
-        const fun = value.f || value;
-        if (fun.evaluator) {
-          const { freeVars, max_values, evaluator } = fun;
-          const n_values = freeVars.length;
-          return {
-            body: [(max_values << 16) | n_values, evaluator],
-            jsChildren: freeVars,
-            bodyWriter: null
-          };
-        } else {
-          let evaluator = kernelFunctions.findIndex(f => f === value);
-          if (evaluator === -1) {
-            kernelFunctions.push(value);
-            evaluator = kernelFunctions.length - 1;
-          }
-          return {
-            body: [NEVER_EVALUATE << 16, evaluator],
-            jsChildren: [],
-            bodyWriter: null
-          };
-        }
-      }
-      case Tag.JsRef: {
-        return {
-          body: [allocateJsRef(value)],
-          jsChildren: [],
-          bodyWriter: null
-        };
+  function writeJsonArray(value: any[], jsShape: JsShape): Address {
+    const size = 2 + value.length;
+    const addr = emscriptenModule._allocate(size);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Custom, size);
+    mem32[index + 1] = JsonValue.ARRAY;
+    for (let i = 0; i < value.length; i++) {
+      mem32[index + 2 + i] = writeJsonValue(value[i], jsShape);
+    }
+    return addr;
+}
+
+  function writeUserCustom(value: Record<string, any>): Address {
+    const jsCtor: string = value.$;
+    const keys = Object.keys(value);
+    const nKeys = keys.length - 1; // subtract 1 for '$'
+    const size = 2 + nKeys;
+    const addr = emscriptenModule._allocate(size);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Custom, size);
+    mem32[index + 1] = appTypes.ctors[jsCtor];
+    for (let k = 0; k < nKeys; k++) {
+      const key = keys[k];
+      if (key !== '$') {
+        mem32[index + 2 + k] = writeWasmValue(value[key]);
       }
     }
-    console.error(value);
-    throw new Error(`Can't write to WebAssembly for tag "${Tag[tag]}"`);
+
+    return addr;
   }
 
-  function writeFromBuilder(
-    nextIndex: number,
-    builder: WasmBuilder,
-    tag: Tag
-  ): WriteResult {
-    if (builder.bodyWriter) {
-      /**
-       * Special cases: Float (64-bit data) or String/Char (16-bit data)
-       */
-      const headerIndex = nextIndex;
-      const addr = headerIndex << 2;
-      const wordsWritten = builder.bodyWriter(addr + WORD);
-      const size = 1 + wordsWritten;
-      write32(headerIndex, encodeHeader(tag, size));
-      return {
-        addr,
-        nextIndex: headerIndex + size
-      };
-    } else {
-      /**
-       * Normal cases (32-bit data)
-       */
-      const { body, jsChildren } = builder;
-      const childAddrs: number[] = [];
-      for (let i = 0; i < jsChildren.length; i++) {
-        const child = jsChildren[i];
-        const update = writeWasmValue(nextIndex, child); // recurse
-        childAddrs.push(update.addr);
-        nextIndex = update.nextIndex;
-      }
+  /**
+   * JS Kernel objects have numeric constructor, single-letter keys
+   * For Wasm we store each value at an index corresponding to that letter
+   * {a:123, j: 456} will be length 10, not 2
+   */
+  function writeKernelCustom(value: Record<string, any>): Address {
+    const jsCtor: number = value.$;
+    const keys = Object.keys(value);
+    const nKeys = keys.length - 1; // subtract 1 for '$'
 
-      const addr = nextIndex << 2;
-      const size = 1 + body.length + childAddrs.length;
-      write32(nextIndex++, encodeHeader(tag, size));
-      body.forEach(word => {
-        write32(nextIndex++, word);
-      });
-      childAddrs.forEach(pointer => {
-        write32(nextIndex++, pointer);
-      });
-      return { addr, nextIndex };
+    // prettier-ignore
+    const kernelKeys = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'];
+    const childAddrs: Address[] = [];
+    for (let k = 0; k < nKeys; k++) {
+      const key = keys[k];
+      if (key !== '$') {
+        const wasmIndex = kernelKeys.indexOf(key); // encode the letter key by position
+        if (wasmIndex === -1) {
+          throw new Error(`Unsupported Kernel Custom field '${key}'`);
+        }
+        childAddrs[wasmIndex] = writeWasmValue(value[key]);
+      }
+    }
+
+    const size = 2 + childAddrs.length;
+    const addr = emscriptenModule._allocate(size);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Custom, size);
+    mem32[index + 1] = KERNEL_CTOR_OFFSET + jsCtor;
+    for (let i = 0; i < childAddrs.length; i++) {
+      mem32[index + 2 + i] = childAddrs[i];
+    }
+    return addr;
+  }
+
+  function writeRecord(value: Record<string, any>): Address {
+    const keys = Object.keys(value).sort();
+
+    const size = 2 + keys.length;
+    const addr = emscriptenModule._allocate(size);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Record, size);
+
+    const fgName = keys.join(' ');
+    const fgAddrStatic = appTypes.fieldGroups[fgName];
+    mem32[index + 1] = fgAddrStatic || writeFieldGroup(keys);
+    for (let k = 0; k < keys.length; k++) {
+      const key = keys[k];
+      mem32[index + 2 + k] = writeWasmValue(value[key]);
+    }
+    return 0;
+  }
+
+  function writeFieldGroup(fieldNames: string[]): Address {
+    const size = 1 + fieldNames.length;
+    const addr = emscriptenModule._allocate(size);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.FieldGroup, size);
+    for (let k = 0; k < fieldNames.length; k++) {
+      const key = fieldNames[k];
+      mem32[index + 1 + k] = appTypes.fields[key];
+    }
+    return addr;
+  }
+
+  function writeClosure(value: any): Address {
+    const fun = value.f || value;
+    if (fun.evaluator) {
+      const { freeVars, max_values, evaluator } = fun;
+      const n_values = freeVars.length;
+      const size = 3 + n_values;
+      const addr = emscriptenModule._allocate(size);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.Closure, size);
+      mem32[index + 1] = (max_values << 16) | n_values;
+      mem32[index + 2] = evaluator;
+      for (let i = 0; i < freeVars.length; i++) {
+        mem32[index + 3 + i] = writeWasmValue(freeVars[i]);
+      }
+      return addr;
+    } else {
+      let evaluator = kernelFunctions.findIndex(f => f === value);
+      if (evaluator === -1) {
+        kernelFunctions.push(value);
+        evaluator = kernelFunctions.length - 1;
+      }
+      const size = 3;
+      const addr = emscriptenModule._allocate(size);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.Closure, size);
+      mem32[index + 1] = NEVER_EVALUATE << 16;
+      mem32[index + 2] = evaluator;
+      return addr;
     }
   }
 
@@ -843,9 +710,7 @@ function wrapWasmElmApp(
     if (!Array.isArray(array)) return 0;
     if (index >= array.length) return -(array.length + 1);
     const value = array[index];
-    return handleWasmWrite(nextIndex =>
-      writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
-    );
+    return writeJsonValue(value, JsShape.MAYBE_CIRCULAR);
   }
 
   function getJsRefObjectField(
@@ -857,107 +722,53 @@ function wrapWasmElmApp(
     const field = readWasmValue(fieldStringAddr);
     if (!(field in obj)) return 0;
     const value = obj[field];
-    return handleWasmWrite(nextIndex =>
-      writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
-    );
+    return writeJsonValue(value, JsShape.MAYBE_CIRCULAR);
   }
 
   function getJsRefValue(jsRefId: number): number {
     const value = jsHeap[jsRefId].value;
-    return handleWasmWrite(nextIndex =>
-      writeJsonValue(nextIndex, value, JsShape.NOT_CIRCULAR)
-    );
+    return writeJsonValue(value, JsShape.NOT_CIRCULAR);
   }
 
-  function writeJsonValue(
-    nextIndex: number,
-    value: any,
-    jsShape: JsShape
-  ): WriteResult {
-    switch (typeof value) {
-      case 'boolean':
-        return {
-          addr: value ? wasmConstAddrs.True : wasmConstAddrs.False,
-          nextIndex
-        };
-      case 'number':
-        return writeFromBuilder(
-          nextIndex,
-          wasmBuilder(Tag.Float, value),
-          Tag.Float
-        );
-      case 'string':
-        return writeFromBuilder(
-          nextIndex,
-          wasmBuilder(Tag.String, value),
-          Tag.String
-        );
-      case 'object': {
-        if (value === null) {
-          return { addr: wasmConstAddrs.JsNull, nextIndex };
-        }
-        if ('$' in value) {
-          const unwrapped = writeJsonValue(nextIndex, value.a, jsShape);
-          return writeFromBuilder(
-            unwrapped.nextIndex,
-            {
-              body: [JsonValue.WRAP, unwrapped.addr],
-              jsChildren: [],
-              bodyWriter: null
-            },
-            Tag.Custom
-          );
-        }
-        if (jsShape === JsShape.MAYBE_CIRCULAR) {
-          return writeFromBuilder(
-            nextIndex,
-            wasmBuilder(Tag.JsRef, value),
-            Tag.JsRef
-          );
-        }
-        const body: number[] = [];
-        if (Array.isArray(value)) {
-          body.push(JsonValue.ARRAY);
-          value.forEach(elem => {
-            const result = writeJsonValue(
-              nextIndex,
-              elem,
-              JsShape.NOT_CIRCULAR
-            );
-            nextIndex = result.nextIndex;
-            body.push(result.addr);
-          });
-        } else {
-          body.push(JsonValue.OBJECT);
-          Object.keys(value).forEach(key => {
-            const keyResult = writeJsonValue(nextIndex, key, jsShape);
-            nextIndex = keyResult.nextIndex;
-            body.push(keyResult.addr);
-            const valueResult = writeJsonValue(
-              nextIndex,
-              value[key],
-              JsShape.NOT_CIRCULAR
-            );
-            nextIndex = valueResult.nextIndex;
-            body.push(valueResult.addr);
-          });
-        }
-        const builder: WasmBuilder = {
-          body,
-          jsChildren: [],
-          bodyWriter: null
-        };
-        return writeFromBuilder(nextIndex, builder, Tag.Custom);
-      }
-      default:
-        // typeof is 'undefined', 'function', 'symbol', or 'bigint'
-        // Preserve the value so it can be passed in one port and out another
-        return writeFromBuilder(
-          nextIndex,
-          wasmBuilder(Tag.JsRef, value),
-          Tag.JsRef
-        );
+  function writeJsonValue(value: any, jsShape: JsShape): Address {
+    if (typeof value !== 'object') {
+      return writeWasmValue(value);
     }
+    if (value === null) {
+      return wasmConstAddrs.JsNull;
+    }
+    if ('$' in value) {
+      // Wrapped value from Json module. Re-wrap it the Wasm way.
+      const unwrapped = writeJsonValue(value.a, jsShape);
+      const addr = emscriptenModule._allocate(3);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.Custom, 3);
+      mem32[index + 1] = JsonValue.WRAP;
+      mem32[index + 2] = unwrapped;
+      return addr;
+    }
+    if (jsShape === JsShape.MAYBE_CIRCULAR) {
+      const addr = emscriptenModule._allocate(2);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.JsRef, 2);
+      mem32[index + 1] = allocateJsRef(value);
+      return addr;
+    }
+    if (Array.isArray(value)) {
+      return writeJsonArray(value, JsShape.MAYBE_CIRCULAR);
+    }
+    const keys = Object.keys(value);
+    const size = 2 + keys.length * 2;
+    const addr = emscriptenModule._allocate(size);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Custom, size);
+    mem32[index + 1] = JsonValue.OBJECT;
+    for (let i = 0; i < value.length; i++) {
+      const two_i = 2 * i;
+      mem32[index + 2 + two_i] = writeWasmValue(keys[i]);
+      mem32[index + 3 + two_i] = writeJsonValue(value[i], jsShape);
+    }
+    return addr;
   }
 
   function call(evaluator: number, args: any[]) {
@@ -965,10 +776,7 @@ function wrapWasmElmApp(
     thunk.evaluator = evaluator;
     thunk.freeVars = args;
     thunk.max_values = args.length;
-
-    const closureAddr = handleWasmWrite(nextIndex =>
-      writeWasmValue(nextIndex, thunk)
-    );
+    const closureAddr = writeClosure(thunk);
     const resultAddr = emscriptenModule._evalClosure(closureAddr);
     return readWasmValue(resultAddr);
   }
@@ -995,12 +803,8 @@ function wrapWasmElmApp(
   return {
     mains,
     readWasmValue,
-    writeWasmValue: (value: any) =>
-      handleWasmWrite(nextIndex => writeWasmValue(nextIndex, value)),
-    writeJsonValue: (value: any) =>
-      handleWasmWrite(nextIndex =>
-        writeJsonValue(nextIndex, value, JsShape.MAYBE_CIRCULAR)
-      ),
+    writeWasmValue,
+    writeJsonValue,
     call,
     getJsRefArrayIndex,
     getJsRefObjectField,

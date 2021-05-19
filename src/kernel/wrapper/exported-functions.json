@@ -1,1 +1,1 @@
-[ "_main", "_getMains", "_getJsNull", "_getUnit", "_getNil", "_getTrue", "_getFalse", "_getFieldGroups", "_getMaxWriteAddr", "_getWriteAddr", "_finishWritingAt", "_readF64", "_writeF64", "_evalClosure", "_collectGarbage", "_debugHeapState", "_debugAddrRange", "_debugStackMap", "_debugEvaluatorName"]
+[ "_main", "_getMains", "_getJsNull", "_getUnit", "_getNil", "_getTrue", "_getFalse", "_getFieldGroups", "_allocate", "_readF64", "_writeF64", "_evalClosure", "_debugHeapState", "_debugAddrRange", "_debugStackMap", "_debugEvaluatorName"]

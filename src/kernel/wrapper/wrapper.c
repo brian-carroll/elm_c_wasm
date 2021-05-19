@@ -43,16 +43,8 @@ EMSCRIPTEN_KEEPALIVE void* getJsNull() {
   return &Json_encodeNull;
 }
 
-EMSCRIPTEN_KEEPALIVE void* getMaxWriteAddr() {
-  return gc_state.heap.end;
-}
-
-EMSCRIPTEN_KEEPALIVE void* getWriteAddr() {
-  return gc_state.next_alloc;
-}
-
-EMSCRIPTEN_KEEPALIVE void finishWritingAt(size_t* addr) {
-  gc_state.next_alloc = addr;
+EMSCRIPTEN_KEEPALIVE void* allocate(size_t size) {
+  return GC_allocate(true, size);
 }
 
 EMSCRIPTEN_KEEPALIVE f64 readF64(f64* addr) {
@@ -65,10 +57,6 @@ EMSCRIPTEN_KEEPALIVE void writeF64(f64* addr, f64 value) {
 
 EMSCRIPTEN_KEEPALIVE void* evalClosure(Closure* c) {
   return GC_execute(c);
-}
-
-EMSCRIPTEN_KEEPALIVE void collectGarbage() {
-  GC_collect_minor();
 }
 
 EMSCRIPTEN_KEEPALIVE void debugHeapState() {
