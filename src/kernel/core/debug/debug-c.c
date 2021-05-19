@@ -579,7 +579,7 @@ static void Debug_prettyHelp(int indent, void* p) {
       break;
     }
     case Tag_JsRef:
-      safe_printf("External JS object %d\n", v->js_ref.index);
+      safe_printf("External JS object #%d\n", v->js_ref.index);
       break;
     default:
       safe_printf("CORRUPTED!! tag %x size %d\n", v->header.tag, v->header.size);

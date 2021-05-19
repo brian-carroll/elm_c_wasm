@@ -530,7 +530,7 @@ function wrapWasmElmApp(
       mem32[index + 2 + i] = writeJsonValue(value[i], jsShape);
     }
     return addr;
-}
+  }
 
   function writeUserCustom(value: Record<string, any>): Address {
     const jsCtor: string = value.$;
@@ -730,7 +730,19 @@ function wrapWasmElmApp(
     return writeJsonValue(value, JsShape.NOT_CIRCULAR);
   }
 
-  function writeJsonValue(value: any, jsShape: JsShape): Address {
+  function writeJsonValue(
+    value: any,
+    jsShape = JsShape.MAYBE_CIRCULAR
+  ): Address {
+    if (typeof value === 'number') {
+      // Json number always written as Float, decoder can convert to Int later
+      const addr = emscriptenModule._allocate(4);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.Float, 4);
+      mem32[index + 1] = 0;
+      emscriptenModule._writeF64(addr + 8, value);
+      return addr;
+    }
     if (typeof value !== 'object') {
       return writeWasmValue(value);
     }
@@ -763,10 +775,11 @@ function wrapWasmElmApp(
     const index = addr >> 2;
     mem32[index] = encodeHeader(Tag.Custom, size);
     mem32[index + 1] = JsonValue.OBJECT;
-    for (let i = 0; i < value.length; i++) {
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       const two_i = 2 * i;
-      mem32[index + 2 + two_i] = writeWasmValue(keys[i]);
-      mem32[index + 3 + two_i] = writeJsonValue(value[i], jsShape);
+      mem32[index + 2 + two_i] = writeWasmValue(key);
+      mem32[index + 3 + two_i] = writeJsonValue(value[key], jsShape);
     }
     return addr;
   }

@@ -26,9 +26,13 @@ void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* e
   stbsp_sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
   ElmString* json = create_string(json_c_str);
 
-  void* actual = runner == &Json_runOnString
-                     ? A2(&Json_runOnString, decoder, json)
-                     : A2(&Json_run, decoder, createJsValue(json));
+  void* actual;
+  if (runner == &Json_runOnString) {
+    actual = A2(&Json_runOnString, decoder, json);
+  } else {
+    void* wrappedJsRef = createJsValue(json);
+    actual = A2(&Json_run, decoder, wrappedJsRef);
+  }
 
   expect_equal(test_decode_buf, actual, newCustom(CTOR_Ok, 1, (void*[]){expected}));
 
@@ -112,16 +116,13 @@ void* test_Json_decode_invalidJson() {
   char* json = "invalid JSON !";
 
   Custom* expectedError = err(newCustom(CTOR_Failure,
-          2,
-          ((void*[]){
-              create_string("This is not valid JSON!"),
-              WRAP(create_string(json)),
-          })));
+      2,
+      ((void*[]){
+          create_string("This is not valid JSON!"),
+          WRAP(create_string(json)),
+      })));
 
-  test_decode_err(runner,
-      &Json_decodeBool,
-      json,
-      expectedError);
+  test_decode_err(runner, &Json_decodeBool, json, expectedError);
 
   return NULL;
 }
@@ -232,10 +233,8 @@ void* test_Json_decodeField(void* runner) {
   ElmString* field = create_string(fld);
   Custom* decoder = A2(&Json_decodeField, field, &Json_decodeInt);
 
-  test_decode_ok(runner,
-      decoder,
-      "{ \"a\": null, \"myField\": 123, \"b\": null }",
-      newElmInt(123));
+  test_decode_ok(
+      runner, decoder, "{ \"a\": null, \"myField\": 123, \"b\": null }", newElmInt(123));
 
   test_decode_errFailure(
       runner, decoder, "null", "Expecting an OBJECT with a field named `myField`");
@@ -443,8 +442,8 @@ void* test_Json_oneOf(void* runner) {
   test_decode_ok(runner, decoder, "null", newElmInt(0));
 
   void* empty_array = runner == &Json_runOnString
-                            ? (void*)newCustom(JSON_VALUE_ARRAY, 0, NULL)
-                            : (void*)newJsRef(latest_jsref_index + 1);
+                          ? (void*)newCustom(JSON_VALUE_ARRAY, 0, NULL)
+                          : (void*)newJsRef(latest_jsref_index + 1);
 
   test_decode_err(runner,
       decoder,
