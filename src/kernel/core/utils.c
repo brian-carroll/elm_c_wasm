@@ -335,14 +335,14 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
 
     case Tag_String: {
       // https://tc39.es/ecma262/#sec-abstract-relational-comparison
-      size_t lx = code_units(&x->elm_string16);
-      size_t ly = code_units(&y->elm_string16);
+      size_t lx = code_units(&x->elm_string);
+      size_t ly = code_units(&y->elm_string);
       size_t len = lx < ly ? lx : ly;
       size_t i = 0;
       u16 cx, cy;
       for (i = 0; i < len; ++i) {
-        cx = x->elm_string16.words16[i];
-        cy = y->elm_string16.words16[i];
+        cx = x->elm_string.words16[i];
+        cy = y->elm_string.words16[i];
         if (cx != cy) break;
       }
       Custom* result;

@@ -83,19 +83,18 @@ void print_value(void* p) {
     case Tag_Char:
       safe_printf("Char 0x%8x", v->elm_char.value);
       break;
-    case Tag_String:
-#if STRING_ENCODING == UTF16
-      safe_printf("String \"");
-      size_t body_bytes = (v->header.size * SIZE_UNIT) - sizeof(Header);
-      for (size_t i = 0; i < body_bytes; i = i + 2) {
-        char c = v->elm_string16.words16[i];
-        if (c) safe_printf("%c", c);
+    case Tag_String: {
+      char buf[128];
+      ElmString* s = &v->elm_string;
+      size_t len = code_units(s);
+      size_t i = 0;
+      for (; i < len && i < sizeof(buf); i++) {
+        buf[i] = s->words16[i];
       }
-      safe_printf("\"");
-#else
-      safe_printf("String \"%s\"", v->elm_string.bytes);
-#endif
+      buf[i] = 0;
+      safe_printf("String \"%s\"", buf);
       break;
+    } 
     case Tag_List:
       if (p == pNil) {
         safe_printf("Nil");

@@ -40,12 +40,12 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
       return;
     }
     case Tag_String: {
-      size_t len = code_units(&v->elm_string16);
+      size_t len = code_units(&v->elm_string);
       StringBuilder_ensureSpace(sb, len + 2);
       u16* write = sb->cursor;
       *write++ = '"';
       for (size_t i = 0; i < len; ++i) {
-        *write++ = v->elm_string16.words16[i];
+        *write++ = v->elm_string.words16[i];
       }
       *write++ = '"';
       sb->cursor = write;

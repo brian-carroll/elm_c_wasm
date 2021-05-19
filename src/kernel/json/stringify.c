@@ -143,7 +143,7 @@ void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb) {
     stbsp_snprintf(buf, sizeof(buf), "%g", v->elm_float.value);
     StringBuilder_copyAscii(sb, buf);
   } else if (tag == Tag_String) {
-    stringify_string(&v->elm_string16, sb);
+    stringify_string(&v->elm_string, sb);
   } else if (tag == Tag_Custom) {
     u32 ctor = v->custom.ctor;
     if (ctor == JSON_VALUE_ARRAY) {
