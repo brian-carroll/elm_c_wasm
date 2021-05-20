@@ -559,12 +559,11 @@ function wrapWasmElmApp(
   function writeKernelCustom(value: Record<string, any>): Address {
     const jsCtor: number = value.$;
     const keys = Object.keys(value);
-    const nKeys = keys.length - 1; // subtract 1 for '$'
 
     // prettier-ignore
     const kernelKeys = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'];
     const childAddrs: Address[] = [];
-    for (let k = 0; k < nKeys; k++) {
+    for (let k = 0; k < keys.length; k++) {
       const key = keys[k];
       if (key !== '$') {
         const wasmIndex = kernelKeys.indexOf(key); // encode the letter key by position
@@ -734,10 +733,12 @@ function wrapWasmElmApp(
     value: any,
     jsShape = JsShape.MAYBE_CIRCULAR
   ): Address {
+    let addr: number;
+    let index: number;
     if (typeof value === 'number') {
       // Json number always written as Float, decoder can convert to Int later
-      const addr = emscriptenModule._allocate(4);
-      const index = addr >> 2;
+      addr = emscriptenModule._allocate(4);
+      index = addr >> 2;
       mem32[index] = encodeHeader(Tag.Float, 4);
       mem32[index + 1] = 0;
       emscriptenModule._writeF64(addr + 8, value);
@@ -752,16 +753,16 @@ function wrapWasmElmApp(
     if ('$' in value) {
       // Wrapped value from Json module. Re-wrap it the Wasm way.
       const unwrapped = writeJsonValue(value.a, jsShape);
-      const addr = emscriptenModule._allocate(3);
-      const index = addr >> 2;
+      addr = emscriptenModule._allocate(3);
+      index = addr >> 2;
       mem32[index] = encodeHeader(Tag.Custom, 3);
       mem32[index + 1] = JsonValue.WRAP;
       mem32[index + 2] = unwrapped;
       return addr;
     }
     if (jsShape === JsShape.MAYBE_CIRCULAR) {
-      const addr = emscriptenModule._allocate(2);
-      const index = addr >> 2;
+      addr = emscriptenModule._allocate(2);
+      index = addr >> 2;
       mem32[index] = encodeHeader(Tag.JsRef, 2);
       mem32[index + 1] = allocateJsRef(value);
       return addr;
@@ -771,8 +772,8 @@ function wrapWasmElmApp(
     }
     const keys = Object.keys(value);
     const size = 2 + keys.length * 2;
-    const addr = emscriptenModule._allocate(size);
-    const index = addr >> 2;
+    addr = emscriptenModule._allocate(size);
+    index = addr >> 2;
     mem32[index] = encodeHeader(Tag.Custom, size);
     mem32[index + 1] = JsonValue.OBJECT;
     for (let i = 0; i < keys.length; i++) {

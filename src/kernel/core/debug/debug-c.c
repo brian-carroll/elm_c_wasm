@@ -588,10 +588,23 @@ static void Debug_prettyHelp(int indent, void* p) {
 }
 
 void Debug_pretty(const char* label, void* p) {
-  safe_printf("\n");
+  char dashes[20];
   for (int i = 0; i < FORMAT_PTR_LEN; i++) {
-    safe_printf("-");
+    dashes[i] = '-';
   }
+  dashes[FORMAT_PTR_LEN] = '\0';
+  safe_printf("%s\n", dashes);
   safe_printf("  %s (%p)\n", label, p);
+  pretty_print_child(2, p);
+}
+
+void Debug_pretty_with_location(const char* function, int line, const char* label, void* p) {
+  char dashes[20];
+  for (int i = 0; i < FORMAT_PTR_LEN; i++) {
+    dashes[i] = '-';
+  }
+  dashes[FORMAT_PTR_LEN] = '\0';
+  safe_printf("%s\n", dashes);
+  safe_printf("%s @ %s:%d\n", label, function, line);
   pretty_print_child(2, p);
 }

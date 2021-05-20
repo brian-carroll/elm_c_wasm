@@ -34,6 +34,9 @@ bool Debug_is_target_in_range(void* from, void* to);
 #endif
 
 void Debug_pretty(const char* label, void* p);
+void Debug_pretty_with_location(const char* function, int line, const char* label, void* p);
+#define DEBUG_PRETTY(expr) Debug_pretty_with_location(__FUNCTION__, __LINE__, #expr, expr)
+
 extern char* Debug_ctors[];
 extern char* Debug_fields[];
 extern char* Debug_jsValues[];

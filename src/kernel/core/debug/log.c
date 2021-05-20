@@ -50,10 +50,11 @@ void log_error(char* fmt, ...) {
   va_start(args, fmt);
   // print_heap();
   print_state();
+  print_stack_map();
   // fprintf(stderr, fmt, args);
   safe_vprintf(fmt, args);
   va_end(args);
-  // emscripten_run_script("debugger;");
+  emscripten_run_script("debugger;");
   exit(EXIT_FAILURE);
 }
 #else

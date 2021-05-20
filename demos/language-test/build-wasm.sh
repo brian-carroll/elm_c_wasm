@@ -28,9 +28,14 @@ emcc $CFLAGS \
   -s ASSERTIONS=1 \
   -s EXPORT_NAME='EmscriptenModule' \
   -s EXPORTED_FUNCTIONS="$(cat $WRAPPER_DIR/exported-functions.json)" \
-  -s EXIT_RUNTIME=1 \
+  -s EXIT_RUNTIME=0 \
   -ferror-limit=10000 \
   $extra_opt \
   &> emcc.log
+
+if grep error emcc.log
+then
+  cat emcc.log
+fi
 
 set +x
