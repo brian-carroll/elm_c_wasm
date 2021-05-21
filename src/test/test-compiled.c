@@ -26,33 +26,32 @@ Closure g_elm_core_List_reverse = {
 
 
 Closure g_elm_core_List_foldl;
-void * eval_elm_core_List_foldl(void * args[]) {
-    void * x_func = args[0];
-    void * x_acc = args[1];
-    void * x_list = args[2];
-    tce_loop:
-    ;
-    void * case0;
-    do {
-        if (x_list == &Nil) {
-            case0 = x_acc;
-            break;
-        } else {
-            void * x_x = ((Tuple3 * )(x_list))->a;
-            void * x_xs = ((Tuple3 * )(x_list))->b;
-            void * tmp1 = A2(x_func, x_x, x_acc);
-            void * tmp2 = x_xs;
-            x_acc = tmp1;
-            x_list = tmp2;
-            assert(sanity_check(x_acc));
-            assert(sanity_check(x_list));
-            GC_stack_tailcall(3, x_func, x_acc, x_list);
-            goto tce_loop;
-            case0 = NULL;
-            break;
-        };
-    } while (0);
-    return case0;
+void* eval_elm_core_List_foldl(void* args[]) {
+  void* x_func = args[0];
+  void* x_acc = args[1];
+  void* x_list = args[2];
+tce_loop:;
+  void* case0;
+  do {
+    if (x_list == &Nil) {
+      case0 = x_acc;
+      break;
+    } else {
+      void* x_x = ((Tuple3*)(x_list))->a;
+      void* x_xs = ((Tuple3*)(x_list))->b;
+      void* tmp1 = A2(x_func, x_x, x_acc);
+      void* tmp2 = x_xs;
+      x_acc = tmp1;
+      x_list = tmp2;
+      assert(sanity_check(x_acc));
+      assert(sanity_check(x_list));
+      GC_stack_tailcall(3, x_func, x_acc, x_list);
+      goto tce_loop;
+      case0 = NULL;
+      break;
+    };
+  } while (0);
+  return case0;
 }
 Closure g_elm_core_List_foldl = {
     .header = HEADER_CLOSURE(0),
@@ -151,7 +150,23 @@ Closure g_elm_core_Array_initialize = {
     .evaluator = &eval_elm_core_Array_initialize,
 };
 
-FieldGroup* Wrapper_appFieldGroups[] = {NULL};
+enum {
+  FIELD_init,
+  FIELD_subscriptions,
+  FIELD_update,
+  FIELD_view,
+};
+
+FieldGroup fg_init_subscriptions_update_view = {.header = HEADER_FIELDGROUP(6),
+    .size = 6,
+    .fields = {
+        FIELD_init,
+        FIELD_subscriptions,
+        FIELD_update,
+        FIELD_view,
+    }};
+
+FieldGroup* Wrapper_appFieldGroups[] = {&fg_init_subscriptions_update_view, NULL};
 void** Wrapper_mainsArray[] = {NULL};
 
 // char Debug_evaluator_name_buf[1024];
@@ -166,9 +181,14 @@ char* Debug_ctors[NUM_TEST_CTORS] = {
 };
 #undef TEST_CTOR
 
-char* Debug_fields[1] = {NULL};
+char* Debug_fields[4] = {
+    "FIELD_init",
+    "FIELD_subscriptions",
+    "FIELD_update",
+    "FIELD_view",
+};
+int Debug_fields_size = 4;
 char* Debug_jsValues[1] = {NULL};
-int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
 int Debug_ctors_size = NUM_TEST_CTORS;
 

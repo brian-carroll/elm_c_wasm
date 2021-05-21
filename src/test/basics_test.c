@@ -13,7 +13,7 @@ int itest(ElmInt* actual, i32 expected) {
   return actual->value == expected;
 }
 
-char* test_number_binops() {
+void test_number_binops() {
   if (verbose) {
     safe_printf("\n");
     safe_printf("## Numerical binary operators\n");
@@ -108,11 +108,9 @@ char* test_number_binops() {
   mu_assert("remainderBy 3 -8 == -2", itest(A2(&Basics_remainderBy, i3, im8), -2));
   mu_assert("remainderBy -3 -8 == -2", itest(A2(&Basics_remainderBy, im3, im8), -2));
   mu_assert("remainderBy -3 8 == 2", itest(A2(&Basics_remainderBy, im3, i8), 2));
-
-  return NULL;
 }
 
-char* test_number_unops() {
+void test_number_unops() {
   if (verbose) {
     safe_printf("\n");
     safe_printf("## Numerical unary operators\n");
@@ -138,11 +136,9 @@ char* test_number_unops() {
 
   // Basics_log
   mu_assert("log 2.71828 == 1.0", ftest(A1(&Basics_log, newElmFloat(2.71828)), 1.0));
-
-  return NULL;
 }
 
-char* test_logical_ops() {
+void test_logical_ops() {
   if (verbose) {
     safe_printf("\n");
     safe_printf("## Logical operators\n");
@@ -164,11 +160,9 @@ char* test_logical_ops() {
   mu_assert("False || True == True", A2(&Basics_or, &False, &True) == &True);
   mu_assert("True || False == True", A2(&Basics_or, &True, &False) == &True);
   mu_assert("True || True == True", A2(&Basics_or, &True, &True) == &True);
-
-  return NULL;
 }
 
-char* basics_test() {
+void basics_test() {
   if (verbose) {
     safe_printf("\n\n\n");
     safe_printf("####################################################\n");
@@ -180,5 +174,4 @@ char* basics_test() {
   mu_run_test(test_number_binops);
   mu_run_test(test_number_unops);
   mu_run_test(test_logical_ops);
-  return NULL;
 }

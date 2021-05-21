@@ -1,7 +1,7 @@
 #include "../kernel/core/core.h"
 #include "test.h"
 
-void* expect_string(char* unit_description, char* expected_c_str, ElmString* actual);
+void expect_string(char* unit_description, char* expected_c_str, ElmString* actual);
 
 
 void test_Debug_toString() {
@@ -92,7 +92,7 @@ void test_StringBuilder() {
 }
 
 
-char* debug_test() {
+void debug_test() {
   if (verbose) {
     safe_printf("\n\n\n");
     safe_printf("####################################################\n");
@@ -103,6 +103,4 @@ char* debug_test() {
 
   mu_run_test(test_Debug_toString);
   mu_run_test(test_StringBuilder);
-
-  return NULL;
 }

@@ -16,7 +16,7 @@ GcBitmapIter start_iter = {
 // --------------------------------------------------------------------------------
 
 
-char* gc_dead_between_test() {
+void test_bitmap_dead_between() {
   gc_test_reset();
   GcState* state = &gc_state;
   GcHeap* heap = &state->heap;
@@ -44,8 +44,6 @@ char* gc_dead_between_test() {
 
   result = bitmap_dead_between(heap, first, last);
   mu_expect_equal("bitmap_dead_between across 3 bitmap words", result, 8);
-
-  return NULL;
 }
 
 
@@ -339,7 +337,7 @@ void gc_bitmap_test() {
     safe_printf("-----------\n");
   }
 
-  mu_run_test(gc_dead_between_test);
+  mu_run_test(test_bitmap_dead_between);
   mu_run_test(test_bitmap_iter_conversions);
   mu_run_test(test_bitmap_find);
   mu_run_test(test_bitmap_find_space);

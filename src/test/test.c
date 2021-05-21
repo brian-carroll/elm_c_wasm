@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../lib/stb/stb_sprintf.h"
 #include "../kernel/core/core.h"
+#include "../lib/stb/stb_sprintf.h"
 
 #include "basics_test.c"
 #include "char_test.c"
@@ -26,14 +26,16 @@
 #include "test-imports.c"
 #include "types_test.c"
 #include "utils_test.c"
+#include "wrapper_test.c"
 
-char* types_test();
-char* utils_test();
-char* basics_test();
-char* string_test();
-char* char_test();
-char* list_test();
-char* json_test();
+void types_test();
+void utils_test();
+void basics_test();
+void string_test();
+void char_test();
+void list_test();
+void json_test();
+void wrapper_test();
 
 int verbose = false;
 int tests_run = 0;
@@ -53,7 +55,7 @@ int assertions_made = 0;
 char* current_describe_string;
 void* test_heap_ptr;
 
-void describe(char* description, void* (*test)()) {
+void describe(char* description, void (*test)()) {
   tests_run++;
   current_describe_string = description;
   test_heap_ptr = GC_allocate(false, 0);
@@ -63,7 +65,7 @@ void describe(char* description, void* (*test)()) {
   test();
 }
 
-void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
+void describe_arg(char* description, void (*test)(void* arg), void* arg) {
   tests_run++;
   current_describe_string = description;
   test_heap_ptr = GC_allocate(false, 0);
@@ -73,7 +75,7 @@ void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
   test(arg);
 }
 
-void* expect_equal(char* expect_description, void* left, void* right) {
+void expect_equal(char* expect_description, void* left, void* right) {
   bool ok = A2(&Utils_equal, left, right) == &True;
   if (!ok) {
     if (!verbose) {
@@ -89,7 +91,6 @@ void* expect_equal(char* expect_description, void* left, void* right) {
     safe_printf("PASS: %s\n", expect_description);
   }
   assertions_made++;
-  return NULL;
 }
 
 ElmString* create_string(char* c_string) {
@@ -133,7 +134,7 @@ char* hex_ptr(void* ptr) {
   return hex(&ptr, sizeof(void*));
 }
 
-char* test_all(bool types,
+void test_all(bool types,
     bool utils,
     bool basics,
     bool string,
@@ -141,6 +142,7 @@ char* test_all(bool types,
     bool list,
     bool debug,
     bool json,
+    bool wrapper,
     bool gc) {
   if (verbose) {
     safe_printf("Selected tests: ");
@@ -152,6 +154,7 @@ char* test_all(bool types,
     if (list) safe_printf("list ");
     if (debug) safe_printf("debug ");
     if (json) safe_printf("json ");
+    if (wrapper) safe_printf("wrapper ");
     if (gc) safe_printf("gc ");
     safe_printf("\n\n");
   }
@@ -163,9 +166,8 @@ char* test_all(bool types,
   if (list) mu_run_test(list_test);
   if (debug) mu_run_test(debug_test);
   if (json) mu_run_test(json_test);
+  if (wrapper) mu_run_test(wrapper_test);
   if (gc) mu_run_test(gc_test);
-
-  return NULL;
 }
 
 int main(int argc, char** argv) {
@@ -182,6 +184,7 @@ int main(int argc, char** argv) {
       {"list", optional_argument, NULL, 'l'},
       {"debug", optional_argument, NULL, 'd'},
       {"json", optional_argument, NULL, 'j'},
+      {"wrapper", optional_argument, NULL, 'w'},
       {"gc", optional_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
   };
@@ -195,9 +198,10 @@ int main(int argc, char** argv) {
   bool list = false;
   bool debug = false;
   bool json = false;
+  bool wrapper = false;
   bool gc = false;
 
-  char options[] = "vatubscldjg";
+  char options[] = "vatubscldjwg";
 
   int opt;
   while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
@@ -213,6 +217,7 @@ int main(int argc, char** argv) {
         chr = true;
         list = true;
         json = true;
+        wrapper = true;
         gc = true;
         break;
       case 't':
@@ -238,6 +243,9 @@ int main(int argc, char** argv) {
         break;
       case 'j':
         json = !optarg;
+        break;
+      case 'w':
+        wrapper = !optarg;
         break;
       case 'g':
         gc = !optarg;
@@ -269,7 +277,7 @@ int main(int argc, char** argv) {
   exit(EXIT_FAILURE);
 #endif
 
-  test_all(types, utils, basics, string, chr, list, debug, json, gc);
+  test_all(types, utils, basics, string, chr, list, debug, json, wrapper, gc);
   int exit_code;
 
   if (tests_failed) {

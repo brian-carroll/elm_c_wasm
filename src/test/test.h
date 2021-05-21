@@ -77,9 +77,9 @@ char* hex_ptr(void* ptr);
 extern char* current_describe_string;
 extern void* test_heap_ptr;
 
-void describe(char* description, void* (*test)());
-void describe_arg(char* description, void* (*test)(void* arg), void* arg);
-void* expect_equal(char* expect_description, void* left, void* right);
+void describe(char* description, void (*test)());
+void describe_arg(char* description, void (*test)(void* arg), void* arg);
+void expect_equal(char* expect_description, void* left, void* right);
 ElmString* create_string(char* c_string);
 
 #endif

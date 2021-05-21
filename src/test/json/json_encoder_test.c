@@ -9,24 +9,22 @@ ElmInt int0 = {
     .value = 0,
 };
 
-void* test_Json_encode_boolean() {
+void test_Json_encode_boolean() {
   expect_equal("should encode True to 'true'",
       A2(&Json_encode, &int0, WRAP(&True)),
       create_string("true"));
   expect_equal("should encode False to 'false'",
       A2(&Json_encode, &int0, WRAP(&False)),
       create_string("false"));
-  return NULL;
 }
 
-void* test_Json_encode_null() {
+void test_Json_encode_null() {
   expect_equal("should encode null to 'null'",
       A2(&Json_encode, &int0, WRAP(&Json_encodeNull)),
       create_string("null"));
-  return NULL;
 }
 
-void* test_Json_encode_number() {
+void test_Json_encode_number() {
   expect_equal("should encode 3.14 to '3.14'",
       A2(&Json_encode, &int0, WRAP(newElmFloat(3.14))),
       create_string("3.14"));
@@ -38,10 +36,9 @@ void* test_Json_encode_number() {
   expect_equal("should encode `123 : Int` to '123'",
       A2(&Json_encode, &int0, WRAP(newElmInt(123))),
       create_string("123"));
-  return NULL;
 }
 
-void* test_Json_encode_string() {
+void test_Json_encode_string() {
   expect_equal("should encode 'hello' to '\"hello\"'",
       A2(&Json_encode, &int0, WRAP(create_string("hello"))),
       create_string("\"hello\""));
@@ -57,11 +54,9 @@ void* test_Json_encode_string() {
   expect_equal("should encode ASCII control chars 0x7 and 0xb to '\"\\u0007\\u000b\"'",
       A2(&Json_encode, &int0, WRAP(create_string("\a\v"))),
       create_string("\"\\u0007\\u000b\""));
-
-  return NULL;
 }
 
-void* test_Json_stringify_array() {
+void test_Json_stringify_array() {
   char* expected;
   char buf[512];
 
@@ -111,11 +106,9 @@ void* test_Json_stringify_array() {
                   array123,
               })))),
       create_string(expected));
-
-  return NULL;
 }
 
-void* test_Json_stringify_object() {
+void test_Json_stringify_object() {
   char* expected;
   char buf[512];
 
@@ -170,8 +163,6 @@ void* test_Json_stringify_object() {
                   exampleObj,
               })))),
       create_string(expected));
-
-  return NULL;
 }
 
 /*
@@ -193,7 +184,7 @@ Closure g_elm_json_Json_Encode_list = {
     .evaluator = &eval_elm_json_Json_Encode_list,
 };
 
-void* test_Json_Encode_list() {
+void test_Json_Encode_list() {
   void* c_array[] = {
       &True,
       &False,
@@ -211,8 +202,6 @@ void* test_Json_Encode_list() {
   expect_equal("encode 0 (list bool [True,False]) == \"[true,false]\"",
       A2(&Json_encode, &int0, encoded),
       create_string("[true,false]"));
-
-  return NULL;
 }
 
 /*
@@ -238,7 +227,7 @@ Closure g_elm_json_Json_Encode_object = {
     .evaluator = &eval_elm_json_Json_Encode_object,
 };
 
-void* test_Json_encode_object() {
+void test_Json_encode_object() {
   ElmString* name = create_string("name");
   ElmString* brian = create_string("Brian");
   ElmString* age = create_string("age");
@@ -273,8 +262,6 @@ void* test_Json_encode_object() {
       " == \"\"\"{\"name\":\"Brian\",\"age\":42}\"\"\"",
       A2(&Json_encode, &int0, encodedObject),
       create_string("{\"name\":\"Brian\",\"age\":42}"));
-
-  return NULL;
 }
 
 void json_encoder_test() {

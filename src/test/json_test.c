@@ -7,7 +7,7 @@ void json_parser_test();
 void json_decoder_test();
 void json_encoder_test();
 
-char* json_test() {
+void json_test() {
   if (verbose) {
     safe_printf("\n\n\n");
     safe_printf("####################################################\n");
@@ -19,6 +19,4 @@ char* json_test() {
   json_parser_test();
   json_decoder_test();
   json_encoder_test();
-
-  return NULL;
 }

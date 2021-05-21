@@ -7,8 +7,8 @@ Module = {
   onRuntimeInitialized: function () {
     const generatedAppTypes = {
       ctors: ["CTOR_Nothing", "CTOR_Just", "CTOR_Ok", "CTOR_Err", "CTOR_Failure", "CTOR_Field", "CTOR_Index", "CTOR_OneOf"],
-      fields: [],
-      fieldGroups: [],
+      fields: ["init", "subscriptions", "update", "view"],
+      fieldGroups: ["init subscriptions udpate view"],
     };
     const kernelFuncRecord = {};
     wasmWrapper = wrapWasmElmApp(Module, elmImports, generatedAppTypes, kernelFuncRecord);

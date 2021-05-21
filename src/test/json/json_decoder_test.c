@@ -22,7 +22,7 @@ void* createJsValue(ElmString* json) {
   return wrapped;
 }
 
-void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* expected) {
+void test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* expected) {
   stbsp_sprintf(test_decode_buf, "should correctly decode '%s'", json_c_str);
   ElmString* json = create_string(json_c_str);
 
@@ -35,11 +35,9 @@ void* test_decode_ok(Closure* runner, Custom* decoder, char* json_c_str, void* e
   }
 
   expect_equal(test_decode_buf, actual, newCustom(CTOR_Ok, 1, (void*[]){expected}));
-
-  return NULL;
 }
 
-void* test_decode_err(
+void test_decode_err(
     Closure* runner, Custom* decoder, char* json_c_str, Custom* expected_err) {
   stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
   ElmString* json = create_string(json_c_str);
@@ -52,11 +50,9 @@ void* test_decode_err(
   }
 
   expect_equal(test_decode_buf, actual_err, expected_err);
-
-  return NULL;
 }
 
-void* test_decode_errFailure(
+void test_decode_errFailure(
     Closure* runner, Custom* decoder, char* json_c_str, char* msg_c_str) {
   ElmString* json = create_string(json_c_str);
   stbsp_sprintf(test_decode_buf, "should return expected error for '%s'", json_c_str);
@@ -76,7 +72,6 @@ void* test_decode_errFailure(
               })),
       }));
   expect_equal(test_decode_buf, actual_err, expected_err);
-  return NULL;
 }
 
 Custom* errField(char* field, Custom* error) {
@@ -111,7 +106,7 @@ JsRef* newJsRef(u32 index) {
 
 //=================================================================================================
 
-void* test_Json_decode_invalidJson() {
+void test_Json_decode_invalidJson() {
   Closure* runner = &Json_runOnString;
   char* json = "invalid JSON !";
 
@@ -123,55 +118,45 @@ void* test_Json_decode_invalidJson() {
       })));
 
   test_decode_err(runner, &Json_decodeBool, json, expectedError);
-
-  return NULL;
 }
 
-void* test_Json_decodeBool(void* runner) {
+void test_Json_decodeBool(void* runner) {
   test_decode_ok(runner, &Json_decodeBool, "true", &True);
   test_decode_ok(runner, &Json_decodeBool, "false", &False);
 
   test_decode_errFailure(runner, &Json_decodeBool, "null", "Expecting a BOOL");
-
-  return NULL;
 }
 
-void* test_Json_decodeInt(void* runner) {
+void test_Json_decodeInt(void* runner) {
   test_decode_ok(runner, &Json_decodeInt, "123", newElmInt(123));
   test_decode_ok(runner, &Json_decodeInt, "-123", newElmInt(-123));
 
   test_decode_errFailure(runner, &Json_decodeInt, "null", "Expecting an INT");
   test_decode_errFailure(runner, &Json_decodeInt, "9876543210", "Expecting an INT");
   test_decode_errFailure(runner, &Json_decodeInt, "3.14", "Expecting an INT");
-
-  return NULL;
 }
 
-void* test_Json_decodeFloat(void* runner) {
+void test_Json_decodeFloat(void* runner) {
   test_decode_ok(runner, &Json_decodeFloat, "3.14", newElmFloat(3.14));
   test_decode_ok(runner, &Json_decodeFloat, "-3.14", newElmFloat(-3.14));
   test_decode_ok(runner, &Json_decodeFloat, "-3.14e-1", newElmFloat(-0.314));
 
   test_decode_errFailure(runner, &Json_decodeFloat, "null", "Expecting a FLOAT");
-
-  return NULL;
 }
 
-void* test_Json_decodeString(void* runner) {
+void test_Json_decodeString(void* runner) {
   test_decode_ok(runner, &Json_decodeString, "\"hello\"", create_string("hello"));
   test_decode_errFailure(runner, &Json_decodeString, "null", "Expecting a STRING");
-  return NULL;
 }
 
-void* test_Json_decodeNull(void* runner) {
+void test_Json_decodeNull(void* runner) {
   ElmInt* num = newElmInt(42);
   Custom* decoder = A1(&Json_decodeNull, num);
   test_decode_ok(runner, decoder, "null", num);
   test_decode_errFailure(runner, decoder, "123", "Expecting null");
-  return NULL;
 }
 
-void* test_Json_decodeValue(void* runner) {
+void test_Json_decodeValue(void* runner) {
   void* expected = runner == &Json_runOnString ? (void*)newCustom(JSON_VALUE_ARRAY,
                                                      3,
                                                      ((void*[]){
@@ -181,10 +166,9 @@ void* test_Json_decodeValue(void* runner) {
                                                      }))
                                                : (void*)newJsRef(latest_jsref_index + 1);
   test_decode_ok(runner, &Json_decodeValue, "[1,2,3]", WRAP(expected));
-  return NULL;
 }
 
-void* test_Json_decodeList(void* runner) {
+void test_Json_decodeList(void* runner) {
   Custom* decoder = A1(&Json_decodeList, &Json_decodeInt);
 
   test_decode_ok(runner,
@@ -203,11 +187,9 @@ void* test_Json_decodeList(void* runner) {
       decoder,
       "[null]",
       err(errIndex(0, errFailure("Expecting an INT", &Json_encodeNull))));
-
-  return NULL;
 }
 
-void* test_Json_decodeArray(void* runner) {
+void test_Json_decodeArray(void* runner) {
   Custom* decoder = A1(&Json_decodeArray, &Json_decodeInt);
 
   test_decode_ok(runner,
@@ -221,11 +203,9 @@ void* test_Json_decodeArray(void* runner) {
       decoder,
       "[null]",
       err(errIndex(0, errFailure("Expecting an INT", &Json_encodeNull))));
-
-  return NULL;
 }
 
-void* test_Json_decodeField(void* runner) {
+void test_Json_decodeField(void* runner) {
   char* fld = "myField";
   if (verbose) {
     safe_printf("field = \"%s\"\n", fld);
@@ -243,11 +223,9 @@ void* test_Json_decodeField(void* runner) {
       decoder,
       "{\"myField\":null}",
       err(errField(fld, errFailure("Expecting an INT", &Json_encodeNull))));
-
-  return NULL;
 }
 
-void* test_Json_decodeIndex(void* runner) {
+void test_Json_decodeIndex(void* runner) {
   const i32 idx = 2;
   if (verbose) {
     safe_printf("index = %d\n", idx);
@@ -275,11 +253,9 @@ void* test_Json_decodeIndex(void* runner) {
       decoder,
       "[{},\"hello\",null,123]",
       err(errIndex(idx, errFailure("Expecting an INT", &Json_encodeNull))));
-
-  return NULL;
 }
 
-void* test_Json_decodeKeyValuePairs(void* runner) {
+void test_Json_decodeKeyValuePairs(void* runner) {
   Custom* decoder = A1(&Json_decodeKeyValuePairs, &Json_decodeInt);
 
   test_decode_ok(runner,
@@ -298,8 +274,6 @@ void* test_Json_decodeKeyValuePairs(void* runner) {
       decoder,
       "{ \"a\": 1, \"b\": null, \"c\": 3 }",
       err(errField("b", errFailure("Expecting an INT", &Json_encodeNull))));
-
-  return NULL;
 }
 
 ElmInt mapArgs = {
@@ -323,7 +297,7 @@ Closure testMapper = {
     .values = {&mapArgs},
 };
 
-void* test_Json_map(void* runner) {
+void test_Json_map(void* runner) {
   Closure* mapFns[] = {
       &Json_map1,
       &Json_map2,
@@ -367,8 +341,6 @@ void* test_Json_map(void* runner) {
     json[json_index] = ',';
     json_index++;
   }
-
-  return NULL;
 }
 
 void* eval_selectField(void* args[]) {
@@ -381,7 +353,7 @@ Closure selectField = {
     .evaluator = &eval_selectField,
 };
 
-void* test_Json_andThen(void* runner) {
+void test_Json_andThen(void* runner) {
   /*
     decoder : Decoder Int
     decoder =
@@ -417,11 +389,9 @@ void* test_Json_andThen(void* runner) {
       decoder,
       "{ \"dataField\": \"foo\", \"foo\": null }",
       err(errField("foo", errFailure("Expecting an INT", &Json_encodeNull))));
-
-  return NULL;
 }
 
-void* test_Json_oneOf(void* runner) {
+void test_Json_oneOf(void* runner) {
   /*
     decoder : Decoder Int
     decoder =
@@ -453,11 +423,9 @@ void* test_Json_oneOf(void* runner) {
               errFailure("Expecting an INT", empty_array),
               errFailure("Expecting null", empty_array),
           })))));
-
-  return NULL;
 }
 
-void* test_Json_fail(void* runner) {
+void test_Json_fail(void* runner) {
   char* msg = "it failed";
   Custom* decoder = A1(&Json_fail, create_string(msg));
   test_decode_errFailure(runner, decoder, "42", msg);
@@ -470,18 +438,14 @@ void* test_Json_fail(void* runner) {
         "[1,2,3]",
         err(errFailure(msg, newJsRef(latest_jsref_index + 1))));
   }
-
-  return NULL;
 }
 
-void* test_Json_succeed(void* runner) {
+void test_Json_succeed(void* runner) {
   ElmInt* msg = newElmInt(42);
   Custom* decoder = A1(&Json_succeed, msg);
 
   test_decode_ok(runner, decoder, "true", msg);
   test_decode_ok(runner, decoder, "[1,2,3]", msg);
-
-  return NULL;
 }
 
 void json_runner_test(void* runner) {

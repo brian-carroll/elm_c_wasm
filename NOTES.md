@@ -1,7 +1,12 @@
 ## TODO
 
-- wrapper
-  - bad memory management for writes due to new GC
+- wrapper tests!
+  - Roundtrip is an option
+  - Could also go one-way. Have an array of test values on each side that are supposed to match.
+    - just fixed a bug where a wrapped JSON from flags was coming in as not-json but kernel.. should work the same as we don't check the ctor.. test that scenario
+  - Could eval JS strings from C
+  - What JS scope do my test callbacks operate in?
+
 - unit tests working in all 4 builds
 - language test
   - Wasm release: tests pass but Emscripten not initialised

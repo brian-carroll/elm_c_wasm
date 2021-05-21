@@ -11,7 +11,7 @@ deseret 𐐷   0x10437     0xD801  0xDC37
 han     𤭢  0x24B62     0xD852  0xDF62
 */
 
-char* test_Char_toCode() {
+void test_Char_toCode() {
   ElmChar dollar = (ElmChar){
       .words16 = {0x0024, 0x0000},  // $
       .header = HEADER_CHAR,
@@ -39,11 +39,9 @@ char* test_Char_toCode() {
   };
   ElmInt* han_code = A1(&Char_toCode, &han);
   mu_expect_equal("toCode han == 0x24B62", han_code->value, 0x24B62);
-
-  return NULL;
 }
 
-char* char_test() {
+void char_test() {
   if (verbose) {
     safe_printf("\n\n\n");
     safe_printf("####################################################\n");
@@ -53,6 +51,4 @@ char* char_test() {
   }
 
   mu_run_test(test_Char_toCode);
-
-  return NULL;
 }

@@ -20,7 +20,7 @@ void gc_test_reset() {
 
 void set_heap_layout(GcHeap* heap, size_t* start, size_t bytes);
 
-char* test_heap_layout() {
+void test_heap_layout() {
   if (verbose) {
     safe_printf(
         "\n"
@@ -66,8 +66,6 @@ char* test_heap_layout() {
 
   set_heap_layout(heap, original_start, original_bytes);
   gc_test_reset();
-
-  return NULL;
 }
 
 // --------------------------------------------------------------------------------
@@ -81,7 +79,7 @@ void test_memcpy_reset(size_t* from, size_t* to) {
   }
 }
 
-void* test_memcpy() {
+void test_memcpy() {
   if (verbose) {
     safe_printf(
         "\n"
@@ -145,8 +143,6 @@ void* test_memcpy() {
         size);
     mu_assert(description, mismatches == 0);
   }
-
-  return NULL;
 }
 
 // --------------------------------------------------------------------------------
@@ -243,7 +239,7 @@ void* test_execute(Closure* c) {
 }
 
 
-char* assertions_test() {
+void assertions_test() {
   if (verbose) {
     safe_printf(
         "\n"
@@ -268,7 +264,6 @@ char* assertions_test() {
   GC_collect_major();
 
   mu_assert("should complete without triggering any assertions", true);
-  return NULL;
 }
 
 // --------------------------------------------------------------------------------
@@ -485,7 +480,7 @@ char* Debug_evaluator_name(void* p) {
 }
 
 
-char* gc_test() {
+void gc_test() {
   if (verbose)
     safe_printf(
         "##############################################################################\n"
@@ -501,6 +496,4 @@ char* gc_test() {
   mu_run_test(assertions_test);
   mu_run_test(minor_gc_test);
   mu_run_test(gc_stackmap_test);
-
-  return NULL;
 }

@@ -10,7 +10,7 @@
 #define PARSE_TEST_MSG_LEN 1024
 char parse_test_msg[PARSE_TEST_MSG_LEN];
 
-char* parse_test(void* (*parse_func)(u16** cursor, u16* end),
+void parse_test(void* (*parse_func)(u16** cursor, u16* end),
     ElmString* json,
     void* expect_val,
     size_t expect_chars_consumed) {
@@ -48,34 +48,30 @@ char* parse_test(void* (*parse_func)(u16** cursor, u16* end),
   } else {
     expect_equal(parse_test_msg, result, expect_val);
   }
-
-  return NULL;
 }
 
 //-----------------------------------------
 
 void* parse_bool(u16** cursor, u16* end);
-void* test_Json_parse_bool() {
+void test_Json_parse_bool() {
   parse_test(&parse_bool, create_string("true"), &True, 4);
   parse_test(&parse_bool, create_string("false"), &False, 5);
   parse_test(&parse_bool, create_string("truh"), NULL, 0);
   parse_test(&parse_bool, create_string("falsy"), NULL, 0);
   parse_test(&parse_bool, create_string("f"), NULL, 0);
   parse_test(&parse_bool, create_string(""), NULL, 0);
-  return NULL;
 }
 
 void* parse_null(u16** cursor, u16* end);
-void* test_Json_parse_null() {
+void test_Json_parse_null() {
   parse_test(&parse_null, create_string("null"), &Json_encodeNull, 4);
   parse_test(&parse_null, create_string("nule"), NULL, 0);
   parse_test(&parse_null, create_string("n"), NULL, 0);
   parse_test(&parse_null, create_string(""), NULL, 0);
-  return NULL;
 }
 
 void* parse_number(u16** cursor, u16* end);
-void* test_Json_parse_number() {
+void test_Json_parse_number() {
   parse_test(&parse_number, create_string("123.456"), newElmFloat(123.456), 7);
   parse_test(&parse_number, create_string("-123.456"), newElmFloat(-123.456), 8);
   parse_test(&parse_number, create_string("-123.456e-3"), newElmFloat(-123.456e-3), 11);
@@ -83,7 +79,6 @@ void* test_Json_parse_number() {
   parse_test(&parse_number, create_string(""), NULL, 0);
   parse_test(&parse_number, create_string("-+e"), NULL, 0);
   parse_test(&parse_number, create_string("abc"), NULL, 0);
-  return NULL;
 }
 
 #define DQUOTE "\""
@@ -92,7 +87,7 @@ ElmString unicode_test_string = {
     .header = HEADER_STRING(2), .words16 = {0xD852, 0xDF62},  // 𤭢
 };
 
-void* test_Json_parse_string() {
+void test_Json_parse_string() {
   // valid strings
   parse_test(
       &parse_string, create_string(DQUOTE "hello" DQUOTE), create_string("hello"), 7);
@@ -156,12 +151,10 @@ void* test_Json_parse_string() {
       0);
   parse_test(&parse_string, create_string(""), NULL, 0);
   parse_test(&parse_string, create_string(DQUOTE "\t" DQUOTE), NULL, 0);  // unescaped tab
-
-  return NULL;
 }
 
 void skip_whitespace(u16** cursor, u16* end);
-void* test_Json_skip_whitespace() {
+void test_Json_skip_whitespace() {
   ElmString* json;
   u16* cursor;
 
@@ -185,12 +178,10 @@ void* test_Json_skip_whitespace() {
   cursor = json->words16;
   skip_whitespace(&cursor, cursor + code_units(json));
   mu_expect_equal("should handle empty string", cursor, json->words16);
-
-  return NULL;
 }
 
 void* parse_array(u16** cursor, u16* end);
-void* test_Json_parse_array() {
+void test_Json_parse_array() {
   // valid arrays
 
   parse_test(&parse_array,
@@ -239,12 +230,10 @@ void* test_Json_parse_array() {
   parse_test(&parse_array, create_string("[ null ,"), NULL, 0);
   parse_test(&parse_array, create_string("[ null , "), NULL, 0);
   parse_test(&parse_array, create_string("[ null , ]"), NULL, 0);
-
-  return NULL;
 }
 
 void* parse_object(u16** cursor, u16* end);
-void* test_Json_parse_object() {
+void test_Json_parse_object() {
   // valid objects
 
   parse_test(&parse_object,
@@ -316,8 +305,6 @@ void* test_Json_parse_object() {
   parse_test(&parse_object, create_string("{ "), NULL, 0);
   parse_test(&parse_object, create_string("{"), NULL, 0);
   parse_test(&parse_object, create_string(""), NULL, 0);
-
-  return NULL;
 }
 
 void json_parser_test() {
