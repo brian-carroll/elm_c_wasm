@@ -4,6 +4,7 @@
   - Compare Wasm vs JS
 - Build
   - Try debugging in VS Code on Windows
+  - Try watch-compiling on Windows. See what Casey is doing.
   - make a config.h for DEBUG and perf and whatever else
   - collect platform stuff together
   - define out `assert`
