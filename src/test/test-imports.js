@@ -29,16 +29,17 @@ mergeInto(LibraryManager.library, {
     return wasmWrapper.writeWasmValue(jsValue);
   },
 
-  writeTestValue: function (index) {
-    const record = {
+  testWriteJsValueToWasm: function (index) {
+    const knownRecord = {
       init: 'init value',
       subscriptions: 'subscriptions value',
       update: 'update value',
       view: 'view value'
     };
-    function kernelIncrementBy1(x) {
-      return x + 1;
-    }
+    const unknownRecord = {
+      foo: 'foo value',
+      bar: 'bar value',
+    };
     const testValueArray = [
       /*  0 */ undefined,
       /*  1 */ null,
@@ -48,22 +49,30 @@ mergeInto(LibraryManager.library, {
       /*  5 */ true,
       /*  6 */ false,
       /*  7 */ _Utils_chr('x'),
-      /*  8 */ ['Kernel', 'array'],
+      /*  8 */ ['kernel', 'array'],
       /*  9 */ _List_Nil,
       /* 10 */ _Utils_Tuple0,
       /* 11 */ _Utils_Tuple2('U', 'V'),
       /* 12 */ _Utils_Tuple3('X', 'Y', 'Z'),
       /* 13 */ _List_Cons(1, _List_Cons(2, _List_Cons(3, _List_Nil))),
-      /* 14 */ record,
-      /* 15 */ { $: 5, b: 'kernel', e: 'union' },
-      /* 16 */ { $: 'Just', a: 321 },
-      /* 17 */ kernelIncrementBy1
+      /* 14 */ knownRecord,
+      /* 15 */ unknownRecord,
+      /* 16 */ { $: 5, b: 'kernel', e: 'union' },
+      /* 17 */ { $: 'Just', a: 321 },
     ];
     return wasmWrapper.writeWasmValue(testValueArray[index]);
   },
 
-  testElmCallback: function (addr) {
-    const wasmCallback = wasmWrapper.readWasmValue(addr);
-    return A2(wasmCallback, 999, { $: 'Just', a: 'hello' });
+  testCallWasmFuncWithJsArgs: function (closureAddr) {
+    const wasmCallback = wasmWrapper.readWasmValue(closureAddr);
+    const result = A2(wasmCallback, 999, { $: 'Just', a: 'hello' });
+    return wasmWrapper.writeWasmValue(result);
+  },
+
+  testPassJsCallbackToWasm: function () {
+    function kernelIncrementBy1(x) {
+      return x + 1;
+    }
+    return wasmWrapper.writeWasmValue(kernelIncrementBy1);
   }
 });

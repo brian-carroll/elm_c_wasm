@@ -81,7 +81,10 @@ void print_value(void* p) {
       safe_printf("Float %f", v->elm_float.value);
       break;
     case Tag_Char:
-      safe_printf("Char 0x%8x", v->elm_char.value);
+      safe_printf("Char 0x%x", v->elm_char.value);
+      if (v->elm_char.value < 128) {
+        safe_printf(" '%c'", v->elm_char.value);
+      }
       break;
     case Tag_String: {
       char buf[128];
@@ -94,7 +97,7 @@ void print_value(void* p) {
       buf[i] = 0;
       safe_printf("String \"%s\"", buf);
       break;
-    } 
+    }
     case Tag_List:
       if (p == pNil) {
         safe_printf("Nil");
@@ -598,7 +601,8 @@ void Debug_pretty(const char* label, void* p) {
   pretty_print_child(2, p);
 }
 
-void Debug_pretty_with_location(const char* function, int line, const char* label, void* p) {
+void Debug_pretty_with_location(
+    const char* function, int line, const char* label, void* p) {
   char dashes[20];
   for (int i = 0; i < FORMAT_PTR_LEN; i++) {
     dashes[i] = '-';

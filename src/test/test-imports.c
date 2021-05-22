@@ -68,13 +68,13 @@ void sweepJsRefs(bool isFullGc) {
   jsHeapLength = lastMarked + 1;
 }
 
-static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
+static void* writeJsonValue(ElmValue* value, enum JsShape jsShape) {
   if (value->header.tag != Tag_Custom) {
-    return (size_t)Utils_clone(value);
+    return Utils_clone(value);
   }
   Custom* c = &value->custom;
   if (c == &Json_encodeNull || c == &True || c == &False) {
-    return (size_t)c;
+    return c;
   }
   if (c->ctor == JSON_VALUE_WRAP) {
     void* unwrapped = (void*)writeJsonValue(c->values[0], jsShape);
@@ -82,15 +82,15 @@ static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
     wrapped->header = (Header)HEADER_CUSTOM(1);
     wrapped->ctor = JSON_VALUE_WRAP;
     wrapped->values[0] = unwrapped;
-    return (size_t)wrapped;
+    return wrapped;
   }
   if (jsShape == MAYBE_CIRCULAR) {
     JsRef* jsRef = GC_allocate(true, SIZE_JS_REF);
     jsRef->header = (Header)HEADER_JS_REF;
     jsRef->index = allocateJsRef(value);
-    return (size_t)jsRef;
+    return jsRef;
   }
-  return (size_t)Utils_clone(value);
+  return Utils_clone(value);
 }
 
 ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
@@ -99,10 +99,10 @@ ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
   u32 len = custom_params(array);
   if (index >= len) return -((ptrdiff_t)len + 1);
   ElmValue* value = array->values[index];
-  return writeJsonValue(value, MAYBE_CIRCULAR);
+  return (ptrdiff_t)writeJsonValue(value, MAYBE_CIRCULAR);
 }
 
-ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
+void* getJsRefObjectField(u32 jsRefId, ElmString* fieldStringAddr) {
   Custom* obj = jsHeap[jsRefId].value;
   if (obj->header.tag != Tag_Custom || obj->ctor != JSON_VALUE_OBJECT) {
     return 0;
@@ -112,7 +112,7 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
   u32 i;
   for (i = 0; i < len; i += 2) {
     ElmString* field = obj->values[i];
-    if (Utils_apply(&Utils_equal, 2, (void*[]){field, (void*)fieldStringAddr}) == &True) {
+    if (Utils_apply(&Utils_equal, 2, (void*[]){field, fieldStringAddr}) == &True) {
       value = obj->values[i + 1];
       break;
     }
@@ -122,7 +122,7 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
   return writeJsonValue(value, MAYBE_CIRCULAR);
 }
 
-ptrdiff_t getJsRefValue(u32 jsRefId) {
+void* getJsRefValue(u32 jsRefId) {
   return writeJsonValue(jsHeap[jsRefId].value, NOT_CIRCULAR);
 }
 
@@ -161,13 +161,13 @@ static Custom array_circular = {
         },
 };
 
-size_t testCircularJsValue(bool isArray) {
+void* testCircularJsValue(bool isArray) {
   void* value = isArray ? &array_circular : &object_circular;
   void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
   return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
 };
 
-size_t testJsonValueRoundTrip(size_t jsonStringAddr) {
+void* testJsonValueRoundTrip(ElmString* jsonStringAddr) {
   void* value = parse_json((ElmString*)jsonStringAddr);
   void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
   return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);

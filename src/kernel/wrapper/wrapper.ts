@@ -500,7 +500,7 @@ function wrapWasmElmApp(
           case '#3': {
             const a = writeWasmValue(elmValue.a);
             const b = writeWasmValue(elmValue.b);
-            const c = writeWasmValue(elmValue.b);
+            const c = writeWasmValue(elmValue.c);
             const addr = emscriptenModule._allocate(4);
             const index = addr >> 2;
             mem32[index] = encodeHeader(Tag.Tuple3, 4);
@@ -535,16 +535,16 @@ function wrapWasmElmApp(
   function writeUserCustom(value: Record<string, any>): Address {
     const jsCtor: string = value.$;
     const keys = Object.keys(value);
-    const nKeys = keys.length - 1; // subtract 1 for '$'
-    const size = 2 + nKeys;
+    const size = 1 + keys.length; // header + ctor - '$' = 1 + 1 -1 = 1
     const addr = emscriptenModule._allocate(size);
     const index = addr >> 2;
     mem32[index] = encodeHeader(Tag.Custom, size);
-    mem32[index + 1] = appTypes.ctors[jsCtor];
-    for (let k = 0; k < nKeys; k++) {
+    mem32[index + 1] = appTypes.ctors['CTOR_' + jsCtor];
+    let i = index + 2;
+    for (let k = 0; k < keys.length; k++) {
       const key = keys[k];
       if (key !== '$') {
-        mem32[index + 2 + k] = writeWasmValue(value[key]);
+        mem32[i++] = writeWasmValue(value[key]);
       }
     }
 
@@ -600,7 +600,7 @@ function wrapWasmElmApp(
       const key = keys[k];
       mem32[index + 2 + k] = writeWasmValue(value[key]);
     }
-    return 0;
+    return addr;
   }
 
   function writeFieldGroup(fieldNames: string[]): Address {

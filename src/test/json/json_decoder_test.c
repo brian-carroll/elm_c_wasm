@@ -14,7 +14,7 @@ char test_decode_buf[1024];
 
 i32 latest_jsref_index = -1;
 void* createJsValue(ElmString* json) {
-  Custom* wrapped = (Custom*)testJsonValueRoundTrip((size_t)json);
+  Custom* wrapped = testJsonValueRoundTrip(json);
   JsRef* jsRef = wrapped->values[0];
   if (jsRef->header.tag == Tag_JsRef) {
     latest_jsref_index = jsRef->index;
