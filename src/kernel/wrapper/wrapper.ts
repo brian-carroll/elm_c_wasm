@@ -227,7 +227,7 @@ function wrapWasmElmApp(
   }
 
   function readWasmValue(addr: number): any {
-    if (!addr) return null;
+    if (!addr) return undefined;
     const index = addr >> 2;
     const header = mem32[index];
     const tag: Tag = (header & TAG_MASK) >>> TAG_SHIFT;
@@ -297,7 +297,7 @@ function wrapWasmElmApp(
         const jsCtor: number | string =
           wasmCtor >= KERNEL_CTOR_OFFSET
             ? wasmCtor - KERNEL_CTOR_OFFSET
-            : appTypes.ctors[wasmCtor];
+            : appTypes.ctors[wasmCtor].replace('CTOR_', '');
         const custom: Record<string, any> = { $: jsCtor };
         const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
         for (let i = 0; i < size - 2; i++) {
@@ -418,7 +418,10 @@ function wrapWasmElmApp(
   type Address = number;
 
   function writeWasmValue(elmValue: any): Address {
-    if (elmValue === null || elmValue === undefined) {
+    if (elmValue === undefined) {
+      return 0;
+    }
+    if (elmValue === null) {
       return wasmConstAddrs.JsNull;
     }
     switch (typeof elmValue) {
@@ -559,9 +562,7 @@ function wrapWasmElmApp(
   function writeKernelCustom(value: Record<string, any>): Address {
     const jsCtor: number = value.$;
     const keys = Object.keys(value);
-
-    // prettier-ignore
-    const kernelKeys = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'];
+    const kernelKeys = 'abcdefghijklmnopqrstuvwxyz';
     const childAddrs: Address[] = [];
     for (let k = 0; k < keys.length; k++) {
       const key = keys[k];

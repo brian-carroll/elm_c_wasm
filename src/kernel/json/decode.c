@@ -508,7 +508,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
           }
         }
       } else if (value->header.tag == Tag_JsRef) {
-        field_value = (void*)getJsRefObjectField(value->js_ref.index, (size_t)field);
+        field_value = getJsRefObjectField(value->js_ref.index, field);
       }
 
       if (field_value != NULL) {

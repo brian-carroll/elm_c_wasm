@@ -29,7 +29,7 @@ enum {
 
 extern void* testCircularJsValue(bool isArray);
 extern void* testJsonValueRoundTrip(ElmString* jsonStringAddr);
-extern void* testWasmValueRoundTrip(void* addr);
+extern void* testElmValueRoundTrip(void* addr);
 extern void* testWriteJsValueToWasm(u32 index);
 extern void* testCallWasmFuncWithJsArgs(Closure* closureAddr);
 extern Closure* testPassJsCallbackToWasm();

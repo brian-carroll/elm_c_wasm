@@ -3,7 +3,7 @@
 
 extern FieldGroup fg_init_subscriptions_update_view;
 
-#define TEST_ARRAY_LEN 18
+#define TEST_ARRAY_LEN 17
 
 static void populate_test_array(void* test_values[]) {
   void* js_undefined = &Json_encodeNull;
@@ -24,13 +24,21 @@ static void populate_test_array(void* test_values[]) {
           create_string("view value"),
       });
 
-  // field group gets ignored by Utils_eq, so just use NULL
-  Record* unknownRecord = newRecord(NULL,
+#if 0
+  Header fgHeader = HEADER_FIELDGROUP(2);
+  FieldGroup* unknownFieldGroup = GC_allocate(true, fgHeader.size);
+  int next_field_id = ARRAY_LEN(Wrapper_appFieldGroups);
+  unknownFieldGroup->header = fgHeader;
+  unknownFieldGroup->size = 2;
+  unknownFieldGroup->fields[0] = next_field_id;
+  unknownFieldGroup->fields[1] = next_field_id + 1;
+  Record* unknownRecord = newRecord(unknownFieldGroup,
       2,
       (void*[]){
           create_string("bar value"),  // fields sorted alphabetically
           create_string("foo value"),
       });
+#endif
 
   Custom* kernelUnion = newCustom(KERNEL_CTOR_OFFSET + 5,
       5,
@@ -60,9 +68,8 @@ static void populate_test_array(void* test_values[]) {
   /* 12 */ test_values[i++] = tuple3_XYZ;
   /* 13 */ test_values[i++] = list123;
   /* 14 */ test_values[i++] = knownRecord;
-  /* 15 */ test_values[i++] = unknownRecord;  // !!
-  /* 16 */ test_values[i++] = kernelUnion;
-  /* 17 */ test_values[i++] = just321;  // !!
+  /* 15 */ test_values[i++] = kernelUnion;
+  /* 16 */ test_values[i++] = just321;
 }
 
 
@@ -81,8 +88,6 @@ static void test_write_values() {
       safe_printf("\n\n");
     }
   }
-
-  print_state();
 }
 
 static void test_call_wasm_from_js() {
@@ -98,10 +103,25 @@ static void test_call_js_from_wasm() {
 }
 
 static void test_read() {
-  //
+  void* test_values[TEST_ARRAY_LEN];
+  populate_test_array(test_values);
+  char message[100];
+
+  for (int i = 0; i < TEST_ARRAY_LEN; i++) {
+    void* actual = testElmValueRoundTrip(test_values[i]);
+    void* expected = test_values[i];
+    stbsp_sprintf(message, "should correctly read JS test value #%d", i);
+    expect_equal(message, actual, expected);
+    if (verbose) {
+      print_value(expected);
+      safe_printf("\n\n");
+    }
+  }
 }
 
 void wrapper_test() {
+#ifdef __EMSCRIPTEN__
+
   if (verbose) {
     safe_printf("\n\n\n");
     safe_printf("####################################################\n");
@@ -109,6 +129,10 @@ void wrapper_test() {
     safe_printf("JS Wrapper\n");
     safe_printf("==========\n");
   }
+  // describe("test_write_values", test_write_values);
+  // describe("test_call_wasm_from_js", test_call_wasm_from_js);
+  // describe("test_call_js_from_wasm", test_call_js_from_wasm);
+  describe("test_read", test_read);
 
-  describe("test_write_values", test_write_values);
+#endif
 }

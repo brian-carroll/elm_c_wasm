@@ -36,10 +36,10 @@ mergeInto(LibraryManager.library, {
       update: 'update value',
       view: 'view value'
     };
-    const unknownRecord = {
-      foo: 'foo value',
-      bar: 'bar value',
-    };
+    // const unknownRecord = {
+    //   foo: 'foo value',
+    //   bar: 'bar value',
+    // };
     const testValueArray = [
       /*  0 */ undefined,
       /*  1 */ null,
@@ -56,9 +56,8 @@ mergeInto(LibraryManager.library, {
       /* 12 */ _Utils_Tuple3('X', 'Y', 'Z'),
       /* 13 */ _List_Cons(1, _List_Cons(2, _List_Cons(3, _List_Nil))),
       /* 14 */ knownRecord,
-      /* 15 */ unknownRecord,
-      /* 16 */ { $: 5, b: 'kernel', e: 'union' },
-      /* 17 */ { $: 'Just', a: 321 },
+      /* 15 */ { $: 5, b: 'kernel', e: 'union' },
+      /* 16 */ { $: 'Just', a: 321 },
     ];
     return wasmWrapper.writeWasmValue(testValueArray[index]);
   },
