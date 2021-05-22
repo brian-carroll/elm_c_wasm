@@ -1,11 +1,13 @@
 ## TODO
 
 - wrapper tests!
-  - Roundtrip is an option
-  - Could also go one-way. Have an array of test values on each side that are supposed to match.
-    - just fixed a bug where a wrapped JSON from flags was coming in as not-json but kernel.. should work the same as we don't check the ctor.. test that scenario
-  - Could eval JS strings from C
-  - What JS scope do my test callbacks operate in?
+
+  - Wasm target
+    - [x] writing values
+    - [x] reading values
+    - [ ] call JS from Wasm
+    - [ ] call Wasm from JS
+  - Native target (skip until needed)
 
 - unit tests working in all 4 builds
 - language test
@@ -15,6 +17,7 @@
     - Debug_toString > StringBuilder_toString > String_copy > copy_chars
   - binary normal: OK
 
+- Make Tag_Zero invalid (breaks Json tests apparently)
 - Build
   - Try debugging in VS Code on Windows
   - make a config.h for DEBUG and perf and whatever else
@@ -128,6 +131,7 @@ Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
 ```
 
 ## OPTIMISATIONS ON -O3
+
 ```
    Total(ms)   Average(ms)  Hits   Function          Line  Code
    8.515000    1.419167        6   GC_collect_minor   158  mark(state, ignore_below)
@@ -140,7 +144,6 @@ Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
    0.010000    0.010000        1   GC_collect_major   199  bitmap_reset(&state->heap)
    0.005000    0.005000        1   GC_collect_major   201  sweepJsRefs(true)
 ```
-
 
 ## GC size analysis
 

@@ -62,7 +62,7 @@ Module = {
   postRun: [],
   onRuntimeInitialized: function () {
     const generatedAppTypes = {
-      ctors: ["CTOR_Nothing", "CTOR_Just", "CTOR_Ok", "CTOR_Err", "CTOR_Failure", "CTOR_Field", "CTOR_Index", "CTOR_OneOf"],
+      ctors: ["Nothing", "Just", "Ok", "Err", "Failure", "Field", "Index", "OneOf"],
       fields: ["init", "subscriptions", "update", "view"],
       fieldGroups: ["init subscriptions udpate view"],
     };

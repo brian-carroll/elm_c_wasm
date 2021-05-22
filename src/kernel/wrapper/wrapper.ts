@@ -297,7 +297,7 @@ function wrapWasmElmApp(
         const jsCtor: number | string =
           wasmCtor >= KERNEL_CTOR_OFFSET
             ? wasmCtor - KERNEL_CTOR_OFFSET
-            : appTypes.ctors[wasmCtor].replace('CTOR_', '');
+            : appTypes.ctors[wasmCtor];
         const custom: Record<string, any> = { $: jsCtor };
         const fieldNames = 'abcdefghijklmnopqrstuvwxyz';
         for (let i = 0; i < size - 2; i++) {
@@ -542,7 +542,7 @@ function wrapWasmElmApp(
     const addr = emscriptenModule._allocate(size);
     const index = addr >> 2;
     mem32[index] = encodeHeader(Tag.Custom, size);
-    mem32[index + 1] = appTypes.ctors['CTOR_' + jsCtor];
+    mem32[index + 1] = appTypes.ctors[jsCtor];
     let i = index + 2;
     for (let k = 0; k < keys.length; k++) {
       const key = keys[k];
