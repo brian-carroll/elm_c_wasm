@@ -18,11 +18,11 @@ clean:
 check: dist/test
 	dist/test
 
-wasm-release: CFLAGS = -Wall -O3
+wasm-release: CFLAGS = -Wall -O3 -Wno-unused-variable -Wno-incompatible-pointer-types
 wasm-release: dist/elm.wasm
 	@:
 
-release: CFLAGS = -Wall -O3
+release: CFLAGS = -Wall -O3 -Wno-unused-variable -Wno-incompatible-pointer-types
 release: dist/test
 	@:
 

@@ -1,22 +1,12 @@
 ## TODO
 
-- unit tests working in all 4 builds
-- language test
-  - Wasm release: tests pass but Emscripten not initialised
-  - Wasm normal: tests pass but Emscripten not initialised
-  - binary release: segfault
-    - Debug_toString > StringBuilder_toString > String_copy > copy_chars
-  - binary normal: OK
-
-- experiment with varargs for Closures, measure perf. Closure max_values is the arity to pass in Utils_apply.
-  - No compiler changes needed, everything uses A1, A2, A3
-- Make Tag_Zero invalid (breaks Json tests apparently)
+- perf profiling in release mode in SPA example
+  - Compare Wasm vs JS
 - Build
   - Try debugging in VS Code on Windows
   - make a config.h for DEBUG and perf and whatever else
   - collect platform stuff together
   - define out `assert`
-  - perf profiling in release mode in SPA example
 - virtual DOM
   - Integrate VDOM allocator into the GC
   - Make a test app and render stuff
@@ -24,6 +14,9 @@
 - logging improvements
   - use flags and log levels and stuff
 - modulo cons
+- experiment with varargs for Closures, measure perf. Closure max_values is the arity to pass in Utils_apply.
+  - No compiler changes needed, everything uses A1, A2, A3
+- Make Tag_Zero invalid (breaks Json tests apparently)
 
 # Allocator 50x speedup!!
 
