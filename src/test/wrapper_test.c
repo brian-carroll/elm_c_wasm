@@ -6,7 +6,6 @@ extern FieldGroup fg_init_subscriptions_update_view;
 #define TEST_ARRAY_LEN 17
 
 static void populate_test_array(void* test_values[]) {
-  void* js_undefined = &Json_encodeNull;
   ElmString* str_kernel = create_string("kernel");
   ElmString* str_array = create_string("array");
   ElmString* str_union = create_string("union");
@@ -53,7 +52,7 @@ static void populate_test_array(void* test_values[]) {
   Custom* just321 = A1(&g_elm_core_Maybe_Just, newElmInt(321));
 
   int i = 0;
-  /*  0 */ test_values[i++] = js_undefined;
+  /*  0 */ test_values[i++] = NULL;
   /*  1 */ test_values[i++] = &Json_encodeNull;
   /*  2 */ test_values[i++] = newElmInt(123);
   /*  3 */ test_values[i++] = newElmFloat(3.14);
@@ -71,6 +70,12 @@ static void populate_test_array(void* test_values[]) {
   /* 15 */ test_values[i++] = kernelUnion;
   /* 16 */ test_values[i++] = just321;
 }
+
+static void* eval_createTuple3(void* args[]) {
+  return newTuple3(args[0], args[1], args[2]);
+}
+
+// --------------------------------------------------
 
 
 static void test_write_values() {
@@ -90,17 +95,26 @@ static void test_write_values() {
   }
 }
 
+
 static void test_call_wasm_from_js() {
-  // Elm callback roundtrip:
-  //  create a Closure (Tuple3 constructor)
-  //  give it a free var (tuple.a)
-  //  it will get called back with 2 more args, result transformed to JS, and back to Wasm
-  //  check wasm return value is OK
+  Closure* c = newClosure(1, 3, eval_createTuple3, (void*[]){&True});
+  Tuple3* actual = testCallWasmFuncWithJsArgs(c);
+  Tuple3* expected =
+      A2(c, newElmInt(999), A1(&g_elm_core_Maybe_Just, create_string("hello")));
+  expect_equal(
+      "should correctly apply 2 JS arguments to a Wasm closure", actual, expected);
 }
 
+
 static void test_call_js_from_wasm() {
-  // Kernel callback: give it an integer to increment, check return value is correct
+  Closure* jsKernelIncrementBy1 = testWriteJsCallbackToWasm();
+  Closure* thunk = A1(jsKernelIncrementBy1, newElmInt(100));
+  ElmInt* actual = testElmValueRoundTrip(thunk);  // evaluate the thunk in JS
+
+  ElmInt* expected = newElmInt(101);
+  expect_equal("should be able to call a JS function from Wasm", actual, expected);
 }
+
 
 static void test_read() {
   void* test_values[TEST_ARRAY_LEN];
@@ -120,8 +134,6 @@ static void test_read() {
 }
 
 void wrapper_test() {
-#ifdef __EMSCRIPTEN__
-
   if (verbose) {
     safe_printf("\n\n\n");
     safe_printf("####################################################\n");
@@ -129,10 +141,8 @@ void wrapper_test() {
     safe_printf("JS Wrapper\n");
     safe_printf("==========\n");
   }
-  // describe("test_write_values", test_write_values);
-  // describe("test_call_wasm_from_js", test_call_wasm_from_js);
-  // describe("test_call_js_from_wasm", test_call_js_from_wasm);
+  describe("test_write_values", test_write_values);
+  describe("test_call_wasm_from_js", test_call_wasm_from_js);
+  describe("test_call_js_from_wasm", test_call_js_from_wasm);
   describe("test_read", test_read);
-
-#endif
 }

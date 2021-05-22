@@ -26,7 +26,14 @@
 #include "test-imports.c"
 #include "types_test.c"
 #include "utils_test.c"
+
+#ifdef __EMSCRIPTEN__
 #include "wrapper_test.c"
+#else
+void wrapper_test() {
+  tests_run--;
+}
+#endif
 
 void types_test();
 void utils_test();

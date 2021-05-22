@@ -1,14 +1,5 @@
 ## TODO
 
-- wrapper tests!
-
-  - Wasm target
-    - [x] writing values
-    - [x] reading values
-    - [ ] call JS from Wasm
-    - [ ] call Wasm from JS
-  - Native target (skip until needed)
-
 - unit tests working in all 4 builds
 - language test
   - Wasm release: tests pass but Emscripten not initialised
@@ -17,6 +8,8 @@
     - Debug_toString > StringBuilder_toString > String_copy > copy_chars
   - binary normal: OK
 
+- experiment with varargs for Closures, measure perf. Closure max_values is the arity to pass in Utils_apply.
+  - No compiler changes needed, everything uses A1, A2, A3
 - Make Tag_Zero invalid (breaks Json tests apparently)
 - Build
   - Try debugging in VS Code on Windows

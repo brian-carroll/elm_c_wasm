@@ -68,7 +68,7 @@ mergeInto(LibraryManager.library, {
     return wasmWrapper.writeWasmValue(result);
   },
 
-  testPassJsCallbackToWasm: function () {
+  testWriteJsCallbackToWasm: function () {
     function kernelIncrementBy1(x) {
       return x + 1;
     }
