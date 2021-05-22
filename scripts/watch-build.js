@@ -9,15 +9,17 @@ const options = {
   cwd: path.resolve(__dirname, '..')
 };
 
+let running = false;
 const run = () => {
+  running = true;
   child_process.exec(command, options, (err, stdout, stderr) => {
-    if (stderr) {
-      console.warn(stderr);
-    }
-    if (err) {
-      console.error(err);
+    running = false;
+    console.warn(stderr);
+    console.log(stdout);
+    if (!err) {
+      console.log('OK');
     } else {
-      console.log(stdout);
+      console.error('ERROR')
     }
   });
 };
@@ -31,10 +33,17 @@ fs.watch('src', { recursive: true }, (_event, filepath) => {
   if (timer) {
     clearTimeout(timer);
   }
-  files.add(file);
-  timer = setTimeout(() => {
-    console.log('Changes in ' + [...files]);
-    files.clear();
-    run();
-  }, DEBOUNCE_TIME_MS);
+  files.add(filepath);
+  const callback = () => {
+    if (running) {
+      timer = setTimeout(callback, DEBOUNCE_TIME_MS);
+    } else {
+      console.log('Changes in ' + [...files]);
+      files.clear();
+      run();
+    }
+  };
+  timer = setTimeout(callback, DEBOUNCE_TIME_MS);
 });
+
+run();
