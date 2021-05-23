@@ -8,7 +8,7 @@ extra_opt=""
 extra_opt="$extra_opt -g4"
 extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/dist/"
 
-mkdir -p dist
+mkdir -p dist build/emscripten
 
 echo "" > emcc.log
 
@@ -21,7 +21,7 @@ emcc $CFLAGS \
   --pre-js $WRAPPER_DIR/wrapper.js \
   --js-library $WRAPPER_DIR/imports.js \
   --post-js build/elm/$FILENAME.js \
-  -o dist/$FILENAME.js \
+  -o build/emscripten/$FILENAME.js \
   -Wno-incompatible-pointer-types \
   -s ASSERTIONS=1 \
   -s ALLOW_MEMORY_GROWTH=1 \
