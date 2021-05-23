@@ -54,7 +54,7 @@ void log_error(char* fmt, ...) {
   // fprintf(stderr, fmt, args);
   safe_vprintf(fmt, args);
   va_end(args);
-  emscripten_run_script("debugger;");
+  // emscripten_run_script("debugger;");
   exit(EXIT_FAILURE);
 }
 #else

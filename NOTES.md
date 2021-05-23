@@ -2,11 +2,11 @@
 
 - perf profiling in release mode in SPA example
   - Compare Wasm vs JS
+- pop the last frame in the stack in GC_execute, rather than forcibly clearing it.
+- Get rid of extra `size` in FieldGroup (utils and wrapper)
 - Build
   - Try debugging in VS Code on Windows
-  - Try watch-compiling on Windows. See what Casey is doing.
-  - make a config.h for DEBUG and perf and whatever else
-  - collect platform stuff together
+  - collect platform stuff together?
   - define out `assert`
 - virtual DOM
   - Integrate VDOM allocator into the GC

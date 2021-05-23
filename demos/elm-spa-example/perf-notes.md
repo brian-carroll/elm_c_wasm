@@ -64,6 +64,7 @@ UI says both API calls failed. Must be something in the Json decoding.
     "view": 5.1499999826774
   },
   {
+    // command in Page.Home.init
     "msgCtor": ["GotHomeMsg", "PassedSlowLoadThreshold"],
     "tUpdate": 0.17500005196779966,
     "tStepper": 0.10499998461455107,
@@ -73,6 +74,8 @@ UI says both API calls failed. Must be something in the Json decoding.
     "view": 4.175000009126961
   },
   {
+    // command in Page.Profile.fetchFeed
+    // Json decoder is Article.Feed.decoder
     "msgCtor": ["GotHomeMsg", "CompletedFeedLoad"],
     "tUpdate": 2.3250000085681677,
     "tStepper": 0.0849999487400055,
@@ -82,6 +85,8 @@ UI says both API calls failed. Must be something in the Json decoding.
     "view": 1.5450000064447522
   },
   {
+    // Page.Home.init
+    // Json decoder is Article.Tag.list
     "msgCtor": ["GotHomeMsg", "CompletedTagsLoad"],
     "tUpdate": 0.08000002708286047,
     "tStepper": 1.0400000028312206,

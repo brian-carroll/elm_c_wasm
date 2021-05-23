@@ -516,9 +516,9 @@ static void Debug_prettyHelp(int indent, void* p) {
         size_t offset = sizeof("CTOR");
         safe_printf("%s\n", &Debug_ctors[ctor][offset]);
       } else if (ctor == JSON_VALUE_OBJECT) {
-        safe_printf("(JSON Object)");
+        safe_printf("(JSON Object)\n");
       } else if (ctor == JSON_VALUE_ARRAY) {
-        safe_printf("(JSON Array)");
+        safe_printf("(JSON Array)\n");
       } else {
         safe_printf("Custom (ctor %d)\n", ctor);
       }

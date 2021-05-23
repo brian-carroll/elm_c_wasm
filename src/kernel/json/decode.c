@@ -639,7 +639,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
     }
 
     default:
-      assert(0);
+      log_error("Unknown decoder constructor %d\n", decoder->ctor);
   }
   return NULL;
 }

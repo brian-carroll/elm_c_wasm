@@ -251,6 +251,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     }
 
     case Tag_FieldGroup:
+      // Cannot get to here from working code that type checks.
       return 1;
 
     case Tag_Closure:

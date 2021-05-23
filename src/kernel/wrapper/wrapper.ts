@@ -479,7 +479,17 @@ function wrapWasmElmApp(
           return addr;
         }
         if (Array.isArray(elmValue)) {
-          return writeJsonArray(elmValue, JsShape.NOT_CIRCULAR);
+          // A JS array in a _kernel_ datastructure, not a Json Value
+          const size = 2 + elmValue.length;
+          const addr = emscriptenModule._allocate(size);
+          const index = addr >> 2;
+          mem32[index] = encodeHeader(Tag.Custom, size);
+          mem32[index + 1] = JsonValue.ARRAY;
+          for (let i = 0; i < elmValue.length; i++) {
+            // Recurse by writing general values, not Json values! (Different interpretation of '$')
+            mem32[index + 2 + i] = writeWasmValue(elmValue[i]);
+          }
+          return addr;
         }
         switch (elmValue.$) {
           case undefined:
@@ -512,6 +522,16 @@ function wrapWasmElmApp(
             mem32[index + 3] = c;
             return addr;
           }
+          case JsonValue.WRAP: {
+            const unwrapped = elmValue.a;
+            const size = 3;
+            const addr = emscriptenModule._allocate(size);
+            const index = addr >> 2;
+            mem32[index] = encodeHeader(Tag.Custom, size);
+            mem32[index + 1] = JsonValue.WRAP;
+            mem32[index + 2] = writeJsonValue(unwrapped);
+            return addr;
+          }
           default:
             return typeof elmValue.$ === 'string'
               ? writeUserCustom(elmValue)
@@ -521,18 +541,6 @@ function wrapWasmElmApp(
     }
     console.error(elmValue);
     throw new Error('Cannot determine type of Elm value');
-  }
-
-  function writeJsonArray(value: any[], jsShape: JsShape): Address {
-    const size = 2 + value.length;
-    const addr = emscriptenModule._allocate(size);
-    const index = addr >> 2;
-    mem32[index] = encodeHeader(Tag.Custom, size);
-    mem32[index + 1] = JsonValue.ARRAY;
-    for (let i = 0; i < value.length; i++) {
-      mem32[index + 2 + i] = writeJsonValue(value[i], jsShape);
-    }
-    return addr;
   }
 
   function writeUserCustom(value: Record<string, any>): Address {
@@ -595,8 +603,11 @@ function wrapWasmElmApp(
     mem32[index] = encodeHeader(Tag.Record, size);
 
     const fgName = keys.join(' ');
-    const fgAddrStatic = appTypes.fieldGroups[fgName];
-    mem32[index + 1] = fgAddrStatic || writeFieldGroup(keys);
+    let fgAddr = appTypes.fieldGroups[fgName];
+    if (!fgAddr) {
+      fgAddr = writeFieldGroup(keys);
+    }
+    mem32[index + 1] = fgAddr;
     for (let k = 0; k < keys.length; k++) {
       const key = keys[k];
       mem32[index + 2 + k] = writeWasmValue(value[key]);
@@ -604,14 +615,17 @@ function wrapWasmElmApp(
     return addr;
   }
 
+  // Dynamically create a FieldGroup that was not known at compile time
+  // Happens for Record types only constructed in Kernel code (e.g. Http.Response)
   function writeFieldGroup(fieldNames: string[]): Address {
-    const size = 1 + fieldNames.length;
+    const size = 2 + fieldNames.length;
     const addr = emscriptenModule._allocate(size);
     const index = addr >> 2;
     mem32[index] = encodeHeader(Tag.FieldGroup, size);
+    mem32[index + 1] = fieldNames.length;
     for (let k = 0; k < fieldNames.length; k++) {
       const key = fieldNames[k];
-      mem32[index + 1 + k] = appTypes.fields[key];
+      mem32[index + 2 + k] = appTypes.fields[key];
     }
     return addr;
   }
@@ -769,7 +783,15 @@ function wrapWasmElmApp(
       return addr;
     }
     if (Array.isArray(value)) {
-      return writeJsonArray(value, JsShape.MAYBE_CIRCULAR);
+      const size = 2 + value.length;
+      const addr = emscriptenModule._allocate(size);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.Custom, size);
+      mem32[index + 1] = JsonValue.ARRAY;
+      for (let i = 0; i < value.length; i++) {
+        mem32[index + 2 + i] = writeJsonValue(value[i], jsShape);
+      }
+      return addr;
     }
     const keys = Object.keys(value);
     const size = 2 + keys.length * 2;

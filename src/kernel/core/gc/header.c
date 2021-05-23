@@ -28,7 +28,9 @@ size_t child_count(ElmValue* v) {
       return v->header.size - (sizeof(Custom) / SIZE_UNIT);
 
     case Tag_Record:
-      return v->header.size - (sizeof(Record) / SIZE_UNIT);
+      // Include FieldGroup since it could be heap-allocated
+      // Http module has no literals for some Record types so compiler emits no FieldGroups
+      return v->header.size - (sizeof(Record) / SIZE_UNIT) + 1;
 
     case Tag_FieldGroup:
       return 0;
