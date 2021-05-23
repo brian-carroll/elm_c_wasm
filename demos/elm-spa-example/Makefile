@@ -18,6 +18,10 @@ release: CFLAGS = -Wall -Wno-unused-variable -O3 -DPERF_TIMER_ENABLED=1
 release: dist/elm.wasm
 	@:
 
+js: $(ELM_SOURCES)
+	rm -f dist/*
+	cd $(SUBMODULE_DIR); elm make src/Main.elm --output ../dist/elm.js
+
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
 	cd $(SUBMODULE_DIR); elm make src/Main.elm --output ../build/elm/elm.c
