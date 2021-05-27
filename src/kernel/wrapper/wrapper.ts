@@ -32,6 +32,8 @@ interface EmscriptenModule {
   _readF64: (addr: number) => number;
   _writeF64: (addr: number, value: number) => void;
   _evalClosure: (addr: number) => number;
+  _addToCache: (addr: number) => number;
+  _retrieveFromCache: (cacheIndex: number) => number;
   _debugHeapState: () => void;
   _debugAddrRange: (start: number, size: number) => void;
   _debugStackMap: () => void;
@@ -220,6 +222,7 @@ function wrapWasmElmApp(
   -------------------------------------------------- */
 
   interface ClosureMetadata {
+    addr: number;
     n_values: number;
     max_values: number;
     evaluator: number;
@@ -328,6 +331,7 @@ function wrapWasmElmApp(
       case Tag.Closure: {
         const idx16 = index << 1;
         const metadata: ClosureMetadata = {
+          addr,
           n_values: mem16[idx16 + 2],
           max_values: mem16[idx16 + 3],
           evaluator: mem32[index + 2],
@@ -348,9 +352,13 @@ function wrapWasmElmApp(
   function evalKernelThunk(metadata: ClosureMetadata): any {
     let { n_values, evaluator, argsIndex } = metadata;
     let kernelFn: ElmCurriedFunction = kernelFunctions[evaluator];
+    if (!kernelFn) {
+      throw new Error(`cannot find evaluator ${evaluator}`)
+    }
+    let f: Function;
+    let nArgs: number;
+    let args: any[] = [];
     while (n_values) {
-      let f: Function;
-      let nArgs: number;
       if (kernelFn.a && kernelFn.f && n_values >= kernelFn.a) {
         f = kernelFn.f;
         nArgs = kernelFn.a;
@@ -358,7 +366,7 @@ function wrapWasmElmApp(
         f = kernelFn;
         nArgs = kernelFn.length || 1;
       }
-      const args: any[] = [];
+      args = [];
       mem32.slice(argsIndex, argsIndex + nArgs).forEach(argAddr => {
         args.push(readWasmValue(argAddr));
       });
@@ -370,40 +378,44 @@ function wrapWasmElmApp(
   }
 
   function createWasmCallback(metadata: ClosureMetadata): Function {
-    const { n_values, max_values, evaluator, argsIndex } = metadata;
-    const freeVars: any[] = [];
-    for (let i = argsIndex; i < argsIndex + n_values; i++) {
-      freeVars.push(readWasmValue(mem32[i]));
-    }
-    function wasmCallback() {
-      const args = freeVars.slice();
-      for (let i = 0; i < arguments.length; i++) {
-        args.push(arguments[i]);
-      }
-      const n_values = args.length;
+    const { addr, n_values, max_values, evaluator } = metadata;
+    const nFreeVars = n_values;
+    const cacheIndex = emscriptenModule._addToCache(addr);
+
+    function wasmCallback(...jsArgs: any[]) {
+      const n_values = nFreeVars + jsArgs.length;
       if (n_values !== max_values) {
-        console.error({ wasmCallback, args });
+        console.error({ wasmCallback, args: jsArgs });
         throw new Error(
           `Trying to call a Wasm Closure with ${n_values} args instead of ${max_values}!`
         );
       }
       const size = 3 + n_values;
       const closureAddr = emscriptenModule._allocate(size);
-      const index = closureAddr >> 2;
-      mem32[index] = encodeHeader(Tag.Closure, size);
-      mem32[index + 1] = (max_values << 16) | n_values;
-      mem32[index + 2] = evaluator;
-      for (let i = 0; i < args.length; i++) {
-        mem32[index + 3 + i] = writeWasmValue(args[i]);
+      const headerIndex = closureAddr >> 2;
+      let index = headerIndex;
+      mem32[index++] = encodeHeader(Tag.Closure, size);
+      mem32[index++] = (max_values << 16) | n_values;
+      mem32[index++] = evaluator;
+
+      const oldClosureAddr = emscriptenModule._retrieveFromCache(cacheIndex);
+
+      if (nFreeVars) {
+        let oldClosureArgsIndex = (oldClosureAddr >> 2) + 3;
+        for (let i = 0; i < nFreeVars; i++) {
+          mem32[index++] = mem32[oldClosureArgsIndex++];
+        }
       }
+      for (let i = 0; i < jsArgs.length; i++) {
+        mem32[index++] = writeWasmValue(jsArgs[i]);
+      }
+
       const resultAddr = emscriptenModule._evalClosure(closureAddr);
       const resultValue = readWasmValue(resultAddr);
       return resultValue;
     }
     // Attach info in case we have to write this Closure back to Wasm
-    wasmCallback.freeVars = freeVars;
-    wasmCallback.evaluator = evaluator;
-    wasmCallback.max_values = max_values;
+    wasmCallback.cacheIndex = cacheIndex;
     const arity = max_values - n_values;
     const FN = elmFunctionWrappers[arity];
     return FN(wasmCallback);
@@ -632,19 +644,8 @@ function wrapWasmElmApp(
 
   function writeClosure(value: any): Address {
     const fun = value.f || value;
-    if (fun.evaluator) {
-      const { freeVars, max_values, evaluator } = fun;
-      const n_values = freeVars.length;
-      const size = 3 + n_values;
-      const addr = emscriptenModule._allocate(size);
-      const index = addr >> 2;
-      mem32[index] = encodeHeader(Tag.Closure, size);
-      mem32[index + 1] = (max_values << 16) | n_values;
-      mem32[index + 2] = evaluator;
-      for (let i = 0; i < freeVars.length; i++) {
-        mem32[index + 3 + i] = writeWasmValue(freeVars[i]);
-      }
-      return addr;
+    if (fun.cacheIndex) {
+      return emscriptenModule._retrieveFromCache(fun.cacheIndex);
     } else {
       let evaluator = kernelFunctions.findIndex(f => f === value);
       if (evaluator === -1) {

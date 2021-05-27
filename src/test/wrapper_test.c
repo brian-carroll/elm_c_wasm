@@ -71,7 +71,7 @@ static void populate_test_array(void* test_values[]) {
   /* 16 */ test_values[i++] = just321;
 }
 
-static void* eval_createTuple3(void* args[]) {
+void* eval_createTuple3(void* args[]) {
   return newTuple3(args[0], args[1], args[2]);
 }
 

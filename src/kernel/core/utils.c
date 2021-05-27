@@ -67,6 +67,7 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
 void* Utils_access_eval(void* args[2]) {
   u32 field = (u32)(size_t)args[0];  // unboxed!
   Record* record = (Record*)args[1];
+  assert(record->header.tag == Tag_Record);
   u32 index = fieldgroup_search(record->fieldgroup, field);
 
   if (index == -1) {
@@ -254,14 +255,22 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       // Cannot get to here from working code that type checks.
       return 1;
 
-    case Tag_Closure:
-      log_error(
-          "Warning: Trying to use `(==)` on functions.\n"
-          "There is no way to know if functions are \"the same\" in the Elm sense.\n"
-          "Read more about this at "
-          "https://package.elm-lang.org/packages/elm/core/latest/Basics#== which "
-          "describes why it is this way and what the better version will look like.\n");
-      return 0;
+    case Tag_Closure: {
+      if (pa->closure.evaluator != pb->closure.evaluator) return 0;
+      u32 n_values = pa->closure.n_values;
+      for (u32 i = 0; i < n_values; ++i) {
+        if (!eq_help(pa->closure.values[i], pb->closure.values[i], depth + 1, pstack))
+          return 0;
+      }
+      return 1;
+    }
+    // log_error(
+    //     "Warning: Trying to use `(==)` on functions.\n"
+    //     "There is no way to know if functions are \"the same\" in the Elm sense.\n"
+    //     "Read more about this at "
+    //     "https://package.elm-lang.org/packages/elm/core/latest/Basics#== which "
+    //     "describes why it is this way and what the better version will look like.\n");
+    // return 0;
 
     case Tag_JsRef:
       return pa->js_ref.index == pb->js_ref.index;

@@ -5,9 +5,14 @@
 #include <stdbool.h>
 #include "../core/types.h"
 
-// Compiler-generated app-specific data
+// Compiler-generated data
 extern FieldGroup* Wrapper_appFieldGroups[];
 extern void** Wrapper_mainsArray[];
+extern Closure g_author_project_WebAssembly_intercept;
+extern const u32 FIELD_init;
+extern const u32 FIELD_update;
+extern const u32 FIELD_view;
+extern const u32 FIELD_subscriptions;
 
 extern ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index);
 extern void* getJsRefObjectField(u32 jsRefId, ElmString* fieldStringAddr);

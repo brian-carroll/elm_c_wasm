@@ -61,7 +61,6 @@ extern Closure Json_map6;
 extern Closure Json_map7;
 extern Closure Json_map8;
 
-extern size_t Json_run_eval_index;  // Index of the JS implementation of Json_run (assigned by compiler)
 extern Closure Json_run;
 extern Closure Json_runOnString;
 

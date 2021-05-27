@@ -596,7 +596,7 @@ void Debug_pretty(const char* label, void* p) {
     dashes[i] = '-';
   }
   dashes[FORMAT_PTR_LEN] = '\0';
-  safe_printf("%s\n", dashes);
+  safe_printf("%s ", dashes);
   safe_printf("  %s (%p)\n", label, p);
   pretty_print_child(2, p);
 }
@@ -608,7 +608,7 @@ void Debug_pretty_with_location(
     dashes[i] = '-';
   }
   dashes[FORMAT_PTR_LEN] = '\0';
-  safe_printf("%s\n", dashes);
+  safe_printf("%s ", dashes);
   safe_printf("%s @ %s:%d\n", label, function, line);
   pretty_print_child(2, p);
 }

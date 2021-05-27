@@ -150,21 +150,22 @@ Closure g_elm_core_Array_initialize = {
     .evaluator = &eval_elm_core_Array_initialize,
 };
 
-enum {
-  FIELD_init,
-  FIELD_subscriptions,
-  FIELD_update,
-  FIELD_view,
-};
+const u32 FIELD_init = 1;
+const u32 FIELD_subscriptions = 2;
+const u32 FIELD_update = 3;
+const u32 FIELD_view = 4;
 
-FieldGroup fg_init_subscriptions_update_view = {.header = HEADER_FIELDGROUP(6),
-    .size = 6,
-    .fields = {
-        FIELD_init,
-        FIELD_subscriptions,
-        FIELD_update,
-        FIELD_view,
-    }};
+FieldGroup fg_init_subscriptions_update_view = {
+    .header = HEADER_FIELDGROUP(4),
+    .size = 4,
+    .fields =
+        {
+            FIELD_init,
+            FIELD_subscriptions,
+            FIELD_update,
+            FIELD_view,
+        },
+};
 
 FieldGroup* Wrapper_appFieldGroups[] = {&fg_init_subscriptions_update_view, NULL};
 void** Wrapper_mainsArray[] = {NULL};
@@ -191,8 +192,6 @@ int Debug_fields_size = 4;
 char* Debug_jsValues[1] = {NULL};
 int Debug_jsValues_size = 0;
 int Debug_ctors_size = NUM_TEST_CTORS;
-
-size_t Json_run_eval_index = 123;
 
 Custom g_elm_core_Basics_LT = {
     .header = HEADER_CUSTOM(0),

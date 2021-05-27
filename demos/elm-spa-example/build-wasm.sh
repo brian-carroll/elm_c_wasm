@@ -4,11 +4,13 @@ KERNELS="${KDIR}/core/core.c ${KDIR}/elm-test/elm-test.c ${KDIR}/json/json.c ${K
 WRAPPER_DIR=../../src/kernel/wrapper
 CFLAGS=$@
 
+OUT_DIR="build/emscripten"
+
 extra_opt=""
 extra_opt="$extra_opt -g4"
-extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/dist/"
+extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/$OUT_DIR/"
 
-mkdir -p dist build/emscripten
+mkdir -p dist $OUT_DIR
 
 echo "" > emcc.log
 
@@ -21,7 +23,7 @@ emcc $CFLAGS \
   --pre-js $WRAPPER_DIR/wrapper.js \
   --js-library $WRAPPER_DIR/imports.js \
   --post-js build/elm/$FILENAME.js \
-  -o build/emscripten/$FILENAME.js \
+  -o $OUT_DIR/$FILENAME.js \
   -Wno-incompatible-pointer-types \
   -s ASSERTIONS=1 \
   -s ALLOW_MEMORY_GROWTH=1 \
