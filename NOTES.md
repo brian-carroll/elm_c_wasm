@@ -1,5 +1,10 @@
 ## TODO
 
+- Go back to enums rather than const, to keep GCC and MSVC happy
+  - Get rid of -1 in wrapper.ts evalKernelThunk
+  - put back the Json_run_eval_index, figure out a way to do the fields
+    - can I have some cleaner mechanism for getting compiler enum values into kernel code?
+    - something to do with #include order?
 - perf profiling in release mode in SPA example
   - Compare Wasm vs JS
 - pop the last frame in the stack in GC_execute, rather than forcibly clearing it.
@@ -18,6 +23,27 @@
 - experiment with varargs for Closures, measure perf. Closure max_values is the arity to pass in Utils_apply.
   - No compiler changes needed, everything uses A1, A2, A3
 - Make Tag_Zero invalid (breaks Json tests apparently)
+
+# SPA profiling analysis
+
+On loading the elm-spa-example, these are the Wasm functions called
+
+| function                                    | comment          |
+| ------------------------------------------- | ---------------- |
+| eval_elm_core_Task_map_lambda1              | WTF              |
+| eval_author_project_Api_application_lambda1 | app init         |
+| eval_elm_http_Http_expectJson_lambda1       |                  |
+| eval_author_project_Main_GotHomeMsg         | Task.map         |
+| eval_elm_core_Basics_composeL               | WTF! Http.toTask |
+| eval_author_project_Main_subscriptions      |                  |
+| eval_author_project_Main_update             |                  |
+| eval_author_project_Main_view               |                  |
+
+We're wasting a lot of time decoding and re-encoding Wasm Closures
+Need to change the implementation of wasmCallback to cache Closures & free vars.
+A lot of functions probably only get called once, apart from GC roots. But we can't really distinguish those!
+Maybe it's OK for that cache to just grow as big as it needs to and remember things forever. Maybe a program doesn't have that many values passed back and forth. Then you just make sure you don't add the same thing over and over. 
+Or maybe we can find a good invalidation strategy.
 
 # Allocator 50x speedup!!
 
