@@ -1,3 +1,18 @@
+# Reducing encoding/decoding in the Elm Architecture
+
+Tried using a cache to reduce encoding and decoding but we end up with cache invalidation issues
+  - I tried removing everything from cache on first usage but that includes the TEA functions themselves
+  - can do an equality check every time we add, to avoid infinite growth, but deep equality is expensive
+
+Need a different, less generic way, that knows about TEA and is specific to it
+Can we just do cacheing on Cmd and Sub callbacks? Can we actually just understand the structure of those and figure out which ones are the actual callbacks?
+Also understand that each Sub has one active callback and Cmd is once-off
+
+Basically we are implementing some of the Platform module, since that's what it's for!
+We can have Wasm exported functions for init, update, subscriptions and view
+Things like _Platform_initialize and _Platform_dispatchEffects should be implemented in JS but also with some exported Wasm helpers
+
+
 ## TODO
 
 - Go back to enums rather than const, to keep GCC and MSVC happy
