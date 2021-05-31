@@ -12,6 +12,11 @@ Basically we are implementing some of the Platform module, since that's what it'
 We can have Wasm exported functions for init, update, subscriptions and view
 Things like _Platform_initialize and _Platform_dispatchEffects should be implemented in JS but also with some exported Wasm helpers
 
+Browser.application does some messing around with init, applying the extra args.
+It leaves update and subs alone. They get straight to Platform_initialize.
+view gets wrapped in to make a stepper
+
+If I want I could call the wrapper to "register" the evaluator IDs for init, update, subs, view
 
 ## TODO
 
