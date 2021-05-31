@@ -1,8 +1,16 @@
 # Reducing encoding/decoding in the Elm Architecture
 
+## notes on Closure caching
+
 Tried using a cache to reduce encoding and decoding but we end up with cache invalidation issues
-  - I tried removing everything from cache on first usage but that includes the TEA functions themselves
+- I tried removing everything from cache on first usage but that includes the TEA functions themselves
+- optimisations for the TEA functions
+  - we know our wrapped versions can't be copied, so we can skip full equality check for this
+- The same Closures get added loads of times and only removed about 1/4 of the time
   - can do an equality check every time we add, to avoid infinite growth, but deep equality is expensive
+- Things like Cmd.map being done in JS is craziness and the cache doesn't solve it
+
+## Customize Platform/Scheduler modules
 
 Need a different, less generic way, that knows about TEA and is specific to it
 Can we just do cacheing on Cmd and Sub callbacks? Can we actually just understand the structure of those and figure out which ones are the actual callbacks?
@@ -16,7 +24,12 @@ Browser.application does some messing around with init, applying the extra args.
 It leaves update and subs alone. They get straight to Platform_initialize.
 view gets wrapped in to make a stepper
 
-If I want I could call the wrapper to "register" the evaluator IDs for init, update, subs, view
+## Relative perf
+- Updates and stuff take no time compared to view, and our view takes twice as long as JS.
+- Our slowest update is CompletedFeedLoad (loads of JSON arriving and lots of encode/decode nonsense) but it's still only 5ms
+- Our worst view cycle is 36ms vs JS 14ms
+
+**Vdom dominates performance** so all this other stuff is less important!
 
 ## TODO
 
