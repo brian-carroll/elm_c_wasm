@@ -33,6 +33,9 @@
 void wrapper_test() {
   tests_run--;
 }
+void* eval_createTuple3(void* args[]) {
+  return NULL;
+}
 #endif
 
 void types_test();

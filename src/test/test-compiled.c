@@ -158,13 +158,7 @@ const u32 FIELD_view = 4;
 FieldGroup fg_init_subscriptions_update_view = {
     .header = HEADER_FIELDGROUP(4),
     .size = 4,
-    .fields =
-        {
-            FIELD_init,
-            FIELD_subscriptions,
-            FIELD_update,
-            FIELD_view,
-        },
+    .fields = {1, 2, 3, 4},
 };
 
 FieldGroup* Wrapper_appFieldGroups[] = {&fg_init_subscriptions_update_view, NULL};

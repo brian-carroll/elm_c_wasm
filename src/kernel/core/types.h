@@ -1,9 +1,9 @@
 #ifndef ELM_KERNEL_TYPES
 #define ELM_KERNEL_TYPES
 
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 // WEBASSEMBLY PRIMITIVE TYPES
 
@@ -21,25 +21,25 @@ typedef float f32;
 typedef double f64;
 
 typedef enum {
-  // Tag_Zero,             // invalid Elm value  TODO: fails Json tests, is that a real bug?
-  Tag_Int,              // 0
-  Tag_Float,            // 1
-  Tag_Char,             // 2
-  Tag_String,           // 3
-  Tag_List,             // 4
-  Tag_Tuple2,           // 5
-  Tag_Tuple3,           // 6
-  Tag_Custom,           // 7
-  Tag_Record,           // 8
-  Tag_FieldGroup,       // 9
-  Tag_Closure,          // a
-  Tag_JsRef,            // b
+  // Tag_Zero, // invalid Elm value  TODO: fails Json tests, is that a real bug?
+  Tag_Int,         // 0
+  Tag_Float,       // 1
+  Tag_Char,        // 2
+  Tag_String,      // 3
+  Tag_List,        // 4
+  Tag_Tuple2,      // 5
+  Tag_Tuple3,      // 6
+  Tag_Custom,      // 7
+  Tag_Record,      // 8
+  Tag_FieldGroup,  // 9
+  Tag_Closure,     // a
+  Tag_JsRef,       // b
 } Tag;
 
 #ifdef _WIN32
 typedef struct {
   u32 size : 27;
-  Tag tag : 5;    // Windows treats this as signed, so comparisons can go wrong
+  Tag tag : 5;  // Windows treats this as signed, so comparisons can go wrong
 } Header;
 #else
 typedef struct {
@@ -76,6 +76,7 @@ typedef struct {
 #define SIZE_CLOSURE(p) (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT
 #define SIZE_JS_REF sizeof(JsRef) / SIZE_UNIT
 
+// clang-format off
 #define HEADER_INT { .tag = Tag_Int, .size = SIZE_INT }
 #define HEADER_FLOAT { .tag = Tag_Float, .size = SIZE_FLOAT }
 #define HEADER_CHAR { .tag = Tag_Char, .size = SIZE_CHAR }
@@ -88,6 +89,7 @@ typedef struct {
 #define HEADER_FIELDGROUP(p) { .tag = Tag_FieldGroup, .size = SIZE_FIELDGROUP(p) }
 #define HEADER_CLOSURE(p) { .tag = Tag_Closure, .size = SIZE_CLOSURE(p) }
 #define HEADER_JS_REF { .tag = Tag_JsRef, .size = SIZE_JS_REF }
+// clang-format on
 
 
 // LIST
@@ -159,7 +161,7 @@ ElmChar* newElmChar(u32 value);
 #if defined(_WIN32)
 #define ALIGN(X) __declspec(align(X))
 #else
-#define ALIGN(X) __attribute__ ((aligned(X)))
+#define ALIGN(X) __attribute__((aligned(X)))
 #endif
 
 struct ALIGN(8) elm_string {
@@ -212,14 +214,13 @@ typedef struct {
   Header header;
   u16 n_values;  // current number of applied args
   u16 max_values;
-  EvalFunction evaluator;  
+  EvalFunction evaluator;
   void* values[];
 } Closure;
 // Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
 #define NEVER_EVALUATE 0xffff
 
-Closure* newClosure(
-    u16 n_values, u16 max_values, EvalFunction evaluator, void* values[]);
+Closure* newClosure(u16 n_values, u16 max_values, EvalFunction evaluator, void* values[]);
 
 // Reference to a JS object
 typedef struct {
@@ -259,5 +260,55 @@ extern void* pFalse;
 
 extern Custom True;
 extern void* pTrue;
+
+
+// PLATFORM & SCHEDULER
+
+
+#define KERNEL_CTOR_OFFSET 0x400 * 1000
+
+
+typedef enum task_ctor {
+  TASK_SUCCEED = KERNEL_CTOR_OFFSET,
+  TASK_FAIL,
+  TASK_BINDING,
+  TASK_AND_THEN,
+  TASK_ON_ERROR,
+  TASK_RECEIVE,
+} TaskCtor;
+
+typedef struct task {
+  Header header;
+  u32 ctor;
+  void* value;
+  Closure* callback;
+  Closure* kill;
+  struct task* task;
+} Task;
+
+
+#define PROC_CTOR KERNEL_CTOR_OFFSET
+
+typedef struct process_stack {
+  Header header;
+  u32 ctor;
+  Closure* a;
+  struct process_stack* b;
+} ProcessStack;
+
+typedef struct process {
+  Header header;
+  u32 ctor;
+  u32 id;
+  Task* root;
+  ProcessStack* stack;
+  Cons* mailbox;
+} Process;
+
+
+// Manager Config
+
+// Manager
+
 
 #endif  // #ifndef ELM_KERNEL_TYPES

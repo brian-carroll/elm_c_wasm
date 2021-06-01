@@ -5,7 +5,6 @@
 
 // Pick offsets so we can easily read lower digits in either decimal or hex
 #define JSON_CTOR_OFFSET 0x2000 * 10000
-#define KERNEL_CTOR_OFFSET 0x400 * 1000
 
 enum ctor_decoder {
   DECODER_SUCCEED = KERNEL_CTOR_OFFSET,

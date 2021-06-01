@@ -7,12 +7,14 @@
 #include "char.c"
 #include "js-array.c"
 #include "list.c"
+#include "scheduler.c"
 #include "string.c"
 #include "types.c"
 #include "utils.c"
+
+#include "debug/debug.c"
 #include "gc/gc.c"
 #include "string-builder.c"
-#include "debug/debug.c"
 
 #if PERF_TIMER_ENABLED
 PerfCounter perf_counters[__COUNTER__];

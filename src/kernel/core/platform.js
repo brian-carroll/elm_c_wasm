@@ -9,6 +9,10 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 	var model = model_cmd.a;
 	var stepper = stepperBuilder(sendToApp, model); // 
 
+
+  // note changes in core v1.0.5
+
+
   // _Platform_setupEffects iterates over a load-time dict of manager configs (constructed by _Platform_createManager) and instantiates them
   // instantiation means (1) create a router (2) set up the "process" for the manager, which is an async infinite loop 
 	var ports = _Platform_setupEffects(managers, sendToApp);
@@ -21,6 +25,8 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 		stepper(model = model_cmd.a, viewMetadata); // stepper is a JS wrapper around view (from _Browser_makeAnimator). It mutates model, which seems a bit rude
 		_Platform_dispatchEffects(managers, model_cmd.b, subscriptions(model));
 	}
+
+  // note changes in core v1.0.5: dispatchEffects replaced by enqueueEffects
 
 	_Platform_dispatchEffects(managers, model_cmd.b, subscriptions(model));
 
