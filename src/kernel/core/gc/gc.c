@@ -52,13 +52,20 @@ GcState gc_state;
 
    ==================================================== */
 
+extern Queue Scheduler_queue;
+Cons coreRoots = {
+  .header = HEADER_LIST,
+  .head = &Scheduler_queue.front,
+  .tail = &Nil,
+};
+
 void reset_state(GcState* state) {
   void* start = state->heap.start;
   state->next_alloc = start;
   state->end_of_alloc_patch = state->heap.end;
   state->end_of_old_gen = start;
   state->n_marked_words = 0;
-  state->roots = &Nil;
+  state->roots = &coreRoots;
   stack_clear();
 }
 

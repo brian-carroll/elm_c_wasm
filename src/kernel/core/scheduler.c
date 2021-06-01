@@ -7,9 +7,9 @@
    ==================================================== */
 
 Task* newTask(u32 ctor, void* value, Closure* callback, Closure* kill, Task* task) {
-  const u32 SIZE_TASK = sizeof(Task) / SIZE_UNIT;
-  Task* t = GC_allocate(true, SIZE_TASK);
-  t->header = (Header){.tag = Tag_Custom, .size = SIZE_TASK};
+  const u32 size = sizeof(Task) / SIZE_UNIT;
+  Task* t = GC_allocate(true, size);
+  t->header = (Header){.tag = Tag_Custom, .size = size};
   t->ctor = ctor;
   t->value = value;
   t->callback = callback;
@@ -114,23 +114,23 @@ static void* Queue_shift(Queue* q) {
 }
 
 
-
 /* ====================================================
 
                 PROCESSES
 
    ==================================================== */
 
-u32 Scheduler_guid = 0;
 static void Scheduler_enqueue(Process* proc);
+
+u32 Scheduler_guid = 0;
 
 
 static void* eval_Scheduler_rawSpawn(void* args[]) {
   Task* task = args[0];
 
-  const u32 SIZE_PROCESS = sizeof(Process) / SIZE_UNIT;
-  Process* proc = GC_allocate(true, SIZE_PROCESS);
-  proc->header = (Header){.tag = Tag_Custom, .size = SIZE_PROCESS};
+  const u32 size = sizeof(Process) / SIZE_UNIT;
+  Process* proc = GC_allocate(true, size);
+  proc->header = (Header){.tag = Tag_Custom, .size = size};
   proc->ctor = PROC_CTOR;
   proc->id = Scheduler_guid++;
   proc->root = task;
@@ -234,9 +234,79 @@ Closure Scheduler_kill = {
 
    ==================================================== */
 
+static void Scheduler_step(Process* proc);
+
 bool Scheduler_working = false;
-Cons* Scheduler_queue = &Nil;
+Queue Scheduler_queue = {
+    .front = &Nil,
+    .back = &Nil,
+};
+
 
 static void Scheduler_enqueue(Process* proc) {
+  Queue_push(&Scheduler_queue, proc);
+  if (Scheduler_working) {
+    return;
+  }
+  Scheduler_working = true;
 
+  for (;;) {
+    Process* proc = Queue_shift(&Scheduler_queue);
+    if (!proc) break;
+    Scheduler_step(proc);
+  }
+  Scheduler_working = false;
+}
+
+
+static void* eval_Scheduler_step_lambda(void* args[]) {
+  Process* proc = args[0];
+  Task* newRoot = args[1];
+  proc->root = newRoot;
+  Scheduler_enqueue(proc);
+  return NULL;
+}
+
+
+static ProcessStack* newProcessStack(u32 ctor, Closure* callback, ProcessStack* rest) {
+  const u32 size = sizeof(ProcessStack) / SIZE_UNIT;
+  ProcessStack* stack = GC_allocate(true, size);
+  stack->header = (Header){.tag = Tag_Custom, .size = size};
+  stack->ctor = ctor;
+  stack->callback = callback;
+  stack->rest = rest;
+  return stack;
+}
+
+
+static void Scheduler_step(Process* proc) {
+  while (proc->root) {
+    u32 rootTag = proc->root->ctor;
+    if (rootTag == TASK_SUCCEED || rootTag == TASK_FAIL) {
+      while (proc->stack && proc->stack->ctor != rootTag) {
+        proc->stack = proc->stack->rest;
+      }
+      if (!proc->stack) {
+        return;
+      }
+      proc->root = A1(proc->stack->callback, proc->root->value);
+      proc->stack = proc->stack->rest;
+    } else if (rootTag == TASK_BINDING) {
+      Closure* lambda = newClosure(1, 2, eval_Scheduler_step_lambda, (void*[]){proc});
+      proc->root->kill = A1(proc->root->callback, lambda);
+      return;
+    } else if (rootTag == TASK_RECEIVE) {
+      void* msg = Queue_shift(&proc->mailbox);
+      if (!msg) {
+        return;
+      }
+      proc->root = A1(proc->root->callback, msg);
+    } else  // if (rootTag == TASK_AND_THEN || rootTag == TASK_ON_ERROR)
+    {
+      proc->stack = newProcessStack(rootTag == TASK_AND_THEN ? TASK_SUCCEED : TASK_FAIL,
+          proc->root->callback,
+          proc->stack);
+      proc->root = proc->root->task;
+    }
+  }
 }

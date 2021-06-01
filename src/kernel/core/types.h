@@ -292,8 +292,8 @@ typedef struct task {
 typedef struct process_stack {
   Header header;
   u32 ctor;
-  Closure* a;
-  struct process_stack* b;
+  Closure* callback;
+  struct process_stack* rest;
 } ProcessStack;
 
 typedef struct queue {
