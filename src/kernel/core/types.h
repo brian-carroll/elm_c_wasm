@@ -296,14 +296,18 @@ typedef struct process_stack {
   struct process_stack* b;
 } ProcessStack;
 
+typedef struct queue {
+  Cons* front;
+  Cons* back;
+} Queue;
+
 typedef struct process {
   Header header;
   u32 ctor;
   u32 id;
   Task* root;
   ProcessStack* stack;
-  Cons* mailbox_head;
-  Cons* mailbox_tail;
+  Queue mailbox;
 } Process;
 
 

@@ -1,8 +1,10 @@
 #include "types.h"
 
+/* ====================================================
 
-// TASKS
+                TASKS
 
+   ==================================================== */
 
 Task* newTask(u32 ctor, void* value, Closure* callback, Closure* kill, Task* task) {
   const u32 SIZE_TASK = sizeof(Task) / SIZE_UNIT;
@@ -85,12 +87,42 @@ Closure Scheduler_receive = {
 };
 
 
-// PROCESSES
+/* ====================================================
 
-static u32 Scheduler_guid;
+                QUEUE
+
+   ==================================================== */
+
+static void Queue_push(Queue* q, void* value) {
+  Cons* newBack = newCons(value, &Nil);
+  if (q->back != &Nil) {
+    q->back->tail = newBack;
+  }
+  q->back = newBack;
+  if (q->front == &Nil) {
+    q->front = newBack;
+  }
+}
+
+static void* Queue_shift(Queue* q) {
+  if (q->front == &Nil) {
+    return NULL;
+  }
+  void* out = q->front->head;
+  q->front = q->front->tail;
+  return out;
+}
 
 
-static void Scheduler_enqueue(Process* proc) {}
+
+/* ====================================================
+
+                PROCESSES
+
+   ==================================================== */
+
+u32 Scheduler_guid = 0;
+static void Scheduler_enqueue(Process* proc);
 
 
 static void* eval_Scheduler_rawSpawn(void* args[]) {
@@ -103,8 +135,8 @@ static void* eval_Scheduler_rawSpawn(void* args[]) {
   proc->id = Scheduler_guid++;
   proc->root = task;
   proc->stack = NULL;
-  proc->mailbox_head = &Nil;
-  proc->mailbox_tail = &Nil;
+  proc->mailbox.front = &Nil;
+  proc->mailbox.back = &Nil;
 
   Scheduler_enqueue(proc);
 
@@ -141,17 +173,7 @@ Closure Scheduler_spawn = {
 static void* eval_Scheduler_rawSend(void* args[]) {
   Process* proc = args[0];
   void* msg = args[1];
-
-  // push message onto end of mailbox
-  Cons* newTail = newCons(msg, &Nil);
-  if (proc->mailbox_tail != &Nil) {
-    proc->mailbox_tail->tail = newTail;
-  }
-  proc->mailbox_tail = newTail;
-  if (proc->mailbox_head == &Nil) {
-    proc->mailbox_head = newTail;
-  }
-
+  Queue_push(&proc->mailbox, msg);
   Scheduler_enqueue(proc);
   return NULL;
 }
@@ -204,3 +226,17 @@ Closure Scheduler_kill = {
     .evaluator = eval_Scheduler_kill,
     .max_values = 1,
 };
+
+
+/* ====================================================
+
+                STEP PROCESSES
+
+   ==================================================== */
+
+bool Scheduler_working = false;
+Cons* Scheduler_queue = &Nil;
+
+static void Scheduler_enqueue(Process* proc) {
+
+}
