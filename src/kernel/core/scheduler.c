@@ -152,16 +152,16 @@ Closure Scheduler_rawSpawn = {
 static void* eval_Scheduler_spawn_lambda(void* args[]) {
   Task* task = args[0];
   Closure* callback = args[1];
-  Process* proc = eval_Scheduler_rawSpawn(&task);
-  Task* t = eval_Scheduler_succeed(&proc);
+  Process* proc = eval_Scheduler_rawSpawn((void*[]){task});
+  Task* t = eval_Scheduler_succeed((void*[]){proc});
   A1(callback, t);
   return NULL;
 }
 
 static void* eval_Scheduler_spawn(void* args[]) {
-  Task* task = args[0];
+  // Task* task = args[0];
   Closure* lambda = newClosure(1, 2, eval_Scheduler_spawn_lambda, args);
-  return eval_Scheduler_binding(&lambda);
+  return eval_Scheduler_binding((void*[]){lambda});
 }
 Closure Scheduler_spawn = {
     .header = HEADER_CLOSURE(0),
@@ -185,18 +185,18 @@ Closure Scheduler_rawSend = {
 
 
 static void* eval_Scheduler_send_lambda(void* args[]) {
-  Process* proc = args[0];
-  void* msg = args[1];
+  // Process* proc = args[0];
+  // void* msg = args[1];
   Closure* callback = args[2];
   eval_Scheduler_rawSend(args);
   A1(callback, eval_Scheduler_succeed(&pUnit));
   return NULL;
 }
 static void* eval_Scheduler_send(void* args[]) {
-  Process* proc = args[0];
-  void* msg = args[1];
+  // Process* proc = args[0];
+  // void* msg = args[1];
   Closure* lambda = newClosure(2, 3, eval_Scheduler_send_lambda, args);
-  return eval_Scheduler_binding(&lambda);
+  return eval_Scheduler_binding((void*[]){lambda});
 }
 Closure Scheduler_send = {
     .header = HEADER_CLOSURE(0),
@@ -217,9 +217,9 @@ static void* eval_Scheduler_kill_lambda(void* args[]) {
   return NULL;
 }
 static void* eval_Scheduler_kill(void* args[]) {
-  Process* proc = args[0];
+  // Process* proc = args[0];
   Closure* lambda = newClosure(1, 2, eval_Scheduler_kill_lambda, args);
-  return eval_Scheduler_binding(&lambda);
+  return eval_Scheduler_binding((void*[]){lambda});
 }
 Closure Scheduler_kill = {
     .header = HEADER_CLOSURE(0),
@@ -301,8 +301,7 @@ static void Scheduler_step(Process* proc) {
         return;
       }
       proc->root = A1(proc->root->callback, msg);
-    } else  // if (rootTag == TASK_AND_THEN || rootTag == TASK_ON_ERROR)
-    {
+    } else {  // if (rootTag == TASK_AND_THEN || rootTag == TASK_ON_ERROR)
       proc->stack = newProcessStack(rootTag == TASK_AND_THEN ? TASK_SUCCEED : TASK_FAIL,
           proc->root->callback,
           proc->stack);
