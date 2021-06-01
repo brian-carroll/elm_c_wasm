@@ -302,7 +302,8 @@ typedef struct process {
   u32 id;
   Task* root;
   ProcessStack* stack;
-  Cons* mailbox;
+  Cons* mailbox_head;
+  Cons* mailbox_tail;
 } Process;
 
 
