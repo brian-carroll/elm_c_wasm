@@ -144,6 +144,11 @@ extern Closure List_sortBy;
 
 // =========================================
 
+void* eval_Scheduler_rawSpawn(void*[]);
+void* eval_Scheduler_spawn(void*[]);
+
+// =========================================
+
 void* eval_String_append(void* args[]);  // exposed for `++` (Utils_append)
 size_t code_units(ElmString* s);
 

@@ -125,7 +125,7 @@ static void Scheduler_enqueue(Process* proc);
 u32 Scheduler_guid = 0;
 
 
-static void* eval_Scheduler_rawSpawn(void* args[]) {
+void* eval_Scheduler_rawSpawn(void* args[]) {
   Task* task = args[0];
 
   const u32 size = sizeof(Process) / SIZE_UNIT;
@@ -158,7 +158,7 @@ static void* eval_Scheduler_spawn_lambda(void* args[]) {
   return NULL;
 }
 
-static void* eval_Scheduler_spawn(void* args[]) {
+void* eval_Scheduler_spawn(void* args[]) {
   // Task* task = args[0];
   Closure* lambda = newClosure(1, 2, eval_Scheduler_spawn_lambda, args);
   return eval_Scheduler_binding((void*[]){lambda});
@@ -170,7 +170,7 @@ Closure Scheduler_spawn = {
 };
 
 
-static void* eval_Scheduler_rawSend(void* args[]) {
+void* eval_Scheduler_rawSend(void* args[]) {
   Process* proc = args[0];
   void* msg = args[1];
   Queue_push(&proc->mailbox, msg);
@@ -209,7 +209,7 @@ static void* eval_Scheduler_kill_lambda(void* args[]) {
   Process* proc = args[0];
   Closure* callback = args[1];
   Task* task = proc->root;
-  if (task->ctor == TASK_BINDING && task->kill) {
+  if (task->ctor == TASK_BINDING && task->kill && task->kill->header.tag == Tag_Closure) {
     Utils_apply(task->kill, 0, NULL);
   }
   proc->root = NULL;
@@ -259,6 +259,12 @@ static void Scheduler_enqueue(Process* proc) {
 }
 
 
+// The binding `callback` for JS modules to return values from effects
+// Its Closure will have a `proc` partially-applied when it is sent to JS
+// The guid could provide a good way to do caching to avoid the encoding round-trip
+// Keep a list of all active Processes and return a WasmProcess with the guid, like JsRef
+// When JS calls back, look it up. When stepper kills the process, remove it from list
+// Make the process list a GC root (prob need to anyway)
 static void* eval_Scheduler_step_lambda(void* args[]) {
   Process* proc = args[0];
   Task* newRoot = args[1];

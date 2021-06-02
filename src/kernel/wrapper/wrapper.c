@@ -59,6 +59,18 @@ EMSCRIPTEN_KEEPALIVE void* evalClosure(Closure* c) {
   return GC_execute(c);
 }
 
+EMSCRIPTEN_KEEPALIVE void* get_Scheduler_rawSpawn() {
+  return &eval_Scheduler_rawSpawn;
+}
+
+EMSCRIPTEN_KEEPALIVE void* get_Scheduler_spawn() {
+  return &eval_Scheduler_spawn;
+}
+
+
+// DEBUG EXPORTS
+
+
 EMSCRIPTEN_KEEPALIVE void debugHeapState() {
   mark(&gc_state, gc_state.heap.start);
   print_heap();

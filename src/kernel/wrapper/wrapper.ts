@@ -32,6 +32,8 @@ interface EmscriptenModule {
   _readF64: (addr: number) => number;
   _writeF64: (addr: number, value: number) => void;
   _evalClosure: (addr: number) => number;
+  _get_Scheduler_rawSpawn: () => number;
+  _get_Scheduler_spawn: () => number;
   _addToCache: (addr: number) => number;
   _retrieveFromCache: (cacheIndex: number) => number;
   _debugHeapState: () => void;
@@ -353,7 +355,7 @@ function wrapWasmElmApp(
     let { n_values, evaluator, argsIndex } = metadata;
     let kernelFn: ElmCurriedFunction = kernelFunctions[evaluator];
     if (!kernelFn) {
-      throw new Error(`cannot find evaluator ${evaluator}`)
+      throw new Error(`cannot find evaluator ${evaluator}`);
     }
     let f: Function;
     let nArgs: number;
@@ -863,6 +865,8 @@ function wrapWasmElmApp(
       const words16 = mem16.slice(idx16, idx16 + len16);
       const jsString = textDecoder.decode(words16);
       return parseFloat(jsString);
-    }
+    },
+    Scheduler_rawSpawn: emscriptenModule._get_Scheduler_rawSpawn(),
+    Scheduler_spawn: emscriptenModule._get_Scheduler_spawn(),
   };
 }
