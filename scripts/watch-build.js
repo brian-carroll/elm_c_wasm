@@ -27,6 +27,7 @@ const run = () => {
 let timer;
 const files = new Set();
 fs.watch('src', { recursive: true }, (_event, filepath) => {
+  // Note: Sometimes Windows reports 'change' events when I open a file
   if (!filepath.includes('.')) {
     return;
   }
