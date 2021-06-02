@@ -673,7 +673,6 @@ Closure Json_run = {
     .evaluator = &eval_Json_run,
 };
 
-size_t EMSCRIPTEN_KEEPALIVE get_eval_Json_run() {
-  void* ptr = &eval_Json_run;
-  return (size_t)ptr;
+void* EMSCRIPTEN_KEEPALIVE get_eval_Json_run() {
+  return &eval_Json_run;
 }

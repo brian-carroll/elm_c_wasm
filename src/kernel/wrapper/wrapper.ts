@@ -34,6 +34,7 @@ interface EmscriptenModule {
   _evalClosure: (addr: number) => number;
   _get_Scheduler_rawSpawn: () => number;
   _get_Scheduler_spawn: () => number;
+  _get_eval_Json_run: () => number;
   _addToCache: (addr: number) => number;
   _retrieveFromCache: (cacheIndex: number) => number;
   _debugHeapState: () => void;
@@ -868,5 +869,6 @@ function wrapWasmElmApp(
     },
     Scheduler_rawSpawn: emscriptenModule._get_Scheduler_rawSpawn(),
     Scheduler_spawn: emscriptenModule._get_Scheduler_spawn(),
+    Json_run: emscriptenModule._get_eval_Json_run() // TODO: unused?
   };
 }
