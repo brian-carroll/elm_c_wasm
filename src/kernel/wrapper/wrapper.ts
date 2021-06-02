@@ -809,12 +809,21 @@ function wrapWasmElmApp(
     return addr;
   }
 
+  /**
+   * Called from src/kernel/json/Json.js... which we don't seem to be using!
+   */
   function call(evaluator: number, args: any[]) {
-    function thunk() {}
-    thunk.evaluator = evaluator;
-    thunk.freeVars = args;
-    thunk.max_values = args.length;
-    const closureAddr = writeClosure(thunk);
+    const n_values = args.length;
+    const size = 3 + n_values;
+    const closureAddr = emscriptenModule._allocate(size);
+    const headerIndex = closureAddr >> 2;
+    let index = headerIndex;
+    mem32[index++] = encodeHeader(Tag.Closure, size);
+    mem32[index++] = (n_values << 16) | n_values;
+    mem32[index++] = evaluator;
+    for (let i = 0; i < args.length; i++) {
+      mem32[index++] = writeWasmValue(args[i]);
+    }
     const resultAddr = emscriptenModule._evalClosure(closureAddr);
     return readWasmValue(resultAddr);
   }
