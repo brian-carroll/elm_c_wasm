@@ -14,11 +14,13 @@ extern const u32 FIELD_update;
 extern const u32 FIELD_view;
 extern const u32 FIELD_subscriptions;
 
+// JS imported functions
 extern ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index);
 extern void* getJsRefObjectField(u32 jsRefId, ElmString* fieldStringAddr);
 extern void* getJsRefValue(u32 jsRefId);
 extern void markJsRef(u32 jsRefId);
 extern void sweepJsRefs(bool isFullGc);
 extern f64 parseFloat(u16* addr, size_t len16);
+extern void Platform_stepper(void*);
 
 #endif

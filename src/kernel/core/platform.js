@@ -1,40 +1,52 @@
+// Called in JS by Browser.application (_Browser_document)
 function _Platform_initialize(flagDecoder, args, init, update, subscriptions, stepperBuilder)
 {
   // flagDecoder is an compiler-generated JS function. Keep the decoding in JS
-	var flagsResult = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
-	_Result_isOk(flagsResult) || _Debug_crash(2, _Json_errorToString(flagsResult.a));
-  var managers = {};
+	var result = A2(__Json_run, flagDecoder, __Json_wrap(args ? args['flags'] : undefined));
+	__Result_isOk(result) || __Debug_crash(2 /**__DEBUG/, __Json_errorToString(result.a) /**/);
+	var initPair = init(result.a); // Wasm
+	var model = initPair.a;
 
-	var model_cmd = init(decodedFlags); // JS wrapper with closed-over URL and Browser.key
-	var model = model_cmd.a;
-	var stepper = stepperBuilder(sendToApp, model); // 
+  // stepperBuilder does JS setup, calls Wasm view on initial model, returns JS closure over Wasm view.
+  // The JS stepper handles sync/async view calls, can defer using rAF, etc.
+	var stepper = stepperBuilder(sendToApp, model); // JS call makes reference to sendToApp, a Wasm function
 
+	var managers = {}; // Wasm
+	var ports = _Platform_setupEffects(managers, sendToApp); // Go to Wasm, return JS object of ports
 
-  // note changes in core v1.0.5
-
-
-  // _Platform_setupEffects iterates over a load-time dict of manager configs (constructed by _Platform_createManager) and instantiates them
-  // instantiation means (1) create a router (2) set up the "process" for the manager, which is an async infinite loop 
-	var ports = _Platform_setupEffects(managers, sendToApp);
-
-
-  // viewMetadata is never used in Browser or virtual-dom, debugger, or anywhere else I can find
-	function sendToApp(msg, viewMetadata)
+  // Wasm
+  // Omit 2nd arg of sendToApp (viewMetadata). It's never used anywhere in GitHub elm org and I can't have optional args
+  function sendToApp(msg)
 	{
-		model_cmd = A2(update, msg, model);
-		stepper(model = model_cmd.a, viewMetadata); // stepper is a JS wrapper around view (from _Browser_makeAnimator). It mutates model, which seems a bit rude
-		_Platform_dispatchEffects(managers, model_cmd.b, subscriptions(model));
+    // closes over: update, model, stepper (JS), managers, subscriptions
+    // *** circular references between sendToApp and stepper!! ***
+		var pair = A2(update, msg, model);
+		stepper(model = pair.a);
+		_Platform_enqueueEffects(managers, pair.b, subscriptions(model));
 	}
 
-  // note changes in core v1.0.5: dispatchEffects replaced by enqueueEffects
+  // Wasm
+	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
-	_Platform_dispatchEffects(managers, model_cmd.b, subscriptions(model));
-
+  // JS
 	return ports ? { ports: ports } : {};
 }
 
+
+function eval_Platform_initialize_sendToApp() {
+  var pair = A2(update, msg, model);
+  stepper(model = pair.a);
+  _Platform_enqueueEffects(managers, pair.b, subscriptions(model));
+}
+
+
 /*
 Effect manager home could be a C enum. Already have lots of compiler magic for Platform.
+
+_Platform_enqueueEffects
+  Ensures correct sequencing of synchronous Cmds. Still works when active at multiple depths of the call stack.
+  Pushing and popping a queue, calling _Platform_dispatchEffects in a loop
+
 
 _Platform_dispatchEffects (Wasm)
    - calls _Platform_gatherEffects
@@ -81,6 +93,7 @@ _Platform_setupEffects (JS & Wasm)
     - if the manager has __portSetup function, then call it
     - instantiate the manager using _Platform_instantiateManager
   - returns ports
+  - Do most of the work in Wasm, then go to JS to set up the ports
 
 
 _Platform_instantiateManager (Wasm)
