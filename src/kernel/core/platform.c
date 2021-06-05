@@ -1,4 +1,5 @@
 #include "./core.h"
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -8,24 +9,365 @@
 void* Platform_model;
 Closure* Platform_update;
 Closure* Platform_subscriptions;
+Custom* Platform_effectManagers;    // configs
+Custom* Platform_managers;          // Processes
+extern u32 Platform_managers_size;  // compiler-generated constant
 
+extern void Platform_stepper(void* model);  // imported JS function (wrapper around view)
+void Platform_enqueueEffects(Custom* managers, void* cmd, void* sub);
+// Platform_initialize(flagDecoder, args, init, update, subscriptions, stepperBuilder);
+// Platform_registerPreload(url);
+// Platform_setupEffects(managers, sendToApp);
+// Platform_createManager(init, onEffects, onSelfMsg, cmdMap, subMap);
+Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);
+// Platform_leaf(home);
+// Platform_batch(list);
+// Platform_enqueueEffects(managers, cmdBag, subBag);
+void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
+void Platform_gatherEffects(bool isCmd, ManagerMsg* bag, Custom* effectsDict, Cons* taggers);
+ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value);
+ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effects);
+// Platform_checkPortName(name);
+// Platform_outgoingPort(name, converter);
+void* Platform_setupOutgoingPort(ElmString* name);
+// Platform_incomingPort(name, converter);
+void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp);
+// Platform_export__PROD(exports);
+// Platform_mergeExportsProd(obj, exports);
+// Platform_export__DEBUG(exports);
+// Platform_mergeExportsDebug(moduleName, obj, exports);
 
-EMSCRIPTEN_KEEPALIVE void Platform_initialize(
-    Closure* model, Closure* update, Closure* subscriptions) {
+// TODO:
+// What's in intercept and what's here?
+void Platform_registerRoots(Closure* model, Closure* update, Closure* subscriptions) {
   GC_register_root(&Platform_model);
-  GC_register_root(&(void*)Platform_update);
-  GC_register_root(&(void*)Platform_subscriptions);
+  GC_register_root(&Platform_update);
+  GC_register_root(&Platform_subscriptions);
+  // GC_register_root(&Platform_effectManagers);  // should get registered in compiled
+  // code
+  GC_register_root(&Platform_managers);  // Processes
 
   Platform_model = model;
   Platform_update = update;
   Platform_subscriptions = subscriptions;
+  Platform_managers = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
 }
 
+
 void* eval_Platform_initialize_sendToApp(void* args[]) {
-  Closure* update = ? ? ;
+  void* msg = args[0];
+  Tuple2* pair = A2(Platform_update, msg, Platform_model);
+  Platform_model = pair->a;
+  Platform_stepper(Platform_model);
+  void* cmd = pair->b;
+  void* sub = A1(Platform_subscriptions, Platform_model);
+  Platform_enqueueEffects(Platform_managers, cmd, sub);
+  return NULL;  // TODO
+}
 
 
-  var pair = A2(update, msg, model);
-  stepper(model = pair.a);
-  _Platform_enqueueEffects(managers, pair.b, subscriptions(model));
+/* ====================================================
+
+                 EFFECT MANAGERS
+
+   ==================================================== */
+
+Cons* eval_Platform_setupEffects(void* args[]) {
+  Custom* managers = args[0];
+  Closure* sendToApp = args[1];
+
+  Cons* ports = &Nil;
+
+  for (u32 i = 0; i < Platform_managers_size; i++) {
+    ManagerConfig* manager = Platform_effectManagers->values[i];
+
+    if (manager->ctor = MANAGER_PORT_OUT) {
+      PortConfig* port = (PortConfig*)manager;
+      Tuple2* keyValuePair =
+          newTuple2(port->name, Platform_setupOutgoingPort(port->name));
+      ports = newCons(keyValuePair, ports);
+    } else if (manager->ctor == MANAGER_PORT_IN) {
+      PortConfig* port = (PortConfig*)manager;
+      Tuple2* keyValuePair =
+          newTuple2(port->name, Platform_setupIncomingPort(port->name, sendToApp));
+      ports = newCons(keyValuePair, ports);
+    }
+
+    managers->values[i] = Platform_instantiateManager(manager, sendToApp);
+  }
+
+  return ports;
+}
+
+
+ManagerConfig* Platform_createManager(Task* init,
+    Closure* onEffects,
+    Closure* onSelfMsg,
+    Closure* cmdMap,
+    Closure* subMap) {
+  const u32 size = sizeof(ManagerConfig) / SIZE_UNIT;
+  ManagerConfig* manager = GC_allocate(true, size);
+  manager->header = (Header){.tag = Tag_Custom, .size = size};
+  manager->ctor = KERNEL_CTOR_OFFSET;
+
+  manager->init = init;
+  manager->onEffects = onEffects;
+  manager->onSelfMsg = onSelfMsg;
+  manager->cmdMap = cmdMap;
+  manager->subMap = subMap;
+
+  return manager;
+}
+
+
+void* eval_manager_loop_receive(void* args[]) {
+  ManagerConfig* info = args[0];
+  Router* router = args[1];
+  void* state = args[2];
+  ManagerMsg* msg = args[3];
+
+  if (msg->ctor == MANAGER_MSG_SELF) {
+    return A3(info->onSelfMsg, router, msg->self.msg, state);
+  } else if (info->cmdMap && info->subMap) {
+    return A4(info->onEffects, router, msg->fx.cmds, msg->fx.subs, state);
+  } else if (info->cmdMap) {
+    return A3(info->onEffects, router, msg->fx.cmds, state);
+  } else {
+    return A3(info->onEffects, router, msg->fx.subs, state);
+  }
+}
+
+
+void* eval_manager_loop(void* args[]) {
+  // ManagerConfig* info = args[0];
+  // Router* router = args[1];
+  // void* state = args[2];
+  Closure* loop = newClosure(2, 3, eval_manager_loop, args);
+  Closure* receive = newClosure(3, 4, eval_manager_loop_receive, args);
+  Task* receiveTask = eval_Scheduler_receive((void*[]){receive});
+  Task* loopTask = eval_Scheduler_andThen((void*[]){loop, receiveTask});
+  return loopTask;
+}
+
+
+Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp) {
+  const u32 size = sizeof(Router) / SIZE_UNIT;
+  Router* router = GC_allocate(true, size);
+  router->header = (Header){.tag = Tag_Custom, .size = size};
+  router->ctor = KERNEL_CTOR_OFFSET;
+  router->sendToApp = sendToApp;
+
+  Closure* loop = newClosure(2, 3, eval_manager_loop, (void*[]){info, router});
+  Task* initTask = info->init;
+  Task* loopTask = eval_Scheduler_andThen((void*[]){loop, initTask});
+  router->selfProcess = eval_Scheduler_rawSpawn((void*[]){loopTask});
+
+  return router->selfProcess;
+}
+
+
+/* ====================================================
+
+                 ROUTING
+
+   ==================================================== */
+
+
+void* eval_Platform_sendToApp_lambda(void* args[]) {
+  Router* router = args[0];
+  void* msg = args[1];
+  Closure* callback = args[2];
+
+  A1(router->sendToApp, msg);
+  A1(callback, eval_Scheduler_succeed(&pUnit));
+  return NULL;
+}
+void* eval_Platform_sendToApp(void* args[]) {
+  Closure* lambda = newClosure(2, 3, eval_Platform_sendToApp_lambda, args);
+  return eval_Scheduler_binding(&lambda);
+}
+Closure Platform_sendToApp = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = eval_Platform_sendToApp,
+};
+
+
+void* eval_Platform_sendToSelf(void* args[]) {
+  Router* router = args[0];
+  void* msg = args[1];
+  return eval_Scheduler_send((void*[]){
+      router->selfProcess,
+      newCustom(MANAGER_MSG_SELF, 1, &msg),
+  });
+}
+Closure Platform_sendToSelf = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = eval_Platform_sendToSelf,
+};
+
+
+/* ====================================================
+
+                 BAGS
+
+   ==================================================== */
+
+void* eval_Platform_leaf(void* args[]) {
+  return newCustom(MANAGER_MSG_LEAF, 2, args);
+}
+Closure Platform_leaf = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = eval_Platform_leaf,
+};
+
+
+void* eval_Platform_batch(void* args[]) {
+  return newCustom(MANAGER_MSG_NODE, 1, args);
+}
+Closure Platform_batch = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 1,
+    .evaluator = eval_Platform_batch,
+};
+
+
+void* eval_Platform_map(void* args[]) {
+  return newCustom(MANAGER_MSG_MAP, 2, args);
+}
+Closure Platform_map = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = eval_Platform_map,
+};
+
+
+/* ====================================================
+
+          PIPE BAGS INTO EFFECT MANAGERS
+
+   ==================================================== */
+
+
+// The queue is necessary to avoid ordering issues for synchronous commands.
+bool Platform_effectsActive = false;
+Queue Platform_effectsQueue = {
+    .front = &Nil,
+    .back = &Nil,
+};
+
+
+void Platform_enqueueEffects(Custom* managers, void* cmd, void* sub) {
+  /*
+_Platform_effectsQueue.push({ __managers: managers, __cmdBag: cmdBag, __subBag: subBag });
+
+  if (_Platform_effectsActive) return;
+
+  _Platform_effectsActive = true;
+  for (var fx; fx = _Platform_effectsQueue.shift(); )
+  {
+          _Platform_dispatchEffects(fx.__managers, fx.__cmdBag, fx.__subBag);
+  }
+  _Platform_effectsActive = false;
+*/
+  return;
+}
+
+
+
+void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag) {
+  u32 n_managers = custom_params(managers);
+  Custom* effectsDict = newCustom(KERNEL_CTOR_OFFSET, n_managers, NULL);
+  for (u32 i = 0; i < n_managers; i++) {
+    effectsDict->values[i] = NULL;
+  }
+  Platform_gatherEffects(true, cmdBag, effectsDict, &Nil);
+  Platform_gatherEffects(false, subBag, effectsDict, &Nil);
+  for (u32 home = 0; home < n_managers; home++) {
+    Process* managerProc = managers->values[home];
+    ManagerMsg* msg;
+    if (effectsDict->values[home]) {
+      msg = effectsDict->values[home];
+    } else {
+      msg = (ManagerMsg*)newCustom(MANAGER_MSG_FX, 2, (void*[]){&Nil, &Nil});
+    }
+    eval_Scheduler_rawSend((void*[]){managerProc, msg});
+  }
+}
+
+
+void Platform_gatherEffects(
+    bool isCmd, ManagerMsg* bag, Custom* effectsDict, Cons* taggers) {
+  switch (bag->ctor) {
+    case MANAGER_MSG_LEAF: {
+      size_t home = bag->leaf.home;
+      ManagerMsg* effect = Platform_toEffect(isCmd, home, taggers, bag->leaf.value);
+      effectsDict->values[home] =
+          Platform_insert(isCmd, effect, effectsDict->values[home]);
+      return;
+    }
+    case MANAGER_MSG_NODE: {
+      for (Cons* list = bag->node.bags; list != &Nil; list = list->tail) {
+        Platform_gatherEffects(isCmd, list->head, effectsDict, taggers);
+      }
+      return;
+    }
+    case MANAGER_MSG_MAP: {
+      Cons* nextTaggers = newCons(bag->map.func, taggers);
+      Platform_gatherEffects(isCmd, bag->map.bag, effectsDict, nextTaggers);
+      return;
+    }
+    default: {
+      log_error(
+          "ERROR in Platform_gatherEffects, unknown effect constructor %d\n", bag->ctor);
+    }
+  }
+}
+
+
+void* eval_applyTaggers(void* args[]) {
+  Cons* taggers = args[0];
+  void* x = args[1];
+  for (Cons* temp = taggers; temp != &Nil; temp = temp->tail) {
+    Closure* tagger = temp->head;
+    x = A1(tagger, x);
+  }
+  return x;
+}
+ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value) {
+  Closure* applyTaggers = newClosure(1, 2, eval_applyTaggers, (void*[]){taggers});
+  ManagerConfig* manager = Platform_effectManagers->values[home];
+  Closure* map = isCmd ? manager->cmdMap : manager->subMap;
+  return A2(map, applyTaggers, value);
+}
+
+
+ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effects) {
+  if (!effects) {
+    effects = (ManagerMsg*)newCustom(MANAGER_MSG_FX, 2, (void*[]){&Nil, &Nil});
+  }
+  if (isCmd) {
+    effects->fx.cmds = newCons(newEffect, effects->fx.cmds);
+  } else {
+    effects->fx.subs = newCons(newEffect, effects->fx.subs);
+  }
+  return effects;
+};
+
+
+/* ====================================================
+
+                 PORTS
+
+   ==================================================== */
+
+
+void* Platform_setupOutgoingPort(ElmString* name) {
+  return NULL;  // TODO
+}
+
+void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp) {
+  return NULL;  // TODO
 }

@@ -194,4 +194,9 @@ f64 parseFloat(u16* chars16, size_t len16) {
   return successCount ? f : not_a_number;
 }
 
+
+void Platform_stepper(void* model) {
+  return;
+}
+
 #endif

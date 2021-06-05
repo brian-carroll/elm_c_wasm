@@ -199,3 +199,50 @@ Custom g_elm_core_Basics_GT = {
     .header = HEADER_CUSTOM(0),
     .ctor = CTOR_GT,
 };
+
+
+/* ====================================================
+
+                EFFECT MANAGERS
+
+   ==================================================== */
+
+u32 Platform_managers_size = 1;
+
+#if 0
+enum {
+  MANAGER_Task,
+  MANAGER_Time,
+  MANAGER_Random,
+};
+
+Closure g_elm_core_Task_init;
+Closure g_elm_core_Task_onEffects;
+Closure g_elm_core_Task_onSelfMsg;
+Closure g_elm_core_Task_cmdMap;
+
+Closure g_elm_core_Task_command = {
+    .header = HEADER_CLOSURE(1),
+    .n_values = 0x1,
+    .evaluator = eval_Platform_leaf,
+    .values = {(void*)MANAGER_Task},
+};
+
+#define g_elm_core_Platform_manager_Task (*gptr_elm_core_Platform_manager_Task)
+Closure* gptr_elm_core_Platform_manager_Task;
+void* ginit_elm_core_Platform_manager_Task() {
+  return Platform_createManager(&g_elm_core_Task_init,
+      &g_elm_core_Task_onEffects,
+      &g_elm_core_Task_onSelfMsg,
+      &g_elm_core_Task_cmdMap,
+      NULL);  // sub
+}
+
+
+int initTaskEffectManagerFromMain() {
+  GC_init_root(&g_elm_core_Platform_manager_Task, &ginit_elm_core_Platform_manager_Task);
+  Platform_effectManagers =
+      newCustom(KERNEL_CTOR_OFFSET, 1, (void*[]){&g_elm_core_Platform_manager_Task});
+  return 0;
+}
+#endif

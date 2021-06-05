@@ -2,15 +2,25 @@
 function _Platform_initialize(flagDecoder, args, init, update, subscriptions, stepperBuilder)
 {
   // flagDecoder is an compiler-generated JS function. Keep the decoding in JS
-	var result = A2(__Json_run, flagDecoder, __Json_wrap(args ? args['flags'] : undefined));
-	__Result_isOk(result) || __Debug_crash(2 /**__DEBUG/, __Json_errorToString(result.a) /**/);
-	var initPair = init(result.a); // Wasm
+	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
+	_Result_isOk(result) || _Debug_crash(2, _Json_errorToString(result.a));
+
+	var initPair = init(result.a); // Wasm, should avoid decode/encode if possible => intercept? address?
 	var model = initPair.a;
+
+  var wasmPlatformRegisterRoots = wasmWrapper.get_Platform_registerRoots();
+  wasmWrapper.call(wasmPlatformRegisterRoots, [model, update, subscriptions]);
+  var evalSendToApp = wasmWrapper.get_sendToApp();
+  function sendToApp(msg) {
+    wasmWrapper.call(evalSendToApp, [msg]);
+  }
 
   // stepperBuilder does JS setup, calls Wasm view on initial model, returns JS closure over Wasm view.
   // The JS stepper handles sync/async view calls, can defer using rAF, etc.
 	var stepper = stepperBuilder(sendToApp, model); // JS call makes reference to sendToApp, a Wasm function
+  wasmWrapper.registerStepper(stepper);
 
+  /*
 	var managers = {}; // Wasm
 	var ports = _Platform_setupEffects(managers, sendToApp); // Go to Wasm, return JS object of ports
 
@@ -27,6 +37,7 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 
   // Wasm
 	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
+*/
 
   // JS
 	return ports ? { ports: ports } : {};
@@ -75,7 +86,8 @@ _Platform_insert (Wasm)
 
 
 _Platform_createManager (Wasm)
-  - constructor for a kernel union.
+  - constructor for a kernel union
+  - need compiler support
   - Gets called at load time with some Elm functions and put into the dict of manager configs.
     ```js
         _Platform_effectManagers['Task'] = _Platform_createManager(

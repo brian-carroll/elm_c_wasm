@@ -7,6 +7,7 @@
 #include "char.c"
 #include "js-array.c"
 #include "list.c"
+#include "platform.c"
 #include "scheduler.c"
 #include "string.c"
 #include "types.c"

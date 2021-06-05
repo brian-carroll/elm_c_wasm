@@ -19,7 +19,7 @@ Task* newTask(u32 ctor, void* value, Closure* callback, Closure* kill, Task* tas
 }
 
 
-static void* eval_Scheduler_succeed(void* args[]) {
+void* eval_Scheduler_succeed(void* args[]) {
   void* value = args[0];
   return newTask(TASK_SUCCEED, value, NULL, NULL, NULL);
 }
@@ -30,7 +30,7 @@ Closure Scheduler_succeed = {
 };
 
 
-static void* eval_Scheduler_fail(void* args[]) {
+void* eval_Scheduler_fail(void* args[]) {
   void* value = args[0];
   return newTask(TASK_FAIL, value, NULL, NULL, NULL);
 }
@@ -41,7 +41,7 @@ Closure Scheduler_fail = {
 };
 
 
-static void* eval_Scheduler_binding(void* args[]) {
+void* eval_Scheduler_binding(void* args[]) {
   Closure* callback = args[0];
   return newTask(TASK_BINDING, NULL, callback, NULL, NULL);
 }
@@ -52,7 +52,7 @@ Closure Scheduler_binding = {
 };
 
 
-static void* eval_Scheduler_andThen(void* args[]) {
+void* eval_Scheduler_andThen(void* args[]) {
   Closure* callback = args[0];
   Task* task = args[1];
   return newTask(TASK_AND_THEN, NULL, callback, NULL, task);
@@ -64,7 +64,7 @@ Closure Scheduler_andThen = {
 };
 
 
-static void* eval_Scheduler_onError(void* args[]) {
+void* eval_Scheduler_onError(void* args[]) {
   Closure* callback = args[0];
   Task* task = args[1];
   return newTask(TASK_ON_ERROR, NULL, callback, NULL, task);
@@ -76,7 +76,7 @@ Closure Scheduler_onError = {
 };
 
 
-static void* eval_Scheduler_receive(void* args[]) {
+void* eval_Scheduler_receive(void* args[]) {
   Closure* callback = args[0];
   return newTask(TASK_RECEIVE, NULL, callback, NULL, NULL);
 }
@@ -104,7 +104,7 @@ static void Queue_push(Queue* q, void* value) {
   }
 }
 
-static void* Queue_shift(Queue* q) {
+void* Queue_shift(Queue* q) {
   if (q->front == &Nil) {
     return NULL;
   }
@@ -131,7 +131,6 @@ void* eval_Scheduler_rawSpawn(void* args[]) {
   const u32 size = sizeof(Process) / SIZE_UNIT;
   Process* proc = GC_allocate(true, size);
   proc->header = (Header){.tag = Tag_Custom, .size = size};
-  proc->ctor = PROC_CTOR;
   proc->id = Scheduler_guid++;
   proc->root = task;
   proc->stack = NULL;
@@ -149,7 +148,7 @@ Closure Scheduler_rawSpawn = {
 };
 
 
-static void* eval_Scheduler_spawn_lambda(void* args[]) {
+void* eval_Scheduler_spawn_lambda(void* args[]) {
   Task* task = args[0];
   Closure* callback = args[1];
   Process* proc = eval_Scheduler_rawSpawn((void*[]){task});
@@ -184,7 +183,7 @@ Closure Scheduler_rawSend = {
 };
 
 
-static void* eval_Scheduler_send_lambda(void* args[]) {
+void* eval_Scheduler_send_lambda(void* args[]) {
   // Process* proc = args[0];
   // void* msg = args[1];
   Closure* callback = args[2];
@@ -192,7 +191,7 @@ static void* eval_Scheduler_send_lambda(void* args[]) {
   A1(callback, eval_Scheduler_succeed(&pUnit));
   return NULL;
 }
-static void* eval_Scheduler_send(void* args[]) {
+void* eval_Scheduler_send(void* args[]) {
   // Process* proc = args[0];
   // void* msg = args[1];
   Closure* lambda = newClosure(2, 3, eval_Scheduler_send_lambda, args);
@@ -205,7 +204,7 @@ Closure Scheduler_send = {
 };
 
 
-static void* eval_Scheduler_kill_lambda(void* args[]) {
+void* eval_Scheduler_kill_lambda(void* args[]) {
   Process* proc = args[0];
   Closure* callback = args[1];
   Task* task = proc->root;
@@ -216,7 +215,7 @@ static void* eval_Scheduler_kill_lambda(void* args[]) {
   A1(callback, eval_Scheduler_succeed(&pUnit));
   return NULL;
 }
-static void* eval_Scheduler_kill(void* args[]) {
+void* eval_Scheduler_kill(void* args[]) {
   // Process* proc = args[0];
   Closure* lambda = newClosure(1, 2, eval_Scheduler_kill_lambda, args);
   return eval_Scheduler_binding((void*[]){lambda});
@@ -265,7 +264,7 @@ static void Scheduler_enqueue(Process* proc) {
 // Keep a list of all active Processes and return a WasmProcess with the guid, like JsRef
 // When JS calls back, look it up. When stepper kills the process, remove it from list
 // Make the process list a GC root (prob need to anyway)
-static void* eval_Scheduler_step_lambda(void* args[]) {
+void* eval_Scheduler_step_lambda(void* args[]) {
   Process* proc = args[0];
   Task* newRoot = args[1];
   proc->root = newRoot;

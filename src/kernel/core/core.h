@@ -144,8 +144,34 @@ extern Closure List_sortBy;
 
 // =========================================
 
-void* eval_Scheduler_rawSpawn(void*[]);
-void* eval_Scheduler_spawn(void*[]);
+extern Custom* Platform_effectManagers;
+void* eval_Platform_leaf(void*[]);
+
+// =========================================
+
+void* eval_Scheduler_rawSpawn(void* args[]);
+void* eval_Scheduler_spawn(void* args[]);
+void* eval_Scheduler_succeed(void* args[]);
+void* eval_Scheduler_fail(void* args[]);
+void* eval_Scheduler_binding(void* args[]);
+void* eval_Scheduler_andThen(void* args[]);
+void* eval_Scheduler_onError(void* args[]);
+void* eval_Scheduler_receive(void* args[]);
+void* eval_Scheduler_rawSend(void* args[]);
+void* eval_Scheduler_send(void* args[]);
+void* eval_Scheduler_kill(void* args[]);
+
+extern Closure Scheduler_succeed;
+extern Closure Scheduler_fail;
+extern Closure Scheduler_binding;
+extern Closure Scheduler_andThen;
+extern Closure Scheduler_onError;
+extern Closure Scheduler_receive;
+extern Closure Scheduler_rawSpawn;
+extern Closure Scheduler_spawn;
+extern Closure Scheduler_rawSend;
+extern Closure Scheduler_send;
+extern Closure Scheduler_kill;
 
 // =========================================
 

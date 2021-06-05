@@ -831,6 +831,11 @@ function wrapWasmElmApp(
     return readWasmValue(resultAddr);
   }
 
+  let stepper;
+  function registerStepper(stepperFromPlatformInitialize: Function) {
+    stepper = stepperFromPlatformInitialize;
+  }
+
   /* --------------------------------------------------
 
                     EXPORTS
@@ -869,6 +874,8 @@ function wrapWasmElmApp(
     },
     Scheduler_rawSpawn: emscriptenModule._get_Scheduler_rawSpawn(),
     Scheduler_spawn: emscriptenModule._get_Scheduler_spawn(),
-    Json_run: emscriptenModule._get_eval_Json_run() // TODO: unused?
+    Json_run: emscriptenModule._get_eval_Json_run(), // TODO: unused?
+    registerStepper,
+    stepper
   };
 }

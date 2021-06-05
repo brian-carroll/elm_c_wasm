@@ -277,6 +277,7 @@ typedef enum task_ctor {
   TASK_RECEIVE,
 } TaskCtor;
 
+
 typedef struct task {
   Header header;
   u32 ctor;
@@ -287,8 +288,6 @@ typedef struct task {
 } Task;
 
 
-#define PROC_CTOR KERNEL_CTOR_OFFSET
-
 typedef struct process_stack {
   Header header;
   u32 ctor;
@@ -296,24 +295,96 @@ typedef struct process_stack {
   struct process_stack* rest;
 } ProcessStack;
 
+
 typedef struct queue {
   Cons* front;
   Cons* back;
 } Queue;
 
+
 typedef struct process {
   Header header;
-  u32 ctor;
-  u32 id;
+  u32 id;  // replaces ctor in Custom struct
   Task* root;
   ProcessStack* stack;
   Queue mailbox;
 } Process;
 
 
-// Manager Config
+enum manager_ctor {
+  MANAGER_EFFECT,
+  MANAGER_PORT_OUT,
+  MANAGER_PORT_IN,
+};
 
-// Manager
+typedef struct manager_config {
+  Header header;
+  u32 ctor;
+  Task* init;  // load-time, not compile-time (yet?)
+  Closure* onEffects;
+  Closure* onSelfMsg;
+  Closure* cmdMap;
+  Closure* subMap;
+} ManagerConfig;
+
+
+typedef struct port_config {
+  Header header;
+  u32 ctor;
+  ElmString* name;
+  // Closure* portSetup; // no need for this, we know from ctor what function to call
+  Closure* converter;
+  Closure* cmdMap;
+  Closure* subMap;
+} PortConfig;
+
+
+enum manager_message_ctor {
+  MANAGER_MSG_SELF,
+  MANAGER_MSG_LEAF,
+  MANAGER_MSG_NODE,
+  MANAGER_MSG_MAP,
+  MANAGER_MSG_FX,
+};
+
+struct msg_fields_self {
+  void* msg;
+};
+struct msg_fields_leaf {
+  size_t home;
+  void* value;
+};
+struct msg_fields_node {
+  Cons* bags;
+};
+struct msg_fields_map {
+  Closure* func;
+  struct manager_message* bag;
+};
+struct msg_fields_fx {
+  Cons* cmds;
+  Cons* subs;
+};
+
+typedef struct manager_message {
+  Header header;
+  u32 ctor;
+  union {
+    struct msg_fields_self self;
+    struct msg_fields_leaf leaf;
+    struct msg_fields_node node;
+    struct msg_fields_map map;
+    struct msg_fields_fx fx;
+  };
+} ManagerMsg;
+
+
+typedef struct router {
+  Header header;
+  u32 ctor;
+  Closure* sendToApp;
+  Process* selfProcess;
+} Router;
 
 
 #endif  // #ifndef ELM_KERNEL_TYPES
