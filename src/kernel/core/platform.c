@@ -6,7 +6,8 @@
 #define EMSCRIPTEN_KEEPALIVE
 #endif
 
-void* Platform_model;
+ElmValue* Platform_model;
+ManagerMsg* Platform_initCmd;
 Closure* Platform_update;
 Closure* Platform_subscriptions;
 Custom* Platform_effectManagers;    // configs
@@ -14,43 +15,23 @@ Custom* Platform_managers;          // Processes
 extern u32 Platform_managers_size;  // compiler-generated constant
 
 extern void Platform_stepper(void* model);  // imported JS function (wrapper around view)
-void Platform_enqueueEffects(Custom* managers, void* cmd, void* sub);
-// Platform_initialize(flagDecoder, args, init, update, subscriptions, stepperBuilder);
-// Platform_registerPreload(url);
-// Platform_setupEffects(managers, sendToApp);
-// Platform_createManager(init, onEffects, onSelfMsg, cmdMap, subMap);
+void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
 Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);
-// Platform_leaf(home);
-// Platform_batch(list);
-// Platform_enqueueEffects(managers, cmdBag, subBag);
 void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
-void Platform_gatherEffects(bool isCmd, ManagerMsg* bag, Custom* effectsDict, Cons* taggers);
+void Platform_gatherEffects(
+    bool isCmd, ManagerMsg* bag, Custom* effectsDict, Cons* taggers);
 ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value);
 ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effects);
-// Platform_checkPortName(name);
-// Platform_outgoingPort(name, converter);
 void* Platform_setupOutgoingPort(ElmString* name);
-// Platform_incomingPort(name, converter);
 void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp);
-// Platform_export__PROD(exports);
-// Platform_mergeExportsProd(obj, exports);
-// Platform_export__DEBUG(exports);
-// Platform_mergeExportsDebug(moduleName, obj, exports);
 
-// TODO:
-// What's in intercept and what's here?
-void Platform_registerRoots(Closure* model, Closure* update, Closure* subscriptions) {
+
+void Platform_initOnIntercept(Closure* update, Closure* subscriptions) {
+  Platform_update = update;
+  Platform_subscriptions = subscriptions;
   GC_register_root(&Platform_model);
   GC_register_root(&Platform_update);
   GC_register_root(&Platform_subscriptions);
-  // GC_register_root(&Platform_effectManagers);  // should get registered in compiled
-  // code
-  GC_register_root(&Platform_managers);  // Processes
-
-  Platform_model = model;
-  Platform_update = update;
-  Platform_subscriptions = subscriptions;
-  Platform_managers = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
 }
 
 
@@ -66,17 +47,26 @@ void* eval_Platform_initialize_sendToApp(void* args[]) {
 }
 
 
+Cons* Platform_initializeEffects() {
+  Platform_managers = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
+  GC_register_root(&Platform_managers);
+  Closure* sendToApp = newClosure(0, 1, eval_Platform_initialize_sendToApp, NULL);
+  Cons* portsList = eval_Platform_setupEffects(managers, sendToApp);
+  ManagerMsg* sub = A1(Platform_subscriptions, Platform_model);
+  Platform_enqueueEffects(Platform_managers, Platform_initCmd, sub);
+  Platform_initCmd = NULL;
+  return portsList;
+}
+
+
 /* ====================================================
 
                  EFFECT MANAGERS
 
    ==================================================== */
 
-Cons* eval_Platform_setupEffects(void* args[]) {
-  Custom* managers = args[0];
-  Closure* sendToApp = args[1];
-
-  Cons* ports = &Nil;
+Cons* eval_Platform_setupEffects(Custom* managers, Closure* sendToApp) {
+  Cons* portsList = &Nil;
 
   for (u32 i = 0; i < Platform_managers_size; i++) {
     ManagerConfig* manager = Platform_effectManagers->values[i];
@@ -85,18 +75,18 @@ Cons* eval_Platform_setupEffects(void* args[]) {
       PortConfig* port = (PortConfig*)manager;
       Tuple2* keyValuePair =
           newTuple2(port->name, Platform_setupOutgoingPort(port->name));
-      ports = newCons(keyValuePair, ports);
+      portsList = newCons(keyValuePair, portsList);
     } else if (manager->ctor == MANAGER_PORT_IN) {
       PortConfig* port = (PortConfig*)manager;
       Tuple2* keyValuePair =
           newTuple2(port->name, Platform_setupIncomingPort(port->name, sendToApp));
-      ports = newCons(keyValuePair, ports);
+      portsList = newCons(keyValuePair, portsList);
     }
 
     managers->values[i] = Platform_instantiateManager(manager, sendToApp);
   }
 
-  return ports;
+  return portsList;
 }
 
 
@@ -120,7 +110,7 @@ ManagerConfig* Platform_createManager(Task* init,
 }
 
 
-void* eval_manager_loop_receive(void* args[]) {
+static void* eval_manager_loop_receive(void* args[]) {
   ManagerConfig* info = args[0];
   Router* router = args[1];
   void* state = args[2];
@@ -138,7 +128,7 @@ void* eval_manager_loop_receive(void* args[]) {
 }
 
 
-void* eval_manager_loop(void* args[]) {
+static void* eval_manager_loop(void* args[]) {
   // ManagerConfig* info = args[0];
   // Router* router = args[1];
   // void* state = args[2];
@@ -173,7 +163,7 @@ Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp) {
    ==================================================== */
 
 
-void* eval_Platform_sendToApp_lambda(void* args[]) {
+static void* eval_Platform_sendToApp_lambda(void* args[]) {
   Router* router = args[0];
   void* msg = args[1];
   Closure* callback = args[2];
@@ -252,6 +242,7 @@ Closure Platform_map = {
 
 
 // The queue is necessary to avoid ordering issues for synchronous commands.
+// Don't try to 'cleverly' skip the queue in some cases! See comments in Platform.js
 bool Platform_effectsActive = false;
 Queue Platform_effectsQueue = {
     .front = &Nil,
@@ -259,22 +250,19 @@ Queue Platform_effectsQueue = {
 };
 
 
-void Platform_enqueueEffects(Custom* managers, void* cmd, void* sub) {
-  /*
-_Platform_effectsQueue.push({ __managers: managers, __cmdBag: cmdBag, __subBag: subBag });
+void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag) {
+  Queue_push(&Platform_effectsQueue, newTuple3(managers, cmdBag, subBag));
 
-  if (_Platform_effectsActive) return;
+  if (Platform_effectsActive) return;
 
-  _Platform_effectsActive = true;
-  for (var fx; fx = _Platform_effectsQueue.shift(); )
-  {
-          _Platform_dispatchEffects(fx.__managers, fx.__cmdBag, fx.__subBag);
+  Platform_effectsActive = true;
+  for (;;) {
+    Tuple3* fx = Queue_shift(&Platform_effectsQueue);
+    if (!fx) break;
+    Platform_dispatchEffects(fx->a, fx->b, fx->c);
   }
-  _Platform_effectsActive = false;
-*/
-  return;
+  Platform_effectsActive = false;
 }
-
 
 
 void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag) {

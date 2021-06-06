@@ -5,42 +5,27 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
 	_Result_isOk(result) || _Debug_crash(2, _Json_errorToString(result.a));
 
-	var initPair = init(result.a); // Wasm, should avoid decode/encode if possible => intercept? address?
-	var model = initPair.a;
+	var initPair = init(result.a); // JS wrapper around Wasm init
+	var model = initPair.a; // dummy Unit
 
-  var wasmPlatformRegisterRoots = wasmWrapper.get_Platform_registerRoots();
-  wasmWrapper.call(wasmPlatformRegisterRoots, [model, update, subscriptions]);
   var evalSendToApp = wasmWrapper.get_sendToApp();
   function sendToApp(msg) {
     wasmWrapper.call(evalSendToApp, [msg]);
   }
 
-  // stepperBuilder does JS setup, calls Wasm view on initial model, returns JS closure over Wasm view.
-  // The JS stepper handles sync/async view calls, can defer using rAF, etc.
-	var stepper = stepperBuilder(sendToApp, model); // JS call makes reference to sendToApp, a Wasm function
-  wasmWrapper.registerStepper(stepper);
+	var stepper = stepperBuilder(sendToApp, model);
 
-  /*
-	var managers = {}; // Wasm
-	var ports = _Platform_setupEffects(managers, sendToApp); // Go to Wasm, return JS object of ports
+  var portsList = wasmWrapper.initializeEffects(stepper);
+  var hasPorts = !!portsList.b;
+  var ports = {};
+  for (; portsList.b; portsList = portsList.b) {
+    var portPair = portsList.a;
+    var name = portPair.a;
+    var port = portPair.b;
+    ports[name] = port;
+  }
 
-  // Wasm
-  // Omit 2nd arg of sendToApp (viewMetadata). It's never used anywhere in GitHub elm org and I can't have optional args
-  function sendToApp(msg)
-	{
-    // closes over: update, model, stepper (JS), managers, subscriptions
-    // *** circular references between sendToApp and stepper!! ***
-		var pair = A2(update, msg, model);
-		stepper(model = pair.a);
-		_Platform_enqueueEffects(managers, pair.b, subscriptions(model));
-	}
-
-  // Wasm
-	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
-*/
-
-  // JS
-	return ports ? { ports: ports } : {};
+	return hasPorts ? { ports: ports } : {};
 }
 
 
@@ -48,6 +33,22 @@ function eval_Platform_initialize_sendToApp() {
   var pair = A2(update, msg, model);
   stepper(model = pair.a);
   _Platform_enqueueEffects(managers, pair.b, subscriptions(model));
+}
+
+
+// TRACK PRELOADS
+//
+// This is used by code in elm/browser and elm/http
+// to register any HTTP requests that are triggered by init.
+//
+
+
+var _Platform_preload;
+
+
+function _Platform_registerPreload(url)
+{
+	_Platform_preload.add(url);
 }
 
 

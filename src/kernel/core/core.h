@@ -149,6 +149,11 @@ void* eval_Platform_leaf(void*[]);
 
 // =========================================
 
+void Queue_push(Queue* q, void* value);
+void* Queue_shift(Queue* q);
+
+// =========================================
+
 void* eval_Scheduler_rawSpawn(void* args[]);
 void* eval_Scheduler_spawn(void* args[]);
 void* eval_Scheduler_succeed(void* args[]);
