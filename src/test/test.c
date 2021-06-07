@@ -39,15 +39,30 @@ void* eval_createTuple3(void* args[]) {
 }
 #endif
 
-void types_test();
-void utils_test();
-void basics_test();
-void string_test();
-void char_test();
-void list_test();
-void json_test();
-void wrapper_test();
-void platform_test();
+struct test_suite {
+  char* name;
+  char shortName;
+  bool enable;
+  void (*run)();
+};
+
+#define NUM_SUITES 11
+#define NUM_OPTIONS (NUM_SUITES + 2)
+
+struct test_suite suites[] = {
+    {.name = "types", .shortName = 't', .run = types_test},
+    {.name = "utils", .shortName = 'u', .run = utils_test},
+    {.name = "basics", .shortName = 'b', .run = basics_test},
+    {.name = "string", .shortName = 's', .run = string_test},
+    {.name = "char", .shortName = 'c', .run = char_test},
+    {.name = "list", .shortName = 'l', .run = list_test},
+    {.name = "debug", .shortName = 'd', .run = debug_test},
+    {.name = "json", .shortName = 'j', .run = json_test},
+    {.name = "wrapper", .shortName = 'w', .run = wrapper_test},
+    {.name = "platform", .shortName = 'p', .run = platform_test},
+    {.name = "gc", .shortName = 'g', .run = gc_test},
+};
+struct option long_options[NUM_OPTIONS + 1];
 
 int verbose = false;
 int tests_run = 0;
@@ -146,134 +161,68 @@ char* hex_ptr(void* ptr) {
   return hex(&ptr, sizeof(void*));
 }
 
-void test_all(bool types,
-    bool utils,
-    bool basics,
-    bool string,
-    bool chr,
-    bool list,
-    bool debug,
-    bool json,
-    bool wrapper,
-    bool platform,
-    bool gc) {
+void test_all() {
   if (verbose) {
     safe_printf("Selected tests: ");
-    if (types) safe_printf("types ");
-    if (utils) safe_printf("utils ");
-    if (basics) safe_printf("basics ");
-    if (string) safe_printf("string ");
-    if (chr) safe_printf("char ");
-    if (list) safe_printf("list ");
-    if (debug) safe_printf("debug ");
-    if (json) safe_printf("json ");
-    if (wrapper) safe_printf("wrapper ");
-    if (platform) safe_printf("platform ");
-    if (gc) safe_printf("gc ");
+    for (int i = 0; i < ARRAY_LEN(suites); i++) {
+      struct test_suite* suite = suites + i;
+      if (suite->enable) {
+        safe_printf("%s ", suite->name);
+      }
+    }
     safe_printf("\n\n");
   }
-  if (types) mu_run_test(types_test);
-  if (utils) mu_run_test(utils_test);
-  if (basics) mu_run_test(basics_test);
-  if (string) mu_run_test(string_test);
-  if (chr) mu_run_test(char_test);
-  if (list) mu_run_test(list_test);
-  if (debug) mu_run_test(debug_test);
-  if (json) mu_run_test(json_test);
-  if (wrapper) mu_run_test(wrapper_test);
-  if (platform) mu_run_test(platform_test);
-  if (gc) mu_run_test(gc_test);
+  for (int i = 0; i < ARRAY_LEN(suites); i++) {
+    struct test_suite* suite = suites + i;
+    if (suite->enable) {
+      suite->run();
+    }
+  }
 }
 
 int main(int argc, char** argv) {
   GC_init();
 
-  static struct option long_options[] = {
-      {"verbose", no_argument, NULL, 'v'},
-      {"all", no_argument, NULL, 'a'},
-      {"types", optional_argument, NULL, 't'},
-      {"utils", optional_argument, NULL, 'u'},
-      {"basics", optional_argument, NULL, 'b'},
-      {"string", optional_argument, NULL, 's'},
-      {"char", optional_argument, NULL, 'c'},
-      {"list", optional_argument, NULL, 'l'},
-      {"debug", optional_argument, NULL, 'd'},
-      {"json", optional_argument, NULL, 'j'},
-      {"wrapper", optional_argument, NULL, 'w'},
-      {"platform", optional_argument, NULL, 'p'},
-      {"gc", optional_argument, NULL, 'g'},
-      {NULL, 0, NULL, 0},
-  };
+  assert(NUM_SUITES == ARRAY_LEN(suites));
 
-  // By default in Bash shell, just do what's specified
-  bool types = false;
-  bool basics = false;
-  bool string = false;
-  bool chr = false;
-  bool utils = false;
-  bool list = false;
-  bool debug = false;
-  bool json = false;
-  bool wrapper = false;
-  bool platform = false;
-  bool gc = false;
+  char options[NUM_OPTIONS + 1] = "va";
+  long_options[0] = (struct option){"verbose", no_argument, NULL, 'v'};
+  long_options[1] = (struct option){"all", no_argument, NULL, 'a'};
 
-  char options[] = "vatubscldjwpg";
+  for (int i = 0; i < ARRAY_LEN(suites); i++) {
+    struct test_suite* suite = suites + i;
+    options[2 + i] = suite->shortName;
+    long_options[2 + i] =
+        (struct option){suite->name, no_argument, NULL, suite->shortName};
+  }
+
+  options[NUM_OPTIONS] = '\0';
+  long_options[NUM_OPTIONS] = (struct option){NULL, 0, NULL, 0};
 
   int opt;
-  while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
-    switch (opt) {
-      case 'v':
-        verbose = true;
-        break;
-      case 'a':
-        types = true;
-        utils = true;
-        basics = true;
-        string = true;
-        chr = true;
-        list = true;
-        json = true;
-        wrapper = true;
-        platform = true;
-        gc = true;
-        break;
-      case 't':
-        types = !optarg;
-        break;
-      case 'u':
-        utils = !optarg;
-        break;
-      case 'b':
-        basics = !optarg;
-        break;
-      case 's':
-        string = !optarg;
-        break;
-      case 'c':
-        chr = !optarg;
-        break;
-      case 'l':
-        list = !optarg;
-        break;
-      case 'd':
-        debug = !optarg;
-        break;
-      case 'j':
-        json = !optarg;
-        break;
-      case 'w':
-        wrapper = !optarg;
-        break;
-      case 'p':
-        platform = !optarg;
-        break;
-      case 'g':
-        gc = !optarg;
-        break;
-      default: {
-        safe_printf("Usage: %s [-%s]\n", argv[0], options);
+  int option_index = 0;
+  while ((opt = getopt_long(argc, argv, options, long_options, &option_index)) != -1) {
+    if (opt == 'v') {
+      verbose = true;
+    } else if (opt == 'a') {
+      for (int i = 0; i < ARRAY_LEN(suites); i++) {
+        struct test_suite* suite = suites + i;
+        suite->enable = true;
+      }
+    } else if (opt == '?') {
+        safe_printf("Cannot parse command line\n");
+        for (int a = 0; a < argc; a++) {
+          safe_printf("%s ", argv[a]);
+        }
+        safe_printf("\nUsage: %s [-%s]\n", argv[0], options);
         exit(EXIT_FAILURE);
+    } else {
+      for (int i = 0; i < ARRAY_LEN(suites); i++) {
+        struct test_suite* suite = suites + i;
+        if (suite->shortName == opt) {
+          suite->enable = true;
+          break;
+        }
       }
     }
   }
@@ -298,7 +247,7 @@ int main(int argc, char** argv) {
   exit(EXIT_FAILURE);
 #endif
 
-  test_all(types, utils, basics, string, chr, list, debug, json, wrapper, platform, gc);
+  test_all();
   int exit_code;
 
   if (tests_failed) {
