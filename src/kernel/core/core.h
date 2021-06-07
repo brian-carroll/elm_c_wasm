@@ -146,6 +146,7 @@ extern Closure List_sortBy;
 
 extern Custom* Platform_effectManagers;
 void* eval_Platform_leaf(void*[]);
+extern Closure sendToApp;
 
 // =========================================
 

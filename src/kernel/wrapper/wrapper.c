@@ -67,7 +67,11 @@ EMSCRIPTEN_KEEPALIVE void* get_Scheduler_spawn() {
   return &eval_Scheduler_spawn;
 }
 
-EMSCRIPTEN_KEEPALIVE void* initializeEffects() {
+EMSCRIPTEN_KEEPALIVE void* get_sendToApp() {
+  return &sendToApp;
+}
+
+EMSCRIPTEN_KEEPALIVE Cons* initializeEffects() {
   return Platform_initializeEffects();
 }
 

@@ -5,15 +5,9 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
 	_Result_isOk(result) || _Debug_crash(2, _Json_errorToString(result.a));
 
-	var initPair = init(result.a); // JS wrapper around Wasm init
-	var model = initPair.a; // dummy Unit
-
-  var evalSendToApp = wasmWrapper.get_sendToApp();
-  function sendToApp(msg) {
-    wasmWrapper.call(evalSendToApp, [msg]);
-  }
-
-	var stepper = stepperBuilder(sendToApp, model);
+  // Call JS wrapper around Wasm init. Stores resulting tuple in wasm.
+	var dummyPair = init(result.a);
+	var stepper = stepperBuilder(wasmWrapper.sendToApp, dummyPair.a);
 
   var portsList = wasmWrapper.initializeEffects(stepper);
   var hasPorts = !!portsList.b;
@@ -26,13 +20,6 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
   }
 
 	return hasPorts ? { ports: ports } : {};
-}
-
-
-function eval_Platform_initialize_sendToApp() {
-  var pair = A2(update, msg, model);
-  stepper(model = pair.a);
-  _Platform_enqueueEffects(managers, pair.b, subscriptions(model));
 }
 
 

@@ -35,8 +35,8 @@ interface EmscriptenModule {
   _get_Scheduler_rawSpawn: () => number;
   _get_Scheduler_spawn: () => number;
   _get_eval_Json_run: () => number;
-  _addToCache: (addr: number) => number;
-  _retrieveFromCache: (cacheIndex: number) => number;
+  _get_sendToApp: () => number;
+  _initializeEffects: () => number;
   _debugHeapState: () => void;
   _debugAddrRange: (start: number, size: number) => void;
   _debugStackMap: () => void;
@@ -381,44 +381,40 @@ function wrapWasmElmApp(
   }
 
   function createWasmCallback(metadata: ClosureMetadata): Function {
-    const { addr, n_values, max_values, evaluator } = metadata;
-    const nFreeVars = n_values;
-    const cacheIndex = emscriptenModule._addToCache(addr);
-
-    function wasmCallback(...jsArgs: any[]) {
-      const n_values = nFreeVars + jsArgs.length;
+    const { n_values, max_values, evaluator, argsIndex } = metadata;
+    const freeVars: any[] = [];
+    for (let i = argsIndex; i < argsIndex + n_values; i++) {
+      freeVars.push(readWasmValue(mem32[i]));
+    }
+    function wasmCallback() {
+      const args = freeVars.slice();
+      for (let i = 0; i < arguments.length; i++) {
+        args.push(arguments[i]);
+      }
+      const n_values = args.length;
       if (n_values !== max_values) {
-        console.error({ wasmCallback, args: jsArgs });
+        console.error({ wasmCallback, args });
         throw new Error(
           `Trying to call a Wasm Closure with ${n_values} args instead of ${max_values}!`
         );
       }
       const size = 3 + n_values;
       const closureAddr = emscriptenModule._allocate(size);
-      const headerIndex = closureAddr >> 2;
-      let index = headerIndex;
-      mem32[index++] = encodeHeader(Tag.Closure, size);
-      mem32[index++] = (max_values << 16) | n_values;
-      mem32[index++] = evaluator;
-
-      const oldClosureAddr = emscriptenModule._retrieveFromCache(cacheIndex);
-
-      if (nFreeVars) {
-        let oldClosureArgsIndex = (oldClosureAddr >> 2) + 3;
-        for (let i = 0; i < nFreeVars; i++) {
-          mem32[index++] = mem32[oldClosureArgsIndex++];
-        }
+      const index = closureAddr >> 2;
+      mem32[index] = encodeHeader(Tag.Closure, size);
+      mem32[index + 1] = (max_values << 16) | n_values;
+      mem32[index + 2] = evaluator;
+      for (let i = 0; i < args.length; i++) {
+        mem32[index + 3 + i] = writeWasmValue(args[i]);
       }
-      for (let i = 0; i < jsArgs.length; i++) {
-        mem32[index++] = writeWasmValue(jsArgs[i]);
-      }
-
       const resultAddr = emscriptenModule._evalClosure(closureAddr);
       const resultValue = readWasmValue(resultAddr);
       return resultValue;
     }
     // Attach info in case we have to write this Closure back to Wasm
-    wasmCallback.cacheIndex = cacheIndex;
+    wasmCallback.freeVars = freeVars;
+    wasmCallback.evaluator = evaluator;
+    wasmCallback.max_values = max_values;
     const arity = max_values - n_values;
     const FN = elmFunctionWrappers[arity];
     return FN(wasmCallback);
@@ -647,8 +643,19 @@ function wrapWasmElmApp(
 
   function writeClosure(value: any): Address {
     const fun = value.f || value;
-    if (fun.cacheIndex) {
-      return emscriptenModule._retrieveFromCache(fun.cacheIndex);
+    if (fun.evaluator) {
+      const { freeVars, max_values, evaluator } = fun;
+      const n_values = freeVars.length;
+      const size = 3 + n_values;
+      const addr = emscriptenModule._allocate(size);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.Closure, size);
+      mem32[index + 1] = (max_values << 16) | n_values;
+      mem32[index + 2] = evaluator;
+      for (let i = 0; i < freeVars.length; i++) {
+        mem32[index + 3 + i] = writeWasmValue(freeVars[i]);
+      }
+      return addr;
     } else {
       let evaluator = kernelFunctions.findIndex(f => f === value);
       if (evaluator === -1) {
@@ -831,10 +838,14 @@ function wrapWasmElmApp(
     return readWasmValue(resultAddr);
   }
 
-  let stepper;
-  function registerStepper(stepperFromPlatformInitialize: Function) {
-    stepper = stepperFromPlatformInitialize;
+  let Platform_stepper: Function = () => {};
+  function Platform_initializeEffects(f: Function) {
+    Platform_stepper = f;
+    const portsListAddr = emscriptenModule._initializeEffects();
+    return readWasmValue(portsListAddr);
   }
+
+  const sendToApp = readWasmValue(emscriptenModule._get_sendToApp());
 
   /* --------------------------------------------------
 
@@ -875,7 +886,8 @@ function wrapWasmElmApp(
     Scheduler_rawSpawn: emscriptenModule._get_Scheduler_rawSpawn(),
     Scheduler_spawn: emscriptenModule._get_Scheduler_spawn(),
     Json_run: emscriptenModule._get_eval_Json_run(), // TODO: unused?
-    registerStepper,
-    stepper
+    Platform_initializeEffects,
+    Platform_stepper,
+    sendToApp
   };
 }

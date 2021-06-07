@@ -24,12 +24,33 @@ Browser.application does some messing around with init, applying the extra args.
 It leaves update and subs alone. They get straight to Platform_initialize.
 view gets wrapped in to make a stepper
 
+## compiler support for Platform & Scheduler
+review code gen for managers & platform leaf
+some literal-like mechanism for manager 'home' enum
+
+## debug & testing for Platform & Scheduler
+
+### app
+Start with an app whose init cmd is just `Task.succeed 123` or something
+Then move on to more complex Task chains
+
+### Scheduler code testing
+- create tasks of every constructor and step them
+- create some chains that receive fx
+- step it and see the queue working
+
+### Platform code testing
+- copy compiled code from a test app to isolate platform.c code without JS
+- test config & instantiation process for Task effect manager
+- push a Cmd through the full pipe sendToApp -> enqueueEffects -> gatherEffects -> dispatchEffects
+
 ## Relative perf
 - Updates and stuff take no time compared to view, and our view takes twice as long as JS.
 - Our slowest update is CompletedFeedLoad (loads of JSON arriving and lots of encode/decode nonsense) but it's still only 5ms
 - Our worst view cycle is 36ms vs JS 14ms
 
 **Vdom dominates performance** so all this other stuff is less important!
+But I wanna. It's better.
 
 ## TODO
 

@@ -45,6 +45,11 @@ void* eval_Platform_initialize_sendToApp(void* args[]) {
   Platform_enqueueEffects(Platform_managers, cmd, sub);
   return NULL;  // TODO
 }
+Closure sendToApp = {
+    .header = HEADER_CLOSURE(0),
+    .evaluator = eval_Platform_initialize_sendToApp,
+    .max_values = 1,
+};
 
 
 Cons* Platform_initializeEffects() {
