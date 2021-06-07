@@ -73,5 +73,9 @@ mergeInto(LibraryManager.library, {
       return x + 1;
     }
     return wasmWrapper.writeWasmValue(kernelIncrementBy1);
+  },
+
+  Platform_stepper: function (model) {
+    console.log('Rendering view from model', model);
   }
 });

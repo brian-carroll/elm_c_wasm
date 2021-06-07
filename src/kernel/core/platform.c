@@ -24,14 +24,14 @@ ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* valu
 ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effects);
 void* Platform_setupOutgoingPort(ElmString* name);
 void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp);
-
+Cons* Platform_setupEffects(Custom* managers, Closure* sendToApp);
 
 void Platform_initOnIntercept(Closure* update, Closure* subscriptions) {
   Platform_update = update;
   Platform_subscriptions = subscriptions;
-  GC_register_root(&Platform_model);
-  GC_register_root(&Platform_update);
-  GC_register_root(&Platform_subscriptions);
+  GC_register_root((void**)&Platform_model);
+  GC_register_root((void**)&Platform_update);
+  GC_register_root((void**)&Platform_subscriptions);
 }
 
 
@@ -54,9 +54,9 @@ Closure sendToApp = {
 
 Cons* Platform_initializeEffects() {
   Platform_managers = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
-  GC_register_root(&Platform_managers);
+  GC_register_root((void**)&Platform_managers);
   Closure* sendToApp = newClosure(0, 1, eval_Platform_initialize_sendToApp, NULL);
-  Cons* portsList = eval_Platform_setupEffects(managers, sendToApp);
+  Cons* portsList = Platform_setupEffects(Platform_managers, sendToApp);
   ManagerMsg* sub = A1(Platform_subscriptions, Platform_model);
   Platform_enqueueEffects(Platform_managers, Platform_initCmd, sub);
   Platform_initCmd = NULL;
@@ -70,13 +70,13 @@ Cons* Platform_initializeEffects() {
 
    ==================================================== */
 
-Cons* eval_Platform_setupEffects(Custom* managers, Closure* sendToApp) {
+Cons* Platform_setupEffects(Custom* managers, Closure* sendToApp) {
   Cons* portsList = &Nil;
 
   for (u32 i = 0; i < Platform_managers_size; i++) {
     ManagerConfig* manager = Platform_effectManagers->values[i];
 
-    if (manager->ctor = MANAGER_PORT_OUT) {
+    if (manager->ctor == MANAGER_PORT_OUT) {
       PortConfig* port = (PortConfig*)manager;
       Tuple2* keyValuePair =
           newTuple2(port->name, Platform_setupOutgoingPort(port->name));
@@ -179,7 +179,7 @@ static void* eval_Platform_sendToApp_lambda(void* args[]) {
 }
 void* eval_Platform_sendToApp(void* args[]) {
   Closure* lambda = newClosure(2, 3, eval_Platform_sendToApp_lambda, args);
-  return eval_Scheduler_binding(&lambda);
+  return eval_Scheduler_binding((void*[]){lambda});
 }
 Closure Platform_sendToApp = {
     .header = HEADER_CLOSURE(0),

@@ -21,6 +21,7 @@
 #include "gc_test.c"
 #include "json_test.c"
 #include "list_test.c"
+#include "platform_test.c"
 #include "string_test.c"
 #include "test-compiled.c"
 #include "test-imports.c"
@@ -46,6 +47,7 @@ void char_test();
 void list_test();
 void json_test();
 void wrapper_test();
+void platform_test();
 
 int verbose = false;
 int tests_run = 0;
@@ -153,6 +155,7 @@ void test_all(bool types,
     bool debug,
     bool json,
     bool wrapper,
+    bool platform,
     bool gc) {
   if (verbose) {
     safe_printf("Selected tests: ");
@@ -165,6 +168,7 @@ void test_all(bool types,
     if (debug) safe_printf("debug ");
     if (json) safe_printf("json ");
     if (wrapper) safe_printf("wrapper ");
+    if (platform) safe_printf("platform ");
     if (gc) safe_printf("gc ");
     safe_printf("\n\n");
   }
@@ -177,6 +181,7 @@ void test_all(bool types,
   if (debug) mu_run_test(debug_test);
   if (json) mu_run_test(json_test);
   if (wrapper) mu_run_test(wrapper_test);
+  if (platform) mu_run_test(platform_test);
   if (gc) mu_run_test(gc_test);
 }
 
@@ -195,6 +200,7 @@ int main(int argc, char** argv) {
       {"debug", optional_argument, NULL, 'd'},
       {"json", optional_argument, NULL, 'j'},
       {"wrapper", optional_argument, NULL, 'w'},
+      {"platform", optional_argument, NULL, 'p'},
       {"gc", optional_argument, NULL, 'g'},
       {NULL, 0, NULL, 0},
   };
@@ -209,9 +215,10 @@ int main(int argc, char** argv) {
   bool debug = false;
   bool json = false;
   bool wrapper = false;
+  bool platform = false;
   bool gc = false;
 
-  char options[] = "vatubscldjwg";
+  char options[] = "vatubscldjwpg";
 
   int opt;
   while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
@@ -228,6 +235,7 @@ int main(int argc, char** argv) {
         list = true;
         json = true;
         wrapper = true;
+        platform = true;
         gc = true;
         break;
       case 't':
@@ -256,6 +264,9 @@ int main(int argc, char** argv) {
         break;
       case 'w':
         wrapper = !optarg;
+        break;
+      case 'p':
+        platform = !optarg;
         break;
       case 'g':
         gc = !optarg;
@@ -287,7 +298,7 @@ int main(int argc, char** argv) {
   exit(EXIT_FAILURE);
 #endif
 
-  test_all(types, utils, basics, string, chr, list, debug, json, wrapper, gc);
+  test_all(types, utils, basics, string, chr, list, debug, json, wrapper, platform, gc);
   int exit_code;
 
   if (tests_failed) {

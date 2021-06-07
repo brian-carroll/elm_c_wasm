@@ -144,8 +144,11 @@ extern Closure List_sortBy;
 
 // =========================================
 
-extern Custom* Platform_effectManagers;
+void Platform_initOnIntercept(Closure* update, Closure* subscriptions);
+Cons* Platform_initializeEffects();
 void* eval_Platform_leaf(void*[]);
+
+extern Custom* Platform_effectManagers;
 extern Closure sendToApp;
 
 // =========================================
