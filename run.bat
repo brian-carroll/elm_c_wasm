@@ -1,1 +1,1 @@
-call compile.bat && dist\exe\test.exe -a
+call compile.bat && dist\exe\test.exe -pv

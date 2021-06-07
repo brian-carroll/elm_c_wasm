@@ -129,11 +129,11 @@ void* eval_Scheduler_spawn_lambda(void* args[]) {
   A1(callback, t);
   return NULL;
 }
-
 void* eval_Scheduler_spawn(void* args[]) {
   // Task* task = args[0];
   Closure* lambda = newClosure(1, 2, eval_Scheduler_spawn_lambda, args);
-  return eval_Scheduler_binding((void*[]){lambda});
+  Task* tbinding = eval_Scheduler_binding((void*[]){lambda});
+  return tbinding;
 }
 Closure Scheduler_spawn = {
     .header = HEADER_CLOSURE(0),
