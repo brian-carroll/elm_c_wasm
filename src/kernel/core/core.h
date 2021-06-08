@@ -152,6 +152,11 @@ extern u32 Platform_managers_size;  // compiler-generated constant
 extern Custom* Platform_effectManagers;
 extern Closure sendToApp;
 
+extern Closure Platform_batch;
+extern Closure Platform_leaf;
+extern Closure Platform_map;
+
+
 // =========================================
 
 void Queue_push(Queue* q, void* value);

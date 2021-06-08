@@ -23,5 +23,9 @@ mergeInto(LibraryManager.library, {
 
   parseFloat: function (addr, len16) {
     return wasmWrapper && wasmWrapper.parseFloat(addr, len16);
+  },
+
+  Platform_stepper: function (model) {
+    wasmWrapper.Platform_stepper(model);
   }
 });
