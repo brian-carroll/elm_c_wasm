@@ -12,7 +12,6 @@ Closure* Platform_update;
 Closure* Platform_subscriptions;
 Custom* Platform_effectManagers;    // configs
 Custom* Platform_managers;          // Processes
-extern u32 Platform_managers_size;  // compiler-generated constant
 
 extern void Platform_stepper(void* model);  // imported JS function (wrapper around view)
 void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);

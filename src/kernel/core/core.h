@@ -148,6 +148,7 @@ void Platform_initOnIntercept(Closure* update, Closure* subscriptions);
 Cons* Platform_initializeEffects();
 void* eval_Platform_leaf(void*[]);
 
+extern u32 Platform_managers_size;  // compiler-generated constant
 extern Custom* Platform_effectManagers;
 extern Closure sendToApp;
 

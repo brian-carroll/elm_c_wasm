@@ -9,10 +9,7 @@
 extern FieldGroup* Wrapper_appFieldGroups[];
 extern void** Wrapper_mainsArray[];
 extern Closure g_author_project_WebAssembly_intercept;
-extern const u32 FIELD_init;
-extern const u32 FIELD_update;
-extern const u32 FIELD_view;
-extern const u32 FIELD_subscriptions;
+extern FieldGroup fg_init_subscriptions_update_view;
 
 // JS imported functions
 extern ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index);

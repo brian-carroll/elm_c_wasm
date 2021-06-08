@@ -150,15 +150,23 @@ Closure g_elm_core_Array_initialize = {
     .evaluator = &eval_elm_core_Array_initialize,
 };
 
-const u32 FIELD_init = 1;
-const u32 FIELD_subscriptions = 2;
-const u32 FIELD_update = 3;
-const u32 FIELD_view = 4;
+enum {
+  FIELD_init,
+  FIELD_subscriptions,
+  FIELD_update,
+  FIELD_view,
+};
 
 FieldGroup fg_init_subscriptions_update_view = {
     .header = HEADER_FIELDGROUP(4),
     .size = 4,
-    .fields = {1, 2, 3, 4},
+    .fields =
+        {
+            FIELD_init,
+            FIELD_subscriptions,
+            FIELD_update,
+            FIELD_view,
+        },
 };
 
 FieldGroup* Wrapper_appFieldGroups[] = {&fg_init_subscriptions_update_view, NULL};

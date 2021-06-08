@@ -131,6 +131,12 @@ static void* eval_wrapView(void* args[]) {
 // Elm function that the user has to insert in front of the Program constructor
 static void* eval_intercept(void* args[]) {
   Record* userTEA = args[0];
+
+  size_t FIELD_init = fg_init_subscriptions_update_view.fields[0];
+  size_t FIELD_subscriptions = fg_init_subscriptions_update_view.fields[1];
+  size_t FIELD_update = fg_init_subscriptions_update_view.fields[2];
+  size_t FIELD_view = fg_init_subscriptions_update_view.fields[3];
+
   Closure* userInit = Utils_access_eval((void*[]){(void*)(size_t)FIELD_init, userTEA});
   Closure* userUpdate =
       Utils_access_eval((void*[]){(void*)(size_t)FIELD_update, userTEA});
