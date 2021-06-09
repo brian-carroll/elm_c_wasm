@@ -1,0 +1,13 @@
+var wasmWrapper;
+(function(scope){ // open outer scope
+'use strict';
+
+var onReadyCallback;
+scope['Elm'] = {
+  onReady: function(callback) {
+    onReadyCallback = callback;
+  }
+};
+
+scope['Module'] = scope['Module'] || {};
+scope['Module'].postRun = function postRun() { // open inner scope

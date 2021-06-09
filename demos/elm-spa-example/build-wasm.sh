@@ -1,4 +1,4 @@
-FILENAME='elm'
+OUTNAME='elm'
 KDIR=../../src/kernel
 KERNELS="${KDIR}/core/core.c ${KDIR}/elm-test/elm-test.c ${KDIR}/json/json.c ${KDIR}/wrapper/wrapper.c"
 WRAPPER_DIR=../../src/kernel/wrapper
@@ -17,13 +17,17 @@ echo "" > emcc.log
 set -x
 
 emcc $CFLAGS \
-  build/codemods/$FILENAME.c \
+  build/codemods/$OUTNAME.c \
   $KERNELS \
   --pre-js $WRAPPER_DIR/emscripten-module.js \
   --pre-js $WRAPPER_DIR/wrapper.js \
   --js-library $WRAPPER_DIR/imports.js \
-  --post-js build/elm/$FILENAME.js \
-  -o $OUT_DIR/$FILENAME.js \
+  --post-js $WRAPPER_DIR/elm-scopes-open.js.txt \
+  --post-js $KDIR/core/scheduler.js \
+  --post-js $KDIR/core/platform.js \
+  --post-js build/elm/$OUTNAME.js \
+  --post-js $WRAPPER_DIR/elm-scopes-close.js.txt \
+  -o $OUT_DIR/$OUTNAME.js \
   -Wno-incompatible-pointer-types \
   -s ASSERTIONS=1 \
   -s ALLOW_MEMORY_GROWTH=1 \

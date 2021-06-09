@@ -1,5 +1,12 @@
 # Reducing encoding/decoding in the Elm Architecture
 
+## TODO Wasm platform/scheduler
+- [ ] move postRun to before all the custom kernels
+  - for now just use Emscripten JS mashing, make it better later when I know what I need
+- [ ] generate managers in C, not JS
+  - deal with init stuff
+  - probably need a manually written prototype. Generate nothing at first? But do generate deps!
+
 ## notes on Closure caching
 
 Tried using a cache to reduce encoding and decoding but we end up with cache invalidation issues

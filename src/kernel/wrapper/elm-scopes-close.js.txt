@@ -1,0 +1,2 @@
+} // close inner scope
+}(this)); // close outer scope
