@@ -1,36 +1,29 @@
-/*
-
-import Elm.Kernel.Utils exposing (Tuple0)
-
-*/
-
-const __1_SUCCEED = 0;
-const __1_FAIL = 1;
-const __1_BINDING = 2;
-const __1_AND_THEN = 3;
-const __1_ON_ERROR = 4;
-const __1_RECEIVE = 5;
-const __2_PROCESS = 0;
+const TASK_SUCCEED = 0;
+const TASK_FAIL = 1;
+const TASK_BINDING = 2;
+const TASK_AND_THEN = 3;
+const TASK_ON_ERROR = 4;
+const TASK_RECEIVE = 5;
 
 // TASKS
 
 function _Scheduler_succeed(value) {
   return {
-    $: __1_SUCCEED,
+    $: TASK_SUCCEED,
     __value: value
   };
 }
 
 function _Scheduler_fail(error) {
   return {
-    $: __1_FAIL,
+    $: TASK_FAIL,
     __value: error
   };
 }
 
 function _Scheduler_binding(callback) {
   return {
-    $: __1_BINDING,
+    $: TASK_BINDING,
     __callback: callback,
     __kill: null
   };
@@ -38,7 +31,7 @@ function _Scheduler_binding(callback) {
 
 var _Scheduler_andThen = F2(function (callback, task) {
   return {
-    $: __1_AND_THEN,
+    $: TASK_AND_THEN,
     __callback: callback,
     __task: task
   };
@@ -46,7 +39,7 @@ var _Scheduler_andThen = F2(function (callback, task) {
 
 var _Scheduler_onError = F2(function (callback, task) {
   return {
-    $: __1_ON_ERROR,
+    $: TASK_ON_ERROR,
     __callback: callback,
     __task: task
   };
@@ -54,7 +47,7 @@ var _Scheduler_onError = F2(function (callback, task) {
 
 function _Scheduler_receive(callback) {
   return {
-    $: __1_RECEIVE,
+    $: TASK_RECEIVE,
     __callback: callback
   };
 }

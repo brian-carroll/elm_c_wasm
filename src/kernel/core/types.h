@@ -340,7 +340,7 @@ typedef struct port_config {
 
 
 enum manager_message_ctor {
-  MANAGER_MSG_SELF,
+  MANAGER_MSG_SELF = KERNEL_CTOR_OFFSET,
   MANAGER_MSG_LEAF,
   MANAGER_MSG_NODE,
   MANAGER_MSG_MAP,

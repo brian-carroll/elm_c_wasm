@@ -1,13 +1,58 @@
 # Reducing encoding/decoding in the Elm Architecture
 
-## TODO Wasm platform/scheduler
+## TODO: C code for platform/scheduler
 - [x] move postRun to before all the custom kernels
 - [x] generate managers in C, not JS
-- [ ] create JS versions of all the Platform & Scheduler functions that can be called from other JS code
+- [x] create JS versions of all the Platform & Scheduler functions that can be called from other JS code
   - Browser.js functions depend on Task.perform
   - Triggers JS code gen of Platform.elm
   - But Platform.js kernel functions are undefined in JS
+- [ ] Process hashmap implementation to avoid encode/decode
 
+## TODO: Compiler support for platform/scheduler
+- [ ] Pass managerNames in JsWrapper
+- [ ] Initialise compiler JS code gen with all of these functions AND figure out their dependencies!
+  - _Json_wrap (is this a can of worms?!)
+  - _Result_isOk
+  - _Debug_crash
+- [ ] Inject manager into JS state
+- [ ] generate JS _Platform_leaf calls
+
+## Ensure JS generated code can access Platform and Scheduler, possibly via Elm code
+
+Everything that is imported in core libs needs a JS version
+AND the compiler needs to know that it's already been emitted!
+
+- JS kernel imports of Platform
+  - [x] __Platform_export (_VirtualDom_init & code gen)
+  - [x] __Platform_initialize
+  - [x] __Platform_preload
+  - [x] __Platform_sendToSelf (Http.js v2)
+- JS kernel imports of Scheduler
+  - [x] __Scheduler_andThen
+  - [x] __Scheduler_binding
+  - [x] __Scheduler_fail
+  - [-] __Scheduler_rawSend (only imported to Platform => no JS needed)
+  - [x] __Scheduler_rawSpawn
+  - [x] __Scheduler_receive
+  - [-] __Scheduler_send (only imported to Platform => no JS needed)
+  - [x] __Scheduler_spawn
+  - [x] __Scheduler_succeed
+- Elm imports of Platform
+  - [x] Elm.Kernel.Platform.batch
+  - [x] Elm.Kernel.Platform.map
+  - [x] Elm.Kernel.Platform.sendToApp
+  - [x] Elm.Kernel.Platform.sendToSelf
+  - [x] Elm.Kernel.Platform.worker
+- Elm imports of Scheduler
+  - [x] Elm.Kernel.Scheduler.andThen
+  - [x] Elm.Kernel.Scheduler.fail
+  - [x] Elm.Kernel.Scheduler.kill
+  - [x] Elm.Kernel.Scheduler.onError
+  - [x] Elm.Kernel.Scheduler.spawn
+  - [x] Elm.Kernel.Scheduler.succeed
+- Indirect imports
+  - [x] _Platform_leaf (all module-specific cmd & sub)
 
 ## notes on Closure caching
 

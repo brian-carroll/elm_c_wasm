@@ -34,6 +34,8 @@ interface EmscriptenModule {
   _evalClosure: (addr: number) => number;
   _get_Scheduler_rawSpawn: () => number;
   _get_Scheduler_spawn: () => number;
+  _get_Platform_sendToApp: () => number;
+  _get_Platform_sendToSelf: () => number;
   _get_eval_Json_run: () => number;
   _get_sendToApp: () => number;
   _initializeEffects: () => number;
@@ -77,7 +79,8 @@ function wrapWasmElmApp(
   emscriptenModule: EmscriptenModule,
   elmImports: ElmImports,
   generatedAppTypes: GeneratedAppTypes,
-  kernelFuncRecord: Record<string, ElmCurriedFunction>
+  kernelFuncRecord: Record<string, ElmCurriedFunction>,
+  managerNames: string[]
 ) {
   /* --------------------------------------------------
 
@@ -888,6 +891,9 @@ function wrapWasmElmApp(
     Json_run: emscriptenModule._get_eval_Json_run(), // TODO: unused?
     Platform_initializeEffects,
     Platform_stepper,
-    sendToApp
+    Platform_sendToApp: emscriptenModule._get_Platform_sendToApp(),
+    Platform_sendToSelf: emscriptenModule._get_Platform_sendToSelf(),
+    sendToApp,
+    managerNames
   };
 }

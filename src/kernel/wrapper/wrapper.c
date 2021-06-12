@@ -67,6 +67,14 @@ EMSCRIPTEN_KEEPALIVE void* get_Scheduler_spawn() {
   return &eval_Scheduler_spawn;
 }
 
+EMSCRIPTEN_KEEPALIVE void* get_Platform_sendToApp() {
+  return &eval_Platform_sendToApp;
+}
+
+EMSCRIPTEN_KEEPALIVE void* get_Platform_sendToSelf() {
+  return &eval_Platform_sendToSelf;
+}
+
 EMSCRIPTEN_KEEPALIVE void* get_sendToApp() {
   return &sendToApp;
 }
