@@ -10,8 +10,8 @@ ElmValue* Platform_model;
 ManagerMsg* Platform_initCmd;
 Closure* Platform_update;
 Closure* Platform_subscriptions;
-Custom* Platform_effectManagers;    // configs
-Custom* Platform_managers;          // Processes
+Custom* Platform_effectManagers;  // configs
+Custom* Platform_managers;        // Processes
 
 extern void Platform_stepper(void* model);  // imported JS function (wrapper around view)
 void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
@@ -42,7 +42,7 @@ void* eval_Platform_initialize_sendToApp(void* args[]) {
   void* cmd = pair->b;
   void* sub = A1(Platform_subscriptions, Platform_model);
   Platform_enqueueEffects(Platform_managers, cmd, sub);
-  return NULL;  // TODO
+  return NULL;
 }
 Closure sendToApp = {
     .header = HEADER_CLOSURE(0),
@@ -94,7 +94,7 @@ Cons* Platform_setupEffects(Custom* managers, Closure* sendToApp) {
 }
 
 
-ManagerConfig* Platform_createManager(Task* init,
+ManagerConfig* Platform_createManager(void* init,
     Closure* onEffects,
     Closure* onSelfMsg,
     Closure* cmdMap,

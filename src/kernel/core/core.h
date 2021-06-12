@@ -2,8 +2,8 @@
 #define CORE_H
 
 #include "../wrapper/wrapper.h"
-#include "types.h"
 #include "./debug/debug.h"
+#include "types.h"
 
 #ifdef _WIN32
 // Ensure windows.h is included very early in compilation
@@ -11,7 +11,7 @@
 #include <windows.h>
 #endif
 
-#define ARRAY_LEN(a) (sizeof(a)/sizeof(a[0]))
+#define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))
 
 /*
   , (+), (-), (*), (/), (//), (^)
@@ -147,6 +147,8 @@ extern Closure List_sortBy;
 void Platform_initOnIntercept(Closure* update, Closure* subscriptions);
 Cons* Platform_initializeEffects();
 void* eval_Platform_leaf(void*[]);
+ManagerConfig* Platform_createManager(
+    void* init, Closure* onEffects, Closure* onSelfMsg, Closure* cmdMap, Closure* subMap);
 
 extern u32 Platform_managers_size;  // compiler-generated constant
 extern Custom* Platform_effectManagers;
@@ -155,6 +157,8 @@ extern Closure sendToApp;
 extern Closure Platform_batch;
 extern Closure Platform_leaf;
 extern Closure Platform_map;
+extern Closure Platform_sendToApp;
+extern Closure Platform_sendToSelf;
 
 
 // =========================================

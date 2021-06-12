@@ -1,11 +1,13 @@
 # Reducing encoding/decoding in the Elm Architecture
 
 ## TODO Wasm platform/scheduler
-- [ ] move postRun to before all the custom kernels
-  - for now just use Emscripten JS mashing, make it better later when I know what I need
-- [ ] generate managers in C, not JS
-  - deal with init stuff
-  - probably need a manually written prototype. Generate nothing at first? But do generate deps!
+- [x] move postRun to before all the custom kernels
+- [x] generate managers in C, not JS
+- [ ] create JS versions of all the Platform & Scheduler functions that can be called from other JS code
+  - Browser.js functions depend on Task.perform
+  - Triggers JS code gen of Platform.elm
+  - But Platform.js kernel functions are undefined in JS
+
 
 ## notes on Closure caching
 
