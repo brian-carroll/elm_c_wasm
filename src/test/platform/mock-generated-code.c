@@ -47,16 +47,33 @@ void* createManager_Task() {
       NULL);
 }
 
-ManagerMsg cmdNone = {
-    .header = HEADER_CUSTOM(1),
-    .ctor = MANAGER_MSG_NODE,
-    .node = {.bags = &Nil},
+Closure g_elm_core_Task_command = {
+    .header = HEADER_CLOSURE(1),
+    .n_values = 0x1,
+    .max_values = 0x2,
+    .evaluator = eval_Platform_leaf,
+    .values = {(void*)MANAGER_Task},
 };
-
-ManagerMsg subNone = {
-    .header = HEADER_CUSTOM(1),
-    .ctor = MANAGER_MSG_NODE,
-    .node = {.bags = &Nil},
+Closure g_elm_browser_Browser_Events_subscription = {
+    .header = HEADER_CLOSURE(1),
+    .n_values = 0x1,
+    .max_values = 0x2,
+    .evaluator = eval_Platform_leaf,
+    .values = {(void*)MANAGER_Browser_Events},
+};
+Closure g_elm_http_Http_subscription = {
+    .header = HEADER_CLOSURE(1),
+    .n_values = 0x1,
+    .max_values = 0x2,
+    .evaluator = eval_Platform_leaf,
+    .values = {(void*)MANAGER_Http},
+};
+Closure g_elm_http_Http_command = {
+    .header = HEADER_CLOSURE(1),
+    .n_values = 0x1,
+    .max_values = 0x2,
+    .evaluator = eval_Platform_leaf,
+    .values = {(void*)MANAGER_Http},
 };
 
 Closure Browser_element = {
@@ -66,11 +83,22 @@ Closure Browser_element = {
     .evaluator = NULL,
 };
 
-Closure * gptr_author_project_Main_main;
+Closure* gptr_author_project_Main_main;
 void* ginit_author_project_Main_main() {
-  Closure* init = mockFunction(1, newTuple2(create_string("init"), &cmdNone));
-  Closure* subs = mockFunction(1, &subNone);
-  Closure* update = mockFunction(2, newTuple2(create_string("update"), &cmdNone));
+  Closure* init = mockFunction(1,
+      newTuple2(create_string("init"),
+          A1(&g_elm_core_Task_command, create_string("init Cmd"))));
+  Closure* subs = mockFunction(1,
+      A1(&Platform_batch,
+          List_create(2,
+              (void*[]){
+                  A1(&g_elm_browser_Browser_Events_subscription,
+                      create_string("Browser Event sub")),
+                  A1(&g_elm_http_Http_subscription, create_string("Http sub")),
+              })));
+  Closure* update = mockFunction(2,
+      newTuple2(create_string("update"),
+          A1(&g_elm_http_Http_command, create_string("update Cmd"))));
   Closure* view = mockFunction(0xffff, create_string("view"));
   Record* elmTeaRecord = newRecord(
       &fg_init_subscriptions_update_view, 4, ((void*[]){init, subs, update, view}));
