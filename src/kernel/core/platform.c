@@ -6,12 +6,8 @@
 #define EMSCRIPTEN_KEEPALIVE
 #endif
 
-ElmValue* Platform_model;
-ManagerMsg* Platform_initCmd;
-Closure* Platform_update;
-Closure* Platform_subscriptions;
-Custom* Platform_effectManagers;  // configs
-Custom* Platform_managers;        // Processes
+
+// Forward declarations
 
 extern void Platform_stepper(void* model);  // imported JS function (wrapper around view)
 void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
@@ -24,6 +20,17 @@ ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effec
 void* Platform_setupOutgoingPort(ElmString* name);
 void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp);
 Cons* Platform_setupEffects(Custom* managers, Closure* sendToApp);
+
+
+// Globals
+
+ElmValue* Platform_model;
+ManagerMsg* Platform_initCmd;
+Closure* Platform_update;
+Closure* Platform_subscriptions;
+Custom* Platform_effectManagers;  // configs
+Custom* Platform_managers;        // Processes
+
 
 void Platform_initOnIntercept(Closure* update, Closure* subscriptions) {
   Platform_update = update;
