@@ -1,4 +1,3 @@
-#include <stdio.h>  // putchar
 #include "../gc/internals.h"
 
 // =======================================================================
@@ -460,19 +459,21 @@ static void Debug_prettyHelp(int indent, void* p) {
       safe_printf("Char 0x%8x\n", v->elm_char.value);
       break;
     case Tag_String: {
-      safe_printf("String \"");
       ElmString* s = p;
-      for (size_t i = 0; i < code_units(s); i++) {
+      char buf[100];
+      size_t i = 0;
+      for (; i < code_units(s) && i < sizeof(buf) - 1; i++) {
         u16 chr = s->words16[i];
         if (chr) {
           if (chr < 128) {
-            putchar(chr);
+            buf[i] = chr;
           } else {
-            putchar('#');
+            buf[i] = '#';
           }
         }
       }
-      safe_printf("\"\n");
+      buf[i] = '\0';
+      safe_printf("String \"%s\"\n", buf);
       break;
     }
     case Tag_List: {
