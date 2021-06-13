@@ -52,6 +52,23 @@ Closure sendToApp = {
 
 
 Cons* Platform_initializeEffects() {
+  if (!Platform_subscriptions || !Platform_model) {
+    safe_printf(
+      "To run a WebAssembly app, you need to pass your program configuration record through "
+      "WebAssembly.intercept before constructing the Program. For example:\n"
+      "\n"
+      "    Browser.application <|\n"
+      "        WebAssembly.intercept\n"
+      "            { init = init\n"
+      "            , onUrlChange = onUrlChange\n"
+      "            , onUrlRequest = onUrlRequest\n"
+      "            , subscriptions = subscriptions\n"
+      "            , update = update\n"
+      "            , view = view\n"
+      "            }\n"
+    );
+    exit(EXIT_FAILURE);
+  }
   Platform_managers = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
   GC_register_root((void**)&Platform_managers);
   Closure* sendToApp = newClosure(0, 1, eval_Platform_initialize_sendToApp, NULL);
@@ -332,7 +349,8 @@ ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* valu
   Closure* applyTaggers = newClosure(1, 2, eval_applyTaggers, (void*[]){taggers});
   ManagerConfig* manager = Platform_effectManagers->values[home];
   Closure* map = isCmd ? manager->cmdMap : manager->subMap;
-  return A2(map, applyTaggers, value);
+  ManagerMsg* result = A2(map, applyTaggers, value);
+  return result;
 }
 
 

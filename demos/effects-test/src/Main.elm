@@ -7,6 +7,7 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as JD exposing (Value)
+import WebAssembly
 
 
 type alias Model =
@@ -68,9 +69,10 @@ view model =
 
 main : Program () Model Msg
 main =
-    Browser.element
-        { init = \() -> ( initialModel, Cmd.none )
-        , view = view
-        , update = update
-        , subscriptions = \_ -> onKeyDown (JD.succeed ButtonClicked)
-        }
+    Browser.element <|
+        WebAssembly.intercept
+            { init = \() -> ( initialModel, Cmd.none )
+            , view = view
+            , update = update
+            , subscriptions = \_ -> onKeyDown (JD.succeed ButtonClicked)
+            }

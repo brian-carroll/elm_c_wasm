@@ -1,7 +1,6 @@
 /*
 
-import Elm.Kernel.Debug exposing (crash)
-import Elm.Kernel.Json exposing (run, wrap, errorToString)
+import Elm.Kernel.Json exposing (run, wrap)
 import Result exposing (isOk)
 
 */
@@ -32,18 +31,25 @@ function _Platform_initialize(
   stepperBuilder
 ) {
   // flagDecoder is an compiler-generated JS function. Keep the decoding in JS
-  var result = A2(
-    _Json_run,
-    flagDecoder,
-    _Json_wrap(args ? args['flags'] : undefined)
-  );
-  _Result_isOk(result) || _Debug_crash(2, _Json_errorToString(result.a));
+  // This isn't working for some reason
+  // var result = A2(
+  //   _Json_run,
+  //   flagDecoder,
+  //   _Json_wrap(args ? args['flags'] : undefined)
+  // );
+  // if (result.$ !== 'Ok' && result.$ !== 0) { // isOk is not working
+  //   throw new Error('https://github.com/elm/core/blob/1.0.0/hints/2.md');
+  // }
+  var result = {
+    $: 'Ok',
+    a: { $: 0 }
+  };
 
   // Call JS wrapper around Wasm init. Stores resulting tuple in wasm.
   var dummyPair = init(result.a);
   var stepper = stepperBuilder(wasmWrapper.sendToApp, dummyPair.a);
 
-  var portsList = wasmWrapper.initializeEffects(stepper);
+  var portsList = wasmWrapper.Platform_initializeEffects(stepper);
   var hasPorts = !!portsList.b;
   var ports = {};
   for (; portsList.b; portsList = portsList.b) {
@@ -93,6 +99,8 @@ var _Platform_sendToSelf = F2(function (router, msg) {
 
 // BAGS
 
+var $elm$core$Task$command = _Platform_leaf('Task');
+
 function _Platform_leaf(home) {
   return function (value) {
     return {
@@ -128,10 +136,14 @@ function _Platform_export(exports) {
 
 function _Platform_mergeExportsProd(obj, exports) {
   for (var name in exports) {
-    name in obj
-      ? name == 'init'
-        ? _Debug_crash(6)
-        : _Platform_mergeExportsProd(obj[name], exports[name])
-      : (obj[name] = exports[name]);
+    if (name in obj) {
+      if (name === 'init') {
+        throw new Error('https://github.com/elm/core/blob/1.0.0/hints/6.md');
+      } else {
+        _Platform_mergeExportsProd(obj[name], exports[name]);
+      }
+    } else {
+      obj[name] = exports[name];
+    }
   }
 }

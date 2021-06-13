@@ -10,13 +10,11 @@
 - [ ] Process hashmap implementation to avoid encode/decode
 
 ## TODO: Compiler support for platform/scheduler
-- [ ] Pass managerNames in JsWrapper
-- [ ] Initialise compiler JS code gen with all of these functions AND figure out their dependencies!
-  - _Json_wrap (is this a can of worms?!)
-  - _Result_isOk
-  - _Debug_crash
-- [ ] Inject manager into JS state
-- [ ] generate JS _Platform_leaf calls
+- [x] Pass managerNames in JsWrapper
+- [!] Initialise compiler JS code gen with all of these functions AND figure out their dependencies!
+  - some issues with this, not sure what's going on
+- [x] Inject manager into JS state
+- [x] generate JS _Platform_leaf calls
 
 ## Ensure JS generated code can access Platform and Scheduler, possibly via Elm code
 
