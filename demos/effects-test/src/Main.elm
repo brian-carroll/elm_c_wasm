@@ -55,10 +55,8 @@ view : Model -> Html Msg
 view model =
     div []
         [ ul []
-            [ li [] [ text "DOM click event passed via JS wrapper to Wasm handler" ]
-            , li [] [ text "Wasm update function calls Http.get, which calls JS kernel code" ]
-            , li [] [ text "Http JS code receives JSON and calls Wasm Msg contructor" ]
-            , li [] [ text "Wasm Msg passed to update function" ]
+            [ li [] [ text "Load a local JSON file over HTTP by either clicking the button or pressing any key" ]
+            , li [] [ text "This app has 3 effect managers: Http (Cmd & Sub), Task (Cmd only), and Browser.Events (Sub only)" ]
             ]
         , div [ class "effects-test" ]
             [ button [ onClick ButtonClicked ] [ text "LOAD" ]

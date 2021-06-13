@@ -150,9 +150,18 @@ extern Closure Platform_map;
 extern Closure Platform_sendToApp;
 extern Closure Platform_sendToSelf;
 
+// globals defined in platform.c
+extern ElmValue* Platform_model;
+extern ManagerMsg* Platform_initCmd;
+extern Closure* Platform_update;
+extern Closure* Platform_subscriptions;
+extern Custom* Platform_managerConfigs;
+extern Custom* Platform_managerProcs;
+
+// globals defined in generated code
+extern u32 Platform_managers_size;
+
 // Called from compiler-generated code
-extern Custom* Platform_effectManagers;
-extern u32 Platform_managers_size;  // compiler-generated constant
 void Platform_initOnIntercept(Closure* update, Closure* subscriptions);
 ManagerConfig* Platform_createManager(
     void* init, Closure* onEffects, Closure* onSelfMsg, Closure* cmdMap, Closure* subMap);

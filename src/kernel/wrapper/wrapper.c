@@ -145,12 +145,10 @@ static void* eval_intercept(void* args[]) {
   size_t FIELD_update = fg_init_subscriptions_update_view.fields[2];
   size_t FIELD_view = fg_init_subscriptions_update_view.fields[3];
 
-  Closure* userInit = Utils_access_eval((void*[]){(void*)(size_t)FIELD_init, userTEA});
-  Closure* userUpdate =
-      Utils_access_eval((void*[]){(void*)(size_t)FIELD_update, userTEA});
-  Closure* userSubs =
-      Utils_access_eval((void*[]){(void*)(size_t)FIELD_subscriptions, userTEA});
-  Closure* userView = Utils_access_eval((void*[]){(void*)(size_t)FIELD_view, userTEA});
+  Closure* userInit = Utils_access_eval((void*[]){(void*)FIELD_init, userTEA});
+  Closure* userUpdate = Utils_access_eval((void*[]){(void*)FIELD_update, userTEA});
+  Closure* userSubs = Utils_access_eval((void*[]){(void*)FIELD_subscriptions, userTEA});
+  Closure* userView = Utils_access_eval((void*[]){(void*)FIELD_view, userTEA});
 
   // Init has different arity for different Program constructors
   u16 initArity = userInit->max_values - userInit->n_values;

@@ -10,7 +10,7 @@
 // Forward declarations
 
 extern void Platform_stepper(void* model);  // imported JS function (wrapper around view)
-void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
+void Platform_enqueueEffects(Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag);
 Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);
 void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
 void Platform_gatherEffects(
@@ -28,8 +28,8 @@ ElmValue* Platform_model;
 ManagerMsg* Platform_initCmd;
 Closure* Platform_update;
 Closure* Platform_subscriptions;
-Custom* Platform_effectManagers;  // configs
-Custom* Platform_managers;        // Processes
+Custom* Platform_managerConfigs;  // JS name "_Platform_effectManagers"
+Custom* Platform_managerProcs;    // JS name "managers" (in _Platform_initialize)
 
 
 void Platform_initOnIntercept(Closure* update, Closure* subscriptions) {
@@ -48,7 +48,7 @@ void* eval_Platform_initialize_sendToApp(void* args[]) {
   Platform_stepper(Platform_model);
   void* cmd = pair->b;
   void* sub = A1(Platform_subscriptions, Platform_model);
-  Platform_enqueueEffects(Platform_managers, cmd, sub);
+  Platform_enqueueEffects(Platform_managerProcs, cmd, sub);
   return NULL;
 }
 Closure sendToApp = {
@@ -61,27 +61,26 @@ Closure sendToApp = {
 Cons* Platform_initializeEffects() {
   if (!Platform_subscriptions || !Platform_model) {
     safe_printf(
-      "To run a WebAssembly app, you need to pass your program configuration record through "
-      "WebAssembly.intercept before constructing the Program. For example:\n"
-      "\n"
-      "    Browser.application <|\n"
-      "        WebAssembly.intercept\n"
-      "            { init = init\n"
-      "            , onUrlChange = onUrlChange\n"
-      "            , onUrlRequest = onUrlRequest\n"
-      "            , subscriptions = subscriptions\n"
-      "            , update = update\n"
-      "            , view = view\n"
-      "            }\n"
-    );
+        "To run a WebAssembly app, you need to pass your program configuration record "
+        "through WebAssembly.intercept before constructing the Program. For example:\n"
+        "\n"
+        "    Browser.application <|\n"
+        "        WebAssembly.intercept\n"
+        "            { init = init\n"
+        "            , onUrlChange = onUrlChange\n"
+        "            , onUrlRequest = onUrlRequest\n"
+        "            , subscriptions = subscriptions\n"
+        "            , update = update\n"
+        "            , view = view\n"
+        "            }\n");
     exit(EXIT_FAILURE);
   }
-  Platform_managers = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
-  GC_register_root((void**)&Platform_managers);
+  Platform_managerProcs = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
+  GC_register_root((void**)&Platform_managerProcs);
   Closure* sendToApp = newClosure(0, 1, eval_Platform_initialize_sendToApp, NULL);
-  Cons* portsList = Platform_setupEffects(Platform_managers, sendToApp);
+  Cons* portsList = Platform_setupEffects(Platform_managerProcs, sendToApp);
   ManagerMsg* sub = A1(Platform_subscriptions, Platform_model);
-  Platform_enqueueEffects(Platform_managers, Platform_initCmd, sub);
+  Platform_enqueueEffects(Platform_managerProcs, Platform_initCmd, sub);
   Platform_initCmd = NULL;
   return portsList;
 }
@@ -93,25 +92,25 @@ Cons* Platform_initializeEffects() {
 
    ==================================================== */
 
-Cons* Platform_setupEffects(Custom* managers, Closure* sendToApp) {
+Cons* Platform_setupEffects(Custom* managerProcs, Closure* sendToApp) {
   Cons* portsList = &Nil;
 
   for (u32 i = 0; i < Platform_managers_size; i++) {
-    ManagerConfig* manager = Platform_effectManagers->values[i];
+    ManagerConfig* config = Platform_managerConfigs->values[i];
 
-    if (manager->ctor == MANAGER_PORT_OUT) {
-      PortConfig* port = (PortConfig*)manager;
+    if (config->ctor == MANAGER_PORT_OUT) {
+      PortConfig* port = (PortConfig*)config;
       Tuple2* keyValuePair =
           newTuple2(port->name, Platform_setupOutgoingPort(port->name));
       portsList = newCons(keyValuePair, portsList);
-    } else if (manager->ctor == MANAGER_PORT_IN) {
-      PortConfig* port = (PortConfig*)manager;
+    } else if (config->ctor == MANAGER_PORT_IN) {
+      PortConfig* port = (PortConfig*)config;
       Tuple2* keyValuePair =
           newTuple2(port->name, Platform_setupIncomingPort(port->name, sendToApp));
       portsList = newCons(keyValuePair, portsList);
     }
-
-    managers->values[i] = Platform_instantiateManager(manager, sendToApp);
+    Process* proc = Platform_instantiateManager(config, sendToApp);
+    managerProcs->values[i] = proc;
   }
 
   return portsList;
@@ -124,17 +123,17 @@ ManagerConfig* Platform_createManager(void* init,
     Closure* cmdMap,
     Closure* subMap) {
   const u32 size = sizeof(ManagerConfig) / SIZE_UNIT;
-  ManagerConfig* manager = GC_allocate(true, size);
-  manager->header = (Header){.tag = Tag_Custom, .size = size};
-  manager->ctor = KERNEL_CTOR_OFFSET;
+  ManagerConfig* config = GC_allocate(true, size);
+  config->header = (Header){.tag = Tag_Custom, .size = size};
+  config->ctor = KERNEL_CTOR_OFFSET;
 
-  manager->init = init;
-  manager->onEffects = onEffects;
-  manager->onSelfMsg = onSelfMsg;
-  manager->cmdMap = cmdMap;
-  manager->subMap = subMap;
+  config->init = init;
+  config->onEffects = onEffects;
+  config->onSelfMsg = onSelfMsg;
+  config->cmdMap = cmdMap;
+  config->subMap = subMap;
 
-  return manager;
+  return config;
 }
 
 
@@ -278,8 +277,8 @@ Queue Platform_effectsQueue = {
 };
 
 
-void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag) {
-  Queue_push(&Platform_effectsQueue, newTuple3(managers, cmdBag, subBag));
+void Platform_enqueueEffects(Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag) {
+  Queue_push(&Platform_effectsQueue, newTuple3(managerProcs, cmdBag, subBag));
 
   if (Platform_effectsActive) return;
 
@@ -293,8 +292,8 @@ void Platform_enqueueEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* s
 }
 
 
-void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag) {
-  u32 n_managers = custom_params(managers);
+void Platform_dispatchEffects(Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag) {
+  u32 n_managers = custom_params(managerProcs);
   Custom* effectsDict = newCustom(KERNEL_CTOR_OFFSET, n_managers, NULL);
   for (u32 i = 0; i < n_managers; i++) {
     effectsDict->values[i] = NULL;
@@ -302,7 +301,7 @@ void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* 
   Platform_gatherEffects(true, cmdBag, effectsDict, &Nil);
   Platform_gatherEffects(false, subBag, effectsDict, &Nil);
   for (u32 home = 0; home < n_managers; home++) {
-    Process* managerProc = managers->values[home];
+    Process* managerProc = managerProcs->values[home];
     ManagerMsg* msg;
     if (effectsDict->values[home]) {
       msg = effectsDict->values[home];
@@ -354,8 +353,8 @@ void* eval_applyTaggers(void* args[]) {
 }
 ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value) {
   Closure* applyTaggers = newClosure(1, 2, eval_applyTaggers, (void*[]){taggers});
-  ManagerConfig* manager = Platform_effectManagers->values[home];
-  Closure* map = isCmd ? manager->cmdMap : manager->subMap;
+  ManagerConfig* config = Platform_managerConfigs->values[home];
+  Closure* map = isCmd ? config->cmdMap : config->subMap;
   ManagerMsg* result = A2(map, applyTaggers, value);
   return result;
 }
