@@ -36,10 +36,10 @@ typedef enum {
   Tag_JsRef,       // b
 } Tag;
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 typedef struct {
   u32 size : 27;
-  Tag tag : 5;  // Windows treats this as signed, so comparisons can go wrong
+  Tag tag : 5;  // Microsoft compiler treats this as signed, so comparisons can go wrong
 } Header;
 #else
 typedef struct {
