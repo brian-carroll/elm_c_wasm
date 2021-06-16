@@ -199,4 +199,10 @@ void Platform_stepper(void* model) {
   return;
 }
 
+void* evalJsThunk(Closure* cjs) {
+  Closure* cwasm = newClosure(cjs->n_values, cjs->n_values, cjs->evaluator, cjs->values);
+  void* result = Utils_apply(cwasm, 0, NULL);
+  return result;
+}
+
 #endif

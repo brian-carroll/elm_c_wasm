@@ -7,7 +7,7 @@ Cons* mock_js_Platform_initialize() {
   size_t FIELD_init = fg_init_subscriptions_update_view.fields[0];
   Closure* wrappedInit = Utils_access_eval((void*[]){(void*)FIELD_init, wrappedTEA});
   Custom* dummyFlags = &Unit;
-  Tuple2* dummyPair = A1(wrappedInit, dummyFlags);
+  A1(wrappedInit, dummyFlags);
   Cons* portList = Platform_initializeEffects();
   return portList;
 }

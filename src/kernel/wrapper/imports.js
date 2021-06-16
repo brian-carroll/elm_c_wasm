@@ -27,5 +27,10 @@ mergeInto(LibraryManager.library, {
 
   Platform_stepper: function (model) {
     wasmWrapper.Platform_stepper(model);
+  },
+
+  evalJsThunk: function (closureAddr) {
+    const jsResult = wasmWrapper.readWasmValue(closureAddr);
+    return wasmWrapper.writeWasmValue(jsResult);
   }
 });

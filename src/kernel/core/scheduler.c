@@ -257,8 +257,26 @@ static ProcessStack* newProcessStack(u32 ctor, Closure* callback, ProcessStack* 
 }
 
 
+static void* evalJsThunkIfNeeded(void* value) {
+  ElmValue* jsOrWasmValue = value;
+  bool isJs = jsOrWasmValue->header.tag == Tag_Closure &&
+              jsOrWasmValue->closure.max_values == NEVER_EVALUATE;
+  void* wasmValue;
+  if (isJs) {
+    DEBUG_PRETTY(jsOrWasmValue);
+    wasmValue = evalJsThunk(jsOrWasmValue);
+    DEBUG_PRETTY(wasmValue);
+  } else {
+    wasmValue = jsOrWasmValue;
+  }
+  return wasmValue;
+}
+
+
 static void Scheduler_step(Process* proc) {
   while (proc->root) {
+    proc->root = evalJsThunkIfNeeded(proc->root);
+
     u32 rootTag = proc->root->ctor;
     if (rootTag == TASK_SUCCEED || rootTag == TASK_FAIL) {
       while (proc->stack && proc->stack->ctor != rootTag) {

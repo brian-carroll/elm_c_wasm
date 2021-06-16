@@ -393,7 +393,7 @@ extern char etext, edata, end;  // memory regions, defined by linker
 #endif
 
 void pretty_print_child(int indent, void* p) {
-  if (indent > 10) {
+  if (indent > 20) {
     safe_printf("...etc...\n");
     return;
   }
@@ -409,7 +409,7 @@ static void Debug_prettyHelp(int indent, void* p) {
     safe_printf("NULL\n");
     return;
   }
-  if (indent > 10) {
+  if (indent > 20) {
     safe_printf("...etc...\n");
     return;
   }
