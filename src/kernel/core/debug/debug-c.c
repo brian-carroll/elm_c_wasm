@@ -170,6 +170,19 @@ void print_value(void* p) {
     case Tag_JsRef:
       safe_printf("JsRef %d", v->js_ref.index);
       break;
+    case Tag_Process: {
+      Process* p = (Process*)v;
+      u32 stack_size = 0;
+      for (ProcessStack* stack = p->stack; stack; stack = stack->rest) {
+        stack_size++;
+      }
+      u32 mailbox_size = 0;
+      for (Cons* cell = p->mailbox.front; cell != &Nil; cell = cell->tail) {
+        mailbox_size++;
+      }
+      safe_printf("Process id %d, stack size %d, mailbox size %d", p->id, stack_size, mailbox_size);
+      break;
+    }
     default:
       safe_printf("<Corrupt data, tag=0x%x>", v->header.tag);
   }
@@ -573,7 +586,7 @@ static void Debug_prettyHelp(int indent, void* p) {
         if (js_value_id < Debug_jsValues_size) {
           name = Debug_jsValues[js_value_id];
         } else {
-          name = "(unknown)";
+          name = "(unknown JS function)";
         }
       }
       safe_printf("Closure %s\n", name);
@@ -585,6 +598,24 @@ static void Debug_prettyHelp(int indent, void* p) {
     case Tag_JsRef:
       safe_printf("External JS object #%d\n", v->js_ref.index);
       break;
+
+    case Tag_Process: {
+      Process* p = (Process*)v;
+      u32 stack_size = 0;
+      for (ProcessStack* stack = p->stack; stack; stack = stack->rest) {
+        stack_size++;
+      }
+      u32 mailbox_size = 0;
+      for (Cons* cell = p->mailbox.front; cell != &Nil; cell = cell->tail) {
+        mailbox_size++;
+      }
+      safe_printf("Process id %d, stack size %d, mailbox size %d\n", p->id, stack_size, mailbox_size);
+      for (int i = 0; i < custom_params(&v->custom) && i < 10; i++) {
+        pretty_print_child(deeper, v->custom.values[i]);
+      }
+      break;
+    }
+
     default:
       safe_printf("CORRUPTED!! tag %x size %d\n", v->header.tag, v->header.size);
       break;

@@ -30,6 +30,7 @@ Closure* Platform_update;
 Closure* Platform_subscriptions;
 Custom* Platform_managerConfigs;  // JS name "_Platform_effectManagers"
 Custom* Platform_managerProcs;    // JS name "managers" (in _Platform_initialize)
+DynamicArray* Platform_process_cache;
 
 
 void Platform_initOnIntercept(Closure* update, Closure* subscriptions) {
@@ -77,6 +78,10 @@ Cons* Platform_initializeEffects() {
   }
   Platform_managerProcs = newCustom(KERNEL_CTOR_OFFSET, Platform_managers_size, NULL);
   GC_register_root((void**)&Platform_managerProcs);
+
+  Platform_process_cache = newDynamicArray(8);
+  GC_register_root((void**)&Platform_process_cache);
+
   Closure* sendToApp = newClosure(0, 1, eval_Platform_initialize_sendToApp, NULL);
   Cons* portsList = Platform_setupEffects(Platform_managerProcs, sendToApp);
   ManagerMsg* sub = A1(Platform_subscriptions, Platform_model);

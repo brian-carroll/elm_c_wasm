@@ -44,6 +44,7 @@ extern int Debug_ctors_size;
 extern int Debug_fields_size;
 extern int Debug_jsValues_size;
 char* Debug_evaluator_name(void*);
+char* Debug_evaluator_name_core(void* p);
 
 void Debug_pause();
 bool sanity_check(void* v);

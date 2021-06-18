@@ -39,6 +39,7 @@ interface EmscriptenModule {
   _get_eval_Json_run: () => number;
   _get_sendToApp: () => number;
   _initializeEffects: () => number;
+  _findProcess: (id: number) => number;
   _debugHeapState: () => void;
   _debugAddrRange: (start: number, size: number) => void;
   _debugStackMap: () => void;
@@ -215,10 +216,11 @@ function wrapWasmElmApp(
     FieldGroup = 0x9,
     Closure = 0xa,
     JsRef = 0xb,
-    GcStackEmpty = 0xc,
-    GcStackPush = 0xd,
-    GcStackPop = 0xe,
-    GcStackTailCall = 0xf
+    Process = 0xc,
+  }
+
+  class Process {
+    constructor(public id: number) {}
   }
 
   /* --------------------------------------------------
@@ -346,6 +348,10 @@ function wrapWasmElmApp(
         return metadata.max_values === NEVER_EVALUATE
           ? evalKernelThunk(metadata)
           : createWasmCallback(metadata);
+      }
+      case Tag.Process: {
+        const id = mem32[index + 1];
+        return new Process(id);
       }
       default:
         throw new Error(
@@ -491,6 +497,9 @@ function wrapWasmElmApp(
           mem32[index + 1] =
             elmValue.charCodeAt(0) | (elmValue.charCodeAt(1) << 16);
           return addr;
+        }
+        if (elmValue instanceof Process) {
+          return emscriptenModule._findProcess(elmValue.id);
         }
         if (Array.isArray(elmValue)) {
           // A JS array in a _kernel_ datastructure, not a Json Value

@@ -5,6 +5,7 @@
 #include "basics.c"
 #include "bitwise.c"
 #include "char.c"
+#include "dynamic-array.c"
 #include "js-array.c"
 #include "list.c"
 #include "platform.c"

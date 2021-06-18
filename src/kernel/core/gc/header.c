@@ -38,6 +38,9 @@ size_t child_count(ElmValue* v) {
     case Tag_Closure:
       return v->closure.n_values;
 
+    case Tag_Process:
+      return (sizeof(Process) - sizeof(Custom)) / SIZE_UNIT;
+
     case Tag_JsRef:
     default:
       return 0;

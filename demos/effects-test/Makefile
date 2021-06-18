@@ -3,6 +3,7 @@
 ELM_SOURCES := $(shell find ./src -name '*.elm')
 KERNELC := $(shell find ../../src/kernel -name '*.c')
 KERNELH := $(shell find ../../src/kernel -name '*.h')
+KERNELJS := $(shell find ../../src/kernel -name '*.js')
 WRAPPER := ../../src/kernel/wrapper/wrapper
 
 .PHONY: all clean
@@ -23,7 +24,7 @@ build/codemods/elm.c: build/elm/elm.c codemods.js
 	@mkdir -p build/codemods
 	node codemods.js build/elm/elm.c > build/codemods/elm.c
 
-dist/elm.wasm: build-wasm.sh build/codemods/elm.c $(KERNELC) $(KERNELH) $(WRAPPER).js
+dist/elm.wasm: build-wasm.sh build/codemods/elm.c $(KERNELC) $(KERNELH) $(KERNELJS)
 	@dos2unix -q build-wasm.sh
 	bash build-wasm.sh
 

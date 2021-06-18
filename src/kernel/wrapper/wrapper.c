@@ -83,6 +83,19 @@ EMSCRIPTEN_KEEPALIVE Cons* initializeEffects() {
   return Platform_initializeEffects();
 }
 
+EMSCRIPTEN_KEEPALIVE Process* findProcess(u32 id) {
+  for (u32 i = 0; i < Platform_process_cache->occupied; i++) {
+    Process* proc = Platform_process_cache->values[i];
+    if (proc->id == id) {
+      return proc;
+    }
+  }
+  safe_printf("Failed to find process %d\n", id);
+  exit(1);
+  return NULL;
+}
+
+
 
 // DEBUG EXPORTS
 

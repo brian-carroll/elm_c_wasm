@@ -10,6 +10,7 @@
 #include "./log.c"
 #include "./debug-c.c"
 #include "./debug-elm.c"
+#include "./core-evaluators.c"
 
 #if PERF_TIMER_ENABLED
 #include "./debug-perf.c"

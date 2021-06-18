@@ -34,6 +34,7 @@ typedef enum {
   Tag_FieldGroup,  // 9
   Tag_Closure,     // a
   Tag_JsRef,       // b
+  Tag_Process,     // c
 } Tag;
 
 #ifdef _MSC_VER
@@ -385,6 +386,13 @@ typedef struct router {
   Closure* sendToApp;
   Process* selfProcess;
 } Router;
+
+
+typedef struct dynamic_array {
+  Header header;
+  u32 occupied;
+  void* values[];
+} DynamicArray;
 
 
 #endif  // #ifndef ELM_KERNEL_TYPES

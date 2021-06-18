@@ -1,5 +1,9 @@
 #include "types.h"
 
+extern DynamicArray* Platform_process_cache;
+void DynamicArray_push(DynamicArray** array_ref, void* value);
+void DynamicArray_remove(DynamicArray* array, u32 index);
+
 /* ====================================================
 
                 TASKS
@@ -11,10 +15,10 @@ Task* newTask(u32 ctor, void* value, Closure* callback, Closure* kill, Task* tas
   Task* t = GC_allocate(true, size);
   t->header = (Header){.tag = Tag_Custom, .size = size};
   t->ctor = ctor;
-  t->value = value;
-  t->callback = callback;
-  t->kill = kill;
-  t->task = task;
+  t->value = value; // a
+  t->callback = callback; // b
+  t->kill = kill; // c
+  t->task = task; // d
   return t;
 }
 
@@ -103,12 +107,14 @@ void* eval_Scheduler_rawSpawn(void* args[]) {
 
   const u32 size = sizeof(Process) / SIZE_UNIT;
   Process* proc = GC_allocate(true, size);
-  proc->header = (Header){.tag = Tag_Custom, .size = size};
+  proc->header = (Header){.tag = Tag_Process, .size = size};
   proc->id = Scheduler_guid++;
   proc->root = task;
   proc->stack = NULL;
   proc->mailbox.front = &Nil;
   proc->mailbox.back = &Nil;
+
+  DynamicArray_push(&Platform_process_cache, proc);
 
   Scheduler_enqueue(proc);
 
@@ -258,9 +264,9 @@ static ProcessStack* newProcessStack(u32 ctor, Closure* callback, ProcessStack* 
 
 
 static void* evalJsThunkIfNeeded(void* value) {
-  ElmValue* jsOrWasmValue = value;
+  Closure* jsOrWasmValue = value;
   bool isJs = jsOrWasmValue->header.tag == Tag_Closure &&
-              jsOrWasmValue->closure.max_values == NEVER_EVALUATE;
+              jsOrWasmValue->max_values == NEVER_EVALUATE;
   void* wasmValue;
   if (isJs) {
     DEBUG_PRETTY(jsOrWasmValue);
@@ -283,6 +289,17 @@ static void Scheduler_step(Process* proc) {
         proc->stack = proc->stack->rest;
       }
       if (!proc->stack) {
+        i32 cache_index = -1;
+        for (u32 i = 0; i < Platform_process_cache->occupied; i++) {
+          if (Platform_process_cache->values[i] == proc) {
+            cache_index = i;
+            break;
+          }
+        }
+        if (cache_index == -1) {
+          safe_printf("process cache miss for Process id %d @ %p\n", proc->id, proc);
+        }
+        // DynamicArray_remove(Platform_process_cache, cache_index);
         return;
       }
       proc->root = A1(proc->stack->callback, proc->root->value);

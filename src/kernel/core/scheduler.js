@@ -10,45 +10,45 @@ const TASK_RECEIVE = 5;
 function _Scheduler_succeed(value) {
   return {
     $: TASK_SUCCEED,
-    __value: value
+    a: value
   };
 }
 
 function _Scheduler_fail(error) {
   return {
     $: TASK_FAIL,
-    __value: error
+    a: error // value
   };
 }
 
 function _Scheduler_binding(callback) {
   return {
     $: TASK_BINDING,
-    __callback: callback,
-    __kill: null
+    b: callback,
+    c: null // kill
   };
 }
 
 var _Scheduler_andThen = F2(function (callback, task) {
   return {
     $: TASK_AND_THEN,
-    __callback: callback,
-    __task: task
+    b: callback,
+    d: task
   };
 });
 
 var _Scheduler_onError = F2(function (callback, task) {
   return {
     $: TASK_ON_ERROR,
-    __callback: callback,
-    __task: task
+    b: callback,
+    d: task
   };
 });
 
 function _Scheduler_receive(callback) {
   return {
     $: TASK_RECEIVE,
-    __callback: callback
+    b: callback
   };
 }
 

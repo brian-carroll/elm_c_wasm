@@ -71,6 +71,11 @@ extern Closure Char_toCode;
 
 // =========================================
 
+void DynamicArray_push(DynamicArray** array_ref, void* value);
+void DynamicArray_remove(DynamicArray* array, u32 index);
+
+// =========================================
+
 extern Custom g_elm_core_Basics_LT;
 extern Custom g_elm_core_Basics_EQ;
 extern Custom g_elm_core_Basics_GT;
@@ -157,6 +162,7 @@ extern Closure* Platform_update;
 extern Closure* Platform_subscriptions;
 extern Custom* Platform_managerConfigs;
 extern Custom* Platform_managerProcs;
+extern DynamicArray* Platform_process_cache;
 
 // globals defined in generated code
 extern u32 Platform_managers_size;
