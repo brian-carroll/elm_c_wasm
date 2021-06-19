@@ -90,6 +90,7 @@ EMSCRIPTEN_KEEPALIVE Process* findProcess(u32 id) {
       return proc;
     }
   }
+  DEBUG_PRETTY(Platform_process_cache);
   safe_printf("Failed to find process %d\n", id);
   exit(1);
   return NULL;

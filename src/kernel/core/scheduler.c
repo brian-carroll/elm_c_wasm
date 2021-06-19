@@ -302,11 +302,11 @@ static void Scheduler_step(Process* proc) {
         // DynamicArray_remove(Platform_process_cache, cache_index);
         return;
       }
-      proc->root = A1(proc->stack->callback, proc->root->value);
+      proc->root = evalJsThunkIfNeeded(A1(proc->stack->callback, proc->root->value));
       proc->stack = proc->stack->rest;
     } else if (rootTag == TASK_BINDING) {
       Closure* lambda = newClosure(1, 2, eval_Scheduler_step_lambda, (void*[]){proc});
-      proc->root->kill = A1(proc->root->callback, lambda);
+      proc->root->kill = evalJsThunkIfNeeded(A1(proc->root->callback, lambda));
       return;
     } else if (rootTag == TASK_RECEIVE) {
       void* msg = Queue_shift(&proc->mailbox);

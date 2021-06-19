@@ -31,6 +31,7 @@ mergeInto(LibraryManager.library, {
 
   evalJsThunk: function (closureAddr) {
     const jsResult = wasmWrapper.readWasmValue(closureAddr);
+    console.log('evalJsThunk', jsResult);
     return wasmWrapper.writeWasmValue(jsResult);
   }
 });

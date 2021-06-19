@@ -910,6 +910,7 @@ function wrapWasmElmApp(
     Platform_sendToApp: emscriptenModule._get_Platform_sendToApp(),
     Platform_sendToSelf: emscriptenModule._get_Platform_sendToSelf(),
     sendToApp_revArgs: emscriptenModule._get_sendToApp_revArgs(),
-    managerNames
+    managerNames,
+    kernelFunctions
   };
 }

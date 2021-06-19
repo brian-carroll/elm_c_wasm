@@ -152,14 +152,14 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
     GcStackMapIndex stack_frame = GC_get_stack_frame();
     void* result = c->evaluator(args);
 
-    if (!result) {
-      safe_printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
-      char label[5] = "arg 0";
-      for (int i=0; i< n_applied; i++) {
-        Debug_pretty(label, args[i]);
-        label[4]++;
-      }
-    }
+    // if (!result) {
+    //   safe_printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
+    //   char label[5] = "arg 0";
+    //   for (int i=0; i< n_applied; i++) {
+    //     Debug_pretty(label, args[i]);
+    //     label[4]++;
+    //   }
+    // }
 
 
     GC_stack_pop_frame(c->evaluator, result, stack_frame);
@@ -281,7 +281,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
   }
 }
 
-static void* eq_eval(void* args[2]) {
+void* eq_eval(void* args[]) {
   ElmValue* nil = (ElmValue*)&Nil;
   ElmValue* stack = nil;
   u32 isEqual = eq_help(args[0], args[1], 0, &stack);
@@ -302,7 +302,7 @@ Closure Utils_equal = {
 };
 
 // INEQUALITY
-static void* eval_notEqual(void* args[2]) {
+void* eval_notEqual(void* args[]) {
   void* equal = eq_eval(args);
   return equal == &False ? &True : &False;
 }
@@ -406,7 +406,7 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
   }
 }
 
-static void* compare_eval(void* args[2]) {
+void* compare_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return compare_help(x, y);
@@ -417,7 +417,7 @@ Closure Utils_compare = {
     .max_values = 2,
 };
 
-static void* lt_eval(void* args[2]) {
+void* lt_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &g_elm_core_Basics_LT) ? &True : &False;
@@ -428,7 +428,7 @@ Closure Utils_lt = {
     .max_values = 2,
 };
 
-static void* le_eval(void* args[2]) {
+void* le_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &g_elm_core_Basics_GT) ? &True : &False;
@@ -439,7 +439,7 @@ Closure Utils_le = {
     .max_values = 2,
 };
 
-static void* gt_eval(void* args[2]) {
+void* gt_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &g_elm_core_Basics_GT) ? &True : &False;
@@ -450,7 +450,7 @@ Closure Utils_gt = {
     .max_values = 2,
 };
 
-static void* ge_eval(void* args[2]) {
+void* ge_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &g_elm_core_Basics_LT) ? &True : &False;

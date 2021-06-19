@@ -78,6 +78,8 @@ bool sanity_check(void* p) {
       return (h.size >= SIZE_CLOSURE(0)) && (h.size < SIZE_CLOSURE(SANITY_MAX_CHILDREN));
     case Tag_JsRef:
       return (h.size == SIZE_JS_REF);
+    case Tag_Process:
+      return (h.size == (sizeof(Process) / SIZE_UNIT));
     default:
       return false;
   }

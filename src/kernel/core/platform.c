@@ -9,7 +9,6 @@
 
 // Forward declarations
 
-extern void jsStepper(void* viewMetadata);  // imported JS view wrapper
 void Platform_enqueueEffects(
     Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag);
 Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);

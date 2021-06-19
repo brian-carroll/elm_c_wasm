@@ -18,7 +18,7 @@ extern void* getJsRefValue(u32 jsRefId);
 extern void markJsRef(u32 jsRefId);
 extern void sweepJsRefs(bool isFullGc);
 extern f64 parseFloat(u16* addr, size_t len16);
-extern void wasmImportStepper(void* viewMetadata);
 extern void* evalJsThunk(Closure* c);
+extern void jsStepper(void* viewMetadata);
 
 #endif

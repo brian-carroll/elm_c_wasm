@@ -195,7 +195,7 @@ f64 parseFloat(u16* chars16, size_t len16) {
 }
 
 
-void wasmImportStepper(void* viewMetadata) {
+void jsStepper(void* viewMetadata) {
   return;
 }
 

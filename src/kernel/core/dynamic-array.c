@@ -23,6 +23,7 @@ void DynamicArray_push(DynamicArray** array_ref, void* value) {
   } else {
     size_t new_capacity = (orig_capacity < 1024) ? (orig_capacity * 2) : (orig_capacity + 1024);
     current = newDynamicArray(new_capacity);
+    current->occupied = orig->occupied;
     for (size_t i = 0; i < orig_capacity; i++) {
       current->values[i] = orig->values[i];
     }
