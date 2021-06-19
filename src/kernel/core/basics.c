@@ -8,7 +8,7 @@
  * Elm version of Basics_negate ends up being self-referential!
  * Have to break the cycle using a kernel version
  */
-static void* eval_negate(void* args[]) {
+void* eval_negate(void* args[]) {
   Number* x = args[0];
   if (x->f.header.tag == Tag_Float) {
     f64 val = x->f.value;
@@ -27,7 +27,7 @@ Closure Basics_negate = {
 /**
  * add
  */
-static void* eval_add(void* args[2]) {
+void* eval_add(void* args[]) {
   Number* pa = args[0];
   Number* pb = args[1];
   Tag ta = pa->f.header.tag;
@@ -54,7 +54,7 @@ Closure Basics_add = {
 /**
  * sub
  */
-static void* eval_sub(void* args[2]) {
+void* eval_sub(void* args[]) {
   Number* pa = args[0];
   Number* pb = args[1];
   Tag ta = pa->f.header.tag;
@@ -81,7 +81,7 @@ Closure Basics_sub = {
 /**
  * mul
  */
-static void* eval_mul(void* args[2]) {
+void* eval_mul(void* args[]) {
   Number* pa = args[0];
   Number* pb = args[1];
   Tag ta = pa->f.header.tag;
@@ -107,7 +107,7 @@ Closure Basics_mul = {
 /**
  * fdiv
  */
-static void* eval_fdiv(void* args[2]) {
+void* eval_fdiv(void* args[]) {
   Number* pa = args[0];
   Number* pb = args[1];
   Tag ta = pa->f.header.tag;
@@ -135,7 +135,7 @@ Closure Basics_fdiv = {
 /**
  * idiv
  */
-static void* eval_idiv(void* args[2]) {
+void* eval_idiv(void* args[]) {
   ElmInt* ia = args[0];
   ElmInt* ib = args[1];
   i32 result = ia->value / ib->value;
@@ -179,7 +179,7 @@ static i32 ipow(i32 base, i32 ex) {
   }
   return result;
 }
-static void* eval_pow(void* args[2]) {
+void* eval_pow(void* args[]) {
   Number* pa = args[0];
   Number* pb = args[1];
   if (pa->f.header.tag == Tag_Float) {
@@ -203,7 +203,7 @@ Closure Basics_pow = {
 /*
  * toFloat
  */
-static void* eval_toFloat(void* args[]) {
+void* eval_toFloat(void* args[]) {
   ElmInt* i = args[0];
   if (i->header.tag == Tag_Float) return i;
   return newElmFloat((f64)i->value);
@@ -217,7 +217,7 @@ Closure Basics_toFloat = {
 /*
  * round
  */
-static void* eval_round(void* args[]) {
+void* eval_round(void* args[]) {
   ElmFloat* f = args[0];
   if (f->header.tag == Tag_Int) return f;
   f64 result = round(f->value);
@@ -232,7 +232,7 @@ Closure Basics_round = {
 /*
  * floor
  */
-static void* eval_floor(void* args[]) {
+void* eval_floor(void* args[]) {
   ElmFloat* f = args[0];
   if (f->header.tag == Tag_Int) return f;
   f64 result = floor(f->value);
@@ -247,7 +247,7 @@ Closure Basics_floor = {
 /*
  * ceiling
  */
-static void* eval_ceiling(void* args[]) {
+void* eval_ceiling(void* args[]) {
   ElmFloat* f = args[0];
   if (f->header.tag == Tag_Int) return f;
   f64 result = ceil(f->value);
@@ -262,7 +262,7 @@ Closure Basics_ceiling = {
 /**
  * not
  */
-static void* eval_not(void* args[2]) {
+void* eval_not(void* args[]) {
   return (args[0] == &False) ? &True : &False;
 }
 Closure Basics_not = {
@@ -274,7 +274,7 @@ Closure Basics_not = {
 /**
  * and
  */
-static void* eval_and(void* args[2]) {
+void* eval_and(void* args[]) {
   return (args[0] == &True && args[1] == &True) ? &True : &False;
 }
 Closure Basics_and = {
@@ -286,7 +286,7 @@ Closure Basics_and = {
 /**
  * or
  */
-static void* eval_or(void* args[2]) {
+void* eval_or(void* args[]) {
   return (args[0] == &True || args[1] == &True) ? &True : &False;
 }
 Closure Basics_or = {
@@ -298,7 +298,7 @@ Closure Basics_or = {
 /**
  * xor
  */
-static void* eval_xor(void* args[2]) {
+void* eval_xor(void* args[]) {
   return (args[0] != args[1]) ? &True : &False;
 }
 Closure Basics_xor = {
@@ -310,7 +310,7 @@ Closure Basics_xor = {
 /**
  * modBy
  */
-static void* eval_remainderBy(void* args[]) {
+void* eval_remainderBy(void* args[]) {
   ElmInt* den = args[0];
   ElmInt* num = args[1];
   return newElmInt(num->value % den->value);
@@ -325,7 +325,7 @@ Closure Basics_remainderBy = {
  * modBy
  * https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/divmodnote-letter.pdf
  */
-static void* eval_modBy(void* args[]) {
+void* eval_modBy(void* args[]) {
   ElmInt* a0 = args[0];
   ElmInt* a1 = args[1];
   i32 modulus = a0->value;
@@ -347,7 +347,7 @@ Closure Basics_modBy = {
 /**
  * log
  */
-static void* eval_log(void* args[]) {
+void* eval_log(void* args[]) {
   Number* x = args[0];
   // Type uncertainty due to Number literals generated as Int
   f64 value = x->f.header.tag == Tag_Float ? x->f.value : (f64)x->i.value;
@@ -362,7 +362,7 @@ Closure Basics_log = {
 /**
  * identity
  */
-static void* eval_identity(void* args[]) {
+void* eval_identity(void* args[]) {
   return args[0];
 }
 Closure Basics_identity = {

@@ -146,7 +146,7 @@ ManagerConfig* Platform_createManager(void* init,
 }
 
 
-static void* eval_manager_loop_receive(void* args[]) {
+void* eval_manager_loop_receive(void* args[]) {
   ManagerConfig* info = args[0];
   Router* router = args[1];
   void* state = args[2];
@@ -164,7 +164,7 @@ static void* eval_manager_loop_receive(void* args[]) {
 }
 
 
-static void* eval_manager_loop(void* args[]) {
+void* eval_manager_loop(void* args[]) {
   // ManagerConfig* info = args[0];
   // Router* router = args[1];
   // void* state = args[2];
@@ -199,7 +199,7 @@ Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp) {
    ==================================================== */
 
 
-static void* eval_Platform_sendToApp_lambda(void* args[]) {
+void* eval_Platform_sendToApp_lambda(void* args[]) {
   Router* router = args[0];
   void* msg = args[1];
   Closure* callback = args[2];

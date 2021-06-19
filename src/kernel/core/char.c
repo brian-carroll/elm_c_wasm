@@ -1,6 +1,6 @@
 #include "core.h"
 
-static void* eval_toCode(void* args[]) {
+void* eval_toCode(void* args[]) {
   ElmChar* c = args[0];
   u32 high = (u32)(c->words16[0]);
   u32 low = (u32)(c->words16[1]);

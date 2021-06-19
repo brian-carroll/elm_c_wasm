@@ -1,51 +1,55 @@
 const fs = require('fs');
+const child_process = require('child_process');
 
-const headerFiles = ['./src/kernel/core/core.h', './src/kernel/json/json.h'];
 const outFile = './src/kernel/core/debug/core-evaluators.c';
 
-const extractClosures = lines => {
-  const rClosure = /^extern Closure (\w+);$/;
-  return lines
-    .map(line => {
-      const m = line.match(rClosure);
-      return m && m[1];
-    })
-    .filter(x => x)
-    .flatMap(closure => [
-      `  if (p == ${closure}.evaluator) {`,
-      `    return "${closure}";`,
-      `  }`
-    ]);
-};
+const execOptions = undefined;
+child_process.exec(
+  'find src/kernel -name "*.c"',
+  execOptions,
+  (err, stdout, stderr) => {
+    if (err) {
+      throw err;
+    }
+    const filenames = stdout.split(/[\r\n]+/);
+    const c_code = generateCode(filenames);
+    fs.writeFileSync(outFile, c_code);
+  }
+);
 
-const extractEvaluators = lines => {
-  const rEval = /^void\* (eval_\w+)/;
-  return lines
-    .map(line => {
+const rEval = /^void\* (\w+)\(void\* args\[/;
+
+function generateCode(filenames) {
+  const evaluators = [];
+
+  filenames.forEach(filename => {
+    if (!filename) return;
+    const text = fs.readFileSync(filename).toString();
+    const lines = text.split(/[\r\n]+/);
+    lines.forEach(line => {
       const m = line.match(rEval);
-      return m && m[1];
-    })
-    .filter(x => x)
-    .flatMap(evaluator => [
+      if (m) {
+        evaluators.push(m[1]);
+      }
+    });
+  });
+
+  const c_code_lines = [];
+  evaluators.forEach(evaluator => {
+    c_code_lines.push(`void* ${evaluator}(void* args[]);`);
+  });
+  c_code_lines.push('');
+  c_code_lines.push('char* Debug_evaluator_name_core(void* p) {');
+  evaluators.forEach(evaluator => {
+    const name = evaluator.replace(/(^eval_|_eval$)/, '');
+    c_code_lines.push(
       `  if (p == ${evaluator}) {`,
-      `    return "${evaluator}";`,
+      `    return "${name}";`,
       `  }`
-    ]);
-};
+    );
+  });
+  c_code_lines.push('  return "(?)";');
+  c_code_lines.push('}');
 
-const extractFile = filename => {
-  const text = fs.readFileSync(filename).toString();
-  const lines = text.split(/[\r\n]+/);
-  return [extractClosures(lines), extractEvaluators(lines)];
-};
-
-const outputCode = [
-  'char* Debug_evaluator_name_core(void* p) {',
-  headerFiles.map(extractFile),
-  '  return "(?)";',
-  '}'
-]
-  .flat(3)
-  .join('\r\n');
-
-fs.writeFileSync(outFile, outputCode);
+  return c_code_lines.join('\r\n');
+}

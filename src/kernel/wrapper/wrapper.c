@@ -128,7 +128,7 @@ EMSCRIPTEN_KEEPALIVE void debugStackMap() {
 extern ElmValue* Platform_model;
 extern ManagerMsg* Platform_initCmd;
 
-static void* eval_wrapInit(void* args[]) {
+void* eval_wrapInit(void* args[]) {
   Closure* userInit = args[0];
   u16 initArity = userInit->max_values - userInit->n_values;
   Tuple2* modelAndCmd = Utils_apply(userInit, initArity, &args[1]);
@@ -142,7 +142,7 @@ static void* eval_wrapInit(void* args[]) {
 }
 
 
-static void* eval_wrapView(void* args[]) {
+void* eval_wrapView(void* args[]) {
   Closure* userView = args[0];
   // Use Wasm model, ignore JS dumy model at args[1]
   return A1(userView, Platform_model);
@@ -150,7 +150,7 @@ static void* eval_wrapView(void* args[]) {
 
 
 // Elm function that the user has to insert in front of the Program constructor
-static void* eval_intercept(void* args[]) {
+void* eval_intercept(void* args[]) {
   Record* userTEA = args[0];
 
   size_t FIELD_init = fg_init_subscriptions_update_view.fields[0];

@@ -64,7 +64,7 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
   return -1;
 }
 
-void* Utils_access_eval(void* args[2]) {
+void* Utils_access_eval(void* args[]) {
   u32 field = (u32)(size_t)args[0];  // unboxed!
   Record* record = (Record*)args[1];
   assert(record->header.tag == Tag_Record);

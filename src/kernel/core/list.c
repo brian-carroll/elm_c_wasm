@@ -21,7 +21,7 @@ void* List_create(size_t len, void* values[]) {
 
 // cons
 
-static void* eval_List_cons(void* args[]) {
+void* eval_List_cons(void* args[]) {
   return newCons(args[0], args[1]);
 }
 Closure List_cons = {
@@ -56,7 +56,7 @@ Closure List_append = {
 
 // map2
 
-static void* eval_List_map2(void* args[]) {
+void* eval_List_map2(void* args[]) {
   Closure* f = args[0];
   Cons* xs = args[1];
   Cons* ys = args[2];

@@ -29,7 +29,7 @@ enum JsonFields {
   /*h*/ JsonField_callback,
 };
 
-static void* eval_Json_succeed(void* args[]) {
+void* eval_Json_succeed(void* args[]) {
   return newCustom(DECODER_SUCCEED, 1, args);
 }
 Closure Json_succeed = {
@@ -38,7 +38,7 @@ Closure Json_succeed = {
     .evaluator = &eval_Json_succeed,
 };
 
-static void* eval_Json_fail(void* args[]) {
+void* eval_Json_fail(void* args[]) {
   return newCustom(DECODER_FAIL, 1, args);
 }
 Closure Json_fail = {
@@ -68,7 +68,7 @@ Custom Json_decodeString = {
     .ctor = DECODER_STRING,
 };
 
-static void* eval_Json_decodeList(void* args[]) {
+void* eval_Json_decodeList(void* args[]) {
   void* decoder = args[0];
   return newCustom(DECODER_LIST, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
@@ -78,7 +78,7 @@ Closure Json_decodeList = {
     .evaluator = &eval_Json_decodeList,
 };
 
-static void* eval_Json_decodeArray(void* args[]) {
+void* eval_Json_decodeArray(void* args[]) {
   void* decoder = args[0];
   return newCustom(DECODER_ARRAY, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
@@ -88,7 +88,7 @@ Closure Json_decodeArray = {
     .evaluator = &eval_Json_decodeArray,
 };
 
-static void* eval_Json_decodeNull(void* args[]) {
+void* eval_Json_decodeNull(void* args[]) {
   void* value = args[0];
   return newCustom(
       DECODER_NULL, 3, ((void*[]){&Json_encodeNull, &Json_encodeNull, value}));
@@ -99,7 +99,7 @@ Closure Json_decodeNull = {
     .evaluator = &eval_Json_decodeNull,
 };
 
-static void* eval_Json_decodeField(void* args[]) {
+void* eval_Json_decodeField(void* args[]) {
   void* field = args[0];
   void* decoder = args[1];
   return newCustom(DECODER_FIELD,
@@ -117,7 +117,7 @@ Closure Json_decodeField = {
     .evaluator = &eval_Json_decodeField,
 };
 
-static void* eval_Json_decodeIndex(void* args[]) {
+void* eval_Json_decodeIndex(void* args[]) {
   void* index = args[0];
   void* decoder = args[1];
   return newCustom(DECODER_INDEX,
@@ -136,7 +136,7 @@ Closure Json_decodeIndex = {
     .evaluator = &eval_Json_decodeIndex,
 };
 
-static void* eval_Json_decodeKeyValuePairs(void* args[]) {
+void* eval_Json_decodeKeyValuePairs(void* args[]) {
   void* decoder = args[0];
   return newCustom(DECODER_KEY_VALUE, 2, ((void*[]){&Json_encodeNull, decoder}));
 }
@@ -146,7 +146,7 @@ Closure Json_decodeKeyValuePairs = {
     .evaluator = &eval_Json_decodeKeyValuePairs,
 };
 
-static void* eval_Json_andThen(void* args[]) {
+void* eval_Json_andThen(void* args[]) {
   void* callback = args[0];
   void* decoder = args[1];
   return newCustom(DECODER_AND_THEN,
@@ -168,7 +168,7 @@ Closure Json_andThen = {
     .evaluator = &eval_Json_andThen,
 };
 
-static void* eval_Json_oneOf(void* args[]) {
+void* eval_Json_oneOf(void* args[]) {
   void* decoders = args[0];
   return newCustom(DECODER_ONE_OF,
       7,
@@ -194,7 +194,7 @@ Closure Json_oneOf = {
 //
 // ----------------------------------------------------
 
-static void* eval_Json_mapMany(void* args[]) {
+void* eval_Json_mapMany(void* args[]) {
   size_t n_decoders = (size_t)args[0];
   Closure* f = args[1];
   Custom* decoders = newCustom(JSON_VALUE_ARRAY, (u32)n_decoders, &args[2]);
@@ -644,7 +644,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
   return NULL;
 }
 
-static void* eval_runOnString(void* args[]) {
+void* eval_runOnString(void* args[]) {
   Custom* decoder = args[0];
   ElmString* string = args[1];
 
@@ -661,7 +661,7 @@ Closure Json_runOnString = {
     .evaluator = &eval_runOnString,
 };
 
-static void* eval_Json_run(void* args[]) {
+void* eval_Json_run(void* args[]) {
   Custom* decoder = args[0];
   Custom* wrapped = args[1];
   void* unwrapped = wrapped->values[0];

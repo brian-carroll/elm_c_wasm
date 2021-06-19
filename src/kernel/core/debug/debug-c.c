@@ -578,18 +578,16 @@ static void Debug_prettyHelp(int indent, void* p) {
       break;
     }
     case Tag_Closure: {
-      char* name;
       if (v->closure.max_values != NEVER_EVALUATE) {
-        name = Debug_evaluator_name(v->closure.evaluator);
+        safe_printf("Closure %s\n", Debug_evaluator_name(v->closure.evaluator));
       } else {
         size_t js_value_id = (size_t)v->closure.evaluator;
         if (js_value_id < Debug_jsValues_size) {
-          name = Debug_jsValues[js_value_id];
+          safe_printf("Closure %s\n", Debug_jsValues[js_value_id]);
         } else {
-          name = "(unknown JS function)";
+          safe_printf("Closure (JS #%d)\n", js_value_id);
         }
       }
-      safe_printf("Closure %s\n", name);
       for (int i = 0; i < v->closure.n_values && i < 10; i++) {
         pretty_print_child(deeper, v->closure.values[i]);
       }

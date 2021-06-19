@@ -119,7 +119,7 @@ ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len) {
 /*
  * String.uncons
  */
-static void* eval_String_uncons(void* args[]) {
+void* eval_String_uncons(void* args[]) {
   ElmString* string = args[0];
   size_t len = code_units(string);
   if (len == 0) {
@@ -149,7 +149,7 @@ Closure String_uncons = {
 /*
  * String.append
  */
-void* eval_String_append(void* args[2]) {
+void* eval_String_append(void* args[]) {
   ElmString* a = args[0];
   ElmString* b = args[1];
 
@@ -172,7 +172,7 @@ Closure String_append = {
 /*
  * String.length
  */
-static void* eval_String_length(void* args[]) {
+void* eval_String_length(void* args[]) {
   size_t len = code_units(args[0]);
   return newElmInt((i32)len);
 }
@@ -185,7 +185,7 @@ Closure String_length = {
 /*
  * String.foldr
  */
-static void* eval_String_foldr(void* args[]) {
+void* eval_String_foldr(void* args[]) {
   Closure* func = args[0];
   void* state = args[1];
   ElmString* string = args[2];
@@ -211,7 +211,7 @@ Closure String_foldr = {
 /*
  * String.split
  */
-static void* eval_String_split(void* args[]) {
+void* eval_String_split(void* args[]) {
   ElmString* sep = args[0];
   ElmString* str = args[1];
 
@@ -250,7 +250,7 @@ Closure String_split = {
 /*
  * String.join
  */
-static void* eval_String_join(void* args[]) {
+void* eval_String_join(void* args[]) {
   ElmString* sep = args[0];
   Cons* strs = args[1];
 
@@ -301,7 +301,7 @@ static size_t slice_wrap_index(i32 n, i32 len) {
     return n;
   }
 }
-static void* eval_String_slice(void* args[]) {
+void* eval_String_slice(void* args[]) {
   ElmInt* argStart = args[0];
   ElmInt* argEnd = args[1];
   ElmString* str = args[2];
@@ -362,7 +362,7 @@ bool is_whitespace(u16 c) {
 /**
  * String.trim
  */
-static void* eval_String_trim(void* args[]) {
+void* eval_String_trim(void* args[]) {
   ElmString* str = args[0];
   size_t len = code_units(str);
   u16* start = str->words16;
@@ -389,7 +389,7 @@ Closure String_trim = {
 /**
  * String.trimLeft
  */
-static void* eval_String_trimLeft(void* args[]) {
+void* eval_String_trimLeft(void* args[]) {
   ElmString* str = args[0];
   size_t len = code_units(str);
   u16* start = str->words16;
@@ -413,7 +413,7 @@ Closure String_trimLeft = {
 /**
  * String.trimRight
  */
-static void* eval_String_trimRight(void* args[]) {
+void* eval_String_trimRight(void* args[]) {
   ElmString* str = args[0];
   size_t len = code_units(str);
   u16* start = str->words16;
@@ -437,7 +437,7 @@ Closure String_trimRight = {
 /*
  * String.all
  */
-static void* eval_String_all(void* args[]) {
+void* eval_String_all(void* args[]) {
   Closure* isGood = args[0];
   ElmString* s = args[1];
   size_t len = code_units(s);
@@ -466,7 +466,7 @@ Closure String_all = {
 /**
  * String.contains
  */
-static void* eval_String_contains(void* args[]) {
+void* eval_String_contains(void* args[]) {
   ElmString* sub = args[0];
   ElmString* str = args[1];
 
@@ -537,7 +537,7 @@ Closure String_endsWith = {
 /**
  * String.indexes
  */
-static void* eval_String_indexes(void* args[]) {
+void* eval_String_indexes(void* args[]) {
   ElmString* sub = args[0];
   ElmString* str = args[1];
 
@@ -569,7 +569,7 @@ Closure String_indexes = {
 /*
  * String.fromNumber
  */
-static void* String_fromNumber_eval(void* args[1]) {
+void* String_fromNumber_eval(void* args[]) {
   Number* box = args[0];
   char buf[MAX_FLOAT_LEN];
   int n_chars;
@@ -595,7 +595,7 @@ Closure String_fromNumber = {
 /*
  * String.toInt
  */
-static void* eval_String_toInt(void* args[]) {
+void* eval_String_toInt(void* args[]) {
   ElmString* str = args[0];
   size_t len = code_units(str);
   u16 code0 = str->words16[0];
@@ -624,7 +624,7 @@ Closure String_toInt = {
 /*
  * String.toFloat
  */
-static void* eval_String_toFloat(void* args[]) {
+void* eval_String_toFloat(void* args[]) {
   ElmString* s = args[0];
   size_t len = code_units(s);
   if (len >= MAX_FLOAT_LEN) {

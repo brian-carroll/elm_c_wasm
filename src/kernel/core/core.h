@@ -281,7 +281,7 @@ void* Utils_apply(Closure* c_old, u16 n_applied, void* applied[]);
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]);
 void* Utils_destruct_index(ElmValue* v, size_t index);
 void* Utils_clone(void* x);
-void* Utils_access_eval(void* args[2]);
+void* Utils_access_eval(void* args[]);
 void Utils_initGlobal(void** global, void* (*init_func)());
 #define A1(fn, a) Utils_apply(fn, 1, (void*[]){a})
 #define A2(fn, a, b) Utils_apply(fn, 2, (void*[]){a, b})

@@ -1,411 +1,1988 @@
+void* eval_negate(void* args[]);
+void* eval_add(void* args[]);
+void* eval_sub(void* args[]);
+void* eval_mul(void* args[]);
+void* eval_fdiv(void* args[]);
+void* eval_idiv(void* args[]);
+void* eval_pow(void* args[]);
+void* eval_toFloat(void* args[]);
+void* eval_round(void* args[]);
+void* eval_floor(void* args[]);
+void* eval_ceiling(void* args[]);
+void* eval_not(void* args[]);
+void* eval_and(void* args[]);
+void* eval_or(void* args[]);
+void* eval_xor(void* args[]);
+void* eval_remainderBy(void* args[]);
+void* eval_modBy(void* args[]);
+void* eval_log(void* args[]);
+void* eval_identity(void* args[]);
+void* eval_Bitwise_and(void* args[]);
+void* eval_Bitwise_or(void* args[]);
+void* eval_Bitwise_xor(void* args[]);
+void* eval_Bitwise_complement(void* args[]);
+void* eval_Bitwise_shiftLeftBy(void* args[]);
+void* eval_Bitwise_shiftRightBy(void* args[]);
+void* eval_Bitwise_shiftRightZfBy(void* args[]);
+void* eval_toCode(void* args[]);
+void* eval_negate(void* args[]);
+void* eval_add(void* args[]);
+void* eval_sub(void* args[]);
+void* eval_mul(void* args[]);
+void* eval_fdiv(void* args[]);
+void* eval_idiv(void* args[]);
+void* eval_pow(void* args[]);
+void* eval_toFloat(void* args[]);
+void* eval_round(void* args[]);
+void* eval_floor(void* args[]);
+void* eval_ceiling(void* args[]);
+void* eval_not(void* args[]);
+void* eval_and(void* args[]);
+void* eval_or(void* args[]);
+void* eval_xor(void* args[]);
+void* eval_remainderBy(void* args[]);
+void* eval_modBy(void* args[]);
+void* eval_log(void* args[]);
+void* eval_identity(void* args[]);
+void* eval_Bitwise_and(void* args[]);
+void* eval_Bitwise_or(void* args[]);
+void* eval_Bitwise_xor(void* args[]);
+void* eval_Bitwise_complement(void* args[]);
+void* eval_Bitwise_shiftLeftBy(void* args[]);
+void* eval_Bitwise_shiftRightBy(void* args[]);
+void* eval_Bitwise_shiftRightZfBy(void* args[]);
+void* eval_toCode(void* args[]);
+void* eval_negate(void* args[]);
+void* eval_add(void* args[]);
+void* eval_sub(void* args[]);
+void* eval_mul(void* args[]);
+void* eval_fdiv(void* args[]);
+void* eval_idiv(void* args[]);
+void* eval_pow(void* args[]);
+void* eval_toFloat(void* args[]);
+void* eval_round(void* args[]);
+void* eval_floor(void* args[]);
+void* eval_ceiling(void* args[]);
+void* eval_not(void* args[]);
+void* eval_and(void* args[]);
+void* eval_or(void* args[]);
+void* eval_xor(void* args[]);
+void* eval_remainderBy(void* args[]);
+void* eval_modBy(void* args[]);
+void* eval_log(void* args[]);
+void* eval_identity(void* args[]);
+void* eval_Bitwise_and(void* args[]);
+void* eval_Bitwise_or(void* args[]);
+void* eval_Bitwise_xor(void* args[]);
+void* eval_Bitwise_complement(void* args[]);
+void* eval_Bitwise_shiftLeftBy(void* args[]);
+void* eval_Bitwise_shiftRightBy(void* args[]);
+void* eval_Bitwise_shiftRightZfBy(void* args[]);
+void* eval_toCode(void* args[]);
+void* eval_negate(void* args[]);
+void* eval_add(void* args[]);
+void* eval_sub(void* args[]);
+void* eval_mul(void* args[]);
+void* eval_fdiv(void* args[]);
+void* eval_idiv(void* args[]);
+void* eval_pow(void* args[]);
+void* eval_toFloat(void* args[]);
+void* eval_round(void* args[]);
+void* eval_floor(void* args[]);
+void* eval_ceiling(void* args[]);
+void* eval_not(void* args[]);
+void* eval_and(void* args[]);
+void* eval_or(void* args[]);
+void* eval_xor(void* args[]);
+void* eval_remainderBy(void* args[]);
+void* eval_modBy(void* args[]);
+void* eval_log(void* args[]);
+void* eval_identity(void* args[]);
+void* eval_Bitwise_and(void* args[]);
+void* eval_Bitwise_or(void* args[]);
+void* eval_Bitwise_xor(void* args[]);
+void* eval_Bitwise_complement(void* args[]);
+void* eval_Bitwise_shiftLeftBy(void* args[]);
+void* eval_Bitwise_shiftRightBy(void* args[]);
+void* eval_Bitwise_shiftRightZfBy(void* args[]);
+void* eval_toCode(void* args[]);
+void* eval_Debug_toString(void* args[]);
+void* eval_Debug_log(void* args[]);
+void* eval_Debug_todo(void* args[]);
+void* eval_JsArray_singleton(void* args[]);
+void* eval_JsArray_length(void* args[]);
+void* eval_JsArray_initialize(void* args[]);
+void* eval_JsArray_initializeFromList(void* args[]);
+void* eval_JsArray_unsafeGet(void* args[]);
+void* eval_JsArray_unsafeSet(void* args[]);
+void* eval_JsArray_push(void* args[]);
+void* eval_JsArray_foldl(void* args[]);
+void* eval_JsArray_foldr(void* args[]);
+void* eval_JsArray_map(void* args[]);
+void* eval_JsArray_indexedMap(void* args[]);
+void* eval_JsArray_slice(void* args[]);
+void* eval_JsArray_appendN(void* args[]);
+void* eval_List_cons(void* args[]);
+void* eval_List_append(void* args[]);
+void* eval_List_map2(void* args[]);
+void* eval_List_sortBy(void* args[]);
+void* eval_sendToApp_revArgs(void* args[]);
+void* eval_manager_loop_receive(void* args[]);
+void* eval_manager_loop(void* args[]);
+void* eval_Platform_sendToApp_lambda(void* args[]);
+void* eval_Platform_sendToApp(void* args[]);
+void* eval_Platform_sendToSelf(void* args[]);
+void* eval_Platform_leaf(void* args[]);
+void* eval_Platform_batch(void* args[]);
+void* eval_Platform_map(void* args[]);
+void* eval_applyTaggers(void* args[]);
+void* eval_Scheduler_succeed(void* args[]);
+void* eval_Scheduler_fail(void* args[]);
+void* eval_Scheduler_binding(void* args[]);
+void* eval_Scheduler_andThen(void* args[]);
+void* eval_Scheduler_onError(void* args[]);
+void* eval_Scheduler_receive(void* args[]);
+void* eval_Scheduler_rawSpawn(void* args[]);
+void* eval_Scheduler_spawn_lambda(void* args[]);
+void* eval_Scheduler_spawn(void* args[]);
+void* eval_Scheduler_rawSend(void* args[]);
+void* eval_Scheduler_send_lambda(void* args[]);
+void* eval_Scheduler_send(void* args[]);
+void* eval_Scheduler_kill_lambda(void* args[]);
+void* eval_Scheduler_kill(void* args[]);
+void* eval_Scheduler_step_lambda(void* args[]);
+void* eval_String_uncons(void* args[]);
+void* eval_String_append(void* args[]);
+void* eval_String_length(void* args[]);
+void* eval_String_foldr(void* args[]);
+void* eval_String_split(void* args[]);
+void* eval_String_join(void* args[]);
+void* eval_String_slice(void* args[]);
+void* eval_String_trim(void* args[]);
+void* eval_String_trimLeft(void* args[]);
+void* eval_String_trimRight(void* args[]);
+void* eval_String_all(void* args[]);
+void* eval_String_contains(void* args[]);
+void* eval_String_startsWith(void* args[]);
+void* eval_String_endsWith(void* args[]);
+void* eval_String_indexes(void* args[]);
+void* String_fromNumber_eval(void* args[]);
+void* eval_String_toInt(void* args[]);
+void* eval_String_toFloat(void* args[]);
+void* Utils_access_eval(void* args[]);
+void* eval_Utils_append(void* args[]);
+void* eq_eval(void* args[]);
+void* eval_notEqual(void* args[]);
+void* compare_eval(void* args[]);
+void* lt_eval(void* args[]);
+void* le_eval(void* args[]);
+void* gt_eval(void* args[]);
+void* ge_eval(void* args[]);
+void* eval_Test_runThunk(void* args[]);
+void* eval_Json_succeed(void* args[]);
+void* eval_Json_fail(void* args[]);
+void* eval_Json_decodeList(void* args[]);
+void* eval_Json_decodeArray(void* args[]);
+void* eval_Json_decodeNull(void* args[]);
+void* eval_Json_decodeField(void* args[]);
+void* eval_Json_decodeIndex(void* args[]);
+void* eval_Json_decodeKeyValuePairs(void* args[]);
+void* eval_Json_andThen(void* args[]);
+void* eval_Json_oneOf(void* args[]);
+void* eval_Json_mapMany(void* args[]);
+void* eval_Json_array_get(void* args[]);
+void* eval_runOnString(void* args[]);
+void* eval_Json_run(void* args[]);
+void* eval_Json_wrap(void* args[]);
+void* eval_Json_unwrap(void* args[]);
+void* eval_Json_emptyArray(void* args[]);
+void* eval_Json_emptyObject(void* args[]);
+void* eval_Json_addField(void* args[]);
+void* eval_Json_addEntry(void* args[]);
+void* eval_Json_encode(void* args[]);
+void* eval_wrapInit(void* args[]);
+void* eval_wrapView(void* args[]);
+void* eval_intercept(void* args[]);
+void* eval_Debug_toString(void* args[]);
+void* eval_Debug_log(void* args[]);
+void* eval_Debug_todo(void* args[]);
+void* eval_JsArray_singleton(void* args[]);
+void* eval_JsArray_length(void* args[]);
+void* eval_JsArray_initialize(void* args[]);
+void* eval_JsArray_initializeFromList(void* args[]);
+void* eval_JsArray_unsafeGet(void* args[]);
+void* eval_JsArray_unsafeSet(void* args[]);
+void* eval_JsArray_push(void* args[]);
+void* eval_JsArray_foldl(void* args[]);
+void* eval_JsArray_foldr(void* args[]);
+void* eval_JsArray_map(void* args[]);
+void* eval_JsArray_indexedMap(void* args[]);
+void* eval_JsArray_slice(void* args[]);
+void* eval_JsArray_appendN(void* args[]);
+void* eval_List_cons(void* args[]);
+void* eval_List_append(void* args[]);
+void* eval_List_map2(void* args[]);
+void* eval_List_sortBy(void* args[]);
+void* eval_sendToApp_revArgs(void* args[]);
+void* eval_manager_loop_receive(void* args[]);
+void* eval_manager_loop(void* args[]);
+void* eval_Platform_sendToApp_lambda(void* args[]);
+void* eval_Platform_sendToApp(void* args[]);
+void* eval_Platform_sendToSelf(void* args[]);
+void* eval_Platform_leaf(void* args[]);
+void* eval_Platform_batch(void* args[]);
+void* eval_Platform_map(void* args[]);
+void* eval_applyTaggers(void* args[]);
+void* eval_Scheduler_succeed(void* args[]);
+void* eval_Scheduler_fail(void* args[]);
+void* eval_Scheduler_binding(void* args[]);
+void* eval_Scheduler_andThen(void* args[]);
+void* eval_Scheduler_onError(void* args[]);
+void* eval_Scheduler_receive(void* args[]);
+void* eval_Scheduler_rawSpawn(void* args[]);
+void* eval_Scheduler_spawn_lambda(void* args[]);
+void* eval_Scheduler_spawn(void* args[]);
+void* eval_Scheduler_rawSend(void* args[]);
+void* eval_Scheduler_send_lambda(void* args[]);
+void* eval_Scheduler_send(void* args[]);
+void* eval_Scheduler_kill_lambda(void* args[]);
+void* eval_Scheduler_kill(void* args[]);
+void* eval_Scheduler_step_lambda(void* args[]);
+void* eval_String_uncons(void* args[]);
+void* eval_String_append(void* args[]);
+void* eval_String_length(void* args[]);
+void* eval_String_foldr(void* args[]);
+void* eval_String_split(void* args[]);
+void* eval_String_join(void* args[]);
+void* eval_String_slice(void* args[]);
+void* eval_String_trim(void* args[]);
+void* eval_String_trimLeft(void* args[]);
+void* eval_String_trimRight(void* args[]);
+void* eval_String_all(void* args[]);
+void* eval_String_contains(void* args[]);
+void* eval_String_startsWith(void* args[]);
+void* eval_String_endsWith(void* args[]);
+void* eval_String_indexes(void* args[]);
+void* String_fromNumber_eval(void* args[]);
+void* eval_String_toInt(void* args[]);
+void* eval_String_toFloat(void* args[]);
+void* Utils_access_eval(void* args[]);
+void* eval_Utils_append(void* args[]);
+void* eq_eval(void* args[]);
+void* eval_notEqual(void* args[]);
+void* compare_eval(void* args[]);
+void* lt_eval(void* args[]);
+void* le_eval(void* args[]);
+void* gt_eval(void* args[]);
+void* ge_eval(void* args[]);
+void* eval_Test_runThunk(void* args[]);
+void* eval_Json_succeed(void* args[]);
+void* eval_Json_fail(void* args[]);
+void* eval_Json_decodeList(void* args[]);
+void* eval_Json_decodeArray(void* args[]);
+void* eval_Json_decodeNull(void* args[]);
+void* eval_Json_decodeField(void* args[]);
+void* eval_Json_decodeIndex(void* args[]);
+void* eval_Json_decodeKeyValuePairs(void* args[]);
+void* eval_Json_andThen(void* args[]);
+void* eval_Json_oneOf(void* args[]);
+void* eval_Json_mapMany(void* args[]);
+void* eval_Json_array_get(void* args[]);
+void* eval_runOnString(void* args[]);
+void* eval_Json_run(void* args[]);
+void* eval_Json_wrap(void* args[]);
+void* eval_Json_unwrap(void* args[]);
+void* eval_Json_emptyArray(void* args[]);
+void* eval_Json_emptyObject(void* args[]);
+void* eval_Json_addField(void* args[]);
+void* eval_Json_addEntry(void* args[]);
+void* eval_Json_encode(void* args[]);
+void* eval_wrapInit(void* args[]);
+void* eval_wrapView(void* args[]);
+void* eval_intercept(void* args[]);
+void* eval_Debug_toString(void* args[]);
+void* eval_Debug_log(void* args[]);
+void* eval_Debug_todo(void* args[]);
+void* eval_JsArray_singleton(void* args[]);
+void* eval_JsArray_length(void* args[]);
+void* eval_JsArray_initialize(void* args[]);
+void* eval_JsArray_initializeFromList(void* args[]);
+void* eval_JsArray_unsafeGet(void* args[]);
+void* eval_JsArray_unsafeSet(void* args[]);
+void* eval_JsArray_push(void* args[]);
+void* eval_JsArray_foldl(void* args[]);
+void* eval_JsArray_foldr(void* args[]);
+void* eval_JsArray_map(void* args[]);
+void* eval_JsArray_indexedMap(void* args[]);
+void* eval_JsArray_slice(void* args[]);
+void* eval_JsArray_appendN(void* args[]);
+void* eval_List_cons(void* args[]);
+void* eval_List_append(void* args[]);
+void* eval_List_map2(void* args[]);
+void* eval_List_sortBy(void* args[]);
+void* eval_sendToApp_revArgs(void* args[]);
+void* eval_manager_loop_receive(void* args[]);
+void* eval_manager_loop(void* args[]);
+void* eval_Platform_sendToApp_lambda(void* args[]);
+void* eval_Platform_sendToApp(void* args[]);
+void* eval_Platform_sendToSelf(void* args[]);
+void* eval_Platform_leaf(void* args[]);
+void* eval_Platform_batch(void* args[]);
+void* eval_Platform_map(void* args[]);
+void* eval_applyTaggers(void* args[]);
+void* eval_Scheduler_succeed(void* args[]);
+void* eval_Scheduler_fail(void* args[]);
+void* eval_Scheduler_binding(void* args[]);
+void* eval_Scheduler_andThen(void* args[]);
+void* eval_Scheduler_onError(void* args[]);
+void* eval_Scheduler_receive(void* args[]);
+void* eval_Scheduler_rawSpawn(void* args[]);
+void* eval_Scheduler_spawn_lambda(void* args[]);
+void* eval_Scheduler_spawn(void* args[]);
+void* eval_Scheduler_rawSend(void* args[]);
+void* eval_Scheduler_send_lambda(void* args[]);
+void* eval_Scheduler_send(void* args[]);
+void* eval_Scheduler_kill_lambda(void* args[]);
+void* eval_Scheduler_kill(void* args[]);
+void* eval_Scheduler_step_lambda(void* args[]);
+void* eval_String_uncons(void* args[]);
+void* eval_String_append(void* args[]);
+void* eval_String_length(void* args[]);
+void* eval_String_foldr(void* args[]);
+void* eval_String_split(void* args[]);
+void* eval_String_join(void* args[]);
+void* eval_String_slice(void* args[]);
+void* eval_String_trim(void* args[]);
+void* eval_String_trimLeft(void* args[]);
+void* eval_String_trimRight(void* args[]);
+void* eval_String_all(void* args[]);
+void* eval_String_contains(void* args[]);
+void* eval_String_startsWith(void* args[]);
+void* eval_String_endsWith(void* args[]);
+void* eval_String_indexes(void* args[]);
+void* String_fromNumber_eval(void* args[]);
+void* eval_String_toInt(void* args[]);
+void* eval_String_toFloat(void* args[]);
+void* Utils_access_eval(void* args[]);
+void* eval_Utils_append(void* args[]);
+void* eq_eval(void* args[]);
+void* eval_notEqual(void* args[]);
+void* compare_eval(void* args[]);
+void* lt_eval(void* args[]);
+void* le_eval(void* args[]);
+void* gt_eval(void* args[]);
+void* ge_eval(void* args[]);
+void* eval_Test_runThunk(void* args[]);
+void* eval_Json_succeed(void* args[]);
+void* eval_Json_fail(void* args[]);
+void* eval_Json_decodeList(void* args[]);
+void* eval_Json_decodeArray(void* args[]);
+void* eval_Json_decodeNull(void* args[]);
+void* eval_Json_decodeField(void* args[]);
+void* eval_Json_decodeIndex(void* args[]);
+void* eval_Json_decodeKeyValuePairs(void* args[]);
+void* eval_Json_andThen(void* args[]);
+void* eval_Json_oneOf(void* args[]);
+void* eval_Json_mapMany(void* args[]);
+void* eval_Json_array_get(void* args[]);
+void* eval_runOnString(void* args[]);
+void* eval_Json_run(void* args[]);
+void* eval_Json_wrap(void* args[]);
+void* eval_Json_unwrap(void* args[]);
+void* eval_Json_emptyArray(void* args[]);
+void* eval_Json_emptyObject(void* args[]);
+void* eval_Json_addField(void* args[]);
+void* eval_Json_addEntry(void* args[]);
+void* eval_Json_encode(void* args[]);
+void* eval_wrapInit(void* args[]);
+void* eval_wrapView(void* args[]);
+void* eval_intercept(void* args[]);
+void* eval_Debug_toString(void* args[]);
+void* eval_Debug_log(void* args[]);
+void* eval_Debug_todo(void* args[]);
+void* eval_JsArray_singleton(void* args[]);
+void* eval_JsArray_length(void* args[]);
+void* eval_JsArray_initialize(void* args[]);
+void* eval_JsArray_initializeFromList(void* args[]);
+void* eval_JsArray_unsafeGet(void* args[]);
+void* eval_JsArray_unsafeSet(void* args[]);
+void* eval_JsArray_push(void* args[]);
+void* eval_JsArray_foldl(void* args[]);
+void* eval_JsArray_foldr(void* args[]);
+void* eval_JsArray_map(void* args[]);
+void* eval_JsArray_indexedMap(void* args[]);
+void* eval_JsArray_slice(void* args[]);
+void* eval_JsArray_appendN(void* args[]);
+void* eval_List_cons(void* args[]);
+void* eval_List_append(void* args[]);
+void* eval_List_map2(void* args[]);
+void* eval_List_sortBy(void* args[]);
+void* eval_sendToApp_revArgs(void* args[]);
+void* eval_manager_loop_receive(void* args[]);
+void* eval_manager_loop(void* args[]);
+void* eval_Platform_sendToApp_lambda(void* args[]);
+void* eval_Platform_sendToApp(void* args[]);
+void* eval_Platform_sendToSelf(void* args[]);
+void* eval_Platform_leaf(void* args[]);
+void* eval_Platform_batch(void* args[]);
+void* eval_Platform_map(void* args[]);
+void* eval_applyTaggers(void* args[]);
+void* eval_Scheduler_succeed(void* args[]);
+void* eval_Scheduler_fail(void* args[]);
+void* eval_Scheduler_binding(void* args[]);
+void* eval_Scheduler_andThen(void* args[]);
+void* eval_Scheduler_onError(void* args[]);
+void* eval_Scheduler_receive(void* args[]);
+void* eval_Scheduler_rawSpawn(void* args[]);
+void* eval_Scheduler_spawn_lambda(void* args[]);
+void* eval_Scheduler_spawn(void* args[]);
+void* eval_Scheduler_rawSend(void* args[]);
+void* eval_Scheduler_send_lambda(void* args[]);
+void* eval_Scheduler_send(void* args[]);
+void* eval_Scheduler_kill_lambda(void* args[]);
+void* eval_Scheduler_kill(void* args[]);
+void* eval_Scheduler_step_lambda(void* args[]);
+void* eval_String_uncons(void* args[]);
+void* eval_String_append(void* args[]);
+void* eval_String_length(void* args[]);
+void* eval_String_foldr(void* args[]);
+void* eval_String_split(void* args[]);
+void* eval_String_join(void* args[]);
+void* eval_String_slice(void* args[]);
+void* eval_String_trim(void* args[]);
+void* eval_String_trimLeft(void* args[]);
+void* eval_String_trimRight(void* args[]);
+void* eval_String_all(void* args[]);
+void* eval_String_contains(void* args[]);
+void* eval_String_startsWith(void* args[]);
+void* eval_String_endsWith(void* args[]);
+void* eval_String_indexes(void* args[]);
+void* String_fromNumber_eval(void* args[]);
+void* eval_String_toInt(void* args[]);
+void* eval_String_toFloat(void* args[]);
+void* Utils_access_eval(void* args[]);
+void* eval_Utils_append(void* args[]);
+void* eq_eval(void* args[]);
+void* eval_notEqual(void* args[]);
+void* compare_eval(void* args[]);
+void* lt_eval(void* args[]);
+void* le_eval(void* args[]);
+void* gt_eval(void* args[]);
+void* ge_eval(void* args[]);
+void* eval_Test_runThunk(void* args[]);
+void* eval_Json_succeed(void* args[]);
+void* eval_Json_fail(void* args[]);
+void* eval_Json_decodeList(void* args[]);
+void* eval_Json_decodeArray(void* args[]);
+void* eval_Json_decodeNull(void* args[]);
+void* eval_Json_decodeField(void* args[]);
+void* eval_Json_decodeIndex(void* args[]);
+void* eval_Json_decodeKeyValuePairs(void* args[]);
+void* eval_Json_andThen(void* args[]);
+void* eval_Json_oneOf(void* args[]);
+void* eval_Json_mapMany(void* args[]);
+void* eval_Json_array_get(void* args[]);
+void* eval_runOnString(void* args[]);
+void* eval_Json_run(void* args[]);
+void* eval_Json_wrap(void* args[]);
+void* eval_Json_unwrap(void* args[]);
+void* eval_Json_emptyArray(void* args[]);
+void* eval_Json_emptyObject(void* args[]);
+void* eval_Json_addField(void* args[]);
+void* eval_Json_addEntry(void* args[]);
+void* eval_Json_encode(void* args[]);
+void* eval_wrapInit(void* args[]);
+void* eval_wrapView(void* args[]);
+void* eval_intercept(void* args[]);
+
 char* Debug_evaluator_name_core(void* p) {
-  if (p == Basics_add.evaluator) {
-    return "Basics_add";
+  if (p == eval_negate) {
+    return "negate";
   }
-  if (p == Basics_sub.evaluator) {
-    return "Basics_sub";
+  if (p == eval_add) {
+    return "add";
   }
-  if (p == Basics_mul.evaluator) {
-    return "Basics_mul";
+  if (p == eval_sub) {
+    return "sub";
   }
-  if (p == Basics_fdiv.evaluator) {
-    return "Basics_fdiv";
+  if (p == eval_mul) {
+    return "mul";
   }
-  if (p == Basics_idiv.evaluator) {
-    return "Basics_idiv";
+  if (p == eval_fdiv) {
+    return "fdiv";
   }
-  if (p == Basics_pow.evaluator) {
-    return "Basics_pow";
+  if (p == eval_idiv) {
+    return "idiv";
   }
-  if (p == Basics_toFloat.evaluator) {
-    return "Basics_toFloat";
+  if (p == eval_pow) {
+    return "pow";
   }
-  if (p == Basics_round.evaluator) {
-    return "Basics_round";
+  if (p == eval_toFloat) {
+    return "toFloat";
   }
-  if (p == Basics_floor.evaluator) {
-    return "Basics_floor";
+  if (p == eval_round) {
+    return "round";
   }
-  if (p == Basics_ceiling.evaluator) {
-    return "Basics_ceiling";
+  if (p == eval_floor) {
+    return "floor";
   }
-  if (p == Basics_not.evaluator) {
-    return "Basics_not";
+  if (p == eval_ceiling) {
+    return "ceiling";
   }
-  if (p == Basics_and.evaluator) {
-    return "Basics_and";
+  if (p == eval_not) {
+    return "not";
   }
-  if (p == Basics_or.evaluator) {
-    return "Basics_or";
+  if (p == eval_and) {
+    return "and";
   }
-  if (p == Basics_xor.evaluator) {
-    return "Basics_xor";
+  if (p == eval_or) {
+    return "or";
   }
-  if (p == Basics_modBy.evaluator) {
-    return "Basics_modBy";
+  if (p == eval_xor) {
+    return "xor";
   }
-  if (p == Basics_remainderBy.evaluator) {
-    return "Basics_remainderBy";
+  if (p == eval_remainderBy) {
+    return "remainderBy";
   }
-  if (p == Basics_log.evaluator) {
-    return "Basics_log";
+  if (p == eval_modBy) {
+    return "modBy";
   }
-  if (p == Basics_identity.evaluator) {
-    return "Basics_identity";
+  if (p == eval_log) {
+    return "log";
   }
-  if (p == Bitwise_and.evaluator) {
+  if (p == eval_identity) {
+    return "identity";
+  }
+  if (p == eval_Bitwise_and) {
     return "Bitwise_and";
   }
-  if (p == Bitwise_or.evaluator) {
+  if (p == eval_Bitwise_or) {
     return "Bitwise_or";
   }
-  if (p == Bitwise_xor.evaluator) {
+  if (p == eval_Bitwise_xor) {
     return "Bitwise_xor";
   }
-  if (p == Bitwise_complement.evaluator) {
+  if (p == eval_Bitwise_complement) {
     return "Bitwise_complement";
   }
-  if (p == Bitwise_shiftLeftBy.evaluator) {
+  if (p == eval_Bitwise_shiftLeftBy) {
     return "Bitwise_shiftLeftBy";
   }
-  if (p == Bitwise_shiftRightBy.evaluator) {
+  if (p == eval_Bitwise_shiftRightBy) {
     return "Bitwise_shiftRightBy";
   }
-  if (p == Bitwise_shiftRightZfBy.evaluator) {
+  if (p == eval_Bitwise_shiftRightZfBy) {
     return "Bitwise_shiftRightZfBy";
   }
-  if (p == Char_toCode.evaluator) {
-    return "Char_toCode";
+  if (p == eval_toCode) {
+    return "toCode";
   }
-  if (p == g_elm_core_Maybe_Just.evaluator) {
-    return "g_elm_core_Maybe_Just";
+  if (p == eval_negate) {
+    return "negate";
   }
-  if (p == g_elm_core_Array_initialize.evaluator) {
-    return "g_elm_core_Array_initialize";
+  if (p == eval_add) {
+    return "add";
   }
-  if (p == g_elm_core_List_reverse.evaluator) {
-    return "g_elm_core_List_reverse";
+  if (p == eval_sub) {
+    return "sub";
   }
-  if (p == g_elm_core_List_foldl.evaluator) {
-    return "g_elm_core_List_foldl";
+  if (p == eval_mul) {
+    return "mul";
   }
-  if (p == JsArray_singleton.evaluator) {
+  if (p == eval_fdiv) {
+    return "fdiv";
+  }
+  if (p == eval_idiv) {
+    return "idiv";
+  }
+  if (p == eval_pow) {
+    return "pow";
+  }
+  if (p == eval_toFloat) {
+    return "toFloat";
+  }
+  if (p == eval_round) {
+    return "round";
+  }
+  if (p == eval_floor) {
+    return "floor";
+  }
+  if (p == eval_ceiling) {
+    return "ceiling";
+  }
+  if (p == eval_not) {
+    return "not";
+  }
+  if (p == eval_and) {
+    return "and";
+  }
+  if (p == eval_or) {
+    return "or";
+  }
+  if (p == eval_xor) {
+    return "xor";
+  }
+  if (p == eval_remainderBy) {
+    return "remainderBy";
+  }
+  if (p == eval_modBy) {
+    return "modBy";
+  }
+  if (p == eval_log) {
+    return "log";
+  }
+  if (p == eval_identity) {
+    return "identity";
+  }
+  if (p == eval_Bitwise_and) {
+    return "Bitwise_and";
+  }
+  if (p == eval_Bitwise_or) {
+    return "Bitwise_or";
+  }
+  if (p == eval_Bitwise_xor) {
+    return "Bitwise_xor";
+  }
+  if (p == eval_Bitwise_complement) {
+    return "Bitwise_complement";
+  }
+  if (p == eval_Bitwise_shiftLeftBy) {
+    return "Bitwise_shiftLeftBy";
+  }
+  if (p == eval_Bitwise_shiftRightBy) {
+    return "Bitwise_shiftRightBy";
+  }
+  if (p == eval_Bitwise_shiftRightZfBy) {
+    return "Bitwise_shiftRightZfBy";
+  }
+  if (p == eval_toCode) {
+    return "toCode";
+  }
+  if (p == eval_negate) {
+    return "negate";
+  }
+  if (p == eval_add) {
+    return "add";
+  }
+  if (p == eval_sub) {
+    return "sub";
+  }
+  if (p == eval_mul) {
+    return "mul";
+  }
+  if (p == eval_fdiv) {
+    return "fdiv";
+  }
+  if (p == eval_idiv) {
+    return "idiv";
+  }
+  if (p == eval_pow) {
+    return "pow";
+  }
+  if (p == eval_toFloat) {
+    return "toFloat";
+  }
+  if (p == eval_round) {
+    return "round";
+  }
+  if (p == eval_floor) {
+    return "floor";
+  }
+  if (p == eval_ceiling) {
+    return "ceiling";
+  }
+  if (p == eval_not) {
+    return "not";
+  }
+  if (p == eval_and) {
+    return "and";
+  }
+  if (p == eval_or) {
+    return "or";
+  }
+  if (p == eval_xor) {
+    return "xor";
+  }
+  if (p == eval_remainderBy) {
+    return "remainderBy";
+  }
+  if (p == eval_modBy) {
+    return "modBy";
+  }
+  if (p == eval_log) {
+    return "log";
+  }
+  if (p == eval_identity) {
+    return "identity";
+  }
+  if (p == eval_Bitwise_and) {
+    return "Bitwise_and";
+  }
+  if (p == eval_Bitwise_or) {
+    return "Bitwise_or";
+  }
+  if (p == eval_Bitwise_xor) {
+    return "Bitwise_xor";
+  }
+  if (p == eval_Bitwise_complement) {
+    return "Bitwise_complement";
+  }
+  if (p == eval_Bitwise_shiftLeftBy) {
+    return "Bitwise_shiftLeftBy";
+  }
+  if (p == eval_Bitwise_shiftRightBy) {
+    return "Bitwise_shiftRightBy";
+  }
+  if (p == eval_Bitwise_shiftRightZfBy) {
+    return "Bitwise_shiftRightZfBy";
+  }
+  if (p == eval_toCode) {
+    return "toCode";
+  }
+  if (p == eval_negate) {
+    return "negate";
+  }
+  if (p == eval_add) {
+    return "add";
+  }
+  if (p == eval_sub) {
+    return "sub";
+  }
+  if (p == eval_mul) {
+    return "mul";
+  }
+  if (p == eval_fdiv) {
+    return "fdiv";
+  }
+  if (p == eval_idiv) {
+    return "idiv";
+  }
+  if (p == eval_pow) {
+    return "pow";
+  }
+  if (p == eval_toFloat) {
+    return "toFloat";
+  }
+  if (p == eval_round) {
+    return "round";
+  }
+  if (p == eval_floor) {
+    return "floor";
+  }
+  if (p == eval_ceiling) {
+    return "ceiling";
+  }
+  if (p == eval_not) {
+    return "not";
+  }
+  if (p == eval_and) {
+    return "and";
+  }
+  if (p == eval_or) {
+    return "or";
+  }
+  if (p == eval_xor) {
+    return "xor";
+  }
+  if (p == eval_remainderBy) {
+    return "remainderBy";
+  }
+  if (p == eval_modBy) {
+    return "modBy";
+  }
+  if (p == eval_log) {
+    return "log";
+  }
+  if (p == eval_identity) {
+    return "identity";
+  }
+  if (p == eval_Bitwise_and) {
+    return "Bitwise_and";
+  }
+  if (p == eval_Bitwise_or) {
+    return "Bitwise_or";
+  }
+  if (p == eval_Bitwise_xor) {
+    return "Bitwise_xor";
+  }
+  if (p == eval_Bitwise_complement) {
+    return "Bitwise_complement";
+  }
+  if (p == eval_Bitwise_shiftLeftBy) {
+    return "Bitwise_shiftLeftBy";
+  }
+  if (p == eval_Bitwise_shiftRightBy) {
+    return "Bitwise_shiftRightBy";
+  }
+  if (p == eval_Bitwise_shiftRightZfBy) {
+    return "Bitwise_shiftRightZfBy";
+  }
+  if (p == eval_toCode) {
+    return "toCode";
+  }
+  if (p == eval_Debug_toString) {
+    return "Debug_toString";
+  }
+  if (p == eval_Debug_log) {
+    return "Debug_log";
+  }
+  if (p == eval_Debug_todo) {
+    return "Debug_todo";
+  }
+  if (p == eval_JsArray_singleton) {
     return "JsArray_singleton";
   }
-  if (p == JsArray_length.evaluator) {
+  if (p == eval_JsArray_length) {
     return "JsArray_length";
   }
-  if (p == JsArray_initialize.evaluator) {
+  if (p == eval_JsArray_initialize) {
     return "JsArray_initialize";
   }
-  if (p == JsArray_initializeFromList.evaluator) {
+  if (p == eval_JsArray_initializeFromList) {
     return "JsArray_initializeFromList";
   }
-  if (p == JsArray_unsafeGet.evaluator) {
+  if (p == eval_JsArray_unsafeGet) {
     return "JsArray_unsafeGet";
   }
-  if (p == JsArray_unsafeSet.evaluator) {
+  if (p == eval_JsArray_unsafeSet) {
     return "JsArray_unsafeSet";
   }
-  if (p == JsArray_push.evaluator) {
+  if (p == eval_JsArray_push) {
     return "JsArray_push";
   }
-  if (p == JsArray_foldl.evaluator) {
+  if (p == eval_JsArray_foldl) {
     return "JsArray_foldl";
   }
-  if (p == JsArray_foldr.evaluator) {
+  if (p == eval_JsArray_foldr) {
     return "JsArray_foldr";
   }
-  if (p == JsArray_map.evaluator) {
+  if (p == eval_JsArray_map) {
     return "JsArray_map";
   }
-  if (p == JsArray_indexedMap.evaluator) {
+  if (p == eval_JsArray_indexedMap) {
     return "JsArray_indexedMap";
   }
-  if (p == JsArray_slice.evaluator) {
+  if (p == eval_JsArray_slice) {
     return "JsArray_slice";
   }
-  if (p == JsArray_appendN.evaluator) {
+  if (p == eval_JsArray_appendN) {
     return "JsArray_appendN";
   }
-  if (p == List_cons.evaluator) {
+  if (p == eval_List_cons) {
     return "List_cons";
   }
-  if (p == List_append.evaluator) {
+  if (p == eval_List_append) {
     return "List_append";
   }
-  if (p == List_map2.evaluator) {
+  if (p == eval_List_map2) {
     return "List_map2";
   }
-  if (p == List_sortBy.evaluator) {
+  if (p == eval_List_sortBy) {
     return "List_sortBy";
   }
-  if (p == Platform_batch.evaluator) {
-    return "Platform_batch";
-  }
-  if (p == Platform_leaf.evaluator) {
-    return "Platform_leaf";
-  }
-  if (p == Platform_map.evaluator) {
-    return "Platform_map";
-  }
-  if (p == Platform_sendToApp.evaluator) {
-    return "Platform_sendToApp";
-  }
-  if (p == Platform_sendToSelf.evaluator) {
-    return "Platform_sendToSelf";
-  }
   if (p == eval_sendToApp_revArgs) {
-    return "eval_sendToApp_revArgs";
+    return "sendToApp_revArgs";
   }
-  if (p == Scheduler_succeed.evaluator) {
-    return "Scheduler_succeed";
+  if (p == eval_manager_loop_receive) {
+    return "manager_loop_receive";
   }
-  if (p == Scheduler_fail.evaluator) {
-    return "Scheduler_fail";
+  if (p == eval_manager_loop) {
+    return "manager_loop";
   }
-  if (p == Scheduler_binding.evaluator) {
-    return "Scheduler_binding";
-  }
-  if (p == Scheduler_andThen.evaluator) {
-    return "Scheduler_andThen";
-  }
-  if (p == Scheduler_onError.evaluator) {
-    return "Scheduler_onError";
-  }
-  if (p == Scheduler_receive.evaluator) {
-    return "Scheduler_receive";
-  }
-  if (p == Scheduler_rawSpawn.evaluator) {
-    return "Scheduler_rawSpawn";
-  }
-  if (p == Scheduler_spawn.evaluator) {
-    return "Scheduler_spawn";
-  }
-  if (p == Scheduler_rawSend.evaluator) {
-    return "Scheduler_rawSend";
-  }
-  if (p == Scheduler_send.evaluator) {
-    return "Scheduler_send";
-  }
-  if (p == Scheduler_kill.evaluator) {
-    return "Scheduler_kill";
-  }
-  if (p == String_uncons.evaluator) {
-    return "String_uncons";
-  }
-  if (p == String_append.evaluator) {
-    return "String_append";
-  }
-  if (p == String_length.evaluator) {
-    return "String_length";
-  }
-  if (p == String_foldr.evaluator) {
-    return "String_foldr";
-  }
-  if (p == String_split.evaluator) {
-    return "String_split";
-  }
-  if (p == String_join.evaluator) {
-    return "String_join";
-  }
-  if (p == String_slice.evaluator) {
-    return "String_slice";
-  }
-  if (p == String_trim.evaluator) {
-    return "String_trim";
-  }
-  if (p == String_trimLeft.evaluator) {
-    return "String_trimLeft";
-  }
-  if (p == String_trimRight.evaluator) {
-    return "String_trimRight";
-  }
-  if (p == String_all.evaluator) {
-    return "String_all";
-  }
-  if (p == String_contains.evaluator) {
-    return "String_contains";
-  }
-  if (p == String_startsWith.evaluator) {
-    return "String_startsWith";
-  }
-  if (p == String_endsWith.evaluator) {
-    return "String_endsWith";
-  }
-  if (p == String_indexes.evaluator) {
-    return "String_indexes";
-  }
-  if (p == String_fromNumber.evaluator) {
-    return "String_fromNumber";
-  }
-  if (p == String_toInt.evaluator) {
-    return "String_toInt";
-  }
-  if (p == String_toFloat.evaluator) {
-    return "String_toFloat";
-  }
-  if (p == Utils_equal.evaluator) {
-    return "Utils_equal";
-  }
-  if (p == Utils_notEqual.evaluator) {
-    return "Utils_notEqual";
-  }
-  if (p == Utils_append.evaluator) {
-    return "Utils_append";
-  }
-  if (p == Utils_compare.evaluator) {
-    return "Utils_compare";
-  }
-  if (p == Utils_lt.evaluator) {
-    return "Utils_lt";
-  }
-  if (p == Utils_le.evaluator) {
-    return "Utils_le";
-  }
-  if (p == Utils_gt.evaluator) {
-    return "Utils_gt";
-  }
-  if (p == Utils_ge.evaluator) {
-    return "Utils_ge";
-  }
-  if (p == eval_elm_core_Result_Ok) {
-    return "eval_elm_core_Result_Ok";
-  }
-  if (p == eval_elm_core_Result_Err) {
-    return "eval_elm_core_Result_Err";
-  }
-  if (p == eval_elm_core_Result_isOk) {
-    return "eval_elm_core_Result_isOk";
-  }
-  if (p == eval_List_append) {
-    return "eval_List_append";
-  }
-  if (p == eval_Platform_leaf) {
-    return "eval_Platform_leaf";
+  if (p == eval_Platform_sendToApp_lambda) {
+    return "Platform_sendToApp_lambda";
   }
   if (p == eval_Platform_sendToApp) {
-    return "eval_Platform_sendToApp";
+    return "Platform_sendToApp";
   }
   if (p == eval_Platform_sendToSelf) {
-    return "eval_Platform_sendToSelf";
+    return "Platform_sendToSelf";
   }
-  if (p == eval_Scheduler_rawSpawn) {
-    return "eval_Scheduler_rawSpawn";
+  if (p == eval_Platform_leaf) {
+    return "Platform_leaf";
   }
-  if (p == eval_Scheduler_spawn) {
-    return "eval_Scheduler_spawn";
+  if (p == eval_Platform_batch) {
+    return "Platform_batch";
+  }
+  if (p == eval_Platform_map) {
+    return "Platform_map";
+  }
+  if (p == eval_applyTaggers) {
+    return "applyTaggers";
   }
   if (p == eval_Scheduler_succeed) {
-    return "eval_Scheduler_succeed";
+    return "Scheduler_succeed";
   }
   if (p == eval_Scheduler_fail) {
-    return "eval_Scheduler_fail";
+    return "Scheduler_fail";
   }
   if (p == eval_Scheduler_binding) {
-    return "eval_Scheduler_binding";
+    return "Scheduler_binding";
   }
   if (p == eval_Scheduler_andThen) {
-    return "eval_Scheduler_andThen";
+    return "Scheduler_andThen";
   }
   if (p == eval_Scheduler_onError) {
-    return "eval_Scheduler_onError";
+    return "Scheduler_onError";
   }
   if (p == eval_Scheduler_receive) {
-    return "eval_Scheduler_receive";
+    return "Scheduler_receive";
+  }
+  if (p == eval_Scheduler_rawSpawn) {
+    return "Scheduler_rawSpawn";
+  }
+  if (p == eval_Scheduler_spawn_lambda) {
+    return "Scheduler_spawn_lambda";
+  }
+  if (p == eval_Scheduler_spawn) {
+    return "Scheduler_spawn";
   }
   if (p == eval_Scheduler_rawSend) {
-    return "eval_Scheduler_rawSend";
+    return "Scheduler_rawSend";
+  }
+  if (p == eval_Scheduler_send_lambda) {
+    return "Scheduler_send_lambda";
   }
   if (p == eval_Scheduler_send) {
-    return "eval_Scheduler_send";
+    return "Scheduler_send";
+  }
+  if (p == eval_Scheduler_kill_lambda) {
+    return "Scheduler_kill_lambda";
   }
   if (p == eval_Scheduler_kill) {
-    return "eval_Scheduler_kill";
+    return "Scheduler_kill";
+  }
+  if (p == eval_Scheduler_step_lambda) {
+    return "Scheduler_step_lambda";
+  }
+  if (p == eval_String_uncons) {
+    return "String_uncons";
   }
   if (p == eval_String_append) {
-    return "eval_String_append";
+    return "String_append";
   }
-  if (p == Json_succeed.evaluator) {
+  if (p == eval_String_length) {
+    return "String_length";
+  }
+  if (p == eval_String_foldr) {
+    return "String_foldr";
+  }
+  if (p == eval_String_split) {
+    return "String_split";
+  }
+  if (p == eval_String_join) {
+    return "String_join";
+  }
+  if (p == eval_String_slice) {
+    return "String_slice";
+  }
+  if (p == eval_String_trim) {
+    return "String_trim";
+  }
+  if (p == eval_String_trimLeft) {
+    return "String_trimLeft";
+  }
+  if (p == eval_String_trimRight) {
+    return "String_trimRight";
+  }
+  if (p == eval_String_all) {
+    return "String_all";
+  }
+  if (p == eval_String_contains) {
+    return "String_contains";
+  }
+  if (p == eval_String_startsWith) {
+    return "String_startsWith";
+  }
+  if (p == eval_String_endsWith) {
+    return "String_endsWith";
+  }
+  if (p == eval_String_indexes) {
+    return "String_indexes";
+  }
+  if (p == String_fromNumber_eval) {
+    return "String_fromNumber";
+  }
+  if (p == eval_String_toInt) {
+    return "String_toInt";
+  }
+  if (p == eval_String_toFloat) {
+    return "String_toFloat";
+  }
+  if (p == Utils_access_eval) {
+    return "Utils_access";
+  }
+  if (p == eval_Utils_append) {
+    return "Utils_append";
+  }
+  if (p == eq_eval) {
+    return "eq";
+  }
+  if (p == eval_notEqual) {
+    return "notEqual";
+  }
+  if (p == compare_eval) {
+    return "compare";
+  }
+  if (p == lt_eval) {
+    return "lt";
+  }
+  if (p == le_eval) {
+    return "le";
+  }
+  if (p == gt_eval) {
+    return "gt";
+  }
+  if (p == ge_eval) {
+    return "ge";
+  }
+  if (p == eval_Test_runThunk) {
+    return "Test_runThunk";
+  }
+  if (p == eval_Json_succeed) {
     return "Json_succeed";
   }
-  if (p == Json_fail.evaluator) {
+  if (p == eval_Json_fail) {
     return "Json_fail";
   }
-  if (p == Json_decodeList.evaluator) {
+  if (p == eval_Json_decodeList) {
     return "Json_decodeList";
   }
-  if (p == Json_decodeArray.evaluator) {
+  if (p == eval_Json_decodeArray) {
     return "Json_decodeArray";
   }
-  if (p == Json_decodeNull.evaluator) {
+  if (p == eval_Json_decodeNull) {
     return "Json_decodeNull";
   }
-  if (p == Json_decodeField.evaluator) {
+  if (p == eval_Json_decodeField) {
     return "Json_decodeField";
   }
-  if (p == Json_decodeIndex.evaluator) {
+  if (p == eval_Json_decodeIndex) {
     return "Json_decodeIndex";
   }
-  if (p == Json_decodeKeyValuePairs.evaluator) {
+  if (p == eval_Json_decodeKeyValuePairs) {
     return "Json_decodeKeyValuePairs";
   }
-  if (p == Json_andThen.evaluator) {
+  if (p == eval_Json_andThen) {
     return "Json_andThen";
   }
-  if (p == Json_oneOf.evaluator) {
+  if (p == eval_Json_oneOf) {
     return "Json_oneOf";
   }
-  if (p == Json_map1.evaluator) {
-    return "Json_map1";
+  if (p == eval_Json_mapMany) {
+    return "Json_mapMany";
   }
-  if (p == Json_map2.evaluator) {
-    return "Json_map2";
+  if (p == eval_Json_array_get) {
+    return "Json_array_get";
   }
-  if (p == Json_map3.evaluator) {
-    return "Json_map3";
+  if (p == eval_runOnString) {
+    return "runOnString";
   }
-  if (p == Json_map4.evaluator) {
-    return "Json_map4";
-  }
-  if (p == Json_map5.evaluator) {
-    return "Json_map5";
-  }
-  if (p == Json_map6.evaluator) {
-    return "Json_map6";
-  }
-  if (p == Json_map7.evaluator) {
-    return "Json_map7";
-  }
-  if (p == Json_map8.evaluator) {
-    return "Json_map8";
-  }
-  if (p == Json_run.evaluator) {
+  if (p == eval_Json_run) {
     return "Json_run";
   }
-  if (p == Json_runOnString.evaluator) {
-    return "Json_runOnString";
-  }
-  if (p == Json_wrap.evaluator) {
+  if (p == eval_Json_wrap) {
     return "Json_wrap";
   }
-  if (p == Json_unwrap.evaluator) {
+  if (p == eval_Json_unwrap) {
     return "Json_unwrap";
   }
-  if (p == Json_emptyArray.evaluator) {
+  if (p == eval_Json_emptyArray) {
     return "Json_emptyArray";
   }
-  if (p == Json_emptyObject.evaluator) {
+  if (p == eval_Json_emptyObject) {
     return "Json_emptyObject";
   }
-  if (p == Json_addField.evaluator) {
+  if (p == eval_Json_addField) {
     return "Json_addField";
   }
-  if (p == Json_addEntry.evaluator) {
+  if (p == eval_Json_addEntry) {
     return "Json_addEntry";
   }
-  if (p == Json_encode.evaluator) {
+  if (p == eval_Json_encode) {
     return "Json_encode";
   }
-  return "(unknown evaluator)";
+  if (p == eval_wrapInit) {
+    return "wrapInit";
+  }
+  if (p == eval_wrapView) {
+    return "wrapView";
+  }
+  if (p == eval_intercept) {
+    return "intercept";
+  }
+  if (p == eval_Debug_toString) {
+    return "Debug_toString";
+  }
+  if (p == eval_Debug_log) {
+    return "Debug_log";
+  }
+  if (p == eval_Debug_todo) {
+    return "Debug_todo";
+  }
+  if (p == eval_JsArray_singleton) {
+    return "JsArray_singleton";
+  }
+  if (p == eval_JsArray_length) {
+    return "JsArray_length";
+  }
+  if (p == eval_JsArray_initialize) {
+    return "JsArray_initialize";
+  }
+  if (p == eval_JsArray_initializeFromList) {
+    return "JsArray_initializeFromList";
+  }
+  if (p == eval_JsArray_unsafeGet) {
+    return "JsArray_unsafeGet";
+  }
+  if (p == eval_JsArray_unsafeSet) {
+    return "JsArray_unsafeSet";
+  }
+  if (p == eval_JsArray_push) {
+    return "JsArray_push";
+  }
+  if (p == eval_JsArray_foldl) {
+    return "JsArray_foldl";
+  }
+  if (p == eval_JsArray_foldr) {
+    return "JsArray_foldr";
+  }
+  if (p == eval_JsArray_map) {
+    return "JsArray_map";
+  }
+  if (p == eval_JsArray_indexedMap) {
+    return "JsArray_indexedMap";
+  }
+  if (p == eval_JsArray_slice) {
+    return "JsArray_slice";
+  }
+  if (p == eval_JsArray_appendN) {
+    return "JsArray_appendN";
+  }
+  if (p == eval_List_cons) {
+    return "List_cons";
+  }
+  if (p == eval_List_append) {
+    return "List_append";
+  }
+  if (p == eval_List_map2) {
+    return "List_map2";
+  }
+  if (p == eval_List_sortBy) {
+    return "List_sortBy";
+  }
+  if (p == eval_sendToApp_revArgs) {
+    return "sendToApp_revArgs";
+  }
+  if (p == eval_manager_loop_receive) {
+    return "manager_loop_receive";
+  }
+  if (p == eval_manager_loop) {
+    return "manager_loop";
+  }
+  if (p == eval_Platform_sendToApp_lambda) {
+    return "Platform_sendToApp_lambda";
+  }
+  if (p == eval_Platform_sendToApp) {
+    return "Platform_sendToApp";
+  }
+  if (p == eval_Platform_sendToSelf) {
+    return "Platform_sendToSelf";
+  }
+  if (p == eval_Platform_leaf) {
+    return "Platform_leaf";
+  }
+  if (p == eval_Platform_batch) {
+    return "Platform_batch";
+  }
+  if (p == eval_Platform_map) {
+    return "Platform_map";
+  }
+  if (p == eval_applyTaggers) {
+    return "applyTaggers";
+  }
+  if (p == eval_Scheduler_succeed) {
+    return "Scheduler_succeed";
+  }
+  if (p == eval_Scheduler_fail) {
+    return "Scheduler_fail";
+  }
+  if (p == eval_Scheduler_binding) {
+    return "Scheduler_binding";
+  }
+  if (p == eval_Scheduler_andThen) {
+    return "Scheduler_andThen";
+  }
+  if (p == eval_Scheduler_onError) {
+    return "Scheduler_onError";
+  }
+  if (p == eval_Scheduler_receive) {
+    return "Scheduler_receive";
+  }
+  if (p == eval_Scheduler_rawSpawn) {
+    return "Scheduler_rawSpawn";
+  }
+  if (p == eval_Scheduler_spawn_lambda) {
+    return "Scheduler_spawn_lambda";
+  }
+  if (p == eval_Scheduler_spawn) {
+    return "Scheduler_spawn";
+  }
+  if (p == eval_Scheduler_rawSend) {
+    return "Scheduler_rawSend";
+  }
+  if (p == eval_Scheduler_send_lambda) {
+    return "Scheduler_send_lambda";
+  }
+  if (p == eval_Scheduler_send) {
+    return "Scheduler_send";
+  }
+  if (p == eval_Scheduler_kill_lambda) {
+    return "Scheduler_kill_lambda";
+  }
+  if (p == eval_Scheduler_kill) {
+    return "Scheduler_kill";
+  }
+  if (p == eval_Scheduler_step_lambda) {
+    return "Scheduler_step_lambda";
+  }
+  if (p == eval_String_uncons) {
+    return "String_uncons";
+  }
+  if (p == eval_String_append) {
+    return "String_append";
+  }
+  if (p == eval_String_length) {
+    return "String_length";
+  }
+  if (p == eval_String_foldr) {
+    return "String_foldr";
+  }
+  if (p == eval_String_split) {
+    return "String_split";
+  }
+  if (p == eval_String_join) {
+    return "String_join";
+  }
+  if (p == eval_String_slice) {
+    return "String_slice";
+  }
+  if (p == eval_String_trim) {
+    return "String_trim";
+  }
+  if (p == eval_String_trimLeft) {
+    return "String_trimLeft";
+  }
+  if (p == eval_String_trimRight) {
+    return "String_trimRight";
+  }
+  if (p == eval_String_all) {
+    return "String_all";
+  }
+  if (p == eval_String_contains) {
+    return "String_contains";
+  }
+  if (p == eval_String_startsWith) {
+    return "String_startsWith";
+  }
+  if (p == eval_String_endsWith) {
+    return "String_endsWith";
+  }
+  if (p == eval_String_indexes) {
+    return "String_indexes";
+  }
+  if (p == String_fromNumber_eval) {
+    return "String_fromNumber";
+  }
+  if (p == eval_String_toInt) {
+    return "String_toInt";
+  }
+  if (p == eval_String_toFloat) {
+    return "String_toFloat";
+  }
+  if (p == Utils_access_eval) {
+    return "Utils_access";
+  }
+  if (p == eval_Utils_append) {
+    return "Utils_append";
+  }
+  if (p == eq_eval) {
+    return "eq";
+  }
+  if (p == eval_notEqual) {
+    return "notEqual";
+  }
+  if (p == compare_eval) {
+    return "compare";
+  }
+  if (p == lt_eval) {
+    return "lt";
+  }
+  if (p == le_eval) {
+    return "le";
+  }
+  if (p == gt_eval) {
+    return "gt";
+  }
+  if (p == ge_eval) {
+    return "ge";
+  }
+  if (p == eval_Test_runThunk) {
+    return "Test_runThunk";
+  }
+  if (p == eval_Json_succeed) {
+    return "Json_succeed";
+  }
+  if (p == eval_Json_fail) {
+    return "Json_fail";
+  }
+  if (p == eval_Json_decodeList) {
+    return "Json_decodeList";
+  }
+  if (p == eval_Json_decodeArray) {
+    return "Json_decodeArray";
+  }
+  if (p == eval_Json_decodeNull) {
+    return "Json_decodeNull";
+  }
+  if (p == eval_Json_decodeField) {
+    return "Json_decodeField";
+  }
+  if (p == eval_Json_decodeIndex) {
+    return "Json_decodeIndex";
+  }
+  if (p == eval_Json_decodeKeyValuePairs) {
+    return "Json_decodeKeyValuePairs";
+  }
+  if (p == eval_Json_andThen) {
+    return "Json_andThen";
+  }
+  if (p == eval_Json_oneOf) {
+    return "Json_oneOf";
+  }
+  if (p == eval_Json_mapMany) {
+    return "Json_mapMany";
+  }
+  if (p == eval_Json_array_get) {
+    return "Json_array_get";
+  }
+  if (p == eval_runOnString) {
+    return "runOnString";
+  }
+  if (p == eval_Json_run) {
+    return "Json_run";
+  }
+  if (p == eval_Json_wrap) {
+    return "Json_wrap";
+  }
+  if (p == eval_Json_unwrap) {
+    return "Json_unwrap";
+  }
+  if (p == eval_Json_emptyArray) {
+    return "Json_emptyArray";
+  }
+  if (p == eval_Json_emptyObject) {
+    return "Json_emptyObject";
+  }
+  if (p == eval_Json_addField) {
+    return "Json_addField";
+  }
+  if (p == eval_Json_addEntry) {
+    return "Json_addEntry";
+  }
+  if (p == eval_Json_encode) {
+    return "Json_encode";
+  }
+  if (p == eval_wrapInit) {
+    return "wrapInit";
+  }
+  if (p == eval_wrapView) {
+    return "wrapView";
+  }
+  if (p == eval_intercept) {
+    return "intercept";
+  }
+  if (p == eval_Debug_toString) {
+    return "Debug_toString";
+  }
+  if (p == eval_Debug_log) {
+    return "Debug_log";
+  }
+  if (p == eval_Debug_todo) {
+    return "Debug_todo";
+  }
+  if (p == eval_JsArray_singleton) {
+    return "JsArray_singleton";
+  }
+  if (p == eval_JsArray_length) {
+    return "JsArray_length";
+  }
+  if (p == eval_JsArray_initialize) {
+    return "JsArray_initialize";
+  }
+  if (p == eval_JsArray_initializeFromList) {
+    return "JsArray_initializeFromList";
+  }
+  if (p == eval_JsArray_unsafeGet) {
+    return "JsArray_unsafeGet";
+  }
+  if (p == eval_JsArray_unsafeSet) {
+    return "JsArray_unsafeSet";
+  }
+  if (p == eval_JsArray_push) {
+    return "JsArray_push";
+  }
+  if (p == eval_JsArray_foldl) {
+    return "JsArray_foldl";
+  }
+  if (p == eval_JsArray_foldr) {
+    return "JsArray_foldr";
+  }
+  if (p == eval_JsArray_map) {
+    return "JsArray_map";
+  }
+  if (p == eval_JsArray_indexedMap) {
+    return "JsArray_indexedMap";
+  }
+  if (p == eval_JsArray_slice) {
+    return "JsArray_slice";
+  }
+  if (p == eval_JsArray_appendN) {
+    return "JsArray_appendN";
+  }
+  if (p == eval_List_cons) {
+    return "List_cons";
+  }
+  if (p == eval_List_append) {
+    return "List_append";
+  }
+  if (p == eval_List_map2) {
+    return "List_map2";
+  }
+  if (p == eval_List_sortBy) {
+    return "List_sortBy";
+  }
+  if (p == eval_sendToApp_revArgs) {
+    return "sendToApp_revArgs";
+  }
+  if (p == eval_manager_loop_receive) {
+    return "manager_loop_receive";
+  }
+  if (p == eval_manager_loop) {
+    return "manager_loop";
+  }
+  if (p == eval_Platform_sendToApp_lambda) {
+    return "Platform_sendToApp_lambda";
+  }
+  if (p == eval_Platform_sendToApp) {
+    return "Platform_sendToApp";
+  }
+  if (p == eval_Platform_sendToSelf) {
+    return "Platform_sendToSelf";
+  }
+  if (p == eval_Platform_leaf) {
+    return "Platform_leaf";
+  }
+  if (p == eval_Platform_batch) {
+    return "Platform_batch";
+  }
+  if (p == eval_Platform_map) {
+    return "Platform_map";
+  }
+  if (p == eval_applyTaggers) {
+    return "applyTaggers";
+  }
+  if (p == eval_Scheduler_succeed) {
+    return "Scheduler_succeed";
+  }
+  if (p == eval_Scheduler_fail) {
+    return "Scheduler_fail";
+  }
+  if (p == eval_Scheduler_binding) {
+    return "Scheduler_binding";
+  }
+  if (p == eval_Scheduler_andThen) {
+    return "Scheduler_andThen";
+  }
+  if (p == eval_Scheduler_onError) {
+    return "Scheduler_onError";
+  }
+  if (p == eval_Scheduler_receive) {
+    return "Scheduler_receive";
+  }
+  if (p == eval_Scheduler_rawSpawn) {
+    return "Scheduler_rawSpawn";
+  }
+  if (p == eval_Scheduler_spawn_lambda) {
+    return "Scheduler_spawn_lambda";
+  }
+  if (p == eval_Scheduler_spawn) {
+    return "Scheduler_spawn";
+  }
+  if (p == eval_Scheduler_rawSend) {
+    return "Scheduler_rawSend";
+  }
+  if (p == eval_Scheduler_send_lambda) {
+    return "Scheduler_send_lambda";
+  }
+  if (p == eval_Scheduler_send) {
+    return "Scheduler_send";
+  }
+  if (p == eval_Scheduler_kill_lambda) {
+    return "Scheduler_kill_lambda";
+  }
+  if (p == eval_Scheduler_kill) {
+    return "Scheduler_kill";
+  }
+  if (p == eval_Scheduler_step_lambda) {
+    return "Scheduler_step_lambda";
+  }
+  if (p == eval_String_uncons) {
+    return "String_uncons";
+  }
+  if (p == eval_String_append) {
+    return "String_append";
+  }
+  if (p == eval_String_length) {
+    return "String_length";
+  }
+  if (p == eval_String_foldr) {
+    return "String_foldr";
+  }
+  if (p == eval_String_split) {
+    return "String_split";
+  }
+  if (p == eval_String_join) {
+    return "String_join";
+  }
+  if (p == eval_String_slice) {
+    return "String_slice";
+  }
+  if (p == eval_String_trim) {
+    return "String_trim";
+  }
+  if (p == eval_String_trimLeft) {
+    return "String_trimLeft";
+  }
+  if (p == eval_String_trimRight) {
+    return "String_trimRight";
+  }
+  if (p == eval_String_all) {
+    return "String_all";
+  }
+  if (p == eval_String_contains) {
+    return "String_contains";
+  }
+  if (p == eval_String_startsWith) {
+    return "String_startsWith";
+  }
+  if (p == eval_String_endsWith) {
+    return "String_endsWith";
+  }
+  if (p == eval_String_indexes) {
+    return "String_indexes";
+  }
+  if (p == String_fromNumber_eval) {
+    return "String_fromNumber";
+  }
+  if (p == eval_String_toInt) {
+    return "String_toInt";
+  }
+  if (p == eval_String_toFloat) {
+    return "String_toFloat";
+  }
+  if (p == Utils_access_eval) {
+    return "Utils_access";
+  }
+  if (p == eval_Utils_append) {
+    return "Utils_append";
+  }
+  if (p == eq_eval) {
+    return "eq";
+  }
+  if (p == eval_notEqual) {
+    return "notEqual";
+  }
+  if (p == compare_eval) {
+    return "compare";
+  }
+  if (p == lt_eval) {
+    return "lt";
+  }
+  if (p == le_eval) {
+    return "le";
+  }
+  if (p == gt_eval) {
+    return "gt";
+  }
+  if (p == ge_eval) {
+    return "ge";
+  }
+  if (p == eval_Test_runThunk) {
+    return "Test_runThunk";
+  }
+  if (p == eval_Json_succeed) {
+    return "Json_succeed";
+  }
+  if (p == eval_Json_fail) {
+    return "Json_fail";
+  }
+  if (p == eval_Json_decodeList) {
+    return "Json_decodeList";
+  }
+  if (p == eval_Json_decodeArray) {
+    return "Json_decodeArray";
+  }
+  if (p == eval_Json_decodeNull) {
+    return "Json_decodeNull";
+  }
+  if (p == eval_Json_decodeField) {
+    return "Json_decodeField";
+  }
+  if (p == eval_Json_decodeIndex) {
+    return "Json_decodeIndex";
+  }
+  if (p == eval_Json_decodeKeyValuePairs) {
+    return "Json_decodeKeyValuePairs";
+  }
+  if (p == eval_Json_andThen) {
+    return "Json_andThen";
+  }
+  if (p == eval_Json_oneOf) {
+    return "Json_oneOf";
+  }
+  if (p == eval_Json_mapMany) {
+    return "Json_mapMany";
+  }
+  if (p == eval_Json_array_get) {
+    return "Json_array_get";
+  }
+  if (p == eval_runOnString) {
+    return "runOnString";
+  }
+  if (p == eval_Json_run) {
+    return "Json_run";
+  }
+  if (p == eval_Json_wrap) {
+    return "Json_wrap";
+  }
+  if (p == eval_Json_unwrap) {
+    return "Json_unwrap";
+  }
+  if (p == eval_Json_emptyArray) {
+    return "Json_emptyArray";
+  }
+  if (p == eval_Json_emptyObject) {
+    return "Json_emptyObject";
+  }
+  if (p == eval_Json_addField) {
+    return "Json_addField";
+  }
+  if (p == eval_Json_addEntry) {
+    return "Json_addEntry";
+  }
+  if (p == eval_Json_encode) {
+    return "Json_encode";
+  }
+  if (p == eval_wrapInit) {
+    return "wrapInit";
+  }
+  if (p == eval_wrapView) {
+    return "wrapView";
+  }
+  if (p == eval_intercept) {
+    return "intercept";
+  }
+  if (p == eval_Debug_toString) {
+    return "Debug_toString";
+  }
+  if (p == eval_Debug_log) {
+    return "Debug_log";
+  }
+  if (p == eval_Debug_todo) {
+    return "Debug_todo";
+  }
+  if (p == eval_JsArray_singleton) {
+    return "JsArray_singleton";
+  }
+  if (p == eval_JsArray_length) {
+    return "JsArray_length";
+  }
+  if (p == eval_JsArray_initialize) {
+    return "JsArray_initialize";
+  }
+  if (p == eval_JsArray_initializeFromList) {
+    return "JsArray_initializeFromList";
+  }
+  if (p == eval_JsArray_unsafeGet) {
+    return "JsArray_unsafeGet";
+  }
+  if (p == eval_JsArray_unsafeSet) {
+    return "JsArray_unsafeSet";
+  }
+  if (p == eval_JsArray_push) {
+    return "JsArray_push";
+  }
+  if (p == eval_JsArray_foldl) {
+    return "JsArray_foldl";
+  }
+  if (p == eval_JsArray_foldr) {
+    return "JsArray_foldr";
+  }
+  if (p == eval_JsArray_map) {
+    return "JsArray_map";
+  }
+  if (p == eval_JsArray_indexedMap) {
+    return "JsArray_indexedMap";
+  }
+  if (p == eval_JsArray_slice) {
+    return "JsArray_slice";
+  }
+  if (p == eval_JsArray_appendN) {
+    return "JsArray_appendN";
+  }
+  if (p == eval_List_cons) {
+    return "List_cons";
+  }
+  if (p == eval_List_append) {
+    return "List_append";
+  }
+  if (p == eval_List_map2) {
+    return "List_map2";
+  }
+  if (p == eval_List_sortBy) {
+    return "List_sortBy";
+  }
+  if (p == eval_sendToApp_revArgs) {
+    return "sendToApp_revArgs";
+  }
+  if (p == eval_manager_loop_receive) {
+    return "manager_loop_receive";
+  }
+  if (p == eval_manager_loop) {
+    return "manager_loop";
+  }
+  if (p == eval_Platform_sendToApp_lambda) {
+    return "Platform_sendToApp_lambda";
+  }
+  if (p == eval_Platform_sendToApp) {
+    return "Platform_sendToApp";
+  }
+  if (p == eval_Platform_sendToSelf) {
+    return "Platform_sendToSelf";
+  }
+  if (p == eval_Platform_leaf) {
+    return "Platform_leaf";
+  }
+  if (p == eval_Platform_batch) {
+    return "Platform_batch";
+  }
+  if (p == eval_Platform_map) {
+    return "Platform_map";
+  }
+  if (p == eval_applyTaggers) {
+    return "applyTaggers";
+  }
+  if (p == eval_Scheduler_succeed) {
+    return "Scheduler_succeed";
+  }
+  if (p == eval_Scheduler_fail) {
+    return "Scheduler_fail";
+  }
+  if (p == eval_Scheduler_binding) {
+    return "Scheduler_binding";
+  }
+  if (p == eval_Scheduler_andThen) {
+    return "Scheduler_andThen";
+  }
+  if (p == eval_Scheduler_onError) {
+    return "Scheduler_onError";
+  }
+  if (p == eval_Scheduler_receive) {
+    return "Scheduler_receive";
+  }
+  if (p == eval_Scheduler_rawSpawn) {
+    return "Scheduler_rawSpawn";
+  }
+  if (p == eval_Scheduler_spawn_lambda) {
+    return "Scheduler_spawn_lambda";
+  }
+  if (p == eval_Scheduler_spawn) {
+    return "Scheduler_spawn";
+  }
+  if (p == eval_Scheduler_rawSend) {
+    return "Scheduler_rawSend";
+  }
+  if (p == eval_Scheduler_send_lambda) {
+    return "Scheduler_send_lambda";
+  }
+  if (p == eval_Scheduler_send) {
+    return "Scheduler_send";
+  }
+  if (p == eval_Scheduler_kill_lambda) {
+    return "Scheduler_kill_lambda";
+  }
+  if (p == eval_Scheduler_kill) {
+    return "Scheduler_kill";
+  }
+  if (p == eval_Scheduler_step_lambda) {
+    return "Scheduler_step_lambda";
+  }
+  if (p == eval_String_uncons) {
+    return "String_uncons";
+  }
+  if (p == eval_String_append) {
+    return "String_append";
+  }
+  if (p == eval_String_length) {
+    return "String_length";
+  }
+  if (p == eval_String_foldr) {
+    return "String_foldr";
+  }
+  if (p == eval_String_split) {
+    return "String_split";
+  }
+  if (p == eval_String_join) {
+    return "String_join";
+  }
+  if (p == eval_String_slice) {
+    return "String_slice";
+  }
+  if (p == eval_String_trim) {
+    return "String_trim";
+  }
+  if (p == eval_String_trimLeft) {
+    return "String_trimLeft";
+  }
+  if (p == eval_String_trimRight) {
+    return "String_trimRight";
+  }
+  if (p == eval_String_all) {
+    return "String_all";
+  }
+  if (p == eval_String_contains) {
+    return "String_contains";
+  }
+  if (p == eval_String_startsWith) {
+    return "String_startsWith";
+  }
+  if (p == eval_String_endsWith) {
+    return "String_endsWith";
+  }
+  if (p == eval_String_indexes) {
+    return "String_indexes";
+  }
+  if (p == String_fromNumber_eval) {
+    return "String_fromNumber";
+  }
+  if (p == eval_String_toInt) {
+    return "String_toInt";
+  }
+  if (p == eval_String_toFloat) {
+    return "String_toFloat";
+  }
+  if (p == Utils_access_eval) {
+    return "Utils_access";
+  }
+  if (p == eval_Utils_append) {
+    return "Utils_append";
+  }
+  if (p == eq_eval) {
+    return "eq";
+  }
+  if (p == eval_notEqual) {
+    return "notEqual";
+  }
+  if (p == compare_eval) {
+    return "compare";
+  }
+  if (p == lt_eval) {
+    return "lt";
+  }
+  if (p == le_eval) {
+    return "le";
+  }
+  if (p == gt_eval) {
+    return "gt";
+  }
+  if (p == ge_eval) {
+    return "ge";
+  }
+  if (p == eval_Test_runThunk) {
+    return "Test_runThunk";
+  }
+  if (p == eval_Json_succeed) {
+    return "Json_succeed";
+  }
+  if (p == eval_Json_fail) {
+    return "Json_fail";
+  }
+  if (p == eval_Json_decodeList) {
+    return "Json_decodeList";
+  }
+  if (p == eval_Json_decodeArray) {
+    return "Json_decodeArray";
+  }
+  if (p == eval_Json_decodeNull) {
+    return "Json_decodeNull";
+  }
+  if (p == eval_Json_decodeField) {
+    return "Json_decodeField";
+  }
+  if (p == eval_Json_decodeIndex) {
+    return "Json_decodeIndex";
+  }
+  if (p == eval_Json_decodeKeyValuePairs) {
+    return "Json_decodeKeyValuePairs";
+  }
+  if (p == eval_Json_andThen) {
+    return "Json_andThen";
+  }
+  if (p == eval_Json_oneOf) {
+    return "Json_oneOf";
+  }
+  if (p == eval_Json_mapMany) {
+    return "Json_mapMany";
+  }
+  if (p == eval_Json_array_get) {
+    return "Json_array_get";
+  }
+  if (p == eval_runOnString) {
+    return "runOnString";
+  }
+  if (p == eval_Json_run) {
+    return "Json_run";
+  }
+  if (p == eval_Json_wrap) {
+    return "Json_wrap";
+  }
+  if (p == eval_Json_unwrap) {
+    return "Json_unwrap";
+  }
+  if (p == eval_Json_emptyArray) {
+    return "Json_emptyArray";
+  }
+  if (p == eval_Json_emptyObject) {
+    return "Json_emptyObject";
+  }
+  if (p == eval_Json_addField) {
+    return "Json_addField";
+  }
+  if (p == eval_Json_addEntry) {
+    return "Json_addEntry";
+  }
+  if (p == eval_Json_encode) {
+    return "Json_encode";
+  }
+  if (p == eval_wrapInit) {
+    return "wrapInit";
+  }
+  if (p == eval_wrapView) {
+    return "wrapView";
+  }
+  if (p == eval_intercept) {
+    return "intercept";
+  }
+  return "(?)";
 }
