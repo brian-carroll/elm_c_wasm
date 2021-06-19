@@ -173,11 +173,11 @@ ManagerConfig* Platform_createManager(
     void* init, Closure* onEffects, Closure* onSelfMsg, Closure* cmdMap, Closure* subMap);
 
 // Used in platform.js (via wrapper.c, wrapper.ts)
-extern Closure sendToApp;
 Cons* Platform_initializeEffects();
 void* eval_Platform_leaf(void*[]);
 void* eval_Platform_sendToApp(void*[]);
 void* eval_Platform_sendToSelf(void*[]);
+void* eval_sendToApp_revArgs(void*[]);
 
 // =========================================
 

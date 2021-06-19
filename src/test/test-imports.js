@@ -75,7 +75,7 @@ mergeInto(LibraryManager.library, {
     return wasmWrapper.writeWasmValue(kernelIncrementBy1);
   },
 
-  Platform_stepper: function (model) {
-    console.log('Rendering view from model', model);
+  wasmImportStepper: function (viewMetadata) {
+    console.log('Rendering view with metadata:', viewMetadata);
   }
 });

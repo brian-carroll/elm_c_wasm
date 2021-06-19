@@ -155,8 +155,8 @@ char* Debug_evaluator_name_core(void* p) {
   if (p == Platform_sendToSelf.evaluator) {
     return "Platform_sendToSelf";
   }
-  if (p == sendToApp.evaluator) {
-    return "sendToApp";
+  if (p == eval_sendToApp_revArgs) {
+    return "eval_sendToApp_revArgs";
   }
   if (p == Scheduler_succeed.evaluator) {
     return "Scheduler_succeed";
@@ -407,5 +407,5 @@ char* Debug_evaluator_name_core(void* p) {
   if (p == Json_encode.evaluator) {
     return "Json_encode";
   }
-  return "(?)";
+  return "(unknown evaluator)";
 }

@@ -25,8 +25,8 @@ mergeInto(LibraryManager.library, {
     return wasmWrapper && wasmWrapper.parseFloat(addr, len16);
   },
 
-  Platform_stepper: function (model) {
-    wasmWrapper.Platform_stepper(model);
+  jsStepper: function (viewMetadataAddr) {
+    wasmWrapper.wasmImportStepper(viewMetadataAddr);
   },
 
   evalJsThunk: function (closureAddr) {

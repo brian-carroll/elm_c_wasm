@@ -40,14 +40,19 @@ function _Platform_initialize(
   // if (result.$ !== 'Ok' && result.$ !== 0) { // isOk is not working
   //   throw new Error('https://github.com/elm/core/blob/1.0.0/hints/2.md');
   // }
+  var flags = undefined; // TODO
   var result = {
     $: 'Ok',
-    a: { $: 0 }
+    a: { $: 0, a: flags }
   };
 
   // Call JS wrapper around Wasm init. Stores resulting tuple in wasm.
   var dummyPair = init(result.a);
-  var stepper = stepperBuilder(wasmWrapper.sendToApp, dummyPair.a);
+
+  var stepper = stepperBuilder(sendToApp, dummyPair.a);
+  function sendToApp(msg, viewMetadata) {
+    wasmWrapper.call(wasmWrapper.sendToApp_revArgs, [viewMetadata, msg]);
+  }
 
   var portsList = wasmWrapper.Platform_initializeEffects(stepper);
   var hasPorts = !!portsList.b;

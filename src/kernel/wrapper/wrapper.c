@@ -75,8 +75,8 @@ EMSCRIPTEN_KEEPALIVE void* get_Platform_sendToSelf() {
   return &eval_Platform_sendToSelf;
 }
 
-EMSCRIPTEN_KEEPALIVE void* get_sendToApp() {
-  return &sendToApp;
+EMSCRIPTEN_KEEPALIVE void* get_sendToApp_revArgs() {
+  return &eval_sendToApp_revArgs;
 }
 
 EMSCRIPTEN_KEEPALIVE Cons* initializeEffects() {

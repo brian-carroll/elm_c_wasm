@@ -6,12 +6,14 @@ KERNELH := $(shell find ../../src/kernel -name '*.h')
 KERNELJS := $(shell find ../../src/kernel -name '*.js')
 WRAPPER := ../../src/kernel/wrapper/wrapper
 
-.PHONY: all clean
+.PHONY: all clean js wasm
 
-all: dist/elm.wasm dist/elm.js
+wasm: dist/elm.wasm dist/elm.js
 
 clean:
 	rm -rf build/* dist/* elm-stuff/*
+
+js: dist/elm-js.js
 
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
@@ -30,6 +32,9 @@ dist/elm.wasm: build-wasm.sh build/codemods/elm.c $(KERNELC) $(KERNELH) $(KERNEL
 
 dist/elm.js: dist/elm.wasm
 	@:
+
+dist/elm-js.js:
+	elm make src/Main.elm --output $@
 
 $(WRAPPER).js: $(WRAPPER).ts
 	../../node_modules/.bin/tsc $(WRAPPER).ts

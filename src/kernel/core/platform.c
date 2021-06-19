@@ -9,8 +9,9 @@
 
 // Forward declarations
 
-extern void Platform_stepper(void* model);  // imported JS function (wrapper around view)
-void Platform_enqueueEffects(Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag);
+extern void jsStepper(void* viewMetadata);  // imported JS view wrapper
+void Platform_enqueueEffects(
+    Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag);
 Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);
 void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
 void Platform_gatherEffects(
@@ -42,21 +43,22 @@ void Platform_initOnIntercept(Closure* update, Closure* subscriptions) {
 }
 
 
-void* eval_Platform_initialize_sendToApp(void* args[]) {
-  void* msg = args[0];
+// Equivalent of JS sendToApp but with args reversed
+// In JS, `viewMetadata` is an optional 2nd arg, only passed from the view stepper.
+// For all other effect managers it is implicitly `undefined` because of how JS works.
+// We don't have that feature here. Instead we reverse the args so we can partially apply
+// viewMetadata=NULL for effect managers.
+void* eval_sendToApp_revArgs(void* args[]) {
+  void* viewMetadata = args[0];
+  void* msg = args[1];
   Tuple2* pair = A2(Platform_update, msg, Platform_model);
   Platform_model = pair->a;
-  Platform_stepper(Platform_model);
+  jsStepper(viewMetadata);
   void* cmd = pair->b;
   void* sub = A1(Platform_subscriptions, Platform_model);
   Platform_enqueueEffects(Platform_managerProcs, cmd, sub);
   return NULL;
 }
-Closure sendToApp = {
-    .header = HEADER_CLOSURE(0),
-    .evaluator = eval_Platform_initialize_sendToApp,
-    .max_values = 1,
-};
 
 
 Cons* Platform_initializeEffects() {
@@ -82,8 +84,10 @@ Cons* Platform_initializeEffects() {
   Platform_process_cache = newDynamicArray(8);
   GC_register_root((void**)&Platform_process_cache);
 
-  Closure* sendToApp = newClosure(0, 1, eval_Platform_initialize_sendToApp, NULL);
-  Cons* portsList = Platform_setupEffects(Platform_managerProcs, sendToApp);
+  void* viewMetadata = NULL;
+  Closure* sendToAppFromManager =
+      newClosure(1, 2, eval_sendToApp_revArgs, (void*){viewMetadata});
+  Cons* portsList = Platform_setupEffects(Platform_managerProcs, sendToAppFromManager);
   ManagerMsg* sub = A1(Platform_subscriptions, Platform_model);
   Platform_enqueueEffects(Platform_managerProcs, Platform_initCmd, sub);
   Platform_initCmd = NULL;
@@ -282,7 +286,8 @@ Queue Platform_effectsQueue = {
 };
 
 
-void Platform_enqueueEffects(Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag) {
+void Platform_enqueueEffects(
+    Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag) {
   Queue_push(&Platform_effectsQueue, newTuple3(managerProcs, cmdBag, subBag));
 
   if (Platform_effectsActive) return;
@@ -297,7 +302,8 @@ void Platform_enqueueEffects(Custom* managerProcs, ManagerMsg* cmdBag, ManagerMs
 }
 
 
-void Platform_dispatchEffects(Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag) {
+void Platform_dispatchEffects(
+    Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag) {
   u32 n_managers = custom_params(managerProcs);
   Custom* effectsDict = newCustom(KERNEL_CTOR_OFFSET, n_managers, NULL);
   for (u32 i = 0; i < n_managers; i++) {

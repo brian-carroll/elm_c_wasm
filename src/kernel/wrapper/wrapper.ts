@@ -37,7 +37,7 @@ interface EmscriptenModule {
   _get_Platform_sendToApp: () => number;
   _get_Platform_sendToSelf: () => number;
   _get_eval_Json_run: () => number;
-  _get_sendToApp: () => number;
+  _get_sendToApp_revArgs: () => number;
   _initializeEffects: () => number;
   _findProcess: (id: number) => number;
   _debugHeapState: () => void;
@@ -850,14 +850,21 @@ function wrapWasmElmApp(
     return readWasmValue(resultAddr);
   }
 
-  let Platform_stepper: Function = () => {};
-  function Platform_initializeEffects(f: Function) {
-    Platform_stepper = f;
+  type StepperFn = (model: any, viewMetadata: any) => void;
+  let jsStepper: StepperFn = () => {
+    throw new Error('stepper not initialised');
+  };
+  function wasmImportStepper(viewMetadataAddr: number) {
+    const jsDummyModel = null;
+    const viewMetadata = readWasmValue(viewMetadataAddr);
+    jsStepper(jsDummyModel, viewMetadata);
+  }
+  function Platform_initializeEffects(f: StepperFn) {
+    jsStepper = f;
     const portsListAddr = emscriptenModule._initializeEffects();
     return readWasmValue(portsListAddr);
   }
 
-  const sendToApp = readWasmValue(emscriptenModule._get_sendToApp());
 
   /* --------------------------------------------------
 
@@ -899,10 +906,10 @@ function wrapWasmElmApp(
     Scheduler_spawn: emscriptenModule._get_Scheduler_spawn(),
     Json_run: emscriptenModule._get_eval_Json_run(), // TODO: unused?
     Platform_initializeEffects,
-    Platform_stepper,
+    wasmImportStepper,
     Platform_sendToApp: emscriptenModule._get_Platform_sendToApp(),
     Platform_sendToSelf: emscriptenModule._get_Platform_sendToSelf(),
-    sendToApp,
+    sendToApp_revArgs: emscriptenModule._get_sendToApp_revArgs(),
     managerNames
   };
 }
