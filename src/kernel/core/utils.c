@@ -233,6 +233,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
              eq_help(pa->tuple3.b, pb->tuple3.b, depth + 1, pstack) &&
              eq_help(pa->tuple3.c, pb->tuple3.c, depth + 1, pstack);
 
+    case Tag_Task:
     case Tag_Custom: {
       if (pa->custom.ctor != pb->custom.ctor) return 0;
       u32 nparams = custom_params(&pa->custom);

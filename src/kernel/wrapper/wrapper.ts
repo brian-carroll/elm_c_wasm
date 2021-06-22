@@ -217,10 +217,7 @@ function wrapWasmElmApp(
     Closure = 0xa,
     JsRef = 0xb,
     Process = 0xc,
-  }
-
-  class Process {
-    constructor(public id: number) {}
+    Task = 0xd
   }
 
   /* --------------------------------------------------
@@ -352,6 +349,16 @@ function wrapWasmElmApp(
       case Tag.Process: {
         const id = mem32[index + 1];
         return new Process(id);
+      }
+      case Tag.Task: {
+        const task = new Task();
+        let childIndex = index;
+        task.$ = TaskCtors[mem32[++childIndex]];
+        task.value = readWasmValue(mem32[++childIndex]);
+        task.callback = readWasmValue(mem32[++childIndex]);
+        task.kill = readWasmValue(mem32[++childIndex]);
+        task.task = readWasmValue(mem32[++childIndex]);
+        return task;
       }
       default:
         throw new Error(
@@ -500,6 +507,17 @@ function wrapWasmElmApp(
         }
         if (elmValue instanceof Process) {
           return emscriptenModule._findProcess(elmValue.id);
+        }
+        if (elmValue instanceof Task) {
+          const addr = emscriptenModule._allocate(6);
+          let index = addr >> 2;
+          mem32[index] = encodeHeader(Tag.Task, 6);
+          mem32[++index] = TaskCtors.indexOf(elmValue.$);
+          mem32[++index] = writeWasmValue(elmValue.value);
+          mem32[++index] = writeWasmValue(elmValue.callback);
+          mem32[++index] = writeWasmValue(elmValue.kill);
+          mem32[++index] = writeWasmValue(elmValue.task);
+          return addr;
         }
         if (Array.isArray(elmValue)) {
           // A JS array in a _kernel_ datastructure, not a Json Value
@@ -832,7 +850,6 @@ function wrapWasmElmApp(
     return addr;
   }
 
-
   /* --------------------------------------------------
 
                     PLATFORM
@@ -879,6 +896,26 @@ function wrapWasmElmApp(
   const Platform_sendToSelf = emscriptenModule._get_Platform_sendToSelf();
   const sendToApp_revArgs = emscriptenModule._get_sendToApp_revArgs();
 
+  class Process {
+    constructor(public id: number) {}
+  }
+
+  class Task {
+    $: string;
+    value: any;
+    callback: (x: any) => Task;
+    kill: () => void;
+    task: Task;
+  }
+
+  const TaskCtors = [
+    'SUCCEED',
+    'FAIL',
+    'BINDING',
+    'AND_THEN',
+    'ON_ERROR',
+    'RECEIVE'
+  ];
 
   /* --------------------------------------------------
 
@@ -924,6 +961,8 @@ function wrapWasmElmApp(
     Platform_sendToApp,
     Platform_sendToSelf,
     sendToApp_revArgs,
+    Task,
+    Process,
     managerNames,
     kernelFunctions
   };

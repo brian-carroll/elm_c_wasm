@@ -1,67 +1,60 @@
-const TASK_SUCCEED = 0;
-const TASK_FAIL = 1;
-const TASK_BINDING = 2;
-const TASK_AND_THEN = 3;
-const TASK_ON_ERROR = 4;
-const TASK_RECEIVE = 5;
-
 // TASKS
 
 function _Scheduler_succeed(value) {
-  return {
-    $: TASK_SUCCEED,
-    a: value
-  };
+  const t = new wasmWrapper.Task();
+  t.$ = 'SUCCEED';
+  t.value = value;
+  return t;
 }
 
 function _Scheduler_fail(error) {
-  return {
-    $: TASK_FAIL,
-    a: error // value
-  };
+  const t = new wasmWrapper.Task();
+  t.$ = 'FAIL';
+  t.value = error;
+  return t;
 }
 
 function _Scheduler_binding(callback) {
-  return {
-    $: TASK_BINDING,
-    b: callback,
-    c: null // kill
-  };
+  const t = new wasmWrapper.Task();
+  t.$ = 'BINDING';
+  t.callback = callback;
+  t.kill = null;
+  return t;
 }
 
 var _Scheduler_andThen = F2(function (callback, task) {
-  return {
-    $: TASK_AND_THEN,
-    b: callback,
-    d: task
-  };
+  const t = new wasmWrapper.Task();
+  t.$ = 'AND_THEN';
+  t.callback = callback;
+  t.task = task;
+  return t;
 });
 
 var _Scheduler_onError = F2(function (callback, task) {
-  return {
-    $: TASK_ON_ERROR,
-    b: callback,
-    d: task
-  };
+  const t = new wasmWrapper.Task();
+  t.$ = 'ON_ERROR';
+  t.callback = callback;
+  t.task = task;
+  return t;
 });
 
 function _Scheduler_receive(callback) {
-  return {
-    $: TASK_RECEIVE,
-    b: callback
-  };
+  const t = new wasmWrapper.Task();
+  t.$ = 'RECEIVE';
+  t.callback = callback;
+  return t;
 }
 
 // PROCESSES
 
 // Used in lots of JS kernel code: Http, Time, Browser...
 function _Scheduler_rawSpawn(task) {
-  return wasmWrapper.call(wasmWrapper.Scheduler_rawSpawn, [task])
+  return wasmWrapper.call(wasmWrapper.Scheduler_rawSpawn, [task]);
 }
 
 // Used by Browser.js `on`
 function _Scheduler_spawn(task) {
-  return wasmWrapper.call(wasmWrapper.Scheduler_spawn, [task])
+  return wasmWrapper.call(wasmWrapper.Scheduler_spawn, [task]);
 }
 
 /*

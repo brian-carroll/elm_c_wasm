@@ -13,12 +13,12 @@ void DynamicArray_remove(DynamicArray* array, u32 index);
 Task* newTask(u32 ctor, void* value, Closure* callback, Closure* kill, Task* task) {
   const u32 size = sizeof(Task) / SIZE_UNIT;
   Task* t = GC_allocate(true, size);
-  t->header = (Header){.tag = Tag_Custom, .size = size};
+  t->header = (Header){.tag = Tag_Task, .size = size};
   t->ctor = ctor;
-  t->value = value; // a
-  t->callback = callback; // b
-  t->kill = kill; // c
-  t->task = task; // d
+  t->value = value;
+  t->callback = callback;
+  t->kill = kill;
+  t->task = task;
   return t;
 }
 

@@ -180,7 +180,14 @@ void print_value(void* p) {
       for (Cons* cell = p->mailbox.front; cell != &Nil; cell = cell->tail) {
         mailbox_size++;
       }
-      safe_printf("Process id %d, stack size %d, mailbox size %d", p->id, stack_size, mailbox_size);
+      safe_printf("Process id %d, stack size %d, mailbox size %d",
+          p->id,
+          stack_size,
+          mailbox_size);
+      break;
+    }
+    case Tag_Task: {
+      safe_printf("Task");
       break;
     }
     default:
@@ -460,6 +467,10 @@ static void Debug_prettyHelp(int indent, void* p) {
     safe_printf("()\n");
     return;
   }
+  if (p == &Json_encodeNull) {
+    safe_printf("Json.null\n");
+    return;
+  }
 
   switch (v->header.tag) {
     case Tag_Int:
@@ -607,9 +618,40 @@ static void Debug_prettyHelp(int indent, void* p) {
       for (Cons* cell = p->mailbox.front; cell != &Nil; cell = cell->tail) {
         mailbox_size++;
       }
-      safe_printf("Process id %d, stack size %d, mailbox size %d\n", p->id, stack_size, mailbox_size);
+      safe_printf("Process id %d, stack size %d, mailbox size %d\n",
+          p->id,
+          stack_size,
+          mailbox_size);
       for (int i = 0; i < custom_params(&v->custom) && i < 10; i++) {
         pretty_print_child(deeper, v->custom.values[i]);
+      }
+      break;
+    }
+
+    case Tag_Task: {
+      Task* t = (Task*)v;
+      static const char* task_ctors[] = {
+          "SUCCEED",
+          "FAIL",
+          "BINDING",
+          "AND_THEN",
+          "ON_ERROR",
+          "RECEIVE",
+      };
+      static const char* task_props[] = {
+          "value",
+          "callback",
+          "kill",
+          "task",
+      };
+      safe_printf("Task %s\n", task_ctors[t->ctor]);
+      void** children = (void**)(&t->value);
+      for (int i = 0; i < ARRAY_LEN(task_props); i++) {
+        void* child = children[i];
+        safe_printf(FORMAT_PTR, child);
+        print_indent(deeper);
+        safe_printf("%s = ", task_props[i]);
+        Debug_prettyHelp(deeper2, children[i]);
       }
       break;
     }

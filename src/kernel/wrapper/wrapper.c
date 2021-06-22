@@ -84,10 +84,12 @@ EMSCRIPTEN_KEEPALIVE Cons* initializeEffects() {
 }
 
 EMSCRIPTEN_KEEPALIVE Process* findProcess(u32 id) {
-  for (u32 i = 0; i < Platform_process_cache->occupied; i++) {
-    Process* proc = Platform_process_cache->values[i];
-    if (proc->id == id) {
-      return proc;
+  if (Platform_process_cache) {
+    for (u32 i = 0; i < Platform_process_cache->occupied; i++) {
+      Process* proc = Platform_process_cache->values[i];
+      if (proc->id == id) {
+        return proc;
+      }
     }
   }
   DEBUG_PRETTY(Platform_process_cache);
@@ -95,7 +97,6 @@ EMSCRIPTEN_KEEPALIVE Process* findProcess(u32 id) {
   exit(1);
   return NULL;
 }
-
 
 
 // DEBUG EXPORTS

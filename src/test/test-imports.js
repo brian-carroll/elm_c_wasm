@@ -40,6 +40,12 @@ mergeInto(LibraryManager.library, {
     //   foo: 'foo value',
     //   bar: 'bar value',
     // };
+
+    const proc = new wasmWrapper.Process(9);
+    const task = new wasmWrapper.Task();
+    task.$ = "SUCCEED";
+    task.value = 'task value';
+
     const testValueArray = [
       /*  0 */ undefined,
       /*  1 */ null,
@@ -58,6 +64,8 @@ mergeInto(LibraryManager.library, {
       /* 14 */ knownRecord,
       /* 15 */ { $: 5, b: 'kernel', e: 'union' },
       /* 16 */ { $: 'Just', a: 321 },
+      /* 17 */ task,
+      /* 18 */ proc
     ];
     return wasmWrapper.writeWasmValue(testValueArray[index]);
   },

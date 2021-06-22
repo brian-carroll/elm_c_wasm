@@ -35,6 +35,10 @@ typedef enum {
   Tag_Closure,     // a
   Tag_JsRef,       // b
   Tag_Process,     // c
+  Tag_Task,        // d
+  // TODO: rename to Tag_Kernel, use it for Json and other things
+  // Reduce ctor to 8 bits and add a namespace field
+  // Zero namespace is generic and prints out as a,b,c
 } Tag;
 
 #ifdef _MSC_VER
@@ -270,7 +274,7 @@ extern void* pTrue;
 
 
 typedef enum task_ctor {
-  TASK_SUCCEED = KERNEL_CTOR_OFFSET,
+  TASK_SUCCEED,
   TASK_FAIL,
   TASK_BINDING,
   TASK_AND_THEN,
