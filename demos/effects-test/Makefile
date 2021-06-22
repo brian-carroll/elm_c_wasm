@@ -26,14 +26,14 @@ build/codemods/elm.c: build/elm/elm.c codemods.js
 	@mkdir -p build/codemods
 	node codemods.js build/elm/elm.c > build/codemods/elm.c
 
-dist/elm.wasm: build-wasm.sh build/codemods/elm.c $(KERNELC) $(KERNELH) $(KERNELJS)
+dist/elm.wasm: build-wasm.sh build/codemods/elm.c $(KERNELC) $(KERNELH) $(KERNELJS) $(WRAPPER).js
 	@dos2unix -q build-wasm.sh
 	bash build-wasm.sh
 
 dist/elm.js: dist/elm.wasm
 	@:
 
-dist/elm-js.js:
+dist/elm-js.js: src/Main.elm
 	elm make src/Main.elm --output $@
 
 $(WRAPPER).js: $(WRAPPER).ts

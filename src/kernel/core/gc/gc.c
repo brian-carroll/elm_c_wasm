@@ -236,6 +236,7 @@ void GC_collect_major() {
 void* GC_execute(Closure* c) {
   stack_clear();
   stack_enter(c->evaluator, c);
+  // DEBUG_PRETTY(c);
   void* result = Utils_apply(c, 0, NULL);
 #if 0
   if (is_major_gc_needed()) {

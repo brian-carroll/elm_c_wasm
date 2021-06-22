@@ -26,16 +26,9 @@
     </div>
     <script src="dist/elm-js.js"></script>
     <script>
-      function go() {
-        Elm.Main.init({
-          node: document.querySelector('#main')
-        });
-      }
-      if (Elm.onReady) {
-        Elm.onReady(go);  // Wait for Wasm async compilation
-      } else {
-        go();
-      }
+      Elm.Main.init({
+        node: document.querySelector('#main')
+      });
     </script>
   </body>
 </html>

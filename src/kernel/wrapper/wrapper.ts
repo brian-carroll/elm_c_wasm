@@ -598,7 +598,8 @@ function wrapWasmElmApp(
     for (let k = 0; k < keys.length; k++) {
       const key = keys[k];
       if (key !== '$') {
-        const wasmIndex = kernelKeys.indexOf(key); // encode the letter key by position
+        // Map letters to array positions. Some entries deliberately empty.
+        const wasmIndex = kernelKeys.indexOf(key);
         if (wasmIndex === -1) {
           throw new Error(`Unsupported Kernel Custom field '${key}'`);
         }
@@ -831,9 +832,13 @@ function wrapWasmElmApp(
     return addr;
   }
 
-  /**
-   * Called from src/kernel/json/Json.js... which we don't seem to be using!
-   */
+
+  /* --------------------------------------------------
+
+                    PLATFORM
+
+  -------------------------------------------------- */
+
   function call(evaluator: number, args: any[]) {
     const n_values = args.length;
     const size = 3 + n_values;
@@ -844,10 +849,12 @@ function wrapWasmElmApp(
     mem32[index++] = (n_values << 16) | n_values;
     mem32[index++] = evaluator;
     for (let i = 0; i < args.length; i++) {
-      mem32[index++] = writeWasmValue(args[i]);
+      const argAddr = writeWasmValue(args[i]);
+      mem32[index++] = argAddr;
     }
     const resultAddr = emscriptenModule._evalClosure(closureAddr);
-    return readWasmValue(resultAddr);
+    const result = readWasmValue(resultAddr);
+    return result;
   }
 
   type StepperFn = (model: any, viewMetadata: any) => void;
@@ -864,6 +871,13 @@ function wrapWasmElmApp(
     const portsListAddr = emscriptenModule._initializeEffects();
     return readWasmValue(portsListAddr);
   }
+
+  const Scheduler_rawSpawn = emscriptenModule._get_Scheduler_rawSpawn();
+  const Scheduler_spawn = emscriptenModule._get_Scheduler_spawn();
+  const Json_run = emscriptenModule._get_eval_Json_run(); // TODO: unused?
+  const Platform_sendToApp = emscriptenModule._get_Platform_sendToApp();
+  const Platform_sendToSelf = emscriptenModule._get_Platform_sendToSelf();
+  const sendToApp_revArgs = emscriptenModule._get_sendToApp_revArgs();
 
 
   /* --------------------------------------------------
@@ -902,14 +916,14 @@ function wrapWasmElmApp(
       const jsString = textDecoder.decode(words16);
       return parseFloat(jsString);
     },
-    Scheduler_rawSpawn: emscriptenModule._get_Scheduler_rawSpawn(),
-    Scheduler_spawn: emscriptenModule._get_Scheduler_spawn(),
-    Json_run: emscriptenModule._get_eval_Json_run(), // TODO: unused?
+    Scheduler_rawSpawn,
+    Scheduler_spawn,
+    Json_run, // TODO: unused?
     Platform_initializeEffects,
     wasmImportStepper,
-    Platform_sendToApp: emscriptenModule._get_Platform_sendToApp(),
-    Platform_sendToSelf: emscriptenModule._get_Platform_sendToSelf(),
-    sendToApp_revArgs: emscriptenModule._get_sendToApp_revArgs(),
+    Platform_sendToApp,
+    Platform_sendToSelf,
+    sendToApp_revArgs,
     managerNames,
     kernelFunctions
   };

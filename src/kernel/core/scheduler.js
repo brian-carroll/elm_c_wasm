@@ -59,7 +59,7 @@ function _Scheduler_rawSpawn(task) {
   return wasmWrapper.call(wasmWrapper.Scheduler_rawSpawn, [task])
 }
 
-// Used by Browser.js for `on`
+// Used by Browser.js `on`
 function _Scheduler_spawn(task) {
   return wasmWrapper.call(wasmWrapper.Scheduler_spawn, [task])
 }

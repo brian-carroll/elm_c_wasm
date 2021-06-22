@@ -21,6 +21,7 @@ initialModel =
 
 type Msg
     = ButtonClicked
+    | KeyPressed String
     | JsonLoaded (Result Http.Error String)
 
 
@@ -38,6 +39,11 @@ update msg model =
         ButtonClicked ->
             ( { model | text = "Loading..." }
             , getJson
+            )
+
+        KeyPressed key ->
+            ( { model | text = key }
+            , Cmd.none
             )
 
         JsonLoaded (Ok jsonString) ->
@@ -72,5 +78,5 @@ main =
             { init = \() -> ( initialModel, Cmd.none )
             , view = view
             , update = update
-            , subscriptions = \_ -> onKeyDown (JD.succeed ButtonClicked)
+            , subscriptions = \_ -> onKeyDown (JD.map KeyPressed (JD.field "key" JD.string))
             }
