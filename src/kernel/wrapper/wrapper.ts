@@ -360,10 +360,12 @@ function wrapWasmElmApp(
         task.task = readWasmValue(mem32[++childIndex]);
         return task;
       }
+      case Tag.JsRef:
+        return jsHeap[mem32[index + 1]];
       default:
         throw new Error(
-          'Tried to decode value with unsupported tag ' +
-            (Tag[tag] || '0x' + tag.toString(16))
+          'Tried to decode value with unsupported tag 0x' +
+            (tag as any).toString(16)
         );
     }
   }
@@ -531,6 +533,11 @@ function wrapWasmElmApp(
             mem32[index + 2 + i] = writeWasmValue(elmValue[i]);
           }
           return addr;
+        }
+        if (elmValue.__proto__.constructor !== Object) {
+          // Elm values are always plain literals, which have class Object.
+          // Any other class is probably coming from a Browser API, to be decoded by Json package
+          return writeJsonValue(elmValue, JsShape.MAYBE_CIRCULAR);
         }
         switch (elmValue.$) {
           case undefined:
