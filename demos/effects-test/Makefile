@@ -13,7 +13,7 @@ wasm: dist/elm.wasm dist/elm.js
 clean:
 	rm -rf build/* dist/* elm-stuff/*
 
-js: dist/elm-js.js
+js: elm-js.js
 
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
@@ -33,7 +33,7 @@ dist/elm.wasm: build-wasm.sh build/codemods/elm.c $(KERNELC) $(KERNELH) $(KERNEL
 dist/elm.js: dist/elm.wasm
 	@:
 
-dist/elm-js.js: src/Main.elm
+elm-js.js: src/Main.elm
 	elm make src/Main.elm --output $@
 
 $(WRAPPER).js: $(WRAPPER).ts
