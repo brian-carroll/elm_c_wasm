@@ -71,12 +71,30 @@ view model =
         ]
 
 
+keyFieldDecoder : JD.Decoder String
+keyFieldDecoder =
+    JD.field "key" JD.string
+
+
+eventValueDecoder : JD.Decoder Msg
+eventValueDecoder =
+    JD.map KeyPressed keyFieldDecoder
+
+
+subscriptions =
+    \_ -> onKeyDown eventValueDecoder
+
+
+init =
+    \() -> ( initialModel, Cmd.none )
+
+
 main : Program () Model Msg
 main =
     Browser.element <|
         WebAssembly.intercept
-            { init = \() -> ( initialModel, Cmd.none )
+            { init = init
             , view = view
             , update = update
-            , subscriptions = \_ -> onKeyDown (JD.map KeyPressed (JD.field "key" JD.string))
+            , subscriptions = subscriptions
             }

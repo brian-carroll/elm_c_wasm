@@ -25,7 +25,8 @@ Task* newTask(u32 ctor, void* value, Closure* callback, Closure* kill, Task* tas
 
 void* eval_Scheduler_succeed(void* args[]) {
   void* value = args[0];
-  return newTask(TASK_SUCCEED, value, NULL, NULL, NULL);
+  Task* t = newTask(TASK_SUCCEED, value, NULL, NULL, NULL);
+  return t;
 }
 Closure Scheduler_succeed = {
     .header = HEADER_CLOSURE(0),
@@ -114,6 +115,8 @@ void* eval_Scheduler_rawSpawn(void* args[]) {
   proc->mailbox.front = &Nil;
   proc->mailbox.back = &Nil;
 
+  safe_printf("spawned process %d\n", proc->id);
+
   DynamicArray_push(&Platform_process_cache, proc);
 
   Scheduler_enqueue(proc);
@@ -137,6 +140,8 @@ void* eval_Scheduler_spawn_lambda(void* args[]) {
 }
 void* eval_Scheduler_spawn(void* args[]) {
   // Task* task = args[0];
+  // safe_printf("eval_Scheduler_spawn with task=%p\n");
+  // DEBUG_PRETTY(task);
   Closure* lambda = newClosure(1, 2, eval_Scheduler_spawn_lambda, args);
   Task* tbinding = eval_Scheduler_binding((void*[]){lambda});
   return tbinding;
@@ -223,6 +228,7 @@ Queue Scheduler_queue = {
 
 static void Scheduler_enqueue(Process* proc) {
   Queue_push(&Scheduler_queue, proc);
+  // safe_printf("Enqueueing process #%d\n", proc->id);
   if (Scheduler_working) {
     return;
   }
@@ -231,6 +237,7 @@ static void Scheduler_enqueue(Process* proc) {
   for (;;) {
     Process* proc = Queue_shift(&Scheduler_queue);
     if (!proc) break;
+    // safe_printf("Stepping process #%d\n", proc->id);
     Scheduler_step(proc);
   }
   Scheduler_working = false;
@@ -269,9 +276,9 @@ static void* evalJsThunkIfNeeded(void* value) {
               jsOrWasmValue->max_values == NEVER_EVALUATE;
   void* wasmValue;
   if (isJs) {
-    DEBUG_PRETTY(jsOrWasmValue);
+    // DEBUG_PRETTY(jsOrWasmValue);
     wasmValue = evalJsThunk(jsOrWasmValue);
-    DEBUG_PRETTY(wasmValue);
+    // DEBUG_PRETTY(wasmValue);
   } else {
     wasmValue = jsOrWasmValue;
   }
@@ -282,6 +289,9 @@ static void* evalJsThunkIfNeeded(void* value) {
 static void Scheduler_step(Process* proc) {
   while (proc->root) {
     proc->root = evalJsThunkIfNeeded(proc->root);
+
+    safe_printf("Stepping process #%d\n", proc->id);
+    // DEBUG_PRETTY(proc->root);
 
     u32 rootTag = proc->root->ctor;
     if (rootTag == TASK_SUCCEED || rootTag == TASK_FAIL) {
@@ -309,11 +319,12 @@ static void Scheduler_step(Process* proc) {
       proc->root->kill = evalJsThunkIfNeeded(A1(proc->root->callback, lambda));
       return;
     } else if (rootTag == TASK_RECEIVE) {
-      void* msg = Queue_shift(&proc->mailbox);
-      if (!msg) {
+      void* received_msg = Queue_shift(&proc->mailbox);
+      if (!received_msg) {
         return;
       }
-      proc->root = A1(proc->root->callback, msg);
+      // DEBUG_PRETTY(received_msg);
+      proc->root = A1(proc->root->callback, received_msg);
     } else {  // if (rootTag == TASK_AND_THEN || rootTag == TASK_ON_ERROR)
       proc->stack = newProcessStack(rootTag == TASK_AND_THEN ? TASK_SUCCEED : TASK_FAIL,
           proc->root->callback,

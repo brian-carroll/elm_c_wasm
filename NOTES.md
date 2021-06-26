@@ -1,20 +1,48 @@
+# Eagerly evaluated JS calls
+
+- Now that the scheduler is inside Wasm, the idea of lazily evaluating JS calls doesn't work anymore. That only worked because we were returning all Cmd and Sub to JS.
+- But when Wasm effect manager calls out to JS, it may need to do some computation with the result so it has to have the right type, can't always be a Closure
+- This is what breaks Browser.Event subscription.
+- Need to do kernelFunctions differently
+
+- Approach 1
+
+  - Compiler output for JS values touched by Elm code
+    - In C output, generate a JsRef literal instead of a Closure literal
+    - In JS wrapper, prepopulate the jsHeap (marking the values as permanent)
+  - Utils_apply can take either Closure or JsRef as its function arg. Check tag on the way in. Change type to `void*`, throw error for bad tags.
+    - When you call a JsRef, Utils_apply calls an imported function to deal with it
+    - This is very similar to evalJsThunk and probably replaces it
+  - We can't know the arity of a JS function, so Utils_apply just always calls out to JS. JS can return another JsRef if it wants, no big deal.
+    - JsRef calls have no Wasm functionality for partial application. They don't need a .values field.
+    - In practice it seems rare to do fancy calls with these anyway.
+
+- Approach 2:
+  - Make a Closure that calls evalJsThunk
+  - All JsRefs are just pre-applied to that Closure
+  - Closure still does all of the closurey stuff
+  - BUT I don't know what arity to use! This can't really work
+    - unless it becomes very like approach 1. Make special case for this JS evaluator thing... but isn't this the same thing, what is the benefit here?
+
 # Reducing encoding/decoding in the Elm Architecture
 
 ## TODO: C code for platform/scheduler
+
 - [x] move postRun to before all the custom kernels
 - [x] generate managers in C, not JS
 - [x] create JS versions of all the Platform & Scheduler functions that can be called from other JS code
   - Browser.js functions depend on Task.perform
   - Triggers JS code gen of Platform.elm
   - But Platform.js kernel functions are undefined in JS
-- [ ] Process hashmap implementation to avoid encode/decode
+- [x] Process hashmap implementation to avoid encode/decode
 
 ## TODO: Compiler support for platform/scheduler
+
 - [x] Pass managerNames in JsWrapper
 - [!] Initialise compiler JS code gen with all of these functions AND figure out their dependencies!
   - some issues with this, not sure what's going on
 - [x] Inject manager into JS state
-- [x] generate JS _Platform_leaf calls
+- [x] generate JS `_Platform_leaf` calls
 
 ## Ensure JS generated code can access Platform and Scheduler, possibly via Elm code
 
@@ -22,20 +50,20 @@ Everything that is imported in core libs needs a JS version
 AND the compiler needs to know that it's already been emitted!
 
 - JS kernel imports of Platform
-  - [x] __Platform_export (_VirtualDom_init & code gen)
-  - [x] __Platform_initialize
-  - [x] __Platform_preload
-  - [x] __Platform_sendToSelf (Http.js v2)
+  - [x] `__Platform_export` (`_VirtualDom_init` & code gen)
+  - [x] `__Platform_initialize`
+  - [x] `__Platform_preload`
+  - [x] `__Platform_sendToSelf` (Http.js v2)
 - JS kernel imports of Scheduler
-  - [x] __Scheduler_andThen
-  - [x] __Scheduler_binding
-  - [x] __Scheduler_fail
-  - [-] __Scheduler_rawSend (only imported to Platform => no JS needed)
-  - [x] __Scheduler_rawSpawn
-  - [x] __Scheduler_receive
-  - [-] __Scheduler_send (only imported to Platform => no JS needed)
-  - [x] __Scheduler_spawn
-  - [x] __Scheduler_succeed
+  - [x] `__Scheduler_andThen`
+  - [x] `__Scheduler_binding`
+  - [x] `__Scheduler_fail`
+  - [-] `__Scheduler_rawSend` (only imported to Platform => no JS needed)
+  - [x] `__Scheduler_rawSpawn`
+  - [x] `__Scheduler_receive`
+  - [-] `__Scheduler_send` (only imported to Platform => no JS needed)
+  - [x] `__Scheduler_spawn`
+  - [x] `__Scheduler_succeed`
 - Elm imports of Platform
   - [x] Elm.Kernel.Platform.batch
   - [x] Elm.Kernel.Platform.map
@@ -50,11 +78,12 @@ AND the compiler needs to know that it's already been emitted!
   - [x] Elm.Kernel.Scheduler.spawn
   - [x] Elm.Kernel.Scheduler.succeed
 - Indirect imports
-  - [x] _Platform_leaf (all module-specific cmd & sub)
+  - [x] `_Platform_leaf` (all module-specific cmd & sub)
 
 ## notes on Closure caching
 
 Tried using a cache to reduce encoding and decoding but we end up with cache invalidation issues
+
 - I tried removing everything from cache on first usage but that includes the TEA functions themselves
 - optimisations for the TEA functions
   - we know our wrapped versions can't be copied, so we can skip full equality check for this
@@ -70,33 +99,38 @@ Also understand that each Sub has one active callback and Cmd is once-off
 
 Basically we are implementing some of the Platform module, since that's what it's for!
 We can have Wasm exported functions for init, update, subscriptions and view
-Things like _Platform_initialize and _Platform_dispatchEffects should be implemented in JS but also with some exported Wasm helpers
+Things like `_Platform_initialize` and `_Platform_dispatchEffects` should be implemented in JS but also with some exported Wasm helpers
 
 Browser.application does some messing around with init, applying the extra args.
 It leaves update and subs alone. They get straight to Platform_initialize.
 view gets wrapped in to make a stepper
 
 ## compiler support for Platform & Scheduler
+
 review code gen for managers & platform leaf
 some literal-like mechanism for manager 'home' enum
 
 ## debug & testing for Platform & Scheduler
 
 ### app
+
 Start with an app whose init cmd is just `Task.succeed 123` or something
 Then move on to more complex Task chains
 
 ### Scheduler code testing
+
 - create tasks of every constructor and step them
 - create some chains that receive fx
 - step it and see the queue working
 
 ### Platform code testing
+
 - copy compiled code from a test app to isolate platform.c code without JS
 - test config & instantiation process for Task effect manager
 - push a Cmd through the full pipe sendToApp -> enqueueEffects -> gatherEffects -> dispatchEffects
 
 ## Relative perf
+
 - Updates and stuff take no time compared to view, and our view takes twice as long as JS.
 - Our slowest update is CompletedFeedLoad (loads of JSON arriving and lots of encode/decode nonsense) but it's still only 5ms
 - Our worst view cycle is 36ms vs JS 14ms
@@ -148,7 +182,7 @@ On loading the elm-spa-example, these are the Wasm functions called
 We're wasting a lot of time decoding and re-encoding Wasm Closures
 Need to change the implementation of wasmCallback to cache Closures & free vars.
 A lot of functions probably only get called once, apart from GC roots. But we can't really distinguish those!
-Maybe it's OK for that cache to just grow as big as it needs to and remember things forever. Maybe a program doesn't have that many values passed back and forth. Then you just make sure you don't add the same thing over and over. 
+Maybe it's OK for that cache to just grow as big as it needs to and remember things forever. Maybe a program doesn't have that many values passed back and forth. Then you just make sure you don't add the same thing over and over.
 Or maybe we can find a good invalidation strategy.
 
 # Allocator 50x speedup!!
