@@ -30,10 +30,16 @@ TODO
 - [x] Modify Utils_apply
 - [x] Implement applyJsRef in the wrapper
 - [x] Use a unit test to get it up and running
-- [ ] Change wrapper code to prepopulate the jsHeap with kernel functions
-- [ ] Update compiler to output JsRef literals
-- [ ] Clean up old stuff
-      - NEVER_EVALUATE, 0xffff, evalJsThunk
+- [x] Change wrapper code to prepopulate the jsHeap with kernel functions
+- [x] Wrapper uses array instead of record, for predictable JsRef indices
+- [x] Compiler emits array instead of record, for predictable JsRef indices
+- [x] Update compiler to output JsRef literals
+- [ ] Clean up leftover unused things
+      - NEVER_EVALUATE, 0xffff, evalJsThunk, evalKernelThunk, debug code for JS Closure evaluators
+      - JS_Json_run
+      - enum is a bit pointless?
+- [ ] deal with initialisation order cycle! Ugh!
+      - Wasm globals initialised in C main may call JS
 
 
 # Reducing encoding/decoding in the Elm Architecture

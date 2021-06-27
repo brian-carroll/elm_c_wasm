@@ -73,14 +73,14 @@ interface ElmCurriedFunction {
  * @param emscriptenModule   Emscripten toolchain output
  * @param elmImports         Values imported into the wrapper from Elm app
  * @param generatedAppTypes  App-specific type info passed from Elm compiler to this wrapper
- * @param kernelFuncRecord   Record of all JS kernel functions called by the Elm Wasm module
+ * @param kernelImports      Array of JS kernel functions/values the Elm Wasm app can use
  *
  /********************************************************************************************/
 function wrapWasmElmApp(
   emscriptenModule: EmscriptenModule,
   elmImports: ElmImports,
   generatedAppTypes: GeneratedAppTypes,
-  kernelFuncRecord: Record<string, ElmCurriedFunction>,
+  kernelImports: ElmCurriedFunction[],
   managerNames: string[]
 ) {
   /* --------------------------------------------------
@@ -177,9 +177,6 @@ function wrapWasmElmApp(
       return enumObj;
     }, {});
   }
-
-  const kernelFunctions = Object.values(kernelFuncRecord);
-  const kernelFunctionNames = Object.keys(kernelFuncRecord); // for debug
 
   const WORD = 4;
   const TAG_MASK = 0xf0000000;
@@ -372,7 +369,7 @@ function wrapWasmElmApp(
 
   function evalKernelThunk(metadata: ClosureMetadata): any {
     let { n_values, evaluator, argsIndex } = metadata;
-    let kernelFn: ElmCurriedFunction = kernelFunctions[evaluator];
+    let kernelFn: ElmCurriedFunction = kernelImports[evaluator];
     if (!kernelFn) {
       throw new Error(`cannot find evaluator ${evaluator}`);
     }
@@ -718,20 +715,30 @@ function wrapWasmElmApp(
     MAYBE_CIRCULAR
   }
 
+  enum JsHeapGen {
+    CONST,
+    OLD,
+    NEW
+  }
+
   interface JsHeapEntry {
     value: any;
     isMarked: boolean;
-    isOldGen: boolean;
+    generation: JsHeapGen;
   }
 
   const unusedJsHeapSlot = {};
-  const jsHeap: JsHeapEntry[] = [];
+  const jsHeap: JsHeapEntry[] = kernelImports.map(value => ({
+    value,
+    isMarked: true,
+    generation: JsHeapGen.CONST
+  }));
 
   function allocateJsRef(value: any): number {
     let id = 0;
     while (id < jsHeap.length && jsHeap[id].value !== unusedJsHeapSlot) id++;
     if (id == jsHeap.length) {
-      jsHeap.push({ isMarked: false, isOldGen: false, value });
+      jsHeap.push({ isMarked: false, generation: JsHeapGen.NEW, value });
     } else {
       jsHeap[id].value = value;
     }
@@ -745,16 +752,14 @@ function wrapWasmElmApp(
   function sweepJsRefs(isFullGc: boolean): void {
     let lastUsedSlot = 0;
     jsHeap.forEach((slot, index) => {
-      let shouldKeep = slot.isMarked;
-      if (isFullGc) {
-        slot.isOldGen = shouldKeep;
-      } else if (slot.isOldGen) {
-        shouldKeep = true;
-      }
-      if (shouldKeep) {
-        lastUsedSlot = index;
-      } else {
+      const shouldKeep = slot.isMarked || (!isFullGc && slot.generation !== JsHeapGen.NEW);
+      if (!shouldKeep) {
         slot.value = unusedJsHeapSlot;
+      } else {
+        if (isFullGc && slot.generation === JsHeapGen.NEW) {
+          slot.generation = JsHeapGen.OLD;
+        }
+        lastUsedSlot = index;
       }
       slot.isMarked = false;
     });
@@ -989,7 +994,6 @@ function wrapWasmElmApp(
     Task,
     Process,
     managerNames,
-    kernelFunctions,
     applyJsRef
   };
 }
