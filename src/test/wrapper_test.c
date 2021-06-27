@@ -119,10 +119,13 @@ static void test_call_wasm_from_js() {
 
 
 static void test_call_js_from_wasm() {
-  Closure* jsKernelIncrementBy1 = testWriteJsCallbackToWasm();
-  Closure* thunk = A1(jsKernelIncrementBy1, newElmInt(100));
-  ElmInt* actual = testElmValueRoundTrip(thunk);  // evaluate the thunk in JS
+  JsRef* jsKernelIncrementBy1 = testWriteJsCallbackToWasm();
+  mu_expect_equal("JS function should appear as a JsRef when written to Wasm",
+      jsKernelIncrementBy1->header.tag,
+      Tag_JsRef);
 
+  ElmInt* arg = newElmInt(100);
+  ElmInt* actual = A1(jsKernelIncrementBy1, arg);
   ElmInt* expected = newElmInt(101);
   expect_equal("should be able to call a JS function from Wasm", actual, expected);
 }

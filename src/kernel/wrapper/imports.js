@@ -12,12 +12,12 @@ mergeInto(LibraryManager.library, {
   },
 
   markJsRef: function (jsRefId) {
-    // The C main can do a GC, but wasmWrapper is not ready at that point
+    // The C main function can do a GC while wasmWrapper is still undefined
     wasmWrapper && wasmWrapper.markJsRef(jsRefId);
   },
 
   sweepJsRefs: function (isFullGc) {
-    // The C main can do a GC, but wasmWrapper is not ready at that point
+    // The C main function can do a GC while wasmWrapper is still undefined
     wasmWrapper && wasmWrapper.sweepJsRefs(isFullGc);
   },
 
@@ -29,9 +29,13 @@ mergeInto(LibraryManager.library, {
     wasmWrapper.wasmImportStepper(viewMetadataAddr);
   },
 
+  // TODO: remove
   evalJsThunk: function (closureAddr) {
     const jsResult = wasmWrapper.readWasmValue(closureAddr);
-    console.log('evalJsThunk', jsResult);
     return wasmWrapper.writeWasmValue(jsResult);
+  },
+
+  applyJsRef: function (jsRefId, nArgs, argsAddr) {
+    return wasmWrapper.applyJsRef(jsRefId, nArgs, argsAddr);
   }
 });

@@ -113,7 +113,15 @@ Closure Utils_append = {
 //      FUNCTION APPLICATION
 // -----------------------------------------------------------
 
-void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
+void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
+  ElmValue* v = func;
+  if (v->header.tag == Tag_JsRef) {
+    JsRef* jsRef = func;
+    return applyJsRef(jsRef->index, n_applied, applied);
+  }
+  assert(v->header.tag == Tag_Closure);
+
+  Closure* c = func;
   void** args;
   do {
     if (n_applied >= c->max_values) {

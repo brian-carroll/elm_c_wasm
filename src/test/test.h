@@ -34,7 +34,7 @@ extern void* testJsonValueRoundTrip(ElmString* jsonStringAddr);
 extern void* testElmValueRoundTrip(void* addr);
 extern void* testWriteJsValueToWasm(u32 index);
 extern void* testCallWasmFuncWithJsArgs(Closure* closureAddr);
-extern Closure* testWriteJsCallbackToWasm();
+extern JsRef* testWriteJsCallbackToWasm();
 #endif
 
 // ---------------------------------------------------------

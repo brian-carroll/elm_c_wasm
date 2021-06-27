@@ -24,6 +24,18 @@
   - BUT I don't know what arity to use! This can't really work
     - unless it becomes very like approach 1. Make special case for this JS evaluator thing... but isn't this the same thing, what is the benefit here?
 
+Decision: approach 1 seems better
+
+TODO
+- [x] Modify Utils_apply
+- [x] Implement applyJsRef in the wrapper
+- [x] Use a unit test to get it up and running
+- [ ] Change wrapper code to prepopulate the jsHeap with kernel functions
+- [ ] Update compiler to output JsRef literals
+- [ ] Clean up old stuff
+      - NEVER_EVALUATE, 0xffff, evalJsThunk
+
+
 # Reducing encoding/decoding in the Elm Architecture
 
 ## TODO: C code for platform/scheduler

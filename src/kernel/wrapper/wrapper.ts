@@ -681,7 +681,13 @@ function wrapWasmElmApp(
 
   function writeClosure(value: any): Address {
     const fun = value.f || value;
-    if (fun.evaluator) {
+    if (!fun.evaluator) {
+      const addr = emscriptenModule._allocate(2);
+      const index = addr >> 2;
+      mem32[index] = encodeHeader(Tag.JsRef, 2);
+      mem32[index + 1] = allocateJsRef(value);
+      return addr;
+    } else {
       const { freeVars, max_values, evaluator } = fun;
       const n_values = freeVars.length;
       const size = 3 + n_values;
@@ -693,19 +699,6 @@ function wrapWasmElmApp(
       for (let i = 0; i < freeVars.length; i++) {
         mem32[index + 3 + i] = writeWasmValue(freeVars[i]);
       }
-      return addr;
-    } else {
-      let evaluator = kernelFunctions.findIndex(f => f === value);
-      if (evaluator === -1) {
-        kernelFunctions.push(value);
-        evaluator = kernelFunctions.length - 1;
-      }
-      const size = 3;
-      const addr = emscriptenModule._allocate(size);
-      const index = addr >> 2;
-      mem32[index] = encodeHeader(Tag.Closure, size);
-      mem32[index + 1] = NEVER_EVALUATE << 16;
-      mem32[index + 2] = evaluator;
       return addr;
     }
   }
@@ -924,6 +917,31 @@ function wrapWasmElmApp(
     'RECEIVE'
   ];
 
+
+  function applyJsRef(jsRefId: number, nArgs: number, argsAddr: number) {
+    let f: ElmCurriedFunction = jsHeap[jsRefId].value;
+
+    const argsIndex = argsAddr >> 2;
+    const jsArgs = [];
+    for (let i = 0; i < nArgs; i++) {
+      const argAddr = mem32[argsIndex + i];
+      jsArgs.push(readWasmValue(argAddr));
+    }
+
+    let jsResult;
+    if (f.a === nArgs) {
+      jsResult = f.f.apply(null, jsArgs);
+    } else {
+      jsResult = f;
+      for (let i = 0; i < nArgs; i++) {
+        jsResult = jsResult(jsArgs[i]);
+      }
+    }
+
+    const resultAddr = writeWasmValue(jsResult);
+    return resultAddr;
+  }
+
   /* --------------------------------------------------
 
                     EXPORTS
@@ -971,6 +989,7 @@ function wrapWasmElmApp(
     Task,
     Process,
     managerNames,
-    kernelFunctions
+    kernelFunctions,
+    applyJsRef
   };
 }

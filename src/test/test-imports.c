@@ -126,6 +126,11 @@ void* getJsRefValue(u32 jsRefId) {
   return writeJsonValue(jsHeap[jsRefId].value, NOT_CIRCULAR);
 }
 
+void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]) {
+  Closure* c = jsHeap[jsRefId].value;
+  return Utils_apply(c, nArgs, args);
+}
+
 // ---------------------------------------------------
 // Test values
 // Circular values must be outside the GC-managed heap
