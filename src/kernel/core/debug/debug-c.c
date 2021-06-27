@@ -150,17 +150,10 @@ void print_value(void* p) {
       break;
     }
     case Tag_Closure: {
-      if (v->closure.max_values != NEVER_EVALUATE) {
-        safe_printf("Closure (%s) n_values: %d max_values: %d values: ",
-            Debug_evaluator_name(v->closure.evaluator),
-            v->closure.n_values,
-            v->closure.max_values);
-      } else {
-        size_t js_value_id = (size_t)v->closure.evaluator;
-        char* name =
-            js_value_id < Debug_jsValues_size ? Debug_jsValues[js_value_id] : "unknown";
-        safe_printf("JS Closure (%s) n_values: %d values: ", name, v->closure.n_values);
-      }
+      safe_printf("Closure (%s) n_values: %d max_values: %d values: ",
+          Debug_evaluator_name(v->closure.evaluator),
+          v->closure.n_values,
+          v->closure.max_values);
       size_t header_kids = (size_t)(v->header.size) - (sizeof(Closure) / sizeof(void*));
       for (size_t i = 0; i < header_kids; ++i) {
         safe_printf("%p ", v->closure.values[i]);
@@ -589,16 +582,7 @@ static void Debug_prettyHelp(int indent, void* p) {
       break;
     }
     case Tag_Closure: {
-      if (v->closure.max_values != NEVER_EVALUATE) {
-        safe_printf("Closure %s\n", Debug_evaluator_name(v->closure.evaluator));
-      } else {
-        size_t js_value_id = (size_t)v->closure.evaluator;
-        if (js_value_id < Debug_jsValues_size) {
-          safe_printf("Closure %s\n", Debug_jsValues[js_value_id]);
-        } else {
-          safe_printf("Closure (JS #%d)\n", js_value_id);
-        }
-      }
+      safe_printf("Closure %s\n", Debug_evaluator_name(v->closure.evaluator));
       for (int i = 0; i < v->closure.n_values && i < 10; i++) {
         pretty_print_child(deeper, v->closure.values[i]);
       }

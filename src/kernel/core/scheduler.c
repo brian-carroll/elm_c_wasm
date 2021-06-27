@@ -270,25 +270,9 @@ static ProcessStack* newProcessStack(u32 ctor, Closure* callback, ProcessStack* 
 }
 
 
-static void* evalJsThunkIfNeeded(void* value) {
-  Closure* jsOrWasmValue = value;
-  bool isJs = jsOrWasmValue->header.tag == Tag_Closure &&
-              jsOrWasmValue->max_values == NEVER_EVALUATE;
-  void* wasmValue;
-  if (isJs) {
-    // DEBUG_PRETTY(jsOrWasmValue);
-    wasmValue = evalJsThunk(jsOrWasmValue);
-    // DEBUG_PRETTY(wasmValue);
-  } else {
-    wasmValue = jsOrWasmValue;
-  }
-  return wasmValue;
-}
-
-
 static void Scheduler_step(Process* proc) {
   while (proc->root) {
-    proc->root = evalJsThunkIfNeeded(proc->root);
+    proc->root = proc->root;
 
     safe_printf("Stepping process #%d\n", proc->id);
     // DEBUG_PRETTY(proc->root);
@@ -312,11 +296,11 @@ static void Scheduler_step(Process* proc) {
         // DynamicArray_remove(Platform_process_cache, cache_index);
         return;
       }
-      proc->root = evalJsThunkIfNeeded(A1(proc->stack->callback, proc->root->value));
+      proc->root = A1(proc->stack->callback, proc->root->value);
       proc->stack = proc->stack->rest;
     } else if (rootTag == TASK_BINDING) {
       Closure* lambda = newClosure(1, 2, eval_Scheduler_step_lambda, (void*[]){proc});
-      proc->root->kill = evalJsThunkIfNeeded(A1(proc->root->callback, lambda));
+      proc->root->kill = A1(proc->root->callback, lambda);
       return;
     } else if (rootTag == TASK_RECEIVE) {
       void* received_msg = Queue_shift(&proc->mailbox);

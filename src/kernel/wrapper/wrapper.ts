@@ -183,7 +183,6 @@ function wrapWasmElmApp(
   const TAG_SHIFT = 28;
   const SIZE_MASK = 0x0fffffff;
   const SIZE_SHIFT = 0;
-  const NEVER_EVALUATE = 0xffff;
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
@@ -339,9 +338,7 @@ function wrapWasmElmApp(
           evaluator: mem32[index + 2],
           argsIndex: index + 3
         };
-        return metadata.max_values === NEVER_EVALUATE
-          ? evalKernelThunk(metadata)
-          : createWasmCallback(metadata);
+        return createWasmCallback(metadata);
       }
       case Tag.Process: {
         const id = mem32[index + 1];
@@ -367,33 +364,6 @@ function wrapWasmElmApp(
     }
   }
 
-  function evalKernelThunk(metadata: ClosureMetadata): any {
-    let { n_values, evaluator, argsIndex } = metadata;
-    let kernelFn: ElmCurriedFunction = kernelImports[evaluator];
-    if (!kernelFn) {
-      throw new Error(`cannot find evaluator ${evaluator}`);
-    }
-    let f: Function;
-    let nArgs: number;
-    let args: any[] = [];
-    while (n_values) {
-      if (kernelFn.a && kernelFn.f && n_values >= kernelFn.a) {
-        f = kernelFn.f;
-        nArgs = kernelFn.a;
-      } else {
-        f = kernelFn;
-        nArgs = kernelFn.length || 1;
-      }
-      args = [];
-      mem32.slice(argsIndex, argsIndex + nArgs).forEach(argAddr => {
-        args.push(readWasmValue(argAddr));
-      });
-      n_values -= nArgs;
-      argsIndex += nArgs;
-      kernelFn = f(...args);
-    }
-    return kernelFn as any;
-  }
 
   function createWasmCallback(metadata: ClosureMetadata): Function {
     const { n_values, max_values, evaluator, argsIndex } = metadata;

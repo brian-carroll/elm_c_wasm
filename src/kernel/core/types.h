@@ -222,8 +222,6 @@ typedef struct {
   EvalFunction evaluator;
   void* values[];
 } Closure;
-// Use effectively "infinite" arity for JS functions, so we don't try to evaluate in Wasm
-#define NEVER_EVALUATE 0xffff
 
 Closure* newClosure(u16 n_values, u16 max_values, EvalFunction evaluator, void* values[]);
 

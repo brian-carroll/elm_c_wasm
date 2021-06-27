@@ -29,12 +29,6 @@ mergeInto(LibraryManager.library, {
     wasmWrapper.wasmImportStepper(viewMetadataAddr);
   },
 
-  // TODO: remove
-  evalJsThunk: function (closureAddr) {
-    const jsResult = wasmWrapper.readWasmValue(closureAddr);
-    return wasmWrapper.writeWasmValue(jsResult);
-  },
-
   applyJsRef: function (jsRefId, nArgs, argsAddr) {
     return wasmWrapper.applyJsRef(jsRefId, nArgs, argsAddr);
   }
