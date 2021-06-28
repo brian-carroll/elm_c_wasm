@@ -116,8 +116,12 @@ Closure Utils_append = {
 void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
   ElmValue* v = func;
   if (v->header.tag == Tag_JsRef) {
+    GC_stack_push_frame(NULL);
+    GcStackMapIndex stack_frame = GC_get_stack_frame();
     JsRef* jsRef = func;
-    return applyJsRef(jsRef->index, n_applied, applied);
+    void* result = applyJsRef(jsRef->index, n_applied, applied);
+    GC_stack_pop_frame(NULL, result, stack_frame);
+    return result;
   }
   assert(v->header.tag == Tag_Closure);
 
