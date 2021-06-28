@@ -238,13 +238,12 @@ void* test_execute(Closure* c) {
   //   exit(1);
   // }
   // assert(gc_state.stack_map.index == 0);
-  GcStackMapIndex frame = GC_stack_push_frame(c->evaluator);
+  GcStackMapIndex frame = GC_stack_push_frame('C', c->evaluator);
   GC_stack_push_value(c);
 
   void* result = Utils_apply(c, 0, NULL);
 
   GC_stack_pop_frame(c->evaluator, result, frame);
-  gc_state.stack_map.index--; // Drop result from stack
 
   return result;
 }
@@ -259,6 +258,7 @@ void assertions_test() {
         "\n");
   }
   gc_test_reset();
+  GcStackMapIndex frame = GC_stack_push_frame('W', NULL);
 
   count_gc_cycles = 0;
   void* list_elems[3] = {
@@ -270,7 +270,10 @@ void assertions_test() {
   ElmInt* max_gc_cycles = newElmInt(10);
   Closure* c = newClosure(2, 2, eval_infinite_loop, ((void*[]){list, max_gc_cycles}));
 
-  test_execute(c);
+  void* result = test_execute(c);
+
+  GC_stack_pop_frame(NULL, result, frame);
+  GC_stack_pop_value();
 
   GC_collect_major();
 

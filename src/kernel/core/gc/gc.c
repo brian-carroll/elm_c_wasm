@@ -54,9 +54,9 @@ GcState gc_state;
 
 extern Queue Scheduler_queue;
 Cons coreRoots = {
-  .header = HEADER_LIST,
-  .head = &Scheduler_queue.front,
-  .tail = &Nil,
+    .header = HEADER_LIST,
+    .head = &Scheduler_queue.front,
+    .tail = &Nil,
 };
 
 void reset_state(GcState* state) {
@@ -108,6 +108,7 @@ int GC_init() {
 void GC_register_root(void** ptr_to_mutable_ptr) {
   GcState* state = &gc_state;
   state->roots = newCons(ptr_to_mutable_ptr, state->roots);
+  GC_stack_pop_value();
 }
 
 
@@ -197,7 +198,8 @@ void GC_collect_major() {
 
   if (state->stack_map.index) {
     print_stack_map();
-    exit(1);
+    safe_printf("ERROR: non-empty stackmap on entering major GC\n");
+    assert(false);
   }
   PERF_TIMED_STATEMENT(mark(state, ignore_below));
   TEST_MARK_CALLBACK();
@@ -237,13 +239,14 @@ void GC_collect_major() {
    ==================================================== */
 
 void* GC_execute(Closure* c) {
-  GcStackMapIndex frame = GC_stack_push_frame(c->evaluator);
+  GcStackMapIndex frame = GC_stack_push_frame('C', c->evaluator);
   GC_stack_push_value(c);
 
   void* result = Utils_apply(c, 0, NULL);
 
   GC_stack_pop_frame(c->evaluator, result, frame);
-  gc_state.stack_map.index--; // Drop result from stack
+  GC_stack_pop_value();
+
 #if 0
   if (is_major_gc_needed()) {
     GC_collect_major();
@@ -266,11 +269,16 @@ void* GC_execute(Closure* c) {
   ==================================================== */
 
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
+  if (gc_state.stack_map.index) {
+    print_stack_map();
+    safe_printf("ERROR: non-empty stackmap on entering GC_init_root\n");
+    assert(false);
+  }
+
   GC_register_root(global_permanent_ptr);
 
-  assert(gc_state.stack_map.index == 0);
-  GcStackMapIndex frame = GC_stack_push_frame(init_func);
+  GcStackMapIndex frame = GC_stack_push_frame('I', init_func);
   *global_permanent_ptr = init_func();
   GC_stack_pop_frame(init_func, NULL, frame);
-  gc_state.stack_map.index--; // Drop result from stack
+  GC_stack_pop_value();
 }

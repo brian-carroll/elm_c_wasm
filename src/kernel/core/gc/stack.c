@@ -61,7 +61,10 @@ void GC_stack_push_value(void* value) {
   stack_values[sm->index] = value;
   stack_flags[sm->index] = 'A';
 #if GC_STACK_VERBOSE
-  safe_printf("Pushing stack index %d in %s: %p\n", sm->index, Debug_evaluator_name(stack_values[sm->frame]), value);
+  safe_printf("Pushing stack index %d in %s: %p\n",
+      sm->index,
+      Debug_evaluator_name(stack_values[sm->frame]),
+      value);
 #endif
   sm->index++;
   assert(sm->index < GC_STACK_MAP_SIZE);
@@ -70,17 +73,25 @@ void GC_stack_push_value(void* value) {
 
 // Push a new frame onto the stack
 // frame index is returned just for debug purposes
-GcStackMapIndex GC_stack_push_frame(void* func) {
+GcStackMapIndex GC_stack_push_frame(char func_type_flag, void* func) {
   GcStackMap* sm = &gc_state.stack_map;
-
   GcStackMapIndex i = sm->index;
-  sm->frame = i;
+
   stack_flags[i] = 'F';
+  stack_values[i] = (void*)(size_t)sm->frame;
+  i++;
+
+  stack_flags[i] = func_type_flag;
   stack_values[i] = func;
-  sm->index++;
+  i++;
+
+  sm->frame = sm->index;
+  sm->index = i;
+
 #if GC_STACK_VERBOSE
   safe_printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
 #endif
+
   return sm->frame;
 }
 
@@ -89,28 +100,16 @@ GcStackMapIndex GC_stack_push_frame(void* func) {
 void GC_stack_pop_frame(void* func, void* result, GcStackMapIndex frame) {
   GcStackMap* sm = &gc_state.stack_map;
   assert(sanity_check(result));
-  assert(stack_values[frame] == func);
   assert(stack_flags[frame] == 'F');
+  assert(stack_values[frame + 1] == func);
+
+  GcStackMapIndex parent = (size_t)stack_values[frame];
 
   stack_values[frame] = result;
   stack_flags[frame] = 'R';
-  sm->index = frame + 1;
 
-  GcStackMapIndex parent = frame;
-  for (;;) {
-    --parent;
-    if (parent == 0) {
-      sm->frame = 0;
-      if (stack_flags[0] != 'F') {
-        sm->index = 0;
-      }
-      break;
-    }
-    if (stack_flags[parent] == 'F') {
-      sm->frame = parent;
-      break;
-    }
-  }
+  sm->index = frame + 1;
+  sm->frame = parent;
 
 #if GC_STACK_VERBOSE
   safe_printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",
@@ -121,21 +120,29 @@ void GC_stack_pop_frame(void* func, void* result, GcStackMapIndex frame) {
 }
 
 
+void* GC_stack_pop_value() {
+  GcStackMap* sm = &gc_state.stack_map;
+  return stack_values[sm->index--];
+}
+
+
 // For tail call, restart the stack with the latest args
 void GC_stack_tailcall(int count, ...) {
+  GcStackMap* sm = &gc_state.stack_map;
+  GcStackMapIndex index = sm->frame + 2;
+
   va_list args;
   va_start(args, count);
-
-  GcStackMap* sm = &gc_state.stack_map;
-  sm->index = sm->frame + 1;
-
   for (int i = 0; i < count; ++i) {
-    stack_values[sm->index++] = va_arg(args, void*);
+    stack_values[index++] = va_arg(args, void*);
   }
-
   va_end(args);
 
+  sm->index = index;
+
 #if GC_STACK_VERBOSE
-  safe_printf("Tail call in %s at stack index %d\n", Debug_evaluator_name(stack_values[sm->frame]), sm->frame);
+  safe_printf("Tail call in %s at stack index %d\n",
+      Debug_evaluator_name(stack_values[sm->frame]),
+      sm->frame);
 #endif
 }

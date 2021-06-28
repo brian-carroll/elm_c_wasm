@@ -116,7 +116,7 @@ Closure Utils_append = {
 void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
   ElmValue* v = func;
   if (v->header.tag == Tag_JsRef) {
-    GcStackMapIndex stack_frame = GC_stack_push_frame(func);
+    GcStackMapIndex stack_frame = GC_stack_push_frame('J', func);
     JsRef* jsRef = func;
     void* result = applyJsRef(jsRef->index, n_applied, applied);
     GC_stack_pop_frame(NULL, result, stack_frame);
@@ -159,7 +159,7 @@ void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
 
 
     // Execute! (and let the GC know what the stack is doing)
-    GcStackMapIndex stack_frame = GC_stack_push_frame(c->evaluator);
+    GcStackMapIndex stack_frame = GC_stack_push_frame('C', c->evaluator);
     void* result = c->evaluator(args);
 
     // if (!result) {

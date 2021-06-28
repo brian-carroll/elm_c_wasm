@@ -48,6 +48,7 @@ TODO
   - GC_execute, GC_init_root, test_execute
   - Check stack is empty before major GC and GC_init_root
   - Deal with popping the last frame
+  - Wrapper needs to push a frame before it starts writing anything
 
 # Reducing encoding/decoding in the Elm Architecture
 
