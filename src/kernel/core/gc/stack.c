@@ -42,7 +42,7 @@
 void* stack_values[GC_STACK_MAP_SIZE];
 char stack_flags[GC_STACK_MAP_SIZE];  // flag which values are returns or allocations
 
-void stack_clear() {
+void stack_reset() {
   GcStackMap* sm = &gc_state.stack_map;
 
   sm->frame = 0;
@@ -54,19 +54,6 @@ void stack_clear() {
     stack_flags[i] = 0;
 }
 
-
-void stack_enter(void* evaluator, Closure* c) {
-  GcStackMap* sm = &gc_state.stack_map;
-  stack_flags[0] = 'F';
-  stack_values[0] = evaluator;
-  if (!c) {
-    sm->index = 1;
-  } else {
-    stack_flags[1] = 'A';
-    stack_values[1] = c;
-    sm->index = 2;
-  }
-}
 
 // Get current stack index (before doing a call or tail call)
 GcStackMapIndex GC_get_stack_frame() {
@@ -114,9 +101,20 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
   sm->index = frame + 1;
 
   GcStackMapIndex parent = frame;
-  while (parent != 0 && stack_flags[--parent] != 'F')
-    ;
-  sm->frame = parent;
+  for (;;) {
+    --parent;
+    if (parent == 0) {
+      sm->frame = 0;
+      if (stack_flags[0] != 'F') {
+        sm->index = 0;
+      }
+      break;
+    }
+    if (stack_flags[parent] == 'F') {
+      sm->frame = parent;
+      break;
+    }
+  }
 
 #if GC_STACK_VERBOSE
   safe_printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",

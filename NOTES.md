@@ -39,11 +39,15 @@ TODO
   - NEVER_EVALUATE, 0xffff, evalJsThunk, evalKernelThunk, debug code for JS Closure evaluators
   - JS_Json_run
   - enum is a bit pointless?
-- [ ] deal with initialisation order
+- [x] deal with initialisation order
   - all JS kernel values
   - wrapper
   - Wasm globals
   - Elm object
+- [ ] Don't clear the stack map: allow arbitrarily nested JS/Wasm calls
+  - GC_execute, GC_init_root, test_execute
+  - Check stack is empty before major GC and GC_init_root
+  - Deal with popping the last frame
 
 # Reducing encoding/decoding in the Elm Architecture
 

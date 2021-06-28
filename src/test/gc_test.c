@@ -233,9 +233,22 @@ void* eval_infinite_loop(void* args[]) {
 
 void* test_execute(Closure* c) {
   gc_test_mark_callback = assertions_test_callback;
-  stack_clear();
-  stack_enter(c->evaluator, c);
-  return Utils_apply(c, 0, NULL);
+
+  // if(gc_state.stack_map.index) {
+  //   print_stack_map();
+  //   exit(1);
+  // }
+  // assert(gc_state.stack_map.index == 0);
+  GC_stack_push_frame(c->evaluator);
+  GC_stack_push_value(c);
+  GcStackMapIndex frame = GC_get_stack_frame();
+
+  void* result = Utils_apply(c, 0, NULL);
+
+  GC_stack_pop_frame(c->evaluator, result, frame);
+  gc_state.stack_map.index--; // Drop result from stack
+
+  return result;
 }
 
 
@@ -387,9 +400,7 @@ void minor_gc_scenario(char* test_name,
           newElmInt(iterations),
       }));
 
-  stack_clear();
-  stack_enter(eval_generateHeapPattern, run);
-  ElmInt* nErrors = Utils_apply(run, 0, NULL);
+  ElmInt* nErrors = GC_execute(run);
   mu_expect_equal("should complete with zero errors", nErrors->value, 0);
 }
 

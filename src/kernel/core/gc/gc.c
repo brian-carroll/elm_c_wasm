@@ -66,7 +66,7 @@ void reset_state(GcState* state) {
   state->end_of_old_gen = start;
   state->n_marked_words = 0;
   state->roots = &coreRoots;
-  stack_clear();
+  stack_reset();
 }
 
 #if PERF_TIMER_ENABLED
@@ -195,7 +195,10 @@ void GC_collect_major() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->heap.start;
 
-  stack_clear();
+  if (state->stack_map.index) {
+    print_stack_map();
+    exit(1);
+  }
   PERF_TIMED_STATEMENT(mark(state, ignore_below));
   TEST_MARK_CALLBACK();
 
@@ -234,10 +237,14 @@ void GC_collect_major() {
    ==================================================== */
 
 void* GC_execute(Closure* c) {
-  stack_clear();
-  stack_enter(c->evaluator, c);
-  // DEBUG_PRETTY(c);
+  GC_stack_push_frame(c->evaluator);
+  GC_stack_push_value(c);
+  GcStackMapIndex frame = GC_get_stack_frame();
+
   void* result = Utils_apply(c, 0, NULL);
+
+  GC_stack_pop_frame(c->evaluator, result, frame);
+  gc_state.stack_map.index--; // Drop result from stack
 #if 0
   if (is_major_gc_needed()) {
     GC_collect_major();
@@ -262,7 +269,10 @@ void* GC_execute(Closure* c) {
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
 
-  stack_clear();
-  stack_enter(init_func, NULL);
+  assert(gc_state.stack_map.index == 0);
+  GC_stack_push_frame(init_func);
+  GcStackMapIndex frame = GC_get_stack_frame();
   *global_permanent_ptr = init_func();
+  GC_stack_pop_frame(init_func, NULL, frame);
+  gc_state.stack_map.index--; // Drop result from stack
 }
