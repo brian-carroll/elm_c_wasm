@@ -21,6 +21,7 @@ interface ElmImports {
 interface EmscriptenModule {
   HEAPU16: Uint16Array;
   HEAPU32: Uint32Array;
+  _init_globals: () => void;
   _getMains: () => number;
   _getJsNull: () => number;
   _getUnit: () => number;
@@ -354,8 +355,10 @@ function wrapWasmElmApp(
         task.task = readWasmValue(mem32[++childIndex]);
         return task;
       }
-      case Tag.JsRef:
-        return jsHeap[mem32[index + 1]];
+      case Tag.JsRef: {
+        const jsIndex = mem32[index + 1]
+        return jsHeap[jsIndex].value;
+      }
       default:
         throw new Error(
           'Tried to decode value with unsupported tag 0x' +
@@ -923,21 +926,26 @@ function wrapWasmElmApp(
 
   -------------------------------------------------- */
 
-  const mains: any[] = [];
+  function getMains() {
+    emscriptenModule._init_globals();
+    const mains: any[] = [];
 
-  const deref = (addr: number) => mem32[addr >> 2];
-  let mainsArrayEntryAddr = emscriptenModule._getMains();
-  while (true) {
-    const gcRootAddr = deref(mainsArrayEntryAddr);
-    if (!gcRootAddr) break;
-    const mainAddr = deref(gcRootAddr);
-    if (!mainAddr) break;
-    mains.push(readWasmValue(mainAddr));
-    mainsArrayEntryAddr += 4;
+    const deref = (addr: number) => mem32[addr >> 2];
+    let mainsArrayEntryAddr = emscriptenModule._getMains();
+    while (true) {
+      const gcRootAddr = deref(mainsArrayEntryAddr);
+      if (!gcRootAddr) break;
+      const mainAddr = deref(gcRootAddr);
+      if (!mainAddr) break;
+      mains.push(readWasmValue(mainAddr));
+      mainsArrayEntryAddr += 4;
+    }
+    return mains;
   }
 
+
   return {
-    mains,
+    getMains,
     readWasmValue,
     writeWasmValue,
     writeJsonValue,
