@@ -55,12 +55,6 @@ void stack_reset() {
 }
 
 
-// Get current stack index (before doing a call or tail call)
-GcStackMapIndex GC_get_stack_frame() {
-  return gc_state.stack_map.frame;
-}
-
-
 // Push a newly constructed value onto the stack
 void GC_stack_push_value(void* value) {
   GcStackMap* sm = &gc_state.stack_map;
@@ -75,25 +69,27 @@ void GC_stack_push_value(void* value) {
 
 
 // Push a new frame onto the stack
-void GC_stack_push_frame(EvalFunction evaluator) {
+// frame index is returned just for debug purposes
+GcStackMapIndex GC_stack_push_frame(void* func) {
   GcStackMap* sm = &gc_state.stack_map;
 
   GcStackMapIndex i = sm->index;
   sm->frame = i;
   stack_flags[i] = 'F';
-  stack_values[i] = evaluator;
+  stack_values[i] = func;
   sm->index++;
 #if GC_STACK_VERBOSE
   safe_printf("Pushing new frame for %s at %d\n", Debug_evaluator_name(evaluator), i);
 #endif
+  return sm->frame;
 }
 
 
 // Track when a function returns
-void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex frame) {
+void GC_stack_pop_frame(void* func, void* result, GcStackMapIndex frame) {
   GcStackMap* sm = &gc_state.stack_map;
   assert(sanity_check(result));
-  assert(stack_values[frame] == evaluator);
+  assert(stack_values[frame] == func);
   assert(stack_flags[frame] == 'F');
 
   stack_values[frame] = result;
@@ -118,7 +114,7 @@ void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex fr
 
 #if GC_STACK_VERBOSE
   safe_printf("Popping frame for %s, writing result to index %d, parent frame is %d\n",
-      Debug_evaluator_name(evaluator),
+      Debug_evaluator_name(func),
       frame,
       parent);
 #endif

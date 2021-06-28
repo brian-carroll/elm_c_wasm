@@ -237,9 +237,8 @@ void GC_collect_major() {
    ==================================================== */
 
 void* GC_execute(Closure* c) {
-  GC_stack_push_frame(c->evaluator);
+  GcStackMapIndex frame = GC_stack_push_frame(c->evaluator);
   GC_stack_push_value(c);
-  GcStackMapIndex frame = GC_get_stack_frame();
 
   void* result = Utils_apply(c, 0, NULL);
 
@@ -270,8 +269,7 @@ void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
   GC_register_root(global_permanent_ptr);
 
   assert(gc_state.stack_map.index == 0);
-  GC_stack_push_frame(init_func);
-  GcStackMapIndex frame = GC_get_stack_frame();
+  GcStackMapIndex frame = GC_stack_push_frame(init_func);
   *global_permanent_ptr = init_func();
   GC_stack_pop_frame(init_func, NULL, frame);
   gc_state.stack_map.index--; // Drop result from stack

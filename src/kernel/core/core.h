@@ -109,10 +109,9 @@ void* GC_memcpy(void* dest, void* src, size_t words);
 typedef u16 GcStackMapIndex;
 
 void GC_stack_push_value(void* value);
-void GC_stack_pop_frame(EvalFunction evaluator, void* result, GcStackMapIndex push);
-GcStackMapIndex GC_get_stack_frame();
+void GC_stack_pop_frame(void* func, void* result, GcStackMapIndex push);
 void GC_stack_tailcall(int count, ...);
-void GC_stack_push_frame(EvalFunction evaluator);
+GcStackMapIndex GC_stack_push_frame(void* func);
 
 // =========================================
 

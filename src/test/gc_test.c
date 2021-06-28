@@ -217,7 +217,6 @@ void assertions_test_callback() {
 void* eval_infinite_loop(void* args[]) {
   Cons* list = args[0];
   ElmInt* max_gc_cycles = args[1];
-  // u32 gc_stack_frame = GC_get_stack_frame();
 
   assert(sanity_check(list));
 
@@ -239,9 +238,8 @@ void* test_execute(Closure* c) {
   //   exit(1);
   // }
   // assert(gc_state.stack_map.index == 0);
-  GC_stack_push_frame(c->evaluator);
+  GcStackMapIndex frame = GC_stack_push_frame(c->evaluator);
   GC_stack_push_value(c);
-  GcStackMapIndex frame = GC_get_stack_frame();
 
   void* result = Utils_apply(c, 0, NULL);
 
