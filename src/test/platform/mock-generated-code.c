@@ -76,11 +76,9 @@ Closure g_elm_http_Http_command = {
     .values = {(void*)MANAGER_Http},
 };
 
-Closure Browser_element = {
-    .header = HEADER_CLOSURE(0),
-    .n_values = 0x0,
-    .max_values = 0xffff,
-    .evaluator = NULL,
+JsRef Browser_element = {
+    .header = HEADER_JS_REF,
+    .index = 1,
 };
 
 Closure* gptr_author_project_Main_main;
@@ -103,19 +101,27 @@ void* ginit_author_project_Main_main() {
   Record* elmTeaRecord = newRecord(
       &fg_init_subscriptions_update_view, 4, ((void*[]){init, subs, update, view}));
   Record* wasmTeaRecord = A1(&g_author_project_WebAssembly_intercept, elmTeaRecord);
-  return A1(&Browser_element, wasmTeaRecord);
+  void* result = A1(&Browser_element, wasmTeaRecord);
+  return result;
 }
 
 
-void mock_app_main() {
-  GC_init_root((void**)&gptr_author_project_Main_main, &ginit_author_project_Main_main);
-  Platform_managerConfigs = newCustom(-1,
+void* init_Platform_managerConfigs() {
+  return newCustom(-1,
       3,
       ((void*[]){
           createManager_Browser_Events(),
           createManager_Http(),
           createManager_Task(),
       }));
-  GC_register_root((void**)&Platform_managerConfigs);
+}
+
+void mock_app_init_globals() {
+  GC_init_root((void**)&gptr_author_project_Main_main, &ginit_author_project_Main_main);
+  GC_init_root((void**)&Platform_managerConfigs, &init_Platform_managerConfigs);
   GC_collect_major();
+}
+
+int mock_app_main() {
+  return GC_init();
 }

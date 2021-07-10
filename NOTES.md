@@ -35,8 +35,9 @@ TODO
 - [x] Wrapper uses array instead of record, for predictable JsRef indices
 - [x] Compiler emits array instead of record, for predictable JsRef indices
 - [x] Update compiler to output JsRef literals
-- [ ] Clean up leftover unused things
-  - NEVER_EVALUATE, 0xffff, evalJsThunk, evalKernelThunk, debug code for JS Closure evaluators
+- [x] Clean up leftover unused things
+  - NEVER_EVALUATE, 0xffff, evalJsThunk, evalKernelThunk
+  - debug code for JS Closure evaluators
   - JS_Json_run
   - enum is a bit pointless?
 - [x] deal with initialisation order
@@ -48,7 +49,7 @@ TODO
   - GC_execute, GC_init_root, test_execute
   - Check stack is empty before major GC and GC_init_root
   - Deal with popping the last frame
-  - Wrapper needs to push a frame before it starts writing anything
+- [ ] Wrapper needs to push a frame before it starts writing args or anything else
 
 # Reducing encoding/decoding in the Elm Architecture
 
