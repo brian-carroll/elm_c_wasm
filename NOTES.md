@@ -1,3 +1,11 @@
+# Perf analysis for cache misses etc
+Linux:
+```sh
+perf stat -e cache-misses -e cache-references -e instructions -e cycles -e branches -e branch-misses $mycommand
+```
+Doesn't work on WSL!!
+Visual Studio has a Performance Explorer, try that.
+
 # Eagerly evaluated JS calls
 
 - Now that the scheduler is inside Wasm, the idea of lazily evaluating JS calls doesn't work anymore. That only worked because we were returning all Cmd and Sub to JS.
