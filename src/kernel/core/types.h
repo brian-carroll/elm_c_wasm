@@ -109,7 +109,7 @@ Cons* newCons(void* head, void* tail);
 
 // TUPLES
 
-typedef struct {
+typedef struct tuple2 {
   Header header;
   PADDING64
   void* a;
@@ -117,7 +117,7 @@ typedef struct {
 } Tuple2;
 Tuple2* newTuple2(void* a, void* b);
 
-typedef struct {
+typedef struct tuple3 {
   Header header;
   PADDING64
   void* a;
@@ -128,13 +128,13 @@ Tuple3* newTuple3(void* a, void* b, void* c);
 
 // NUMBERS
 
-typedef struct {
+typedef struct elm_int {
   Header header;
   i32 value;
 } ElmInt;
 ElmInt* newElmInt(i32 value);
 
-typedef struct {
+typedef struct elm_float {
   Header header;
   u32 padding;  // on both 32 and 64-bit platforms
   f64 value;
@@ -148,7 +148,7 @@ typedef union {
 
 // CHAR
 
-typedef struct {
+typedef struct elm_char {
   Header header;
   union {
     u32 value;
@@ -179,7 +179,7 @@ ElmString* newElmString(size_t len16);
 
 // CUSTOM
 
-typedef struct {
+typedef struct custom {
   Header header;
   u32 ctor;
   void* values[];
@@ -190,13 +190,13 @@ Custom* newCustom(u32 ctor, u32 n_children, void* children[]);
 
 // RECORD
 
-typedef struct {
+typedef struct field_group {
   Header header;
   u32 size;
   u32 fields[];
 } FieldGroup;
 
-typedef struct {
+typedef struct record {
   Header header;
   PADDING64
   FieldGroup* fieldgroup;
@@ -215,7 +215,7 @@ Record* newRecord(FieldGroup* fg, u32 n_children, void* children[]);
 // pointer to a function that takes an array of pointers and returns a pointer
 typedef void* (*EvalFunction)(void*[]);
 
-typedef struct {
+typedef struct closure {
   Header header;
   u16 n_values;  // current number of applied args
   u16 max_values;
@@ -226,7 +226,7 @@ typedef struct {
 Closure* newClosure(u16 n_values, u16 max_values, EvalFunction evaluator, void* values[]);
 
 // Reference to a JS object
-typedef struct {
+typedef struct js_ref {
   Header header;
   u32 index;
 } JsRef;

@@ -1,3 +1,4 @@
+#include "../types.h"
 #include "internals.h"
 
 // The offset is the (positive) amount by which a value is moved *down* during compaction

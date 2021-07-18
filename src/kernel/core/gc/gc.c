@@ -24,7 +24,7 @@
         [3] Abuaiadh et al, 2004
 */
 
-#include "../core.h"
+#include "../core.h"  // debug
 #include "allocate.c"
 #include "bitmap.c"
 #include "compact.c"
@@ -171,7 +171,7 @@ void GC_collect_minor() {
   PERF_TIMED_STATEMENT(sweep(&state->heap, ignore_below));
 #endif
 
-  if (0) {
+#if 0
     size_t new_gen_size = state->heap.end - ignore_below;
     size_t used = state->n_marked_words;
     f32 percent_marked = (100.0 * used) / (f32)new_gen_size;
@@ -180,8 +180,10 @@ void GC_collect_minor() {
     format_mem_size(marked, sizeof(marked), used);
     format_mem_size(available, sizeof(available), new_gen_size);
     safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
-  }
+#endif
+
   PERF_TIMED_STATEMENT(sweepJsRefs(false));
+
 #if PERF_TIMER_ENABLED
   perf_print();
 #endif
