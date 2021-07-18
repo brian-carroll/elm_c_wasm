@@ -283,7 +283,7 @@ typedef enum task_ctor {
 
 typedef struct task {
   Header header;
-  u32 ctor;
+  TaskCtor ctor;
   void* value;
   Closure* callback;
   Closure* kill;

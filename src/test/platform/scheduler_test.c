@@ -1,4 +1,5 @@
 #include "../test.h"
+#include "../../kernel/core/core.h"
 
 ElmInt* callback_arg = NULL;
 
@@ -19,9 +20,12 @@ Closure increment_task_value = {
 
 
 void test_scheduler() {
+  GC_init();
+  Platform_process_cache = newDynamicArray(8);
+  GC_register_root((void**)&Platform_process_cache);
+
   Task* t_succeed = A1(&Scheduler_succeed, newElmInt(5));
   Task* t_fail = A1(&Scheduler_fail, newElmInt(123));
-
 
   Task* t_andThen = A2(&Scheduler_andThen, &increment_task_value, t_succeed);
   Process* p_andThen = A1(&Scheduler_rawSpawn, t_andThen);
