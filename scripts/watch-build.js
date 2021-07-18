@@ -12,6 +12,7 @@ const options = {
 let running = false;
 const run = () => {
   running = true;
+  console.log(`watch-build.js running command: "${command}"`);
   child_process.exec(command, options, (err, stdout, stderr) => {
     running = false;
     console.warn(stderr);
@@ -19,7 +20,7 @@ const run = () => {
     if (!err) {
       console.log('OK');
     } else {
-      console.error('ERROR')
+      console.error('ERROR\n', err);
     }
   });
 };
