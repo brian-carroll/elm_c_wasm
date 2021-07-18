@@ -241,6 +241,7 @@ void GC_collect_major() {
    ==================================================== */
 
 void* GC_execute(Closure* c) {
+  // TODO: remove this redundant stack frame! JS wrapper has already created one.
   GcStackMapIndex frame = GC_stack_push_frame('C', c->evaluator);
   GC_stack_push_value(c);
 
