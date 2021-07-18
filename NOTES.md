@@ -58,6 +58,10 @@ TODO
   - Check stack is empty before major GC and GC_init_root
   - Deal with popping the last frame
 - [ ] Wrapper needs to push a frame before it starts writing args or anything else
+  - [x] export a stackframe allocation function from Wasm
+  - [x] wrapper `call` & `wasmCallback`
+  - [ ] debug & cleanup
+
 
 # Reducing encoding/decoding in the Elm Architecture
 

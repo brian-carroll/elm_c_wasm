@@ -30,6 +30,8 @@ interface EmscriptenModule {
   _getFalse: () => number;
   _getFieldGroups: () => number;
   _allocate: (size: number) => number;
+  _stack_push_frame: (eval_func_addr: number) => number;
+  _stack_pop_frame: (eval_func_addr: number, result: number, frame: number) => void;
   _readF64: (addr: number) => number;
   _writeF64: (addr: number, value: number) => void;
   _evalClosure: (addr: number) => number;
@@ -386,6 +388,7 @@ function wrapWasmElmApp(
           `Trying to call a Wasm Closure with ${n_values} args instead of ${max_values}!`
         );
       }
+      const frameIndex = emscriptenModule._stack_push_frame(evaluator);
       const size = 3 + n_values;
       const closureAddr = emscriptenModule._allocate(size);
       const index = closureAddr >> 2;
@@ -397,6 +400,7 @@ function wrapWasmElmApp(
       }
       const resultAddr = emscriptenModule._evalClosure(closureAddr);
       const resultValue = readWasmValue(resultAddr);
+      emscriptenModule._stack_pop_frame(evaluator, resultAddr, frameIndex);
       return resultValue;
     }
     // Attach info in case we have to write this Closure back to Wasm
@@ -835,6 +839,7 @@ function wrapWasmElmApp(
   -------------------------------------------------- */
 
   function call(evaluator: number, args: any[]) {
+    const frameIndex = emscriptenModule._stack_push_frame(evaluator);
     const n_values = args.length;
     const size = 3 + n_values;
     const closureAddr = emscriptenModule._allocate(size);
@@ -849,6 +854,7 @@ function wrapWasmElmApp(
     }
     const resultAddr = emscriptenModule._evalClosure(closureAddr);
     const result = readWasmValue(resultAddr);
+    emscriptenModule._stack_pop_frame(evaluator, resultAddr, frameIndex);
     return result;
   }
 

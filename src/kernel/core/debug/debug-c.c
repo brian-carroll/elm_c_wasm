@@ -300,12 +300,32 @@ void print_stack_map() {
 
   GcStackMapIndex top = sm->index;
   for (u32 i = 0; i < top; ++i) {
-    void* value = stack_values[i];
+    ElmValue* value = stack_values[i];
     char flag = stack_flags[i];
     if (flag == 'F') {
-      char* eval_name = value ? Debug_evaluator_name(value) : "NULL";
       safe_printf("-----------------\n");
-      safe_printf("%2d | %c | " FORMAT_PTR " | %s\n", i, flag, value, eval_name);
+      safe_printf("%2d | %c | " FORMAT_PTR " |\n", i, flag, value);
+      i++;
+      value = stack_values[i];
+      flag = stack_flags[i];
+      char* eval_name = value ? Debug_evaluator_name(value) : "NULL";
+      safe_printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);
+      switch (flag) {
+        case 'J':
+          safe_printf("JsRef %d\n", value->js_ref.index);
+          break;
+        case 'C':
+          safe_printf("Closure %s\n", eval_name);
+          break;
+        case 'I':
+          safe_printf("Global initializer\n"); // TODO compiler could generate init names
+          break;
+        case 'W':
+          safe_printf("%s Wrapper args\n", eval_name);
+          break;
+        default:
+          assert(false);
+      }
     } else {
       safe_printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);
       print_value(value);

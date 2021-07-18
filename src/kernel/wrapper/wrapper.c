@@ -47,6 +47,15 @@ EMSCRIPTEN_KEEPALIVE void* allocate(size_t size) {
   return GC_allocate(true, size);
 }
 
+EMSCRIPTEN_KEEPALIVE u32 stack_push_frame(void* eval_func) {
+  return (u32)GC_stack_push_frame('W', eval_func);
+}
+
+EMSCRIPTEN_KEEPALIVE void stack_pop_frame(void* func, void* result, u32 frame) {
+  GC_stack_pop_frame(func, result, frame);
+  GC_stack_pop_value(); // We have decoded the return value to JS by now. Drop it.
+}
+
 EMSCRIPTEN_KEEPALIVE f64 readF64(f64* addr) {
   return *addr;
 }

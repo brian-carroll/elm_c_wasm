@@ -245,7 +245,6 @@ void* GC_execute(Closure* c) {
   void* result = Utils_apply(c, 0, NULL);
 
   GC_stack_pop_frame(c->evaluator, result, frame);
-  GC_stack_pop_value();
 
 #if 0
   if (is_major_gc_needed()) {
