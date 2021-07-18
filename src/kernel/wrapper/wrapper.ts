@@ -77,8 +77,9 @@ interface ElmCurriedFunction {
  * @param elmImports         Values imported into the wrapper from Elm app
  * @param generatedAppTypes  App-specific type info passed from Elm compiler to this wrapper
  * @param kernelImports      Array of JS kernel functions/values the Elm Wasm app can use
+ * @param managerNames       Array of effect manager names (for debug info)
  *
- /********************************************************************************************/
+ ********************************************************************************************/
 function wrapWasmElmApp(
   emscriptenModule: EmscriptenModule,
   elmImports: ElmImports,
@@ -727,7 +728,7 @@ function wrapWasmElmApp(
   }
 
   function sweepJsRefs(isFullGc: boolean): void {
-    let lastUsedSlot = 0;
+    let lastUsedSlot = -1;
     jsHeap.forEach((slot, index) => {
       const shouldKeep = slot.isMarked || (!isFullGc && slot.generation !== JsHeapGen.NEW);
       if (!shouldKeep) {
@@ -740,7 +741,7 @@ function wrapWasmElmApp(
       }
       slot.isMarked = false;
     });
-    jsHeap.splice(lastUsedSlot + 1, jsHeap.length);
+    jsHeap.splice(lastUsedSlot + 1);
   }
 
   function getJsRefArrayIndex(jsRefId: number, index: number): number {
@@ -978,6 +979,7 @@ function wrapWasmElmApp(
     Task,
     Process,
     managerNames,
-    applyJsRef
+    applyJsRef,
+    allocateJsRef // for test only
   };
 }

@@ -33,7 +33,7 @@ typedef struct js_heap_entry {
 static int unusedJsHeapSlot;
 
 #define JS_HEAP_MAX_LENGTH 100
-static u32 jsHeapLength = 0;
+u32 jsHeapLength = 0;
 static JsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
 
 u32 allocateJsRef(void* value) {
@@ -57,7 +57,7 @@ void markJsRef(u32 id) {
 }
 
 void sweepJsRefs(bool isFullGc) {
-  u32 lastUsedSlot = 0;
+  i32 lastUsedSlot = -1;
   for (u32 index = 0; index < jsHeapLength; index++) {
     JsHeapEntry* slot = &jsHeap[index];
     bool shouldKeep = slot->isMarked || (!isFullGc && slot->generation != GEN_NEW);
