@@ -270,11 +270,20 @@ static ProcessStack* newProcessStack(u32 ctor, Closure* callback, ProcessStack* 
 }
 
 
+char* tag_names[] = {
+    "SUCCEED",
+    "FAIL",
+    "BINDING",
+    "AND_THEN",
+    "ON_ERROR",
+    "RECEIVE",
+};
+
 static void Scheduler_step(Process* proc) {
   while (proc->root) {
     proc->root = proc->root;
 
-    safe_printf("Stepping process #%d\n", proc->id);
+    safe_printf("Stepping process #%d: %s\n", proc->id, proc->root ? tag_names[proc->root->ctor] : "NULL");
     // DEBUG_PRETTY(proc->root);
 
     u32 rootTag = proc->root->ctor;
