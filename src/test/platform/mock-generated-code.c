@@ -1,4 +1,5 @@
 #include "../test.h"
+#include "../../kernel/kernel.h"
 
 enum {
   MANAGER_Browser_Events,
@@ -6,22 +7,34 @@ enum {
   MANAGER_Task,
 };
 u32 Platform_managers_size = 3;
+extern Closure mock_js_Browser_element;
+DynamicArray* mock_tasks_executed;
 
 void* eval_mockFunction(void* args[]) {
   ElmValue* returnValue = args[0];
-  if (verbose) {
-    DEBUG_PRETTY(returnValue);
-  }
+  // DEBUG_PRETTY(returnValue);
   return returnValue;
 }
 Closure* mockFunction(u16 arity, void* returnValue) {
   return newClosure(1, arity + 1, eval_mockFunction, (void*[]){returnValue});
 }
+
+void* eval_mockTaskCallback(void* args[]) {
+  ElmString* s = args[0];
+  DynamicArray_push(&mock_tasks_executed, s);
+  return eval_Scheduler_succeed(args);
+}
+Closure mockTaskCallback = {
+    .header = HEADER_CLOSURE(1),
+    .evaluator = eval_mockTaskCallback,
+    .max_values = 1,
+};
+
 Task* mockTask(char* label) {
   ElmString* s = create_string(label);
-  return eval_Scheduler_succeed((void*[]){s});
+  Task* task = eval_Scheduler_succeed((void*[]){s});
+  return eval_Scheduler_andThen((void*[]){&mockTaskCallback, task});
 }
-
 
 void* createManager_Browser_Events() {
   return Platform_createManager(mockTask("Browser_Events_init"),
@@ -76,11 +89,6 @@ Closure g_elm_http_Http_command = {
     .values = {(void*)MANAGER_Http},
 };
 
-JsRef Browser_element = {
-    .header = HEADER_JS_REF,
-    .index = 1,
-};
-
 Closure* gptr_author_project_Main_main;
 void* ginit_author_project_Main_main() {
   Closure* init = mockFunction(1,
@@ -101,7 +109,7 @@ void* ginit_author_project_Main_main() {
   Record* elmTeaRecord = newRecord(
       &fg_init_subscriptions_update_view, 4, ((void*[]){init, subs, update, view}));
   Record* wasmTeaRecord = A1(&g_author_project_WebAssembly_intercept, elmTeaRecord);
-  void* result = A1(&Browser_element, wasmTeaRecord);
+  void* result = A1(&mock_js_Browser_element, wasmTeaRecord);
   return result;
 }
 
