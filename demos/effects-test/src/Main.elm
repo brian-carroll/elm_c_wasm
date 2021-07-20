@@ -27,10 +27,8 @@ type Msg
 
 getJson : Cmd Msg
 getJson =
-    Http.get
-        { url = "./assets/data.json"
-        , expect = Http.expectJson JsonLoaded JD.string
-        }
+    Http.send JsonLoaded <|
+        Http.get "./assets/data.json" JD.string
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

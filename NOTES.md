@@ -1,11 +1,3 @@
-# Perf analysis for cache misses etc
-Linux:
-```sh
-perf stat -e cache-misses -e cache-references -e instructions -e cycles -e branches -e branch-misses $mycommand
-```
-Doesn't work on WSL!!
-Visual Studio has a Performance Explorer, try that.
-
 # Eagerly evaluated JS calls
 
 - Now that the scheduler is inside Wasm, the idea of lazily evaluating JS calls doesn't work anymore. That only worked because we were returning all Cmd and Sub to JS.
@@ -61,7 +53,9 @@ TODO
   - [x] export a stackframe allocation function from Wasm
   - [x] wrapper `call` & `wasmCallback`
   - [ ] debug & cleanup
-
+    - effects demo has mismatched versions for Json lib (C enum doesn't match JS enum, e.g. 13 doesn't exist in JS)
+    - check the elm.json and check if compiler is doing the right things
+    - probably need isOk to work on the result, in JS! So JS decode...
 
 # Reducing encoding/decoding in the Elm Architecture
 
