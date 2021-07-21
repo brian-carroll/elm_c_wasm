@@ -30,8 +30,8 @@ interface EmscriptenModule {
   _getFalse: () => number;
   _getFieldGroups: () => number;
   _allocate: (size: number) => number;
-  _stack_push_frame: (eval_func_addr: number) => number;
-  _stack_pop_frame: (eval_func_addr: number, result: number, frame: number) => void;
+  _stack_push_frame: (eval_addr: number) => number;
+  _stack_pop_frame: (eval_addr: number, result: number, frame: number) => void;
   _readF64: (addr: number) => number;
   _writeF64: (addr: number, value: number) => void;
   _evalClosure: (addr: number) => number;
@@ -187,6 +187,7 @@ function wrapWasmElmApp(
   const TAG_SHIFT = 28;
   const SIZE_MASK = 0x0fffffff;
   const SIZE_SHIFT = 0;
+  const NEVER_EVALUATE = 0xffff;
 
   const textDecoder = new TextDecoder('utf-16le');
   const identity = (f: Function) => f;
@@ -342,7 +343,9 @@ function wrapWasmElmApp(
           evaluator: mem32[index + 2],
           argsIndex: index + 3
         };
-        return createWasmCallback(metadata);
+        return metadata.max_values === NEVER_EVALUATE
+          ? evalKernelThunk(metadata)
+          : createWasmCallback(metadata);
       }
       case Tag.Process: {
         const id = mem32[index + 1];
@@ -359,7 +362,7 @@ function wrapWasmElmApp(
         return task;
       }
       case Tag.JsRef: {
-        const jsIndex = mem32[index + 1]
+        const jsIndex = mem32[index + 1];
         return jsHeap[jsIndex].value;
       }
       default:
@@ -370,6 +373,33 @@ function wrapWasmElmApp(
     }
   }
 
+  function evalKernelThunk(metadata: ClosureMetadata): any {
+    let { n_values, evaluator, argsIndex } = metadata;
+    let kernelFn: ElmCurriedFunction = kernelImports[evaluator];
+    if (!kernelFn) {
+      throw new Error(`cannot find evaluator ${evaluator}`);
+    }
+    let f: Function;
+    let nArgs: number;
+    let args: any[] = [];
+    while (n_values) {
+      if (kernelFn.a && kernelFn.f && n_values >= kernelFn.a) {
+        f = kernelFn.f;
+        nArgs = kernelFn.a;
+      } else {
+        f = kernelFn;
+        nArgs = kernelFn.length || 1;
+      }
+      args = [];
+      mem32.slice(argsIndex, argsIndex + nArgs).forEach(argAddr => {
+        args.push(readWasmValue(argAddr));
+      });
+      n_values -= nArgs;
+      argsIndex += nArgs;
+      kernelFn = f(...args);
+    }
+    return kernelFn as any;
+  }
 
   function createWasmCallback(metadata: ClosureMetadata): Function {
     const { n_values, max_values, evaluator, argsIndex } = metadata;
@@ -730,7 +760,8 @@ function wrapWasmElmApp(
   function sweepJsRefs(isFullGc: boolean): void {
     let lastUsedSlot = -1;
     jsHeap.forEach((slot, index) => {
-      const shouldKeep = slot.isMarked || (!isFullGc && slot.generation !== JsHeapGen.NEW);
+      const shouldKeep =
+        slot.isMarked || (!isFullGc && slot.generation !== JsHeapGen.NEW);
       if (!shouldKeep) {
         slot.value = unusedJsHeapSlot;
       } else {
@@ -902,7 +933,6 @@ function wrapWasmElmApp(
     'RECEIVE'
   ];
 
-
   function applyJsRef(jsRefId: number, nArgs: number, argsAddr: number) {
     let f: ElmCurriedFunction = jsHeap[jsRefId].value;
 
@@ -949,7 +979,6 @@ function wrapWasmElmApp(
     }
     return mains;
   }
-
 
   return {
     getMains,
