@@ -293,7 +293,7 @@ typedef struct task {
 
 typedef struct process_stack {
   Header header;
-  u32 ctor;
+  TaskCtor ctor;
   Closure* callback;
   struct process_stack* rest;
 } ProcessStack;
@@ -333,7 +333,7 @@ typedef struct manager_config {
 
 typedef struct port_config {
   Header header;
-  u32 ctor;
+  enum manager_ctor ctor;
   ElmString* name;
   // Closure* portSetup; // no need for this, we know from ctor what function to call
   Closure* converter;
@@ -371,7 +371,7 @@ struct msg_fields_fx {
 
 typedef struct manager_message {
   Header header;
-  u32 ctor;
+  enum manager_message_ctor ctor;
   union {
     struct msg_fields_self self;
     struct msg_fields_leaf leaf;

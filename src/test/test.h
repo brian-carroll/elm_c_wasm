@@ -8,7 +8,7 @@
 #include "../kernel/core/types.h"
 
 #define TEST_CTOR(x) x,
-enum {
+enum ctor {
 #include "./test-ctors.inc"
 NUM_TEST_CTORS
 };

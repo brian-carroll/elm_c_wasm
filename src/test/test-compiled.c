@@ -150,7 +150,7 @@ Closure g_elm_core_Array_initialize = {
     .evaluator = &eval_elm_core_Array_initialize,
 };
 
-enum {
+enum field {
   FIELD_init,
   FIELD_subscriptions,
   FIELD_update,

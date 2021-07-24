@@ -259,7 +259,7 @@ void* eval_Scheduler_step_lambda(void* args[]) {
 }
 
 
-static ProcessStack* newProcessStack(u32 ctor, Closure* callback, ProcessStack* rest) {
+static ProcessStack* newProcessStack(TaskCtor ctor, Closure* callback, ProcessStack* rest) {
   const u32 size = sizeof(ProcessStack) / SIZE_UNIT;
   ProcessStack* stack = GC_allocate(true, size);
   stack->header = (Header){.tag = Tag_Custom, .size = size};
