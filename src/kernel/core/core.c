@@ -9,6 +9,7 @@
 #include "js-array.c"
 #include "list.c"
 #include "platform.c"
+#include "process.c"
 #include "queue.c"
 #include "scheduler.c"
 #include "string.c"

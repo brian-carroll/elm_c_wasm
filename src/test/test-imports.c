@@ -137,6 +137,10 @@ void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]) {
   return Utils_apply(c, nArgs, args);
 }
 
+Task* Wrapper_sleep(f64 time) {
+  return NULL;
+}
+
 // ---------------------------------------------------
 // Test values
 // Circular values must be outside the GC-managed heap

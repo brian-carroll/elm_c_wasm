@@ -1,3 +1,28 @@
+# ports in Wasm platform
+
+## outgoing
+
+We have an Elm Wasm value and we want to send it to external JS code
+This is initiated by a `Cmd msg`
+
+Compiler:
+- make a JsRef for the converter function
+- init code
+  - use `_Platform_outgoingPort(name, converterJsRef)`
+  - instead of `_Platform_leaf(name)` and `_Platform_createManager`
+- emit JS converter function, give it a name
+- include converter name in the js kernel function array
+
+### _Process_sleep
+
+Only called from C code, not JS
+Implement _Process_sleep as an imported JS function wrapped in a Closure
+
+Compiler:
+Add Process to the list of C-only kernels
+Create JS imports for `setTimeout` and `clearTimeout`
+
+
 # Eagerly evaluated JS calls
 
 - Now that the scheduler is inside Wasm, the idea of lazily evaluating JS calls doesn't work anymore. That only worked because we were returning all Cmd and Sub to JS.
@@ -45,17 +70,15 @@ TODO
   - wrapper
   - Wasm globals
   - Elm object
-- [ ] Don't clear the stack map: allow arbitrarily nested JS/Wasm calls
+- [x] Don't clear the stack map: allow arbitrarily nested JS/Wasm calls
   - GC_execute, GC_init_root, test_execute
   - Check stack is empty before major GC and GC_init_root
   - Deal with popping the last frame
-- [ ] Wrapper needs to push a frame before it starts writing args or anything else
+- [x] Wrapper needs to push a frame before it starts writing args or anything else
   - [x] export a stackframe allocation function from Wasm
   - [x] wrapper `call` & `wasmCallback`
-  - [ ] debug & cleanup
-    - effects demo has mismatched versions for Json lib (C enum doesn't match JS enum, e.g. 13 doesn't exist in JS)
-    - check the elm.json and check if compiler is doing the right things
-    - probably need isOk to work on the result, in JS! So JS decode...
+  - [x] debug & cleanup
+
 
 # Reducing encoding/decoding in the Elm Architecture
 

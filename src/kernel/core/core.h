@@ -182,6 +182,11 @@ void* eval_sendToApp_revArgs(void*[]);
 
 // =========================================
 
+void* eval_Process_sleep(void* args[]);
+extern Closure Process_sleep;
+
+// =========================================
+
 void Queue_push(Queue* q, void* value);
 void* Queue_shift(Queue* q);
 

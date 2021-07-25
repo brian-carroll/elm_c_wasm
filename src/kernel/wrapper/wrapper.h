@@ -20,5 +20,6 @@ extern void sweepJsRefs(bool isFullGc);
 extern f64 parseFloat(u16* addr, size_t len16);
 extern void jsStepper(void* viewMetadata);
 extern void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]);
+extern Task* Wrapper_sleep(f64 time);
 
 #endif
