@@ -83,7 +83,7 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
     if (already_marked) continue;
 
     if (v->header.tag == Tag_JsRef) {
-      markJsRef(v->js_ref.index);
+      markJsRef(v->js_ref.id);
       continue;
     }
 

@@ -228,8 +228,9 @@ Closure* newClosure(u16 n_values, u16 max_values, EvalFunction evaluator, void* 
 // Reference to a JS object
 typedef struct js_ref {
   Header header;
-  u32 index;
+  u32 id;
 } JsRef;
+JsRef* newJsRef(u32 id);
 
 
 // ANY ELM VALUE (for pointers in collections)

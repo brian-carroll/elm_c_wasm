@@ -17,7 +17,7 @@ void* createJsValue(ElmString* json) {
   Custom* wrapped = testJsonValueRoundTrip(json);
   JsRef* jsRef = wrapped->values[0];
   if (jsRef->header.tag == Tag_JsRef) {
-    latest_jsref_index = jsRef->index;
+    latest_jsref_index = jsRef->id;
   }
   return wrapped;
 }
@@ -95,14 +95,6 @@ Custom* err(Custom* error) {
   return newCustom(CTOR_Err, 1, (void*[]){error});
 }
 
-JsRef* newJsRef(u32 index) {
-  JsRef* jsRef = GC_allocate(true, SIZE_JS_REF);
-  *jsRef = (JsRef){
-      .header = HEADER_JS_REF,
-      .index = index,
-  };
-  return jsRef;
-}
 
 //=================================================================================================
 

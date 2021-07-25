@@ -93,7 +93,7 @@ static void* writeJsonValue(ElmValue* value, JsShape jsShape) {
   if (jsShape == MAYBE_CIRCULAR) {
     JsRef* jsRef = GC_allocate(true, SIZE_JS_REF);
     jsRef->header = (Header)HEADER_JS_REF;
-    jsRef->index = allocateJsRef(value);
+    jsRef->id = allocateJsRef(value);
     return jsRef;
   }
   return Utils_clone(value);

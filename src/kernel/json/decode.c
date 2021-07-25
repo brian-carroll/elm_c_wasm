@@ -475,7 +475,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_LIST:
       if (value->header.tag == Tag_JsRef) {
-        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+        value = (ElmValue*)getJsRefValue(value->js_ref.id);
       }
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
         return Json_runArrayDecoder(
@@ -485,7 +485,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_ARRAY: {
       if (value->header.tag == Tag_JsRef) {
-        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+        value = (ElmValue*)getJsRefValue(value->js_ref.id);
       }
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
         return Json_runArrayDecoder(
@@ -508,7 +508,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
           }
         }
       } else if (value->header.tag == Tag_JsRef) {
-        field_value = getJsRefObjectField(value->js_ref.index, field);
+        field_value = getJsRefObjectField(value->js_ref.id, field);
       }
 
       if (field_value != NULL) {
@@ -537,7 +537,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
           index_value = value->custom.values[index->value];
         }
       } else if (value->header.tag == Tag_JsRef) {
-        ptrdiff_t from_js = getJsRefArrayIndex(value->js_ref.index, index->value);
+        ptrdiff_t from_js = getJsRefArrayIndex(value->js_ref.id, index->value);
         if (from_js < 0) {
           too_short = true;
           len = -from_js - 1;
@@ -572,7 +572,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_KEY_VALUE: {
       if (value->header.tag == Tag_JsRef) {
-        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+        value = (ElmValue*)getJsRefValue(value->js_ref.id);
       }
       if (value->header.tag != Tag_Custom || value->custom.ctor != JSON_VALUE_OBJECT) {
         return Json_expecting(&str_err_Object, value);

@@ -118,7 +118,7 @@ void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
   if (v->header.tag == Tag_JsRef) {
     GcStackMapIndex stack_frame = GC_stack_push_frame('J', func);
     JsRef* jsRef = func;
-    void* result = applyJsRef(jsRef->index, n_applied, applied);
+    void* result = applyJsRef(jsRef->id, n_applied, applied);
     GC_stack_pop_frame(func, result, stack_frame);
     return result;
   }
@@ -284,7 +284,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
     // return 0;
 
     case Tag_JsRef:
-      return pa->js_ref.index == pb->js_ref.index;
+      return pa->js_ref.id == pb->js_ref.id;
 
     case Tag_Process:
     default:

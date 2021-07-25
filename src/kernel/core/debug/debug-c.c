@@ -161,7 +161,7 @@ void print_value(void* p) {
       break;
     }
     case Tag_JsRef:
-      safe_printf("JsRef %d", v->js_ref.index);
+      safe_printf("JsRef %d", v->js_ref.id);
       break;
     case Tag_Process: {
       Process* p = (Process*)v;
@@ -312,7 +312,7 @@ void print_stack_map() {
       safe_printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);
       switch (flag) {
         case 'J':
-          safe_printf("JsRef %d\n", value->js_ref.index);
+          safe_printf("JsRef %d\n", value->js_ref.id);
           break;
         case 'C':
           safe_printf("Closure %s\n", eval_name);
@@ -609,7 +609,7 @@ static void Debug_prettyHelp(int indent, void* p) {
       break;
     }
     case Tag_JsRef:
-      safe_printf("External JS object #%d\n", v->js_ref.index);
+      safe_printf("External JS object #%d\n", v->js_ref.id);
       break;
 
     case Tag_Process: {
