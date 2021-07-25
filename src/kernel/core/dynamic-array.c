@@ -13,7 +13,6 @@ DynamicArray* newDynamicArray(u32 capacity) {
 
 // Push a value onto the end of the array
 // Side-effect: re-allocates the array if needed
-// Returned index is temporary. Can change if another value is removed
 void DynamicArray_push(DynamicArray** array_ref, void* value) {
   DynamicArray* orig = *array_ref;
   DynamicArray* current;
@@ -21,7 +20,8 @@ void DynamicArray_push(DynamicArray** array_ref, void* value) {
   if (orig->occupied < orig_capacity) {
     current = orig;
   } else {
-    size_t new_capacity = (orig_capacity < 1024) ? (orig_capacity * 2) : (orig_capacity + 1024);
+    size_t new_capacity =
+        (orig_capacity < 1024) ? (orig_capacity * 2) : (orig_capacity + 1024);
     current = newDynamicArray(new_capacity);
     current->occupied = orig->occupied;
     for (size_t i = 0; i < orig_capacity; i++) {
@@ -37,9 +37,18 @@ void DynamicArray_push(DynamicArray** array_ref, void* value) {
   *array_ref = current;
 }
 
-// Remove a value from the array
-// Side-effect: reorders the values so the last slot is free
-void DynamicArray_remove(DynamicArray* array, u32 index) {
+// Remove a value from the array, preserving order
+void DynamicArray_remove_ordered(DynamicArray* array, u32 index) {
+  u32 new_occupied = array->occupied - 1;
+  for (u32 i = index; i < new_occupied; ++i) {
+    array->values[i] = array->values[i + 1];
+  }
+  array->values[new_occupied] = NULL;
+  array->occupied = new_occupied;
+}
+
+// Remove a value from the array, not preserving order (faster)
+void DynamicArray_remove_unordered(DynamicArray* array, u32 index) {
   u32 last = array->occupied - 1;
   array->values[index] = array->values[last];
   array->values[last] = NULL;

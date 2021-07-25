@@ -73,7 +73,8 @@ extern Closure Char_toCode;
 
 DynamicArray* newDynamicArray(u32 capacity);
 void DynamicArray_push(DynamicArray** array_ref, void* value);
-void DynamicArray_remove(DynamicArray* array, u32 index);
+void DynamicArray_remove_ordered(DynamicArray* array, u32 index);
+void DynamicArray_remove_unordered(DynamicArray* array, u32 index);
 
 // =========================================
 

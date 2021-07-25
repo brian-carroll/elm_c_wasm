@@ -303,7 +303,7 @@ static void Scheduler_step(Process* proc) {
         if (cache_index == -1) {
           safe_printf("process cache miss for Process id %d @ %p\n", proc->id, proc);
         }
-        // DynamicArray_remove(Platform_process_cache, cache_index);
+        // DynamicArray_remove_unordered(Platform_process_cache, cache_index);
         return;
       }
       proc->root = A1(proc->stack->callback, proc->root->value);
