@@ -207,7 +207,7 @@ void* eval_Platform_sendToApp_lambda(void* args[]) {
   Closure* callback = args[2];
 
   A1(router->sendToApp, msg);
-  A1(callback, eval_Scheduler_succeed(&pUnit));
+  A1(callback, eval_Scheduler_succeed((void*[]){pUnit}));
   return NULL;
 }
 void* eval_Platform_sendToApp(void* args[]) {

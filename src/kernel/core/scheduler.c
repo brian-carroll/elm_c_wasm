@@ -1,8 +1,6 @@
 #include "core.h"
 
 extern DynamicArray* Platform_process_cache;
-void DynamicArray_push(DynamicArray** array_ref, void* value);
-void DynamicArray_remove(DynamicArray* array, u32 index);
 
 /* ====================================================
 
@@ -172,7 +170,7 @@ void* eval_Scheduler_send_lambda(void* args[]) {
   // void* msg = args[1];
   Closure* callback = args[2];
   eval_Scheduler_rawSend(args);
-  A1(callback, eval_Scheduler_succeed(&pUnit));
+  A1(callback, eval_Scheduler_succeed((void*[]){pUnit}));
   return NULL;
 }
 void* eval_Scheduler_send(void* args[]) {
@@ -196,7 +194,7 @@ void* eval_Scheduler_kill_lambda(void* args[]) {
     Utils_apply(task->kill, 0, NULL);
   }
   proc->root = NULL;
-  A1(callback, eval_Scheduler_succeed(&pUnit));
+  A1(callback, eval_Scheduler_succeed((void*[]){pUnit}));
   return NULL;
 }
 void* eval_Scheduler_kill(void* args[]) {
@@ -259,7 +257,8 @@ void* eval_Scheduler_step_lambda(void* args[]) {
 }
 
 
-static ProcessStack* newProcessStack(TaskCtor ctor, Closure* callback, ProcessStack* rest) {
+static ProcessStack* newProcessStack(
+    TaskCtor ctor, Closure* callback, ProcessStack* rest) {
   const u32 size = sizeof(ProcessStack) / SIZE_UNIT;
   ProcessStack* stack = GC_allocate(true, size);
   stack->header = (Header){.tag = Tag_Custom, .size = size};
@@ -283,7 +282,9 @@ static void Scheduler_step(Process* proc) {
   while (proc->root) {
     proc->root = proc->root;
 
-    safe_printf("Stepping process #%d: %s\n", proc->id, proc->root ? tag_names[proc->root->ctor] : "NULL");
+    safe_printf("Stepping process #%d: %s\n",
+        proc->id,
+        proc->root ? tag_names[proc->root->ctor] : "NULL");
     // DEBUG_PRETTY(proc->root);
 
     u32 rootTag = proc->root->ctor;
