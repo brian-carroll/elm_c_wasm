@@ -551,29 +551,24 @@ function wrapWasmElmApp(
             return wasmConstAddrs.Nil;
           case '#0':
             return wasmConstAddrs.Unit;
-          case '::':
+          case '::': {
+            return writeCons(
+              writeWasmValue(elmValue.a),
+              writeWasmValue(elmValue.b)
+            );
+          }
           case '#2': {
-            const a = writeWasmValue(elmValue.a);
-            const b = writeWasmValue(elmValue.b);
-            const addr = emscriptenModule._allocate(3);
-            const index = addr >> 2;
-            const tag = elmValue.$ === '::' ? Tag.List : Tag.Tuple2;
-            mem32[index] = encodeHeader(tag, 3);
-            mem32[index + 1] = a;
-            mem32[index + 2] = b;
-            return addr;
+            return writeTuple2(
+              writeWasmValue(elmValue.a),
+              writeWasmValue(elmValue.b)
+            );
           }
           case '#3': {
-            const a = writeWasmValue(elmValue.a);
-            const b = writeWasmValue(elmValue.b);
-            const c = writeWasmValue(elmValue.c);
-            const addr = emscriptenModule._allocate(4);
-            const index = addr >> 2;
-            mem32[index] = encodeHeader(Tag.Tuple3, 4);
-            mem32[index + 1] = a;
-            mem32[index + 2] = b;
-            mem32[index + 3] = c;
-            return addr;
+            return writeTuple3(
+              writeWasmValue(elmValue.a),
+              writeWasmValue(elmValue.b),
+              writeWasmValue(elmValue.c)
+            );
           }
           case JsonValue.WRAP: {
             const unwrapped = elmValue.a;
@@ -594,6 +589,34 @@ function wrapWasmElmApp(
     }
     console.error(elmValue);
     throw new Error('Cannot determine type of Elm value');
+  }
+
+  function writeCons(headAddr: number, tailAddr: number) {
+    const addr = emscriptenModule._allocate(3);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.List, 3);
+    mem32[index + 1] = headAddr;
+    mem32[index + 2] = tailAddr;
+    return addr;
+  }
+
+  function writeTuple2(aAddr: number, bAddr: number) {
+    const addr = emscriptenModule._allocate(3);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Tuple2, 3);
+    mem32[index + 1] = aAddr;
+    mem32[index + 2] = bAddr;
+    return addr;
+  }
+
+  function writeTuple3(aAddr: number, bAddr: number, cAddr: number) {
+    const addr = emscriptenModule._allocate(4);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Tuple3, 4);
+    mem32[index + 1] = aAddr;
+    mem32[index + 2] = bAddr;
+    mem32[index + 3] = cAddr;
+    return addr;
   }
 
   function writeUserCustom(value: Record<string, any>): Address {
@@ -832,11 +855,7 @@ function wrapWasmElmApp(
       return addr;
     }
     if (jsShape === JsShape.MAYBE_CIRCULAR) {
-      addr = emscriptenModule._allocate(2);
-      index = addr >> 2;
-      mem32[index] = encodeHeader(Tag.JsRef, 2);
-      mem32[index + 1] = allocateJsRef(value);
-      return addr;
+      return writeJsRef(allocateJsRef(value));
     }
     if (Array.isArray(value)) {
       const size = 2 + value.length;
@@ -861,6 +880,14 @@ function wrapWasmElmApp(
       mem32[index + 2 + two_i] = writeWasmValue(key);
       mem32[index + 3 + two_i] = writeJsonValue(value[key], jsShape);
     }
+    return addr;
+  }
+
+  function writeJsRef(id: number): number {
+    const addr = emscriptenModule._allocate(2);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.JsRef, 2);
+    mem32[index + 1] = id;
     return addr;
   }
 
