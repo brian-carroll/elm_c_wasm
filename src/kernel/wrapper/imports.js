@@ -38,16 +38,6 @@ mergeInto(LibraryManager.library, {
   },
 
   Wrapper_sleep: function (time) {
-    const task = _Scheduler_binding(function (callback) {
-      var id = setTimeout(function () {
-        callback(_Scheduler_succeed(_Utils_Tuple0));
-      }, time);
-
-      return function () {
-        clearTimeout(id);
-      };
-    });
-    const taskAddr = wasmWrapper.writeWasmValue(task);
-    return taskAddr;
+    return wasmWrapper.Wrapper_sleep(time);
   }
 });

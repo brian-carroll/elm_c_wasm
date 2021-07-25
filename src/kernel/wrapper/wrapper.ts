@@ -936,7 +936,7 @@ function wrapWasmElmApp(
     let subs: Function[] = [];
     const converter: Function = jsHeap[converterJsRefId].value;
 
-    function onEffects(cmdList: { a: any; b: any; }) {
+    function onEffects(cmdList: { a: any; b: any }) {
       for (; cmdList.b; cmdList = cmdList.b) {
         // grab a separate reference to subs in case unsubscribe is called
         const currentSubs = subs;
@@ -1021,6 +1021,26 @@ function wrapWasmElmApp(
     return resultAddr;
   }
 
+  function Wrapper_sleep(time: number) {
+    const b = new Task();
+    b.$ = 'BINDING';
+    b.kill = null;
+    b.callback = function (callback) {
+      var id = setTimeout(function () {
+        const s = new Task();
+        s.$ = 'SUCCEED';
+        s.value = elmImports._Utils_Tuple0;
+        callback(s);
+      }, time);
+
+      return function () {
+        clearTimeout(id);
+      };
+    };
+    const taskAddr = writeWasmValue(b);
+    return taskAddr;
+  }
+
   /* --------------------------------------------------
 
                     EXPORTS
@@ -1070,6 +1090,7 @@ function wrapWasmElmApp(
     Platform_sendToApp,
     Platform_sendToSelf,
     sendToApp_revArgs,
+    Wrapper_sleep,
     Task,
     Process,
     managerNames,
