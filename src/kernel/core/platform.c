@@ -17,7 +17,7 @@ void Platform_gatherEffects(
     bool isCmd, ManagerMsg* bag, Custom* effectsDict, Cons* taggers);
 ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value);
 ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effects);
-void* Platform_setupOutgoingPort(ElmString* name);
+JsRef* Platform_setupOutgoingPort(size_t home, PortConfig* config);
 void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp);
 Cons* Platform_setupEffects(Custom* managers, Closure* sendToApp);
 
@@ -106,13 +106,13 @@ Cons* Platform_initializeEffects() {
 Cons* Platform_setupEffects(Custom* managerProcs, Closure* sendToApp) {
   Cons* portsList = &Nil;
 
-  for (u32 i = 0; i < Platform_managers_size; i++) {
-    ManagerConfig* config = Platform_managerConfigs->values[i];
+  for (u32 managerId = 0; managerId < Platform_managers_size; managerId++) {
+    ManagerConfig* config = Platform_managerConfigs->values[managerId];
 
     if (config->ctor == MANAGER_PORT_OUT) {
       PortConfig* port = (PortConfig*)config;
-      Tuple2* keyValuePair =
-          newTuple2(port->name, Platform_setupOutgoingPort(port->name));
+      JsRef* jsObject = Platform_setupOutgoingPort(managerId, port);
+      Tuple2* keyValuePair = newTuple2(port->name, jsObject);
       portsList = newCons(keyValuePair, portsList);
     } else if (config->ctor == MANAGER_PORT_IN) {
       PortConfig* port = (PortConfig*)config;
@@ -121,7 +121,7 @@ Cons* Platform_setupEffects(Custom* managerProcs, Closure* sendToApp) {
       portsList = newCons(keyValuePair, portsList);
     }
     Process* proc = Platform_instantiateManager(config, sendToApp);
-    managerProcs->values[i] = proc;
+    managerProcs->values[managerId] = proc;
   }
 
   return portsList;
@@ -392,10 +392,85 @@ ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effec
 
    ==================================================== */
 
-
-void* Platform_setupOutgoingPort(ElmString* name) {
-  return NULL;  // TODO
+void Platform_checkPortName(ElmString* name) {
+  for (u32 managerId = 0; managerId < Platform_managers_size; managerId++) {
+    PortConfig* config = Platform_managerConfigs->values[managerId];
+    if (config->ctor != MANAGER_PORT_OUT && config->ctor != MANAGER_PORT_IN) {
+      continue;
+    }
+    if (A2(&Utils_equal, name, config->name) == &True) {
+      log_error("Multiple ports with the same name");  // TODO: print the name
+    }
+  }
 }
+
+
+void* eval_Platform_outgoingPortMap(void* args[]) {
+  // Closure* tagger = args[0];
+  ElmValue* value = args[1];
+  return value;
+}
+Closure Platform_outgoingPortMap = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 2,
+    .evaluator = eval_Platform_outgoingPortMap,
+};
+
+
+void* eval_Platform_outgoingPortOnEffects(void* args[]) {
+  Task* sleep0 = args[0];
+  JsRef* jsOnEffects = args[1];
+  // void* router = args[2];
+  Cons* cmdList = args[3];
+  // void* state = args[4];
+
+  A1(jsOnEffects, cmdList);
+
+  return sleep0;
+}
+
+
+// global init
+Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* converter) {
+  Platform_checkPortName(name);
+
+  const u32 size = sizeof(PortConfig) / SIZE_UNIT;
+  PortConfig* config = GC_allocate(true, size);
+  config->header = (Header){.tag = Tag_Custom, .size = size};
+  config->ctor = MANAGER_PORT_OUT;
+
+  config->init = NULL;       // wait until setup
+  config->onEffects = NULL;  // wait until setup
+  config->onSelfMsg = NULL;
+  config->cmdMap = &Platform_outgoingPortMap;
+  config->subMap = NULL;
+  config->name = name;
+  config->converter = converter;
+
+  void* leaf_args[] = {(void*)managerId};
+  Closure* leaf = newClosure(1, 2, eval_Platform_leaf, leaf_args);
+  return leaf;
+}
+
+
+// effects init
+JsRef* Platform_setupOutgoingPort(size_t managerId, PortConfig* config) {
+  JsRef* converter = config->converter;
+
+  ElmFloat zero = {.header = HEADER_FLOAT, .value = 0};
+  Task* sleep0 = A1(&Process_sleep, &zero);
+  config->init = sleep0;
+
+  Tuple2* tuple = Wrapper_setupOutgoingPort(converter->id);
+  JsRef* jsOnEffects = tuple->a;
+  JsRef* jsPortObj = tuple->b;
+
+  config->onEffects =
+      newClosure(1, 4, eval_Platform_outgoingPortOnEffects, (void*[]){sleep0, jsOnEffects});
+
+  return jsPortObj;
+}
+
 
 void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp) {
   return NULL;  // TODO

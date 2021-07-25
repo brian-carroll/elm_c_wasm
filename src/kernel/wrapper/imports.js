@@ -33,6 +33,10 @@ mergeInto(LibraryManager.library, {
     return wasmWrapper.applyJsRef(jsRefId, nArgs, argsAddr);
   },
 
+  Wrapper_setupOutgoingPort: function (converterJsRefId) {
+    return wasmWrapper.setupOutgoingPort(converterJsRefId);
+  },
+
   Wrapper_sleep: function (time) {
     const task = _Scheduler_binding(function (callback) {
       var id = setTimeout(function () {

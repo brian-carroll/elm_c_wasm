@@ -137,6 +137,10 @@ void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]) {
   return Utils_apply(c, nArgs, args);
 }
 
+Tuple2* Wrapper_setupOutgoingPort(u32 converterJsRefId) {
+  return NULL;
+}
+
 Task* Wrapper_sleep(f64 time) {
   return NULL;
 }

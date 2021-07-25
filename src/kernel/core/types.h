@@ -334,11 +334,14 @@ typedef struct manager_config {
 typedef struct port_config {
   Header header;
   enum manager_ctor ctor;
-  ElmString* name;
-  // Closure* portSetup; // no need for this, we know from ctor what function to call
-  Closure* converter;
+  Task* init;  // load-time, not compile-time (yet?)
+  Closure* onEffects;
+  Closure* onSelfMsg; // unused
   Closure* cmdMap;
   Closure* subMap;
+
+  ElmString* name;
+  JsRef* converter;
 } PortConfig;
 
 

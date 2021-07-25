@@ -932,6 +932,43 @@ function wrapWasmElmApp(
     return readWasmValue(portsListAddr);
   }
 
+  function setupOutgoingPort(converterJsRefId: number) {
+    let subs: Function[] = [];
+    const converter: Function = jsHeap[converterJsRefId].value;
+
+    function onEffects(cmdList: { a: any; b: any; }) {
+      for (; cmdList.b; cmdList = cmdList.b) {
+        // grab a separate reference to subs in case unsubscribe is called
+        const currentSubs = subs;
+        const jsonWrapped = converter(cmdList.a);
+        const value = jsonWrapped.a;
+        for (let i = 0; i < currentSubs.length; i++) {
+          currentSubs[i](value);
+        }
+      }
+    }
+
+    function subscribe(callback: Function) {
+      subs.push(callback);
+    }
+
+    function unsubscribe(callback: Function) {
+      // copy subs into a new array in case unsubscribe is called within a
+      // subscribed callback
+      subs = subs.slice();
+      var index = subs.indexOf(callback);
+      if (index >= 0) {
+        subs.splice(index, 1);
+      }
+    }
+
+    const portObj = { subscribe, unsubscribe };
+    const portAddr = writeJsRef(allocateJsRef(portObj));
+    const onEffectsAddr = writeJsRef(allocateJsRef(onEffects));
+    const tupleAddr = writeTuple2(onEffectsAddr, portAddr);
+    return tupleAddr;
+  }
+
   const Scheduler_rawSpawn = emscriptenModule._get_Scheduler_rawSpawn();
   const Scheduler_spawn = emscriptenModule._get_Scheduler_spawn();
   const Json_run = emscriptenModule._get_eval_Json_run(); // TODO: unused?
@@ -946,8 +983,8 @@ function wrapWasmElmApp(
   class Task {
     $: string;
     value: any;
-    callback: (x: any) => Task;
-    kill: () => void;
+    callback: (x: any) => any;
+    kill: null | (() => void);
     task: Task;
   }
 
@@ -1028,6 +1065,7 @@ function wrapWasmElmApp(
     Scheduler_spawn,
     Json_run, // TODO: unused?
     Platform_initializeEffects,
+    setupOutgoingPort,
     wasmImportStepper,
     Platform_sendToApp,
     Platform_sendToSelf,
