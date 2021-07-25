@@ -322,7 +322,7 @@ enum manager_ctor {
 
 typedef struct manager_config {
   Header header;
-  u32 ctor;
+  enum manager_ctor ctor;
   Task* init;  // load-time, not compile-time (yet?)
   Closure* onEffects;
   Closure* onSelfMsg;

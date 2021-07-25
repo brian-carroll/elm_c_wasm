@@ -136,7 +136,7 @@ ManagerConfig* Platform_createManager(void* init,
   const u32 size = sizeof(ManagerConfig) / SIZE_UNIT;
   ManagerConfig* config = GC_allocate(true, size);
   config->header = (Header){.tag = Tag_Custom, .size = size};
-  config->ctor = KERNEL_CTOR_OFFSET;
+  config->ctor = MANAGER_EFFECT;
 
   config->init = init;
   config->onEffects = onEffects;
