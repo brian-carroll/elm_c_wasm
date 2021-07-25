@@ -67,11 +67,11 @@ typedef struct {
 // Header size field has units corresponding to this many bytes:
 #define SIZE_UNIT sizeof(void*)
 
+// clang-format off
 #define SIZE_INT sizeof(ElmInt) / SIZE_UNIT
 #define SIZE_FLOAT sizeof(ElmFloat) / SIZE_UNIT
 #define SIZE_CHAR sizeof(ElmChar) / SIZE_UNIT
-#define SIZE_STRING(utf16len) \
-  (sizeof(Header) + (sizeof(u16) * utf16len) + SIZE_UNIT - 1) / SIZE_UNIT
+#define SIZE_STRING(utf16len) (sizeof(Header) + (sizeof(u16) * utf16len) + SIZE_UNIT - 1) / SIZE_UNIT
 #define SIZE_LIST sizeof(Cons) / SIZE_UNIT
 #define SIZE_TUPLE2 sizeof(Tuple2) / SIZE_UNIT
 #define SIZE_TUPLE3 sizeof(Tuple3) / SIZE_UNIT
@@ -81,7 +81,6 @@ typedef struct {
 #define SIZE_CLOSURE(p) (sizeof(Closure) + p * sizeof(void*)) / SIZE_UNIT
 #define SIZE_JS_REF sizeof(JsRef) / SIZE_UNIT
 
-// clang-format off
 #define HEADER_INT { .tag = Tag_Int, .size = SIZE_INT }
 #define HEADER_FLOAT { .tag = Tag_Float, .size = SIZE_FLOAT }
 #define HEADER_CHAR { .tag = Tag_Char, .size = SIZE_CHAR }
