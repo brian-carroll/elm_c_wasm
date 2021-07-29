@@ -37,6 +37,10 @@ mergeInto(LibraryManager.library, {
     return wasmWrapper.setupOutgoingPort(converterJsRefId);
   },
 
+  Wrapper_setupIncomingPort: function (managerId, converterJsRefId) {
+    return wasmWrapper.setupIncomingPort(managerId, converterJsRefId);
+  },
+
   Wrapper_sleep: function (time) {
     return wasmWrapper.Wrapper_sleep(time);
   }

@@ -342,6 +342,7 @@ typedef struct port_config {
 
   ElmString* name;
   JsRef* converter;
+  Cons* incomingSubs;
 } PortConfig;
 
 

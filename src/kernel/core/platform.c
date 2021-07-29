@@ -9,6 +9,7 @@
 
 // Forward declarations
 
+extern Custom Json_encodeNull;
 void Platform_enqueueEffects(
     Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag);
 Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);
@@ -18,7 +19,7 @@ void Platform_gatherEffects(
 ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value);
 ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effects);
 JsRef* Platform_setupOutgoingPort(size_t home, PortConfig* config);
-void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp);
+JsRef* Platform_setupIncomingPort(size_t managerId, PortConfig* config);
 Cons* Platform_setupEffects(Custom* managers, Closure* sendToApp);
 
 
@@ -109,17 +110,15 @@ Cons* Platform_setupEffects(Custom* managerProcs, Closure* sendToApp) {
   for (u32 managerId = 0; managerId < Platform_managers_size; managerId++) {
     ManagerConfig* config = Platform_managerConfigs->values[managerId];
 
-    if (config->ctor == MANAGER_PORT_OUT) {
+    if (config->ctor != MANAGER_EFFECT) {
       PortConfig* port = (PortConfig*)config;
-      JsRef* jsObject = Platform_setupOutgoingPort(managerId, port);
+      JsRef* jsObject = config->ctor == MANAGER_PORT_IN
+                            ? Platform_setupIncomingPort(managerId, port)
+                            : Platform_setupOutgoingPort(managerId, port);
       Tuple2* keyValuePair = newTuple2(port->name, jsObject);
       portsList = newCons(keyValuePair, portsList);
-    } else if (config->ctor == MANAGER_PORT_IN) {
-      PortConfig* port = (PortConfig*)config;
-      Tuple2* keyValuePair =
-          newTuple2(port->name, Platform_setupIncomingPort(port->name, sendToApp));
-      portsList = newCons(keyValuePair, portsList);
     }
+
     Process* proc = Platform_instantiateManager(config, sendToApp);
     managerProcs->values[managerId] = proc;
   }
@@ -388,7 +387,7 @@ ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effec
 
 /* ====================================================
 
-                 PORTS
+                 OUTGOING PORTS
 
    ==================================================== */
 
@@ -446,6 +445,7 @@ Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* convert
   config->subMap = NULL;
   config->name = name;
   config->converter = converter;
+  config->incomingSubs = NULL;
 
   void* leaf_args[] = {(void*)managerId};
   Closure* leaf = newClosure(1, 2, eval_Platform_leaf, leaf_args);
@@ -465,13 +465,91 @@ JsRef* Platform_setupOutgoingPort(size_t managerId, PortConfig* config) {
   JsRef* jsOnEffects = tuple->a;
   JsRef* jsPortObj = tuple->b;
 
-  config->onEffects =
-      newClosure(1, 4, eval_Platform_outgoingPortOnEffects, (void*[]){sleep0, jsOnEffects});
+  config->onEffects = newClosure(
+      2, 5, eval_Platform_outgoingPortOnEffects, (void*[]){sleep0, jsOnEffects});
 
   return jsPortObj;
 }
 
 
-void* Platform_setupIncomingPort(ElmString* name, Closure* sendToApp) {
-  return NULL;  // TODO
+/* ====================================================
+
+                 INCOMING PORTS
+
+   ==================================================== */
+
+void* eval_Platform_incomingPortMap(void* args[]) {
+  Closure* tagger = args[0];
+  Closure* finalTagger = args[1];
+  ElmValue* value = args[2];
+  ElmValue* result = A1(tagger, A1(finalTagger, value));
+  return result;
+}
+Closure Platform_incomingPortMap = {
+    .header = HEADER_CLOSURE(0),
+    .max_values = 3,
+    .evaluator = eval_Platform_incomingPortMap,
+};
+
+
+void* eval_Platform_incomingPortOnEffects(void* args[]) {
+  PortConfig* config = args[0];
+  // void* router = args[1];
+  Cons* subList = args[2];
+  // void* state = args[3];
+
+  config->incomingSubs = subList;
+
+  return config->init;
+}
+
+
+void Platform_sendToIncomingPort(u32 managerId, ElmValue* value) {
+  PortConfig* config = Platform_managerConfigs->values[managerId];
+  for (Cons* temp = config->incomingSubs; temp != &Nil; temp = temp->tail) {
+    Closure* sub = temp->head;
+    ElmValue* msg = A1(sub, value);
+    eval_sendToApp_revArgs((void*[]){NULL, msg});
+  }
+}
+
+
+// global init
+Closure* Platform_incomingPort(size_t managerId, ElmString* name, JsRef* converter) {
+  Platform_checkPortName(name);
+
+  const u32 size = sizeof(PortConfig) / SIZE_UNIT;
+  PortConfig* config = GC_allocate(true, size);
+  config->header = (Header){.tag = Tag_Custom, .size = size};
+  config->ctor = MANAGER_PORT_IN;
+
+  config->init = NULL;       // wait until setup
+  config->onEffects = NULL;  // wait until setup
+  config->onSelfMsg = NULL;
+  config->cmdMap = NULL;
+  config->subMap = &Platform_incomingPortMap;
+  config->name = name;
+  config->converter = converter;
+  config->incomingSubs = NULL;  // wait until setup
+
+  void* leaf_args[] = {(void*)managerId};
+  Closure* leaf = newClosure(1, 2, eval_Platform_leaf, leaf_args);
+  return leaf;
+}
+
+
+// effects init
+JsRef* Platform_setupIncomingPort(size_t managerId, PortConfig* config) {
+  JsRef* converter = config->converter;
+
+  void* succeedArgs[1];
+  succeedArgs[0] = &Json_encodeNull;
+  config->init = eval_Scheduler_succeed(succeedArgs);
+  config->onEffects =
+      newClosure(1, 4, eval_Platform_incomingPortOnEffects, (void*[]){config});
+  config->incomingSubs = &Nil;
+
+  u32 jsRefId = Wrapper_setupIncomingPort(managerId, converter->id);
+  JsRef* jsPortObj = newJsRef(jsRefId);
+  return jsPortObj;
 }

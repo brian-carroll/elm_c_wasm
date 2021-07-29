@@ -43,6 +43,7 @@ interface EmscriptenModule {
   _get_sendToApp_revArgs: () => number;
   _initializeEffects: () => number;
   _findProcess: (id: number) => number;
+  _Wrapper_sendToIncomingPort(managerId: number, valueAddr: number): void;
   _debugHeapState: () => void;
   _debugAddrRange: (start: number, size: number) => void;
   _debugStackMap: () => void;
@@ -969,6 +970,23 @@ function wrapWasmElmApp(
     return tupleAddr;
   }
 
+  function setupIncomingPort(managerId: number, converterJsRefId: number) {
+    const converter: Function = jsHeap[converterJsRefId].value;
+
+    function send(incomingValue: any): void {
+      const result = converter(incomingValue);
+      if (result.$ !== 'Ok') {
+        throw new Error(result.a)
+      }
+      const valueAddr = writeWasmValue(result.a);
+      emscriptenModule._Wrapper_sendToIncomingPort(managerId, valueAddr);
+    }
+
+    const portObj = { send };
+    const jsRefId = allocateJsRef(portObj);
+    return jsRefId;
+  }
+
   const Scheduler_rawSpawn = emscriptenModule._get_Scheduler_rawSpawn();
   const Scheduler_spawn = emscriptenModule._get_Scheduler_spawn();
   const Json_run = emscriptenModule._get_eval_Json_run(); // TODO: unused?
@@ -1086,6 +1104,7 @@ function wrapWasmElmApp(
     Json_run, // TODO: unused?
     Platform_initializeEffects,
     setupOutgoingPort,
+    setupIncomingPort,
     wasmImportStepper,
     Platform_sendToApp,
     Platform_sendToSelf,
