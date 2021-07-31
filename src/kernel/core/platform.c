@@ -133,7 +133,7 @@ ManagerConfig* Platform_createManager(void* init,
     Closure* cmdMap,
     Closure* subMap) {
   const u32 size = sizeof(ManagerConfig) / SIZE_UNIT;
-  ManagerConfig* config = GC_allocate(true, size);
+  ManagerConfig* config = GC_allocate(false, size);
   config->header = (Header){.tag = Tag_Custom, .size = size};
   config->ctor = MANAGER_EFFECT;
 
@@ -447,6 +447,8 @@ Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* convert
   config->converter = converter;
   config->incomingSubs = NULL;
 
+  Platform_managerConfigs->values[managerId] = config;
+
   void* leaf_args[] = {(void*)managerId};
   Closure* leaf = newClosure(1, 2, eval_Platform_leaf, leaf_args);
   return leaf;
@@ -531,6 +533,8 @@ Closure* Platform_incomingPort(size_t managerId, ElmString* name, JsRef* convert
   config->name = name;
   config->converter = converter;
   config->incomingSubs = NULL;  // wait until setup
+
+  Platform_managerConfigs->values[managerId] = config;
 
   void* leaf_args[] = {(void*)managerId};
   Closure* leaf = newClosure(1, 2, eval_Platform_leaf, leaf_args);
