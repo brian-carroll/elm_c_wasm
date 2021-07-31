@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Browser.Events exposing (onKeyDown)
@@ -20,9 +20,17 @@ initialModel =
 
 
 type Msg
-    = ButtonClicked
+    = LoadClicked
     | KeyPressed String
     | JsonLoaded (Result Http.Error String)
+    | PortRoundtripClicked
+    | ReceivedFromJs ( String, String )
+
+
+port receiveFromJs : (( String, String ) -> msg) -> Sub msg
+
+
+port sendToJs : ( String, String ) -> Cmd msg
 
 
 getJson : Cmd Msg
@@ -34,7 +42,7 @@ getJson =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ButtonClicked ->
+        LoadClicked ->
             ( { model | text = "Loading..." }
             , getJson
             )
@@ -54,16 +62,34 @@ update msg model =
             , Cmd.none
             )
 
+        PortRoundtripClicked ->
+            ( model
+            , sendToJs ( "Round", "Trip" )
+            )
+
+        ReceivedFromJs ( a, b ) ->
+            ( { model | text = a ++ " " ++ b }
+            , Cmd.none
+            )
+
 
 view : Model -> Html Msg
 view model =
     div []
         [ ul []
-            [ li [] [ text "Load a local JSON file over HTTP by either clicking the button or pressing any key" ]
-            , li [] [ text "This app has 3 effect managers: Http (Cmd & Sub), Task (Cmd only), and Browser.Events (Sub only)" ]
+            [ li [] [ text "Load a local JSON file over HTTP" ]
+            , li []
+                [ text "This app has 3 effect managers and two ports"
+                , ul []
+                    [ li [] [ text "Http (Cmd & Sub)" ]
+                    , li [] [ text "Task (Cmd only)" ]
+                    , li [] [ text "Browser.Events (Sub only)" ]
+                    ]
+                ]
             ]
         , div [ class "effects-test" ]
-            [ button [ onClick ButtonClicked ] [ text "LOAD" ]
+            [ button [ onClick LoadClicked ] [ text "Load Http" ]
+            , button [ onClick PortRoundtripClicked ] [ text "Port round-trip" ]
             , div [] [ text model.text ]
             ]
         ]
@@ -80,7 +106,11 @@ eventValueDecoder =
 
 
 subscriptions =
-    \_ -> onKeyDown eventValueDecoder
+    \_ ->
+        Sub.batch
+            [ receiveFromJs ReceivedFromJs
+            , onKeyDown eventValueDecoder
+            ]
 
 
 init =
