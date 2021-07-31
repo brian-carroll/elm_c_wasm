@@ -1,26 +1,19 @@
 # ports in Wasm platform
 
-## outgoing
+## Compiler changes
 
-We have an Elm Wasm value and we want to send it to external JS code
-This is initiated by a `Cmd msg`
-
-Compiler:
-- make a JsRef for the converter function
-- init code
+- prepend "converter" to port name? do we care? yeah we do in the C code
+- make a JsRef for the converter function (already doing this for the port)
+- init C code
   - use `_Platform_outgoingPort(name, converterJsRef)`
   - instead of `_Platform_leaf(name)` and `_Platform_createManager`
-- emit JS converter function, give it a name
-- include converter name in the js kernel function array
+- emit JS converter function instead of JS port init, converter$author$project$Api$onStoreChange
+- include converter name in the js kernel function array (it's already there)
+- manager enum
+- port name string
+- change JsRef index to id
 
-### _Process_sleep
-
-Only called from C code, not JS
-Implement _Process_sleep as an imported JS function wrapped in a Closure
-
-Compiler:
-Add Process to the list of C-only kernels
-Create JS imports for `setTimeout` and `clearTimeout`
+- Add Process to the list of C-only kernels
 
 
 # Eagerly evaluated JS calls
