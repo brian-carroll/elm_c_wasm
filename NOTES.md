@@ -1,5 +1,15 @@
 # ports in Wasm platform
 
+
+## GC bug with Platform_managerConfigs
+
+The compaction algorithm is broken in some cases!
+We adjust child pointers while moving the parent
+So if a parent is not moved, but its children are, then we don't adjust them.
+That was impossible in the old GC.
+It can only happen in the first live patch.
+
+
 ## Compiler changes
 
 - prepend "converter" to port name? do we care? yeah we do in the C code
