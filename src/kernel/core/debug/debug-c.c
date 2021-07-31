@@ -49,16 +49,9 @@ bool Debug_is_target_in_range(void* from, void* to) {
 
 
 bool is_marked(void* p) {
-  GcState* state = &gc_state;
-  size_t* pword = (size_t*)p;
-  if (pword < state->heap.start || pword > state->heap.end) return true;
-  size_t slot = pword - state->heap.start;
-  size_t word = slot / 64;
-  size_t bit = slot & 63;
-  size_t mask = (size_t)1 << bit;
-  size_t masked = state->heap.bitmap[word] & mask;
-  size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
-  return (bool)downshift;
+  GcHeap* heap = &gc_state.heap;
+  GcBitmapIter iter = ptr_to_bitmap_iter(heap, p);
+  return (heap->bitmap[iter.index] & iter.mask) != 0;
 }
 
 
