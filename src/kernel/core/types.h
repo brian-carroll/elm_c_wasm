@@ -358,7 +358,7 @@ struct msg_fields_self {
   void* msg;
 };
 struct msg_fields_leaf {
-  size_t home;
+  ElmInt* home;
   void* value;
 };
 struct msg_fields_node {

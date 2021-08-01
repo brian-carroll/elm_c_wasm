@@ -1,3 +1,22 @@
+# Remaining SPA example bugs
+
+## effect "home" bug
+It is an unboxed int but can come from JS so that doesn't work
+For example Browser creates Tasks, so there is a `_Platform_leaf` in JS
+Need to make it always boxed
+
+## _VirtualDom_custom
+Markdown and WebGl packages use this
+It's an immediate JS call that doesn't work properly. The same thing we got rid of by
+making VirtualDom package calls lazy.
+
+Either add two more exceptional cases (ugh)
+Or debug that issue more thoroughly.
+- Is this about unknown fieldgroups? We do seem to handle some of those just fine...
+- Can we use JsRef to skip conversion?
+- Create some test cases, try to make it reproducible.
+
+
 # ports in Wasm platform
 
 
@@ -24,6 +43,8 @@ It can only happen in the first live patch.
 - change JsRef index to id
 
 - Add Process to the list of C-only kernels
+
+- generate leaf with elmInt instead of unboxed
 
 
 # Eagerly evaluated JS calls
@@ -929,7 +950,7 @@ typedef struct {
 
 ```
 
-"custom" nodes exist in the source but not used anywhere in Elm core
+"custom" nodes are used in the Markdown package, which is used in elm-spa-example
 
 text nodes
 

@@ -21,7 +21,7 @@ typedef enum js_shape {
 typedef enum js_heap_gen {
   GEN_CONST,
   GEN_OLD,
-  GEN_NEW
+  GEN_NEW,
 } JsHeapGen;
 
 typedef struct js_heap_entry {
@@ -141,9 +141,14 @@ Tuple2* Wrapper_setupOutgoingPort(u32 converterJsRefId) {
   return NULL;
 }
 
+u32 Wrapper_setupIncomingPort(u32 managerId, u32 converterJsRefId) {
+  return 0;
+}
+
 Task* Wrapper_sleep(f64 time) {
   return NULL;
 }
+
 
 // ---------------------------------------------------
 // Test values

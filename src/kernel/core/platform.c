@@ -16,7 +16,7 @@ Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);
 void Platform_dispatchEffects(Custom* managers, ManagerMsg* cmdBag, ManagerMsg* subBag);
 void Platform_gatherEffects(
     bool isCmd, ManagerMsg* bag, Custom* effectsDict, Cons* taggers);
-ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value);
+ManagerMsg* Platform_toEffect(bool isCmd, i32 home, Cons* taggers, void* value);
 ManagerMsg* Platform_insert(bool isCmd, ManagerMsg* newEffect, ManagerMsg* effects);
 JsRef* Platform_setupOutgoingPort(size_t home, PortConfig* config);
 JsRef* Platform_setupIncomingPort(size_t managerId, PortConfig* config);
@@ -329,7 +329,8 @@ void Platform_gatherEffects(
     bool isCmd, ManagerMsg* bag, Custom* effectsDict, Cons* taggers) {
   switch (bag->ctor) {
     case MANAGER_MSG_LEAF: {
-      size_t home = bag->leaf.home;
+      i32 home = bag->leaf.home->value;
+      assert(home >= 0 && home < Platform_managers_size);
       ManagerMsg* effect = Platform_toEffect(isCmd, home, taggers, bag->leaf.value);
       effectsDict->values[home] =
           Platform_insert(isCmd, effect, effectsDict->values[home]);
@@ -363,7 +364,7 @@ void* eval_applyTaggers(void* args[]) {
   }
   return x;
 }
-ManagerMsg* Platform_toEffect(bool isCmd, size_t home, Cons* taggers, void* value) {
+ManagerMsg* Platform_toEffect(bool isCmd, i32 home, Cons* taggers, void* value) {
   Closure* applyTaggers = newClosure(1, 2, eval_applyTaggers, (void*[]){taggers});
   ManagerConfig* config = Platform_managerConfigs->values[home];
   Closure* map = isCmd ? config->cmdMap : config->subMap;
@@ -449,8 +450,7 @@ Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* convert
 
   Platform_managerConfigs->values[managerId] = config;
 
-  void* leaf_args[] = {(void*)managerId};
-  Closure* leaf = newClosure(1, 2, eval_Platform_leaf, leaf_args);
+  Closure* leaf = newClosure(1, 2, eval_Platform_leaf, (void*[]){newElmInt(managerId)});
   return leaf;
 }
 
@@ -536,8 +536,7 @@ Closure* Platform_incomingPort(size_t managerId, ElmString* name, JsRef* convert
 
   Platform_managerConfigs->values[managerId] = config;
 
-  void* leaf_args[] = {(void*)managerId};
-  Closure* leaf = newClosure(1, 2, eval_Platform_leaf, leaf_args);
+  Closure* leaf = newClosure(1, 2, eval_Platform_leaf, (void*[]){newElmInt(managerId)});
   return leaf;
 }
 
