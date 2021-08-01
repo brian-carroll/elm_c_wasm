@@ -543,7 +543,7 @@ function wrapWasmElmApp(
         if (elmValue.__proto__.constructor !== Object) {
           // Elm values are always plain literals, which have class Object.
           // Any other class is probably coming from a Browser API, to be decoded by Json package
-          return writeJsonValue(elmValue, JsShape.MAYBE_CIRCULAR);
+          return writeJsRef(allocateJsRef(elmValue));
         }
         switch (elmValue.$) {
           case undefined:
@@ -672,7 +672,7 @@ function wrapWasmElmApp(
     return addr;
   }
 
-  function writeRecord(value: Record<string, any>): Address {
+  function writeRecord(value: Record<string, any>, isWasmFieldAccess?: boolean): Address {
     const keys = Object.keys(value).sort();
 
     const size = 2 + keys.length;
@@ -683,7 +683,11 @@ function wrapWasmElmApp(
     const fgName = keys.join(' ');
     let fgAddr = appTypes.fieldGroups[fgName];
     if (!fgAddr) {
-      fgAddr = writeFieldGroup(keys);
+      if (!isWasmFieldAccess) {
+        return writeJsRef(allocateJsRef(value));
+      } else {
+        fgAddr = writeFieldGroup(keys);
+      }
     }
     mem32[index + 1] = fgAddr;
     for (let k = 0; k < keys.length; k++) {
@@ -711,11 +715,7 @@ function wrapWasmElmApp(
   function writeClosure(value: any): Address {
     const fun = value.f || value;
     if (!fun.evaluator) {
-      const addr = emscriptenModule._allocate(2);
-      const index = addr >> 2;
-      mem32[index] = encodeHeader(Tag.JsRef, 2);
-      mem32[index + 1] = allocateJsRef(value);
-      return addr;
+      return writeJsRef(allocateJsRef(value));
     } else {
       const { freeVars, max_values, evaluator } = fun;
       const n_values = freeVars.length;
@@ -1059,6 +1059,11 @@ function wrapWasmElmApp(
     return taskAddr;
   }
 
+  function jsRefToWasmRecord(jsRefId: number) {
+    const obj = jsHeap[jsRefId].value;
+    return writeRecord(obj, true);
+  }
+
   /* --------------------------------------------------
 
                     EXPORTS
@@ -1087,6 +1092,7 @@ function wrapWasmElmApp(
     readWasmValue,
     writeWasmValue,
     writeJsonValue,
+    jsRefToWasmRecord,
     call,
     getJsRefArrayIndex,
     getJsRefObjectField,

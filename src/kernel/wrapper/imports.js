@@ -33,6 +33,10 @@ mergeInto(LibraryManager.library, {
     return wasmWrapper.applyJsRef(jsRefId, nArgs, argsAddr);
   },
 
+  jsRefToWasmRecord: function(jsRefId) {
+    return wasmWrapper.jsRefToWasmRecord(jsRefId);
+  },
+
   Wrapper_setupOutgoingPort: function (converterJsRefId) {
     return wasmWrapper.setupOutgoingPort(converterJsRefId);
   },

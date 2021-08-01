@@ -66,7 +66,11 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
 
 void* Utils_access_eval(void* args[]) {
   u32 field = (u32)(size_t)args[0];  // unboxed!
-  Record* record = (Record*)args[1];
+  Record* record = args[1];
+  if (record->header.tag == Tag_JsRef) {
+    JsRef* jsRef = args[1];
+    record = jsRefToWasmRecord(jsRef->id);
+  }
   assert(record->header.tag == Tag_Record);
   u32 index = fieldgroup_search(record->fieldgroup, field);
 
@@ -78,6 +82,10 @@ void* Utils_access_eval(void* args[]) {
 }
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
+  if (r->header.tag == Tag_JsRef) {
+    JsRef* jsRef = (JsRef*)r;
+    r = jsRefToWasmRecord(jsRef->id);
+  }
   Record* r_new = Utils_clone(r);
   for (u32 i = 0; i < n_updates; ++i) {
     u32 field_pos = fieldgroup_search(r_new->fieldgroup, fields[i]);

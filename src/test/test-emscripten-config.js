@@ -96,7 +96,7 @@ Module = {
     const generatedAppTypes = {
       ctors: ["Nothing", "Just", "Ok", "Err", "Failure", "Field", "Index", "OneOf"],
       fields: ["init", "subscriptions", "update", "view"],
-      fieldGroups: ["init subscriptions udpate view"],
+      fieldGroups: ["init subscriptions update view"],
     };
     const kernelImports = [];
     const managerNames = ['Task'];

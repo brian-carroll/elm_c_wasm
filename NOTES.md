@@ -16,6 +16,29 @@ Or debug that issue more thoroughly.
 - Can we use JsRef to skip conversion?
 - Create some test cases, try to make it reproducible.
 
+Solution: if we can't find the fieldgroup, assume the object is a JsRef.
+
+If it's a Record
+- Wasm code will have to do a Record access or update in order to do anything with the data inside it.
+- So allow access and update to work on JsRef, converting on the fly to Record in the (rare) case where the record came from JS.
+
+If it's a random JS Kernel thing
+- then it will be passed back out to JS again eventually and Wasm just treats it as opaque
+
+## Timestamps are all in 1970
+
+Make Int use either i64 ...or f64! Ugh!
+Timestamp issue could be fixed with i64
+
+Arguments for f64:
+- We can only reliably get rid of data corruption by using f64 everywhere
+- JS number is ambiguous when coming from JS kernel code
+- Elm allows reified Number literals and emits them as Int, then can reinterpret as Float
+  - relies pretty heavily on JS semantics, which are a pain to build
+
+Compromise: i64 with asserts
+- Compile out the asserts in prod build
+- But if app devs find an assert, what can they do about it?!
 
 # ports in Wasm platform
 

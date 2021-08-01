@@ -137,6 +137,10 @@ void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]) {
   return Utils_apply(c, nArgs, args);
 }
 
+Record* jsRefToWasmRecord(u32 jsRefId) {
+  return jsHeap[jsRefId].value;
+}
+
 Tuple2* Wrapper_setupOutgoingPort(u32 converterJsRefId) {
   return NULL;
 }
