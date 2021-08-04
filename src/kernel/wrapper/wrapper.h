@@ -21,8 +21,8 @@ extern f64 parseFloat(u16* addr, size_t len16);
 extern void jsStepper(void* viewMetadata);
 extern void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]);
 extern Record* jsRefToWasmRecord(u32 jsRefId);
-extern Tuple2* Wrapper_setupOutgoingPort(u32 converterJsRefId);
-extern u32 Wrapper_setupIncomingPort(u32 managerId, u32 converterJsRefId);
+extern Tuple2* Wrapper_setupOutgoingPort();
+extern u32 Wrapper_setupIncomingPort(u32 managerId);
 extern Task* Wrapper_sleep(f64 time);
 
 #endif

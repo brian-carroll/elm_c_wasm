@@ -107,8 +107,8 @@ EMSCRIPTEN_KEEPALIVE Process* findProcess(u32 id) {
   return NULL;
 }
 
-EMSCRIPTEN_KEEPALIVE void Wrapper_sendToIncomingPort(u32 managerId, ElmValue* value) {
-  Platform_sendToIncomingPort(managerId, value);
+EMSCRIPTEN_KEEPALIVE void Wrapper_sendToIncomingPort(u32 managerId, ElmValue* unwrappedJson) {
+  Platform_sendToIncomingPort(managerId, unwrappedJson);
 }
 
 

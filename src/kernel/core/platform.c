@@ -1,3 +1,4 @@
+#include "../json/json.h"
 #include "./core.h"
 
 #ifdef __EMSCRIPTEN__
@@ -9,7 +10,6 @@
 
 // Forward declarations
 
-extern Custom Json_encodeNull;
 void Platform_enqueueEffects(
     Custom* managerProcs, ManagerMsg* cmdBag, ManagerMsg* subBag);
 Process* Platform_instantiateManager(ManagerConfig* info, Closure* sendToApp);
@@ -418,20 +418,26 @@ Closure Platform_outgoingPortMap = {
 
 
 void* eval_Platform_outgoingPortOnEffects(void* args[]) {
-  Task* sleep0 = args[0];
-  JsRef* jsOnEffects = args[1];
+  JsRef* jsCallSubs = args[0];
+  PortConfig* config = args[1];
   // void* router = args[2];
   Cons* cmdList = args[3];
   // void* state = args[4];
 
-  A1(jsOnEffects, cmdList);
+  Closure* encoder = &config->converter->closure;
 
-  return sleep0;
+  for (; cmdList != &Nil; cmdList = cmdList->tail) {
+    Custom* wrappedJson = A1(encoder, cmdList->head);
+    ElmValue* unwrapped = wrappedJson->values[0];
+    A1(jsCallSubs, unwrapped);
+  }
+
+  return config->init;
 }
 
 
 // global init
-Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* converter) {
+Closure* Platform_outgoingPort(size_t managerId, ElmString* name, Closure* encoder) {
   Platform_checkPortName(name);
 
   const u32 size = sizeof(PortConfig) / SIZE_UNIT;
@@ -445,7 +451,7 @@ Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* convert
   config->cmdMap = &Platform_outgoingPortMap;
   config->subMap = NULL;
   config->name = name;
-  config->converter = converter;
+  config->converter = (ElmValue*)encoder;
   config->incomingSubs = NULL;
 
   Platform_managerConfigs->values[managerId] = config;
@@ -457,18 +463,16 @@ Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* convert
 
 // effects init
 JsRef* Platform_setupOutgoingPort(size_t managerId, PortConfig* config) {
-  JsRef* converter = config->converter;
-
   ElmFloat zero = {.header = HEADER_FLOAT, .value = 0};
   Task* sleep0 = A1(&Process_sleep, &zero);
   config->init = sleep0;
 
-  Tuple2* tuple = Wrapper_setupOutgoingPort(converter->id);
-  JsRef* jsOnEffects = tuple->a;
+  Tuple2* tuple = Wrapper_setupOutgoingPort();
+  JsRef* jsCallSubs = tuple->a;
   JsRef* jsPortObj = tuple->b;
 
-  config->onEffects = newClosure(
-      2, 5, eval_Platform_outgoingPortOnEffects, (void*[]){sleep0, jsOnEffects});
+  config->onEffects =
+      newClosure(2, 5, eval_Platform_outgoingPortOnEffects, (void*[]){jsCallSubs, config});
 
   return jsPortObj;
 }
@@ -506,8 +510,11 @@ void* eval_Platform_incomingPortOnEffects(void* args[]) {
 }
 
 
-void Platform_sendToIncomingPort(u32 managerId, ElmValue* value) {
+void Platform_sendToIncomingPort(u32 managerId, ElmValue* unwrappedJson) {
   PortConfig* config = Platform_managerConfigs->values[managerId];
+  Custom* decoder = &config->converter->custom;
+  ElmValue* value = Json_runHelp(decoder, unwrappedJson);
+
   for (Cons* temp = config->incomingSubs; temp != &Nil; temp = temp->tail) {
     Closure* sub = temp->head;
     ElmValue* msg = A1(sub, value);
@@ -517,7 +524,7 @@ void Platform_sendToIncomingPort(u32 managerId, ElmValue* value) {
 
 
 // global init
-Closure* Platform_incomingPort(size_t managerId, ElmString* name, JsRef* converter) {
+Closure* Platform_incomingPort(size_t managerId, ElmString* name, Custom* decoder) {
   Platform_checkPortName(name);
 
   const u32 size = sizeof(PortConfig) / SIZE_UNIT;
@@ -531,7 +538,7 @@ Closure* Platform_incomingPort(size_t managerId, ElmString* name, JsRef* convert
   config->cmdMap = NULL;
   config->subMap = &Platform_incomingPortMap;
   config->name = name;
-  config->converter = converter;
+  config->converter = (ElmValue*)decoder;
   config->incomingSubs = NULL;  // wait until setup
 
   Platform_managerConfigs->values[managerId] = config;
@@ -543,8 +550,6 @@ Closure* Platform_incomingPort(size_t managerId, ElmString* name, JsRef* convert
 
 // effects init
 JsRef* Platform_setupIncomingPort(size_t managerId, PortConfig* config) {
-  JsRef* converter = config->converter;
-
   void* succeedArgs[1];
   succeedArgs[0] = &Json_encodeNull;
   config->init = eval_Scheduler_succeed(succeedArgs);
@@ -552,7 +557,7 @@ JsRef* Platform_setupIncomingPort(size_t managerId, PortConfig* config) {
       newClosure(1, 4, eval_Platform_incomingPortOnEffects, (void*[]){config});
   config->incomingSubs = &Nil;
 
-  u32 jsRefId = Wrapper_setupIncomingPort(managerId, converter->id);
+  u32 jsRefId = Wrapper_setupIncomingPort(managerId);
   JsRef* jsPortObj = newJsRef(jsRefId);
   return jsPortObj;
 }

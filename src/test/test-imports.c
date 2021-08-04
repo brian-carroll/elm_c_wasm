@@ -141,11 +141,11 @@ Record* jsRefToWasmRecord(u32 jsRefId) {
   return jsHeap[jsRefId].value;
 }
 
-Tuple2* Wrapper_setupOutgoingPort(u32 converterJsRefId) {
+Tuple2* Wrapper_setupOutgoingPort() {
   return NULL;
 }
 
-u32 Wrapper_setupIncomingPort(u32 managerId, u32 converterJsRefId) {
+u32 Wrapper_setupIncomingPort(u32 managerId) {
   return 0;
 }
 

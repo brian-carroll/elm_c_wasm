@@ -43,7 +43,7 @@ interface EmscriptenModule {
   _get_sendToApp_revArgs: () => number;
   _initializeEffects: () => number;
   _findProcess: (id: number) => number;
-  _Wrapper_sendToIncomingPort(managerId: number, valueAddr: number): void;
+  _Wrapper_sendToIncomingPort(managerId: number, unwrappedJson: number): void;
   _debugHeapState: () => void;
   _debugAddrRange: (start: number, size: number) => void;
   _debugStackMap: () => void;
@@ -672,7 +672,10 @@ function wrapWasmElmApp(
     return addr;
   }
 
-  function writeRecord(value: Record<string, any>, isWasmFieldAccess?: boolean): Address {
+  function writeRecord(
+    value: Record<string, any>,
+    isWasmFieldAccess?: boolean
+  ): Address {
     const keys = Object.keys(value).sort();
 
     const size = 2 + keys.length;
@@ -933,19 +936,14 @@ function wrapWasmElmApp(
     return readWasmValue(portsListAddr);
   }
 
-  function setupOutgoingPort(converterJsRefId: number) {
+  function setupOutgoingPort() {
     let subs: Function[] = [];
-    const converter: Function = jsHeap[converterJsRefId].value;
 
-    function onEffects(cmdList: { a: any; b: any }) {
-      for (; cmdList.b; cmdList = cmdList.b) {
-        // grab a separate reference to subs in case unsubscribe is called
-        const currentSubs = subs;
-        const jsonWrapped = converter(cmdList.a);
-        const value = jsonWrapped.a;
-        for (let i = 0; i < currentSubs.length; i++) {
-          currentSubs[i](value);
-        }
+    function callSubs(value: any) {
+      // grab a separate reference to subs in case unsubscribe is called
+      const currentSubs = subs;
+      for (let i = 0; i < currentSubs.length; i++) {
+        currentSubs[i](value);
       }
     }
 
@@ -963,23 +961,20 @@ function wrapWasmElmApp(
       }
     }
 
-    const portObj = { subscribe, unsubscribe };
+    const portObj = { subscribe, unsubscribe }; // external JS API
     const portAddr = writeJsRef(allocateJsRef(portObj));
-    const onEffectsAddr = writeJsRef(allocateJsRef(onEffects));
-    const tupleAddr = writeTuple2(onEffectsAddr, portAddr);
+    const callSubsAddr = writeJsRef(allocateJsRef(callSubs));
+    const tupleAddr = writeTuple2(callSubsAddr, portAddr);
     return tupleAddr;
   }
 
-  function setupIncomingPort(managerId: number, converterJsRefId: number) {
-    const converter: Function = jsHeap[converterJsRefId].value;
-
+  function setupIncomingPort(managerId: number) {
     function send(incomingValue: any): void {
-      const result = converter(incomingValue);
-      if (result.$ !== 'Ok') {
-        throw new Error(result.a)
-      }
-      const valueAddr = writeWasmValue(result.a);
-      emscriptenModule._Wrapper_sendToIncomingPort(managerId, valueAddr);
+      const unwrappedJsonAddr = writeJsonValue(incomingValue);
+      emscriptenModule._Wrapper_sendToIncomingPort(
+        managerId,
+        unwrappedJsonAddr
+      );
     }
 
     const portObj = { send };

@@ -173,9 +173,9 @@ extern u32 Platform_managers_size;
 void Platform_initOnIntercept(Closure* update, Closure* subscriptions);
 ManagerConfig* Platform_createManager(
     void* init, Closure* onEffects, Closure* onSelfMsg, Closure* cmdMap, Closure* subMap);
-Closure* Platform_outgoingPort(size_t managerId, ElmString* name, JsRef* converter);
-Closure* Platform_incomingPort(size_t managerId, ElmString* name, JsRef* converter);
-void Platform_sendToIncomingPort(u32 managerId, ElmValue* value);
+Closure* Platform_outgoingPort(size_t managerId, ElmString* name, Closure* encoder);
+Closure* Platform_incomingPort(size_t managerId, ElmString* name, Custom* decoder);
+void Platform_sendToIncomingPort(u32 managerId, ElmValue* unwrappedJson);
 
 // Used in platform.js (via wrapper.c, wrapper.ts)
 Cons* Platform_initializeEffects();

@@ -62,6 +62,7 @@ extern Closure Json_map8;
 
 extern Closure Json_run;
 extern Closure Json_runOnString;
+void* Json_runHelp(Custom* decoder, ElmValue* value);
 
 // Encode
 
