@@ -113,8 +113,6 @@ void* eval_Scheduler_rawSpawn(void* args[]) {
   proc->mailbox.front = &Nil;
   proc->mailbox.back = &Nil;
 
-  safe_printf("spawned process %d\n", proc->id);
-
   DynamicArray_push(&Platform_process_cache, proc);
 
   Scheduler_enqueue(proc);
@@ -282,9 +280,9 @@ static void Scheduler_step(Process* proc) {
   while (proc->root) {
     proc->root = proc->root;
 
-    safe_printf("Stepping process #%d: %s\n",
-        proc->id,
-        proc->root ? tag_names[proc->root->ctor] : "NULL");
+    // safe_printf("Stepping process #%d: %s\n",
+    //     proc->id,
+    //     proc->root ? tag_names[proc->root->ctor] : "NULL");
     // DEBUG_PRETTY(proc->root);
 
     u32 rootTag = proc->root->ctor;

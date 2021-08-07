@@ -52,7 +52,7 @@ void* eval_sendToApp_revArgs(void* args[]) {
   void* viewMetadata = args[0];
   void* msg = args[1];
 
-  DEBUG_PRETTY(msg);
+  // DEBUG_PRETTY(msg);
 
   Tuple2* pair = A2(Platform_update, msg, Platform_model);
   Platform_model = pair->a;
