@@ -18,10 +18,15 @@
 
 Figures noted are ranges across 4 runs of Lighthouse Performance report for Desktop.
 
-The test application is elm-spa-example, but with API endpoints pointing to local .json files instead of a server.
-This eliminates most of the network variability from the measurements.
+Wasm performance is already comparable to JS with `--optimize`, and we've barely started working on it so there's lots of room to speed it up.
 
-The Wasm version has a lot of JS code from Emscripten
+Until now the focus has been on making the generated code _correct_, without much serious effort to make it _fast_.
+VirtualDom diffing has not been implemented in Wasm yet, which I expect to be a big win
+Replacing Emscripten with custom code should hugely reduce code size, improving performance
+
+The test application is based on [elm-spa-example](https://github.com/rtfeldman/elm-spa-example).
+The code has been modified so that API endpoints point at local .json files instead of a server,
+in order to remove most of the network variability from the measurements.
 
 ## Wasm with -O3
 
