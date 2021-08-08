@@ -54,34 +54,19 @@ clean:
 	@mkdir -p $(BUILD)/bin $(BUILD)/wasm $(BUILD)/exe
 	@rm -f $(KERNEL)/wrapper/wrapper.js
 
-benchmark:
-	cd $(ROOT)/demos/2019-08-benchmark && make clean && make
-
-wrapper:
-	cd $(ROOT)/demos/2019-10-wrapper && make clean && make
-
-codegen:
-	cd $(ROOT)/demos/2019-12-code-gen && make clean && make
-
-todo:
-	cd $(ROOT)/demos/todo-mvc && make clean && make
-
 gh-pages: CFLAGS=-Wall -O3
-gh-pages: wasm codegen todo
+gh-pages: wasm
 	mkdir -p $(DEPLOY)/unit-tests/dist/wasm
-	mkdir -p $(DEPLOY)/wrapper/dist
-	mkdir -p $(DEPLOY)/code-gen/dist
-	mkdir -p $(DEPLOY)/todo-mvc/dist
 	cp $(ROOT)/index.html $(DEPLOY)/unit-tests/
 	cp $(ROOT)/favicon.png $(DEPLOY)/unit-tests/
 	cp $(DIST)/wasm/test.js $(DEPLOY)/unit-tests/dist/wasm
 	cp $(DIST)/wasm/test.wasm $(DEPLOY)/unit-tests/dist/wasm
 	cp $(ROOT)/demos/index.html $(DEPLOY)
 	cp $(ROOT)/demos/favicon.png $(DEPLOY)
-	cp $(ROOT)/demos/2019-12-code-gen/index.html $(DEPLOY)/code-gen/index.html
-	cp $(ROOT)/demos/2019-12-code-gen/dist/* $(DEPLOY)/code-gen/dist/
-	cp $(ROOT)/demos/todo-mvc/index.html $(DEPLOY)/todo-mvc/index.html
-	cp $(ROOT)/demos/todo-mvc/dist/* $(DEPLOY)/todo-mvc/dist/
+	cp $(ROOT)/demos/elm-spa-example/index.html $(DEPLOY)/elm-spa-example-wasm/index.html
+	cp $(ROOT)/demos/elm-spa-example/dist/* $(DEPLOY)/elm-spa-example-wasm/dist/
+	cp $(ROOT)/demos/elm-spa-example/index.html $(DEPLOY)/elm-spa-example-wasm/index.html
+	cp $(ROOT)/demos/elm-spa-example/dist/* $(DEPLOY)/elm-spa-example-wasm/dist/
 	cd $(DEPLOY) && git add . && git commit -m 'update' && git push
 
 
