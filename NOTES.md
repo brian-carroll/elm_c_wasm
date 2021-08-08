@@ -1,55 +1,25 @@
 # Remaining SPA example bugs
 
-## effect "home" bug
-It is an unboxed int but can come from JS so that doesn't work
-For example Browser creates Tasks, so there is a `_Platform_leaf` in JS
-Need to make it always boxed
+## Timestamps are all in 1970!
 
-## _VirtualDom_custom
-Markdown and WebGl packages use this
-It's an immediate JS call that doesn't work properly. The same thing we got rid of by
-making VirtualDom package calls lazy.
+Timestamp issue could be fixed with i64 but we still have issues.
+Can't believe I'm thinking this, but we could use f64 for `ElmInt`, making it identical to `ElmFloat`.
 
-Either add two more exceptional cases (ugh)
-Or debug that issue more thoroughly.
-- Is this about unknown fieldgroups? We do seem to handle some of those just fine...
-- Can we use JsRef to skip conversion?
-- Create some test cases, try to make it reproducible.
+Arguments for f64
+- It's the only practical way to eliminate actual data corruption, which is not really negotiable!
+  - JS number is ambiguous when coming from JS kernel code, and getting type info from the compiler is disproportionately hard.
+  - Round number literals are emitted as Int, but can be used as Float. Happens before code gen.
+- It would actually enable some optimisations!
+  - Get rid of all type tag checks, since we don't care.
+  - Make it easier to eliminate Utils_apply from arithmetic expressions. Much bigger difference than i32/f64 ops!
+  - Make it easier to merge arithmetic expressions together and maybe without boxing intermediate values
+- Fixes the `Time` module
 
-Solution: if we can't find the fieldgroup, assume the object is a JsRef.
-
-If it's a Record
-- Wasm code will have to do a Record access or update in order to do anything with the data inside it.
-- So allow access and update to work on JsRef, converting on the fly to Record in the (rare) case where the record came from JS.
-
-If it's a random JS Kernel thing
-- then it will be passed back out to JS again eventually and Wasm just treats it as opaque
-
-## Timestamps are all in 1970
-
-Make Int use either i64 ...or f64! Ugh!
-Timestamp issue could be fixed with i64
-
-Arguments for f64:
-- We can only reliably get rid of data corruption by using f64 everywhere
-- JS number is ambiguous when coming from JS kernel code
-- Elm allows reified Number literals and emits them as Int, then can reinterpret as Float
-  - relies pretty heavily on JS semantics, which are a pain to build
-
-Compromise: i64 with asserts
+Compromise: i64 with asserts?
 - Compile out the asserts in prod build
-- But if app devs find an assert, what can they do about it?!
+- If app devs find an assert, they can rewrite to ensure Float and put a `round` on the Elm side... not great!
 
-# ports in Wasm platform
-
-
-## GC bug with Platform_managerConfigs
-
-The compaction algorithm is broken in some cases!
-We adjust child pointers while moving the parent
-So if a parent is not moved, but its children are, then we don't adjust them.
-That was impossible in the old GC.
-It can only happen in the first live patch.
+Answering the question of where exactly in your program this can happen is not trivial.
 
 
 ## Compiler changes
