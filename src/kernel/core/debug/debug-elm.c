@@ -137,6 +137,14 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
       StringBuilder_copyAscii(sb, "<JavaScript>");
       return;
     }
+    case Tag_Process: {
+      StringBuilder_copyAscii(sb, "<Process>");
+      return;
+    }
+    case Tag_Task: {
+      StringBuilder_copyAscii(sb, "<Task>");
+      return;
+    }
     default: {
       StringBuilder_copyAscii(sb, "<unknown>");
       return;

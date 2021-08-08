@@ -2,10 +2,14 @@
 #include "./test.h"
 
 extern FieldGroup fg_init_subscriptions_update_view;
+extern u32 Scheduler_guid;
+Process* findProcess(u32 id);
 
-#define TEST_ARRAY_LEN 17
+// test globals
+void* test_values[100];
+int test_values_len;
 
-static void populate_test_array(void* test_values[]) {
+static void init_test_values() {
   ElmString* str_kernel = create_string("kernel");
   ElmString* str_array = create_string("array");
   ElmString* str_union = create_string("union");
@@ -51,6 +55,12 @@ static void populate_test_array(void* test_values[]) {
 
   Custom* just321 = A1(&g_elm_core_Maybe_Just, newElmInt(321));
 
+  Task* task = eval_Scheduler_succeed((void*[]){create_string("task value")});
+
+  Platform_process_cache = newDynamicArray(8);
+  Scheduler_guid = 9;
+  Process* proc = eval_Scheduler_rawSpawn((void*[]){task});
+
   int i = 0;
   /*  0 */ test_values[i++] = NULL;
   /*  1 */ test_values[i++] = &Json_encodeNull;
@@ -69,9 +79,13 @@ static void populate_test_array(void* test_values[]) {
   /* 14 */ test_values[i++] = knownRecord;
   /* 15 */ test_values[i++] = kernelUnion;
   /* 16 */ test_values[i++] = just321;
+  /* 17 */ test_values[i++] = task;
+  /* 18 */ test_values[i++] = proc;
+  test_values_len = i;
+  assert(test_values_len < ARRAY_LEN(test_values));
 }
 
-static void* eval_createTuple3(void* args[]) {
+void* eval_createTuple3(void* args[]) {
   return newTuple3(args[0], args[1], args[2]);
 }
 
@@ -79,11 +93,9 @@ static void* eval_createTuple3(void* args[]) {
 
 
 static void test_write_values() {
-  void* test_values[TEST_ARRAY_LEN];
-  populate_test_array(test_values);
   char message[100];
 
-  for (int i = 0; i < TEST_ARRAY_LEN; i++) {
+  for (int i = 0; i < test_values_len; i++) {
     void* actual = testWriteJsValueToWasm(i);
     void* expected = test_values[i];
     stbsp_sprintf(message, "should correctly write JS test value #%d", i);
@@ -107,21 +119,22 @@ static void test_call_wasm_from_js() {
 
 
 static void test_call_js_from_wasm() {
-  Closure* jsKernelIncrementBy1 = testWriteJsCallbackToWasm();
-  Closure* thunk = A1(jsKernelIncrementBy1, newElmInt(100));
-  ElmInt* actual = testElmValueRoundTrip(thunk);  // evaluate the thunk in JS
+  JsRef* jsKernelIncrementBy1 = testWriteJsCallbackToWasm();
+  mu_expect_equal("JS function should appear as a JsRef when written to Wasm",
+      jsKernelIncrementBy1->header.tag,
+      Tag_JsRef);
 
+  ElmInt* arg = newElmInt(100);
+  ElmInt* actual = A1(jsKernelIncrementBy1, arg);
   ElmInt* expected = newElmInt(101);
   expect_equal("should be able to call a JS function from Wasm", actual, expected);
 }
 
 
 static void test_read() {
-  void* test_values[TEST_ARRAY_LEN];
-  populate_test_array(test_values);
   char message[100];
 
-  for (int i = 0; i < TEST_ARRAY_LEN; i++) {
+  for (int i = 0; i < test_values_len; i++) {
     void* actual = testElmValueRoundTrip(test_values[i]);
     void* expected = test_values[i];
     stbsp_sprintf(message, "should correctly read JS test value #%d", i);
@@ -141,6 +154,9 @@ void wrapper_test() {
     safe_printf("JS Wrapper\n");
     safe_printf("==========\n");
   }
+
+  init_test_values();
+
   describe("test_write_values", test_write_values);
   describe("test_call_wasm_from_js", test_call_wasm_from_js);
   describe("test_call_js_from_wasm", test_call_js_from_wasm);

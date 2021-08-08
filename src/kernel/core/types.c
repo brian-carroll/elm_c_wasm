@@ -147,6 +147,13 @@ Closure* newClosure(
   return c;
 }
 
+JsRef* newJsRef(u32 id) {
+  JsRef* jsRef = GC_allocate(true, SIZE_JS_REF);
+  jsRef->header = (Header)HEADER_JS_REF;
+  jsRef->id = id;
+  return jsRef;
+}
+
 u32 custom_params(Custom* c) {
   return c->header.size - (sizeof(Custom) / SIZE_UNIT);
 }

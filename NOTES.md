@@ -1,5 +1,223 @@
+# Remaining SPA example bugs
+
+## Timestamps are all in 1970!
+
+Timestamp issue could be fixed with i64 but we still have issues.
+Can't believe I'm thinking this, but we could use f64 for `ElmInt`, making it identical to `ElmFloat`.
+
+Arguments for f64
+- It's the only practical way to eliminate actual data corruption, which is not really negotiable!
+  - JS number is ambiguous when coming from JS kernel code, and getting type info from the compiler is disproportionately hard.
+  - Round number literals are emitted as Int, but can be used as Float. Happens before code gen.
+- It would actually enable some optimisations!
+  - Get rid of all type tag checks, since we don't care.
+  - Make it easier to eliminate Utils_apply from arithmetic expressions. Much bigger difference than i32/f64 ops!
+  - Make it easier to merge arithmetic expressions together and maybe without boxing intermediate values
+- Fixes the `Time` module
+
+Compromise: i64 with asserts?
+- Compile out the asserts in prod build
+- If app devs find an assert, they can rewrite to ensure Float and put a `round` on the Elm side... not great!
+
+Answering the question of where exactly in your program this can happen is not trivial.
+
+
+## Compiler changes
+
+- prepend "converter" to port name? do we care? yeah we do in the C code
+- make a JsRef for the converter function (already doing this for the port)
+- init C code
+  - use `_Platform_outgoingPort(name, converterJsRef)`
+  - instead of `_Platform_leaf(name)` and `_Platform_createManager`
+- emit JS converter function instead of JS port init, converter$author$project$Api$onStoreChange
+- include converter name in the js kernel function array (it's already there)
+- manager enum
+- port name string
+- change JsRef index to id
+
+- Add Process to the list of C-only kernels
+
+- generate leaf with elmInt instead of unboxed
+
+
+# Eagerly evaluated JS calls
+
+- Now that the scheduler is inside Wasm, the idea of lazily evaluating JS calls doesn't work anymore. That only worked because we were returning all Cmd and Sub to JS.
+- But when Wasm effect manager calls out to JS, it may need to do some computation with the result so it has to have the right type, can't always be a Closure
+- This is what breaks Browser.Event subscription.
+- Need to do kernelFunctions differently
+
+- Approach 1
+
+  - Compiler output for JS values touched by Elm code
+    - In C output, generate a JsRef literal instead of a Closure literal
+    - In JS wrapper, prepopulate the jsHeap (marking the values as permanent)
+  - Utils_apply can take either Closure or JsRef as its function arg. Check tag on the way in. Change type to `void*`, throw error for bad tags.
+    - When you call a JsRef, Utils_apply calls an imported function to deal with it
+    - This is very similar to evalJsThunk and probably replaces it
+  - We can't know the arity of a JS function, so Utils_apply just always calls out to JS. JS can return another JsRef if it wants, no big deal.
+    - JsRef calls have no Wasm functionality for partial application. They don't need a .values field.
+    - In practice it seems rare to do fancy calls with these anyway.
+
+- Approach 2:
+  - Make a Closure that calls evalJsThunk
+  - All JsRefs are just pre-applied to that Closure
+  - Closure still does all of the closurey stuff
+  - BUT I don't know what arity to use! This can't really work
+    - unless it becomes very like approach 1. Make special case for this JS evaluator thing... but isn't this the same thing, what is the benefit here?
+
+Decision: approach 1 seems better
+
+TODO
+
+- [x] Modify Utils_apply
+- [x] Implement applyJsRef in the wrapper
+- [x] Use a unit test to get it up and running
+- [x] Change wrapper code to prepopulate the jsHeap with kernel functions
+- [x] Wrapper uses array instead of record, for predictable JsRef indices
+- [x] Compiler emits array instead of record, for predictable JsRef indices
+- [x] Update compiler to output JsRef literals
+- [x] Clean up leftover unused things
+  - NEVER_EVALUATE, 0xffff, evalJsThunk, evalKernelThunk
+  - debug code for JS Closure evaluators
+  - JS_Json_run
+  - enum is a bit pointless?
+- [x] deal with initialisation order
+  - all JS kernel values
+  - wrapper
+  - Wasm globals
+  - Elm object
+- [x] Don't clear the stack map: allow arbitrarily nested JS/Wasm calls
+  - GC_execute, GC_init_root, test_execute
+  - Check stack is empty before major GC and GC_init_root
+  - Deal with popping the last frame
+- [x] Wrapper needs to push a frame before it starts writing args or anything else
+  - [x] export a stackframe allocation function from Wasm
+  - [x] wrapper `call` & `wasmCallback`
+  - [x] debug & cleanup
+
+
+# Reducing encoding/decoding in the Elm Architecture
+
+## TODO: C code for platform/scheduler
+
+- [x] move postRun to before all the custom kernels
+- [x] generate managers in C, not JS
+- [x] create JS versions of all the Platform & Scheduler functions that can be called from other JS code
+  - Browser.js functions depend on Task.perform
+  - Triggers JS code gen of Platform.elm
+  - But Platform.js kernel functions are undefined in JS
+- [x] Process hashmap implementation to avoid encode/decode
+
+## TODO: Compiler support for platform/scheduler
+
+- [x] Pass managerNames in JsWrapper
+- [!] Initialise compiler JS code gen with all of these functions AND figure out their dependencies!
+  - some issues with this, not sure what's going on
+- [x] Inject manager into JS state
+- [x] generate JS `_Platform_leaf` calls
+
+## Ensure JS generated code can access Platform and Scheduler, possibly via Elm code
+
+Everything that is imported in core libs needs a JS version
+AND the compiler needs to know that it's already been emitted!
+
+- JS kernel imports of Platform
+  - [x] `__Platform_export` (`_VirtualDom_init` & code gen)
+  - [x] `__Platform_initialize`
+  - [x] `__Platform_preload`
+  - [x] `__Platform_sendToSelf` (Http.js v2)
+- JS kernel imports of Scheduler
+  - [x] `__Scheduler_andThen`
+  - [x] `__Scheduler_binding`
+  - [x] `__Scheduler_fail`
+  - [-] `__Scheduler_rawSend` (only imported to Platform => no JS needed)
+  - [x] `__Scheduler_rawSpawn`
+  - [x] `__Scheduler_receive`
+  - [-] `__Scheduler_send` (only imported to Platform => no JS needed)
+  - [x] `__Scheduler_spawn`
+  - [x] `__Scheduler_succeed`
+- Elm imports of Platform
+  - [x] Elm.Kernel.Platform.batch
+  - [x] Elm.Kernel.Platform.map
+  - [x] Elm.Kernel.Platform.sendToApp
+  - [x] Elm.Kernel.Platform.sendToSelf
+  - [x] Elm.Kernel.Platform.worker
+- Elm imports of Scheduler
+  - [x] Elm.Kernel.Scheduler.andThen
+  - [x] Elm.Kernel.Scheduler.fail
+  - [x] Elm.Kernel.Scheduler.kill
+  - [x] Elm.Kernel.Scheduler.onError
+  - [x] Elm.Kernel.Scheduler.spawn
+  - [x] Elm.Kernel.Scheduler.succeed
+- Indirect imports
+  - [x] `_Platform_leaf` (all module-specific cmd & sub)
+
+## notes on Closure caching
+
+Tried using a cache to reduce encoding and decoding but we end up with cache invalidation issues
+
+- I tried removing everything from cache on first usage but that includes the TEA functions themselves
+- optimisations for the TEA functions
+  - we know our wrapped versions can't be copied, so we can skip full equality check for this
+- The same Closures get added loads of times and only removed about 1/4 of the time
+  - can do an equality check every time we add, to avoid infinite growth, but deep equality is expensive
+- Things like Cmd.map being done in JS is craziness and the cache doesn't solve it
+
+## Customize Platform/Scheduler modules
+
+Need a different, less generic way, that knows about TEA and is specific to it
+Can we just do cacheing on Cmd and Sub callbacks? Can we actually just understand the structure of those and figure out which ones are the actual callbacks?
+Also understand that each Sub has one active callback and Cmd is once-off
+
+Basically we are implementing some of the Platform module, since that's what it's for!
+We can have Wasm exported functions for init, update, subscriptions and view
+Things like `_Platform_initialize` and `_Platform_dispatchEffects` should be implemented in JS but also with some exported Wasm helpers
+
+Browser.application does some messing around with init, applying the extra args.
+It leaves update and subs alone. They get straight to Platform_initialize.
+view gets wrapped in to make a stepper
+
+## compiler support for Platform & Scheduler
+
+review code gen for managers & platform leaf
+some literal-like mechanism for manager 'home' enum
+
+## debug & testing for Platform & Scheduler
+
+### app
+
+Start with an app whose init cmd is just `Task.succeed 123` or something
+Then move on to more complex Task chains
+
+### Scheduler code testing
+
+- create tasks of every constructor and step them
+- create some chains that receive fx
+- step it and see the queue working
+
+### Platform code testing
+
+- copy compiled code from a test app to isolate platform.c code without JS
+- test config & instantiation process for Task effect manager
+- push a Cmd through the full pipe sendToApp -> enqueueEffects -> gatherEffects -> dispatchEffects
+
+## Relative perf
+
+- Updates and stuff take no time compared to view, and our view takes twice as long as JS.
+- Our slowest update is CompletedFeedLoad (loads of JSON arriving and lots of encode/decode nonsense) but it's still only 5ms
+- Our worst view cycle is 36ms vs JS 14ms
+
+**Vdom dominates performance** so all this other stuff is less important!
+But I wanna. It's better.
+
 ## TODO
 
+- Go back to enums rather than const, to keep GCC and MSVC happy
+  - Get rid of -1 in wrapper.ts evalKernelThunk
+  - put back the Json_run_eval_index, figure out a way to do the fields
+    - can I have some cleaner mechanism for getting compiler enum values into kernel code?
+    - something to do with #include order?
 - perf profiling in release mode in SPA example
   - Compare Wasm vs JS
 - pop the last frame in the stack in GC_execute, rather than forcibly clearing it.
@@ -18,6 +236,27 @@
 - experiment with varargs for Closures, measure perf. Closure max_values is the arity to pass in Utils_apply.
   - No compiler changes needed, everything uses A1, A2, A3
 - Make Tag_Zero invalid (breaks Json tests apparently)
+
+# SPA profiling analysis
+
+On loading the elm-spa-example, these are the Wasm functions called
+
+| function                                    | comment          |
+| ------------------------------------------- | ---------------- |
+| eval_elm_core_Task_map_lambda1              | WTF              |
+| eval_author_project_Api_application_lambda1 | app init         |
+| eval_elm_http_Http_expectJson_lambda1       |                  |
+| eval_author_project_Main_GotHomeMsg         | Task.map         |
+| eval_elm_core_Basics_composeL               | WTF! Http.toTask |
+| eval_author_project_Main_subscriptions      |                  |
+| eval_author_project_Main_update             |                  |
+| eval_author_project_Main_view               |                  |
+
+We're wasting a lot of time decoding and re-encoding Wasm Closures
+Need to change the implementation of wasmCallback to cache Closures & free vars.
+A lot of functions probably only get called once, apart from GC roots. But we can't really distinguish those!
+Maybe it's OK for that cache to just grow as big as it needs to and remember things forever. Maybe a program doesn't have that many values passed back and forth. Then you just make sure you don't add the same thing over and over.
+Or maybe we can find a good invalidation strategy.
 
 # Allocator 50x speedup!!
 
@@ -704,7 +943,7 @@ typedef struct {
 
 ```
 
-"custom" nodes exist in the source but not used anywhere in Elm core
+"custom" nodes are used in the Markdown package, which is used in elm-spa-example
 
 text nodes
 

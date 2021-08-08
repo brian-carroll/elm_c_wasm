@@ -12,7 +12,7 @@ Custom JsArray_empty = {
 /**
  * singleton : a -> JsArray a
  */
-static void* eval_JsArray_singleton(void* args[]) {
+void* eval_JsArray_singleton(void* args[]) {
   return newCustom(JSON_VALUE_ARRAY, 1, args);
 }
 Closure JsArray_singleton = {
@@ -24,7 +24,7 @@ Closure JsArray_singleton = {
 /**
  * length : JsArray a -> Int
  */
-static void* eval_JsArray_length(void* args[]) {
+void* eval_JsArray_length(void* args[]) {
   i32 len = custom_params(args[0]);
   return newElmInt(len);
 }
@@ -37,7 +37,7 @@ Closure JsArray_length = {
 /**
  * initialize : Int -> Int -> (Int -> a) -> JsArray a
  */
-static void* eval_JsArray_initialize(void* args[]) {
+void* eval_JsArray_initialize(void* args[]) {
   ElmInt* size = args[0];
   ElmInt* offset = args[1];
   Closure* func = args[2];
@@ -62,7 +62,7 @@ Closure JsArray_initialize = {
 /**
  * initializeFromList : Int -> List a -> ( JsArray a, List a )
  */
-static void* eval_JsArray_initializeFromList(void* args[]) {
+void* eval_JsArray_initializeFromList(void* args[]) {
   ElmInt* max = args[0];
   Cons* ls = args[1];
 
@@ -89,7 +89,7 @@ Closure JsArray_initializeFromList = {
 /**
  * unsafeGet : Int -> JsArray a -> a
  */
-static void* eval_JsArray_unsafeGet(void* args[]) {
+void* eval_JsArray_unsafeGet(void* args[]) {
   ElmInt* index = args[0];
   Custom* array = args[1];
   return array->values[index->value];
@@ -103,7 +103,7 @@ Closure JsArray_unsafeGet = {
 /**
  * unsafeSet : Int -> a -> JsArray a -> JsArray a
  */
-static void* eval_JsArray_unsafeSet(void* args[]) {
+void* eval_JsArray_unsafeSet(void* args[]) {
   ElmInt* index = args[0];
   void* value = args[1];
   Custom* array = args[2];
@@ -121,7 +121,7 @@ Closure JsArray_unsafeSet = {
 /**
  * push : a -> JsArray a -> JsArray a
  */
-static void* eval_JsArray_push(void* args[]) {
+void* eval_JsArray_push(void* args[]) {
   void* value = args[0];
   Custom* array = args[1];
 
@@ -144,7 +144,7 @@ Closure JsArray_push = {
 /**
  * foldl : (a -> b -> b) -> b -> JsArray a -> b
  */
-static void* eval_JsArray_foldl(void* args[]) {
+void* eval_JsArray_foldl(void* args[]) {
   Closure* func = args[0];
   void* acc = args[1];
   Custom* array = args[2];
@@ -165,7 +165,7 @@ Closure JsArray_foldl = {
 /**
  * foldr : (a -> b -> b) -> b -> JsArray a -> b
  */
-static void* eval_JsArray_foldr(void* args[]) {
+void* eval_JsArray_foldr(void* args[]) {
   Closure* func = args[0];
   void* acc = args[1];
   Custom* array = args[2];
@@ -187,7 +187,7 @@ Closure JsArray_foldr = {
 /**
  * map : (a -> b) -> JsArray a -> JsArray b
  */
-static void* eval_JsArray_map(void* args[]) {
+void* eval_JsArray_map(void* args[]) {
   Closure* func = args[0];
   Custom* array = args[1];
 
@@ -208,7 +208,7 @@ Closure JsArray_map = {
 /**
  * indexedMap : (Int -> a -> b) -> Int -> JsArray a -> JsArray b
  */
-static void* eval_JsArray_indexedMap(void* args[]) {
+void* eval_JsArray_indexedMap(void* args[]) {
   Closure* func = args[0];
   ElmInt* offset = args[1];
   Custom* array = args[2];
@@ -232,7 +232,7 @@ Closure JsArray_indexedMap = {
 /**
  * slice : Int -> Int -> JsArray a -> JsArray a
  */
-static void* eval_JsArray_slice(void* args[]) {
+void* eval_JsArray_slice(void* args[]) {
   ElmInt* from = args[0];
   ElmInt* to = args[1];
   Custom* array = args[2];
@@ -256,7 +256,7 @@ Closure JsArray_slice = {
 /**
  * appendN : Int -> JsArray a -> JsArray a -> JsArray a
  */
-static void* eval_JsArray_appendN(void* args[]) {
+void* eval_JsArray_appendN(void* args[]) {
   ElmInt* n = args[0];
   Custom* dest = args[1];
   Custom* source = args[2];

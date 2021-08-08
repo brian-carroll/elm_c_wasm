@@ -2,6 +2,7 @@
 .vscode/
 .vs/
 .codelite/
+.idea/
 
 # npm
 package-lock.json

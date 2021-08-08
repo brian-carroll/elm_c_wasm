@@ -24,7 +24,7 @@
         [3] Abuaiadh et al, 2004
 */
 
-#include "../core.h"
+#include "../core.h"  // debug
 #include "allocate.c"
 #include "bitmap.c"
 #include "compact.c"
@@ -52,14 +52,21 @@ GcState gc_state;
 
    ==================================================== */
 
+extern Queue Scheduler_queue;
+Cons coreRoots = {
+    .header = HEADER_LIST,
+    .head = &Scheduler_queue.front,
+    .tail = &Nil,
+};
+
 void reset_state(GcState* state) {
   void* start = state->heap.start;
   state->next_alloc = start;
   state->end_of_alloc_patch = state->heap.end;
   state->end_of_old_gen = start;
   state->n_marked_words = 0;
-  state->roots = &Nil;
-  stack_clear();
+  state->roots = &coreRoots;
+  stack_reset();
 }
 
 #if PERF_TIMER_ENABLED
@@ -101,6 +108,7 @@ int GC_init() {
 void GC_register_root(void** ptr_to_mutable_ptr) {
   GcState* state = &gc_state;
   state->roots = newCons(ptr_to_mutable_ptr, state->roots);
+  GC_stack_pop_value();
 }
 
 
@@ -163,7 +171,7 @@ void GC_collect_minor() {
   PERF_TIMED_STATEMENT(sweep(&state->heap, ignore_below));
 #endif
 
-  if (0) {
+#if 0
     size_t new_gen_size = state->heap.end - ignore_below;
     size_t used = state->n_marked_words;
     f32 percent_marked = (100.0 * used) / (f32)new_gen_size;
@@ -172,8 +180,10 @@ void GC_collect_minor() {
     format_mem_size(marked, sizeof(marked), used);
     format_mem_size(available, sizeof(available), new_gen_size);
     safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
-  }
+#endif
+
   PERF_TIMED_STATEMENT(sweepJsRefs(false));
+
 #if PERF_TIMER_ENABLED
   perf_print();
 #endif
@@ -188,7 +198,11 @@ void GC_collect_major() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->heap.start;
 
-  stack_clear();
+  if (state->stack_map.index) {
+    print_stack_map();
+    safe_printf("ERROR: non-empty stackmap on entering major GC\n");
+    assert(false);
+  }
   PERF_TIMED_STATEMENT(mark(state, ignore_below));
   TEST_MARK_CALLBACK();
 
@@ -227,9 +241,14 @@ void GC_collect_major() {
    ==================================================== */
 
 void* GC_execute(Closure* c) {
-  stack_clear();
-  stack_enter(c->evaluator, c);
+  // TODO: remove this redundant stack frame! JS wrapper has already created one.
+  GcStackMapIndex frame = GC_stack_push_frame('C', c->evaluator);
+  GC_stack_push_value(c);
+
   void* result = Utils_apply(c, 0, NULL);
+
+  GC_stack_pop_frame(c->evaluator, result, frame);
+
 #if 0
   if (is_major_gc_needed()) {
     GC_collect_major();
@@ -252,9 +271,16 @@ void* GC_execute(Closure* c) {
   ==================================================== */
 
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
+  if (gc_state.stack_map.index) {
+    print_stack_map();
+    safe_printf("ERROR: non-empty stackmap on entering GC_init_root\n");
+    assert(false);
+  }
+
   GC_register_root(global_permanent_ptr);
 
-  stack_clear();
-  stack_enter(init_func, NULL);
+  GcStackMapIndex frame = GC_stack_push_frame('I', init_func);
   *global_permanent_ptr = init_func();
+  GC_stack_pop_frame(init_func, NULL, frame);
+  GC_stack_pop_value();
 }

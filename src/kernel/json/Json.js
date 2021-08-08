@@ -30,8 +30,7 @@ function __Json_unwrap(value) {
   return value.a;
 }
 var __Json_run = F2(function (decoder, value) {
-  const evaluator = EmscriptenModule._get_eval_Json_run();
-  return wasmWrapper.call(evaluator, [decoder, value]);
+  return wasmWrapper.call(wasmWrapper.Json_run, [decoder, value]);
 });
 function __Json_runHelp(decoder, value) {
   // Wrap it before sending to Wasm, so it gets serialised as JSON, not Elm

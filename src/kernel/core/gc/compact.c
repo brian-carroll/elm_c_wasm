@@ -1,3 +1,4 @@
+#include "../types.h"
 #include "internals.h"
 
 // The offset is the (positive) amount by which a value is moved *down* during compaction
@@ -51,6 +52,24 @@ void compact(GcState* state, size_t* compact_start) {
   if (first_move_to >= compact_end) return;
 
   calc_offsets(heap, compact_start, compact_end);
+
+
+  // Adjust any upward pointers in the first live patch
+  for (size_t* p = compact_start; p < first_move_to;) {
+    ElmValue* v = (ElmValue*)p;
+    size_t n_children = child_count(v);
+    size_t* next_value = p + v->header.size;
+    size_t* first_child_field = next_value - n_children;
+    size_t** child_ptr_array = (size_t**)first_child_field;
+    for (size_t c = 0; c < n_children; c++) {
+      size_t* child_old = child_ptr_array[c];
+      if (child_old > first_move_to) {
+        child_ptr_array[c] = forwarding_address(heap, child_old);
+      }
+    }
+    p = next_value;
+  }
+
 
   // The `to` pointer is where we're copying to.
   // It just moves uniformly forward. Doesn't need to care about the mark bits.

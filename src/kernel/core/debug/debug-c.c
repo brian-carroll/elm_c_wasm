@@ -1,4 +1,3 @@
-#include <stdio.h>  // putchar
 #include "../gc/internals.h"
 
 // =======================================================================
@@ -50,16 +49,9 @@ bool Debug_is_target_in_range(void* from, void* to) {
 
 
 bool is_marked(void* p) {
-  GcState* state = &gc_state;
-  size_t* pword = (size_t*)p;
-  if (pword < state->heap.start || pword > state->heap.end) return true;
-  size_t slot = pword - state->heap.start;
-  size_t word = slot / 64;
-  size_t bit = slot & 63;
-  size_t mask = (size_t)1 << bit;
-  size_t masked = state->heap.bitmap[word] & mask;
-  size_t downshift = masked >> bit;  // get 1 or 0, avoiding 64-bit compiler bugs
-  return (bool)downshift;
+  GcHeap* heap = &gc_state.heap;
+  GcBitmapIter iter = ptr_to_bitmap_iter(heap, p);
+  return (heap->bitmap[iter.index] & iter.mask) != 0;
 }
 
 
@@ -151,17 +143,10 @@ void print_value(void* p) {
       break;
     }
     case Tag_Closure: {
-      if (v->closure.max_values != NEVER_EVALUATE) {
-        safe_printf("Closure (%s) n_values: %d max_values: %d values: ",
-            Debug_evaluator_name(v->closure.evaluator),
-            v->closure.n_values,
-            v->closure.max_values);
-      } else {
-        size_t js_value_id = (size_t)v->closure.evaluator;
-        char* name =
-            js_value_id < Debug_jsValues_size ? Debug_jsValues[js_value_id] : "unknown";
-        safe_printf("JS Closure (%s) n_values: %d values: ", name, v->closure.n_values);
-      }
+      safe_printf("Closure (%s) n_values: %d max_values: %d values: ",
+          Debug_evaluator_name(v->closure.evaluator),
+          v->closure.n_values,
+          v->closure.max_values);
       size_t header_kids = (size_t)(v->header.size) - (sizeof(Closure) / sizeof(void*));
       for (size_t i = 0; i < header_kids; ++i) {
         safe_printf("%p ", v->closure.values[i]);
@@ -169,8 +154,28 @@ void print_value(void* p) {
       break;
     }
     case Tag_JsRef:
-      safe_printf("JsRef %d", v->js_ref.index);
+      safe_printf("JsRef %d", v->js_ref.id);
       break;
+    case Tag_Process: {
+      Process* p = (Process*)v;
+      u32 stack_size = 0;
+      for (ProcessStack* stack = p->stack; stack; stack = stack->rest) {
+        stack_size++;
+      }
+      u32 mailbox_size = 0;
+      for (Cons* cell = p->mailbox.front; cell != &Nil; cell = cell->tail) {
+        mailbox_size++;
+      }
+      safe_printf("Process id %d, stack size %d, mailbox size %d",
+          p->id,
+          stack_size,
+          mailbox_size);
+      break;
+    }
+    case Tag_Task: {
+      safe_printf("Task");
+      break;
+    }
     default:
       safe_printf("<Corrupt data, tag=0x%x>", v->header.tag);
   }
@@ -288,12 +293,32 @@ void print_stack_map() {
 
   GcStackMapIndex top = sm->index;
   for (u32 i = 0; i < top; ++i) {
-    void* value = stack_values[i];
+    ElmValue* value = stack_values[i];
     char flag = stack_flags[i];
     if (flag == 'F') {
-      char* eval_name = value ? Debug_evaluator_name(value) : "NULL";
       safe_printf("-----------------\n");
-      safe_printf("%2d | %c | " FORMAT_PTR " | %s\n", i, flag, value, eval_name);
+      safe_printf("%2d | %c | " FORMAT_PTR " |\n", i, flag, value);
+      i++;
+      value = stack_values[i];
+      flag = stack_flags[i];
+      char* eval_name = value ? Debug_evaluator_name(value) : "NULL";
+      safe_printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);
+      switch (flag) {
+        case 'J':
+          safe_printf("JsRef %d\n", value->js_ref.id);
+          break;
+        case 'C':
+          safe_printf("Closure %s\n", eval_name);
+          break;
+        case 'I':
+          safe_printf("Global initializer\n"); // TODO compiler could generate init names
+          break;
+        case 'W':
+          safe_printf("%s Wrapper args\n", eval_name);
+          break;
+        default:
+          assert(false);
+      }
     } else {
       safe_printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);
       print_value(value);
@@ -394,7 +419,7 @@ extern char etext, edata, end;  // memory regions, defined by linker
 #endif
 
 void pretty_print_child(int indent, void* p) {
-  if (indent > 10) {
+  if (indent > 20) {
     safe_printf("...etc...\n");
     return;
   }
@@ -410,7 +435,7 @@ static void Debug_prettyHelp(int indent, void* p) {
     safe_printf("NULL\n");
     return;
   }
-  if (indent > 10) {
+  if (indent > 20) {
     safe_printf("...etc...\n");
     return;
   }
@@ -448,6 +473,10 @@ static void Debug_prettyHelp(int indent, void* p) {
     safe_printf("()\n");
     return;
   }
+  if (p == &Json_encodeNull) {
+    safe_printf("Json.null\n");
+    return;
+  }
 
   switch (v->header.tag) {
     case Tag_Int:
@@ -460,19 +489,21 @@ static void Debug_prettyHelp(int indent, void* p) {
       safe_printf("Char 0x%8x\n", v->elm_char.value);
       break;
     case Tag_String: {
-      safe_printf("String \"");
       ElmString* s = p;
-      for (size_t i = 0; i < code_units(s); i++) {
+      char buf[100];
+      size_t i = 0;
+      for (; i < code_units(s) && i < sizeof(buf) - 1; i++) {
         u16 chr = s->words16[i];
         if (chr) {
           if (chr < 128) {
-            putchar(chr);
+            buf[i] = chr;
           } else {
-            putchar('#');
+            buf[i] = '#';
           }
         }
       }
-      safe_printf("\"\n");
+      buf[i] = '\0';
+      safe_printf("String \"%s\"\n", buf);
       break;
     }
     case Tag_List: {
@@ -564,26 +595,64 @@ static void Debug_prettyHelp(int indent, void* p) {
       break;
     }
     case Tag_Closure: {
-      char* name;
-      if (v->closure.max_values != NEVER_EVALUATE) {
-        name = Debug_evaluator_name(v->closure.evaluator);
-      } else {
-        size_t js_value_id = (size_t)v->closure.evaluator;
-        if (js_value_id < Debug_jsValues_size) {
-          name = Debug_jsValues[js_value_id];
-        } else {
-          name = "(unknown)";
-        }
-      }
-      safe_printf("Closure %s\n", name);
+      safe_printf("Closure %s\n", Debug_evaluator_name(v->closure.evaluator));
       for (int i = 0; i < v->closure.n_values && i < 10; i++) {
         pretty_print_child(deeper, v->closure.values[i]);
       }
       break;
     }
     case Tag_JsRef:
-      safe_printf("External JS object #%d\n", v->js_ref.index);
+      safe_printf("External JS object #%d\n", v->js_ref.id);
       break;
+
+    case Tag_Process: {
+      Process* p = (Process*)v;
+      u32 stack_size = 0;
+      for (ProcessStack* stack = p->stack; stack; stack = stack->rest) {
+        stack_size++;
+      }
+      u32 mailbox_size = 0;
+      for (Cons* cell = p->mailbox.front; cell != &Nil; cell = cell->tail) {
+        mailbox_size++;
+      }
+      safe_printf("Process id %d, stack size %d, mailbox size %d\n",
+          p->id,
+          stack_size,
+          mailbox_size);
+      for (int i = 0; i < custom_params(&v->custom) && i < 10; i++) {
+        pretty_print_child(deeper, v->custom.values[i]);
+      }
+      break;
+    }
+
+    case Tag_Task: {
+      Task* t = (Task*)v;
+      static const char* task_ctors[] = {
+          "SUCCEED",
+          "FAIL",
+          "BINDING",
+          "AND_THEN",
+          "ON_ERROR",
+          "RECEIVE",
+      };
+      static const char* task_props[] = {
+          "value",
+          "callback",
+          "kill",
+          "task",
+      };
+      safe_printf("Task %s\n", task_ctors[t->ctor]);
+      void** children = (void**)(&t->value);
+      for (int i = 0; i < ARRAY_LEN(task_props); i++) {
+        void* child = children[i];
+        safe_printf(FORMAT_PTR, child);
+        print_indent(deeper);
+        safe_printf("%s = ", task_props[i]);
+        Debug_prettyHelp(deeper2, children[i]);
+      }
+      break;
+    }
+
     default:
       safe_printf("CORRUPTED!! tag %x size %d\n", v->header.tag, v->header.size);
       break;
@@ -596,7 +665,7 @@ void Debug_pretty(const char* label, void* p) {
     dashes[i] = '-';
   }
   dashes[FORMAT_PTR_LEN] = '\0';
-  safe_printf("%s\n", dashes);
+  safe_printf("%s ", dashes);
   safe_printf("  %s (%p)\n", label, p);
   pretty_print_child(2, p);
 }
@@ -608,7 +677,7 @@ void Debug_pretty_with_location(
     dashes[i] = '-';
   }
   dashes[FORMAT_PTR_LEN] = '\0';
-  safe_printf("%s\n", dashes);
+  safe_printf("%s ", dashes);
   safe_printf("%s @ %s:%d\n", label, function, line);
   pretty_print_child(2, p);
 }

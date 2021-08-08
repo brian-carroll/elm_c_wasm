@@ -13,24 +13,30 @@
 #include "../kernel/json/json.h"
 #include "test.h"
 
-enum JsShape {
+typedef enum js_shape {
   NOT_CIRCULAR,
   MAYBE_CIRCULAR,
-};
+} JsShape;
 
-struct jsHeapEntry {
+typedef enum js_heap_gen {
+  GEN_CONST,
+  GEN_OLD,
+  GEN_NEW,
+} JsHeapGen;
+
+typedef struct js_heap_entry {
   void* value;
   bool isMarked;
-  bool isOldGen;
-};
+  JsHeapGen generation;
+} JsHeapEntry;
 
 static int unusedJsHeapSlot;
 
 #define JS_HEAP_MAX_LENGTH 100
-static u32 jsHeapLength = 0;
-static struct jsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
+u32 jsHeapLength = 0;
+static JsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
 
-static u32 allocateJsRef(void* value) {
+u32 allocateJsRef(void* value) {
   u32 id = 0;
   while (id < jsHeapLength && jsHeap[id].value != &unusedJsHeapSlot)
     id++;
@@ -38,10 +44,10 @@ static u32 allocateJsRef(void* value) {
     jsHeapLength++;
     assert(jsHeapLength < JS_HEAP_MAX_LENGTH);
   }
-  jsHeap[id] = (struct jsHeapEntry){
+  jsHeap[id] = (JsHeapEntry){
       .value = value,
       .isMarked = false,
-      .isOldGen = false,
+      .generation = GEN_NEW,
   };
   return id;
 }
@@ -51,24 +57,24 @@ void markJsRef(u32 id) {
 }
 
 void sweepJsRefs(bool isFullGc) {
-  u32 lastMarked = 0;
+  i32 lastUsedSlot = -1;
   for (u32 index = 0; index < jsHeapLength; index++) {
-    struct jsHeapEntry* slot = &jsHeap[index];
-    if (slot->isMarked || (!isFullGc && slot->isOldGen)) {
-      lastMarked = index;
-      if (isFullGc) {
-        slot->isOldGen = true;
-      }
-    } else {
+    JsHeapEntry* slot = &jsHeap[index];
+    bool shouldKeep = slot->isMarked || (!isFullGc && slot->generation != GEN_NEW);
+    if (!shouldKeep) {
       slot->value = &unusedJsHeapSlot;
-      slot->isOldGen = false;
+    } else {
+      if (isFullGc && slot->generation == GEN_NEW) {
+        slot->generation = GEN_OLD;
+      }
+      lastUsedSlot = index;
     }
     slot->isMarked = false;
   }
-  jsHeapLength = lastMarked + 1;
+  jsHeapLength = lastUsedSlot + 1;
 }
 
-static void* writeJsonValue(ElmValue* value, enum JsShape jsShape) {
+static void* writeJsonValue(ElmValue* value, JsShape jsShape) {
   if (value->header.tag != Tag_Custom) {
     return Utils_clone(value);
   }
@@ -87,7 +93,7 @@ static void* writeJsonValue(ElmValue* value, enum JsShape jsShape) {
   if (jsShape == MAYBE_CIRCULAR) {
     JsRef* jsRef = GC_allocate(true, SIZE_JS_REF);
     jsRef->header = (Header)HEADER_JS_REF;
-    jsRef->index = allocateJsRef(value);
+    jsRef->id = allocateJsRef(value);
     return jsRef;
   }
   return Utils_clone(value);
@@ -125,6 +131,28 @@ void* getJsRefObjectField(u32 jsRefId, ElmString* fieldStringAddr) {
 void* getJsRefValue(u32 jsRefId) {
   return writeJsonValue(jsHeap[jsRefId].value, NOT_CIRCULAR);
 }
+
+void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]) {
+  Closure* c = jsHeap[jsRefId].value;
+  return Utils_apply(c, nArgs, args);
+}
+
+Record* jsRefToWasmRecord(u32 jsRefId) {
+  return jsHeap[jsRefId].value;
+}
+
+Tuple2* Wrapper_setupOutgoingPort() {
+  return NULL;
+}
+
+u32 Wrapper_setupIncomingPort(u32 managerId) {
+  return 0;
+}
+
+Task* Wrapper_sleep(f64 time) {
+  return NULL;
+}
+
 
 // ---------------------------------------------------
 // Test values
@@ -192,6 +220,11 @@ f64 parseFloat(u16* chars16, size_t len16) {
 #endif
 
   return successCount ? f : not_a_number;
+}
+
+
+void jsStepper(void* viewMetadata) {
+  return;
 }
 
 #endif

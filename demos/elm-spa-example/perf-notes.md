@@ -69,3 +69,39 @@
   { "view": 23.58499999900232 }
 ]
 ```
+
+## Wasm with cache
+
+```json
+[
+  { "view": 2.800000016577542 },
+  {
+    "msgCtor": ["GotHomeMsg", "GotTimeZone"],
+    "tUpdate": 0.11999998241662979,
+    "tStepper": 0.15000003622844815,
+    "tEffects": 0.07000000914558768
+  },
+  { "view": 0.9300000383518636 },
+  {
+    "msgCtor": ["GotHomeMsg", "PassedSlowLoadThreshold"],
+    "tUpdate": 0.1550000160932541,
+    "tStepper": 0.19500002963468432,
+    "tEffects": 0.22499996703118086
+  },
+  { "view": 4.9149999977089465 },
+  {
+    "msgCtor": ["GotHomeMsg", "CompletedFeedLoad"],
+    "tUpdate": 4.660000035073608,
+    "tStepper": 0.109999964479357,
+    "tEffects": 0.1800000318326056
+  },
+  { "view": 25.224999990314245 },
+  {
+    "msgCtor": ["GotHomeMsg", "CompletedTagsLoad"],
+    "tUpdate": 0.3999999607913196,
+    "tStepper": 0.1200000406242907,
+    "tEffects": 0.1799999736249447
+  },
+  { "view": 36.660000041592866 }
+]
+```

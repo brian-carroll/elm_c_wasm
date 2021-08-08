@@ -49,9 +49,14 @@ void log_error(char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   // print_heap();
+  safe_printf("\n");
+  safe_printf("------------------------------------------------------\n");
+  safe_printf("ERROR!\n");
+  safe_printf("\nGC state:\n");
   print_state();
   print_stack_map();
   // fprintf(stderr, fmt, args);
+  safe_printf("\n");
   safe_vprintf(fmt, args);
   va_end(args);
   // emscripten_run_script("debugger;");

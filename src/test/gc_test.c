@@ -217,7 +217,6 @@ void assertions_test_callback() {
 void* eval_infinite_loop(void* args[]) {
   Cons* list = args[0];
   ElmInt* max_gc_cycles = args[1];
-  // u32 gc_stack_frame = GC_get_stack_frame();
 
   assert(sanity_check(list));
 
@@ -233,9 +232,20 @@ void* eval_infinite_loop(void* args[]) {
 
 void* test_execute(Closure* c) {
   gc_test_mark_callback = assertions_test_callback;
-  stack_clear();
-  stack_enter(c->evaluator, c);
-  return Utils_apply(c, 0, NULL);
+
+  // if(gc_state.stack_map.index) {
+  //   print_stack_map();
+  //   exit(1);
+  // }
+  // assert(gc_state.stack_map.index == 0);
+  GcStackMapIndex frame = GC_stack_push_frame('C', c->evaluator);
+  GC_stack_push_value(c);
+
+  void* result = Utils_apply(c, 0, NULL);
+
+  GC_stack_pop_frame(c->evaluator, result, frame);
+
+  return result;
 }
 
 
@@ -248,6 +258,7 @@ void assertions_test() {
         "\n");
   }
   gc_test_reset();
+  GcStackMapIndex frame = GC_stack_push_frame('W', NULL);
 
   count_gc_cycles = 0;
   void* list_elems[3] = {
@@ -259,7 +270,10 @@ void assertions_test() {
   ElmInt* max_gc_cycles = newElmInt(10);
   Closure* c = newClosure(2, 2, eval_infinite_loop, ((void*[]){list, max_gc_cycles}));
 
-  test_execute(c);
+  void* result = test_execute(c);
+
+  GC_stack_pop_frame(NULL, result, frame);
+  GC_stack_pop_value();
 
   GC_collect_major();
 
@@ -387,9 +401,7 @@ void minor_gc_scenario(char* test_name,
           newElmInt(iterations),
       }));
 
-  stack_clear();
-  stack_enter(eval_generateHeapPattern, run);
-  ElmInt* nErrors = Utils_apply(run, 0, NULL);
+  ElmInt* nErrors = GC_execute(run);
   mu_expect_equal("should complete with zero errors", nErrors->value, 0);
 }
 
@@ -442,48 +454,71 @@ void minor_gc_test() {
 
 // --------------------------------------------------------------------------------
 
+void* eval_createTuple3(void* args[]);
 
 char unknown_function_address[FORMAT_PTR_LEN];
 char* Debug_evaluator_name(void* p) {
+  if (p == eval_createTuple3) {
+    return "eval_createTuple3";
+  }
+  if (p == g_author_project_WebAssembly_intercept.evaluator) {
+    return "g_author_project_WebAssembly_intercept";
+  }
   if (p == eval_stack_tail_overflow) {
     return "eval_stack_tail_overflow";
-  } else if (p == eval_stack_normal_overflow) {
-    return "eval_stack_normal_overflow";
-  } else if (p == eval_stack_tail_complete) {
-    return "eval_stack_tail_complete";
-  } else if (p == eval_stack_normal_complete) {
-    return "eval_stack_normal_complete";
-  } else if (p == eval_stackmap_test) {
-    return "eval_stackmap_test";
-  } else if (p == Utils_le.evaluator) {
-    return "Utils_le     ";
-  } else if (p == Basics_sub.evaluator) {
-    return "Basics_sub   ";
-  } else if (p == Basics_add.evaluator) {
-    return "Basics_add   ";
-  } else if (p == g_elm_core_List_foldl.evaluator) {
-    return "List.foldl   ";
-  } else if (p == g_elm_core_List_reverse.evaluator) {
-    return "List.reverse ";
-  } else if (p == eval_trashyFold) {
-    return "trashyFold   ";
-  } else if (p == eval_listNonsense) {
-    return "listNonsense ";
-  } else if (p == eval_infinite_loop) {
-    return "infinite_loop";
-  } else if (p == eval_generateHeapPattern) {
-    return "generateHeapPattern";
-  } else {
-    stbsp_snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
-    return unknown_function_address;
   }
+  if (p == eval_stack_tail_overflow) {
+    return "eval_stack_tail_overflow";
+  }
+  if (p == eval_stack_normal_overflow) {
+    return "eval_stack_normal_overflow";
+  }
+  if (p == eval_stack_tail_complete) {
+    return "eval_stack_tail_complete";
+  }
+  if (p == eval_stack_normal_complete) {
+    return "eval_stack_normal_complete";
+  }
+  if (p == eval_stackmap_test) {
+    return "eval_stackmap_test";
+  }
+  if (p == Utils_le.evaluator) {
+    return "Utils_le";
+  }
+  if (p == Basics_sub.evaluator) {
+    return "Basics_sub";
+  }
+  if (p == Basics_add.evaluator) {
+    return "Basics_add";
+  }
+  if (p == g_elm_core_List_foldl.evaluator) {
+    return "List.foldl";
+  }
+  if (p == g_elm_core_List_reverse.evaluator) {
+    return "List.reverse";
+  }
+  if (p == eval_trashyFold) {
+    return "trashyFold";
+  }
+  if (p == eval_listNonsense) {
+    return "listNonsense";
+  }
+  if (p == eval_infinite_loop) {
+    return "infinite_loop";
+  }
+  if (p == eval_generateHeapPattern) {
+    return "generateHeapPattern";
+  }
+  stbsp_snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
+  return unknown_function_address;
 }
 
 
 void gc_test() {
   if (verbose)
     safe_printf(
-        "##############################################################################\n"
+        "##############################################################################"
+        "\n"
         "\n"
         "                              Garbage Collector tests\n"
         "\n"

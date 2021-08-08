@@ -21,6 +21,7 @@ interface ElmImports {
 interface EmscriptenModule {
   HEAPU16: Uint16Array;
   HEAPU32: Uint32Array;
+  _init_globals: () => void;
   _getMains: () => number;
   _getJsNull: () => number;
   _getUnit: () => number;
@@ -29,9 +30,20 @@ interface EmscriptenModule {
   _getFalse: () => number;
   _getFieldGroups: () => number;
   _allocate: (size: number) => number;
+  _stack_push_frame: (eval_addr: number) => number;
+  _stack_pop_frame: (eval_addr: number, result: number, frame: number) => void;
   _readF64: (addr: number) => number;
   _writeF64: (addr: number, value: number) => void;
   _evalClosure: (addr: number) => number;
+  _get_Scheduler_rawSpawn: () => number;
+  _get_Scheduler_spawn: () => number;
+  _get_Platform_sendToApp: () => number;
+  _get_Platform_sendToSelf: () => number;
+  _get_eval_Json_run: () => number;
+  _get_sendToApp_revArgs: () => number;
+  _initializeEffects: () => number;
+  _findProcess: (id: number) => number;
+  _Wrapper_sendToIncomingPort(managerId: number, unwrappedJson: number): void;
   _debugHeapState: () => void;
   _debugAddrRange: (start: number, size: number) => void;
   _debugStackMap: () => void;
@@ -65,14 +77,16 @@ interface ElmCurriedFunction {
  * @param emscriptenModule   Emscripten toolchain output
  * @param elmImports         Values imported into the wrapper from Elm app
  * @param generatedAppTypes  App-specific type info passed from Elm compiler to this wrapper
- * @param kernelFuncRecord   Record of all JS kernel functions called by the Elm Wasm module
+ * @param kernelImports      Array of JS kernel functions/values the Elm Wasm app can use
+ * @param managerNames       Array of effect manager names (for debug info)
  *
- /********************************************************************************************/
+ ********************************************************************************************/
 function wrapWasmElmApp(
   emscriptenModule: EmscriptenModule,
   elmImports: ElmImports,
   generatedAppTypes: GeneratedAppTypes,
-  kernelFuncRecord: Record<string, ElmCurriedFunction>
+  kernelImports: ElmCurriedFunction[],
+  managerNames: string[]
 ) {
   /* --------------------------------------------------
 
@@ -169,9 +183,6 @@ function wrapWasmElmApp(
     }, {});
   }
 
-  const kernelFunctions = Object.values(kernelFuncRecord);
-  const kernelFunctionNames = Object.keys(kernelFuncRecord); // for debug
-
   const WORD = 4;
   const TAG_MASK = 0xf0000000;
   const TAG_SHIFT = 28;
@@ -207,10 +218,8 @@ function wrapWasmElmApp(
     FieldGroup = 0x9,
     Closure = 0xa,
     JsRef = 0xb,
-    GcStackEmpty = 0xc,
-    GcStackPush = 0xd,
-    GcStackPop = 0xe,
-    GcStackTailCall = 0xf
+    Process = 0xc,
+    Task = 0xd
   }
 
   /* --------------------------------------------------
@@ -220,6 +229,7 @@ function wrapWasmElmApp(
   -------------------------------------------------- */
 
   interface ClosureMetadata {
+    addr: number;
     n_values: number;
     max_values: number;
     evaluator: number;
@@ -328,6 +338,7 @@ function wrapWasmElmApp(
       case Tag.Closure: {
         const idx16 = index << 1;
         const metadata: ClosureMetadata = {
+          addr,
           n_values: mem16[idx16 + 2],
           max_values: mem16[idx16 + 3],
           evaluator: mem32[index + 2],
@@ -337,20 +348,42 @@ function wrapWasmElmApp(
           ? evalKernelThunk(metadata)
           : createWasmCallback(metadata);
       }
+      case Tag.Process: {
+        const id = mem32[index + 1];
+        return new Process(id);
+      }
+      case Tag.Task: {
+        const task = new Task();
+        let childIndex = index;
+        task.$ = TaskCtors[mem32[++childIndex]];
+        task.value = readWasmValue(mem32[++childIndex]);
+        task.callback = readWasmValue(mem32[++childIndex]);
+        task.kill = readWasmValue(mem32[++childIndex]);
+        task.task = readWasmValue(mem32[++childIndex]);
+        return task;
+      }
+      case Tag.JsRef: {
+        const jsIndex = mem32[index + 1];
+        return jsHeap[jsIndex].value;
+      }
       default:
         throw new Error(
-          'Tried to decode value with unsupported tag ' +
-            (Tag[tag] || '0x' + tag.toString(16))
+          'Tried to decode value with unsupported tag 0x' +
+            (tag as any).toString(16)
         );
     }
   }
 
   function evalKernelThunk(metadata: ClosureMetadata): any {
     let { n_values, evaluator, argsIndex } = metadata;
-    let kernelFn: ElmCurriedFunction = kernelFunctions[evaluator];
+    let kernelFn: ElmCurriedFunction = kernelImports[evaluator];
+    if (!kernelFn) {
+      throw new Error(`cannot find evaluator ${evaluator}`);
+    }
+    let f: Function;
+    let nArgs: number;
+    let args: any[] = [];
     while (n_values) {
-      let f: Function;
-      let nArgs: number;
       if (kernelFn.a && kernelFn.f && n_values >= kernelFn.a) {
         f = kernelFn.f;
         nArgs = kernelFn.a;
@@ -358,7 +391,7 @@ function wrapWasmElmApp(
         f = kernelFn;
         nArgs = kernelFn.length || 1;
       }
-      const args: any[] = [];
+      args = [];
       mem32.slice(argsIndex, argsIndex + nArgs).forEach(argAddr => {
         args.push(readWasmValue(argAddr));
       });
@@ -387,6 +420,7 @@ function wrapWasmElmApp(
           `Trying to call a Wasm Closure with ${n_values} args instead of ${max_values}!`
         );
       }
+      const frameIndex = emscriptenModule._stack_push_frame(evaluator);
       const size = 3 + n_values;
       const closureAddr = emscriptenModule._allocate(size);
       const index = closureAddr >> 2;
@@ -398,6 +432,7 @@ function wrapWasmElmApp(
       }
       const resultAddr = emscriptenModule._evalClosure(closureAddr);
       const resultValue = readWasmValue(resultAddr);
+      emscriptenModule._stack_pop_frame(evaluator, resultAddr, frameIndex);
       return resultValue;
     }
     // Attach info in case we have to write this Closure back to Wasm
@@ -478,6 +513,20 @@ function wrapWasmElmApp(
             elmValue.charCodeAt(0) | (elmValue.charCodeAt(1) << 16);
           return addr;
         }
+        if (elmValue instanceof Process) {
+          return emscriptenModule._findProcess(elmValue.id);
+        }
+        if (elmValue instanceof Task) {
+          const addr = emscriptenModule._allocate(6);
+          let index = addr >> 2;
+          mem32[index] = encodeHeader(Tag.Task, 6);
+          mem32[++index] = TaskCtors.indexOf(elmValue.$);
+          mem32[++index] = writeWasmValue(elmValue.value);
+          mem32[++index] = writeWasmValue(elmValue.callback);
+          mem32[++index] = writeWasmValue(elmValue.kill);
+          mem32[++index] = writeWasmValue(elmValue.task);
+          return addr;
+        }
         if (Array.isArray(elmValue)) {
           // A JS array in a _kernel_ datastructure, not a Json Value
           const size = 2 + elmValue.length;
@@ -491,6 +540,11 @@ function wrapWasmElmApp(
           }
           return addr;
         }
+        if (elmValue.__proto__.constructor !== Object) {
+          // Elm values are always plain literals, which have class Object.
+          // Any other class is probably coming from a Browser API, to be decoded by Json package
+          return writeJsRef(allocateJsRef(elmValue));
+        }
         switch (elmValue.$) {
           case undefined:
             return writeRecord(elmValue);
@@ -498,29 +552,24 @@ function wrapWasmElmApp(
             return wasmConstAddrs.Nil;
           case '#0':
             return wasmConstAddrs.Unit;
-          case '::':
+          case '::': {
+            return writeCons(
+              writeWasmValue(elmValue.a),
+              writeWasmValue(elmValue.b)
+            );
+          }
           case '#2': {
-            const a = writeWasmValue(elmValue.a);
-            const b = writeWasmValue(elmValue.b);
-            const addr = emscriptenModule._allocate(3);
-            const index = addr >> 2;
-            const tag = elmValue.$ === '::' ? Tag.List : Tag.Tuple2;
-            mem32[index] = encodeHeader(tag, 3);
-            mem32[index + 1] = a;
-            mem32[index + 2] = b;
-            return addr;
+            return writeTuple2(
+              writeWasmValue(elmValue.a),
+              writeWasmValue(elmValue.b)
+            );
           }
           case '#3': {
-            const a = writeWasmValue(elmValue.a);
-            const b = writeWasmValue(elmValue.b);
-            const c = writeWasmValue(elmValue.c);
-            const addr = emscriptenModule._allocate(4);
-            const index = addr >> 2;
-            mem32[index] = encodeHeader(Tag.Tuple3, 4);
-            mem32[index + 1] = a;
-            mem32[index + 2] = b;
-            mem32[index + 3] = c;
-            return addr;
+            return writeTuple3(
+              writeWasmValue(elmValue.a),
+              writeWasmValue(elmValue.b),
+              writeWasmValue(elmValue.c)
+            );
           }
           case JsonValue.WRAP: {
             const unwrapped = elmValue.a;
@@ -541,6 +590,34 @@ function wrapWasmElmApp(
     }
     console.error(elmValue);
     throw new Error('Cannot determine type of Elm value');
+  }
+
+  function writeCons(headAddr: number, tailAddr: number) {
+    const addr = emscriptenModule._allocate(3);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.List, 3);
+    mem32[index + 1] = headAddr;
+    mem32[index + 2] = tailAddr;
+    return addr;
+  }
+
+  function writeTuple2(aAddr: number, bAddr: number) {
+    const addr = emscriptenModule._allocate(3);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Tuple2, 3);
+    mem32[index + 1] = aAddr;
+    mem32[index + 2] = bAddr;
+    return addr;
+  }
+
+  function writeTuple3(aAddr: number, bAddr: number, cAddr: number) {
+    const addr = emscriptenModule._allocate(4);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.Tuple3, 4);
+    mem32[index + 1] = aAddr;
+    mem32[index + 2] = bAddr;
+    mem32[index + 3] = cAddr;
+    return addr;
   }
 
   function writeUserCustom(value: Record<string, any>): Address {
@@ -575,7 +652,8 @@ function wrapWasmElmApp(
     for (let k = 0; k < keys.length; k++) {
       const key = keys[k];
       if (key !== '$') {
-        const wasmIndex = kernelKeys.indexOf(key); // encode the letter key by position
+        // Map letters to array positions. Some entries deliberately empty.
+        const wasmIndex = kernelKeys.indexOf(key);
         if (wasmIndex === -1) {
           throw new Error(`Unsupported Kernel Custom field '${key}'`);
         }
@@ -594,7 +672,10 @@ function wrapWasmElmApp(
     return addr;
   }
 
-  function writeRecord(value: Record<string, any>): Address {
+  function writeRecord(
+    value: Record<string, any>,
+    isWasmFieldAccess?: boolean
+  ): Address {
     const keys = Object.keys(value).sort();
 
     const size = 2 + keys.length;
@@ -605,7 +686,11 @@ function wrapWasmElmApp(
     const fgName = keys.join(' ');
     let fgAddr = appTypes.fieldGroups[fgName];
     if (!fgAddr) {
-      fgAddr = writeFieldGroup(keys);
+      if (!isWasmFieldAccess) {
+        return writeJsRef(allocateJsRef(value));
+      } else {
+        fgAddr = writeFieldGroup(keys);
+      }
     }
     mem32[index + 1] = fgAddr;
     for (let k = 0; k < keys.length; k++) {
@@ -632,7 +717,9 @@ function wrapWasmElmApp(
 
   function writeClosure(value: any): Address {
     const fun = value.f || value;
-    if (fun.evaluator) {
+    if (!fun.evaluator) {
+      return writeJsRef(allocateJsRef(value));
+    } else {
       const { freeVars, max_values, evaluator } = fun;
       const n_values = freeVars.length;
       const size = 3 + n_values;
@@ -644,19 +731,6 @@ function wrapWasmElmApp(
       for (let i = 0; i < freeVars.length; i++) {
         mem32[index + 3 + i] = writeWasmValue(freeVars[i]);
       }
-      return addr;
-    } else {
-      let evaluator = kernelFunctions.findIndex(f => f === value);
-      if (evaluator === -1) {
-        kernelFunctions.push(value);
-        evaluator = kernelFunctions.length - 1;
-      }
-      const size = 3;
-      const addr = emscriptenModule._allocate(size);
-      const index = addr >> 2;
-      mem32[index] = encodeHeader(Tag.Closure, size);
-      mem32[index + 1] = NEVER_EVALUATE << 16;
-      mem32[index + 2] = evaluator;
       return addr;
     }
   }
@@ -676,20 +750,30 @@ function wrapWasmElmApp(
     MAYBE_CIRCULAR
   }
 
+  enum JsHeapGen {
+    CONST,
+    OLD,
+    NEW
+  }
+
   interface JsHeapEntry {
     value: any;
     isMarked: boolean;
-    isOldGen: boolean;
+    generation: JsHeapGen;
   }
 
   const unusedJsHeapSlot = {};
-  const jsHeap: JsHeapEntry[] = [];
+  const jsHeap: JsHeapEntry[] = kernelImports.map(value => ({
+    value,
+    isMarked: true,
+    generation: JsHeapGen.CONST
+  }));
 
   function allocateJsRef(value: any): number {
     let id = 0;
     while (id < jsHeap.length && jsHeap[id].value !== unusedJsHeapSlot) id++;
     if (id == jsHeap.length) {
-      jsHeap.push({ isMarked: false, isOldGen: false, value });
+      jsHeap.push({ isMarked: false, generation: JsHeapGen.NEW, value });
     } else {
       jsHeap[id].value = value;
     }
@@ -701,22 +785,21 @@ function wrapWasmElmApp(
   }
 
   function sweepJsRefs(isFullGc: boolean): void {
-    let lastUsedSlot = 0;
+    let lastUsedSlot = -1;
     jsHeap.forEach((slot, index) => {
-      let shouldKeep = slot.isMarked;
-      if (isFullGc) {
-        slot.isOldGen = shouldKeep;
-      } else if (slot.isOldGen) {
-        shouldKeep = true;
-      }
-      if (shouldKeep) {
-        lastUsedSlot = index;
-      } else {
+      const shouldKeep =
+        slot.isMarked || (!isFullGc && slot.generation !== JsHeapGen.NEW);
+      if (!shouldKeep) {
         slot.value = unusedJsHeapSlot;
+      } else {
+        if (isFullGc && slot.generation === JsHeapGen.NEW) {
+          slot.generation = JsHeapGen.OLD;
+        }
+        lastUsedSlot = index;
       }
       slot.isMarked = false;
     });
-    jsHeap.splice(lastUsedSlot + 1, jsHeap.length);
+    jsHeap.splice(lastUsedSlot + 1);
   }
 
   function getJsRefArrayIndex(jsRefId: number, index: number): number {
@@ -776,11 +859,7 @@ function wrapWasmElmApp(
       return addr;
     }
     if (jsShape === JsShape.MAYBE_CIRCULAR) {
-      addr = emscriptenModule._allocate(2);
-      index = addr >> 2;
-      mem32[index] = encodeHeader(Tag.JsRef, 2);
-      mem32[index + 1] = allocateJsRef(value);
-      return addr;
+      return writeJsRef(allocateJsRef(value));
     }
     if (Array.isArray(value)) {
       const size = 2 + value.length;
@@ -808,14 +887,176 @@ function wrapWasmElmApp(
     return addr;
   }
 
+  function writeJsRef(id: number): number {
+    const addr = emscriptenModule._allocate(2);
+    const index = addr >> 2;
+    mem32[index] = encodeHeader(Tag.JsRef, 2);
+    mem32[index + 1] = id;
+    return addr;
+  }
+
+  /* --------------------------------------------------
+
+                    PLATFORM
+
+  -------------------------------------------------- */
+
   function call(evaluator: number, args: any[]) {
-    function thunk() {}
-    thunk.evaluator = evaluator;
-    thunk.freeVars = args;
-    thunk.max_values = args.length;
-    const closureAddr = writeClosure(thunk);
+    const frameIndex = emscriptenModule._stack_push_frame(evaluator);
+    const n_values = args.length;
+    const size = 3 + n_values;
+    const closureAddr = emscriptenModule._allocate(size);
+    const headerIndex = closureAddr >> 2;
+    let index = headerIndex;
+    mem32[index++] = encodeHeader(Tag.Closure, size);
+    mem32[index++] = (n_values << 16) | n_values;
+    mem32[index++] = evaluator;
+    for (let i = 0; i < args.length; i++) {
+      const argAddr = writeWasmValue(args[i]);
+      mem32[index++] = argAddr;
+    }
     const resultAddr = emscriptenModule._evalClosure(closureAddr);
-    return readWasmValue(resultAddr);
+    const result = readWasmValue(resultAddr);
+    emscriptenModule._stack_pop_frame(evaluator, resultAddr, frameIndex);
+    return result;
+  }
+
+  type StepperFn = (model: any, viewMetadata: any) => void;
+  let jsStepper: StepperFn = () => {
+    throw new Error('stepper not initialised');
+  };
+  function wasmImportStepper(viewMetadataAddr: number) {
+    const jsDummyModel = null;
+    const viewMetadata = readWasmValue(viewMetadataAddr);
+    jsStepper(jsDummyModel, viewMetadata);
+  }
+  function Platform_initializeEffects(f: StepperFn) {
+    jsStepper = f;
+    const portsListAddr = emscriptenModule._initializeEffects();
+    return readWasmValue(portsListAddr);
+  }
+
+  function setupOutgoingPort() {
+    let subs: Function[] = [];
+
+    function callSubs(value: any) {
+      // grab a separate reference to subs in case unsubscribe is called
+      const currentSubs = subs;
+      for (let i = 0; i < currentSubs.length; i++) {
+        currentSubs[i](value);
+      }
+    }
+
+    function subscribe(callback: Function) {
+      subs.push(callback);
+    }
+
+    function unsubscribe(callback: Function) {
+      // copy subs into a new array in case unsubscribe is called within a
+      // subscribed callback
+      subs = subs.slice();
+      var index = subs.indexOf(callback);
+      if (index >= 0) {
+        subs.splice(index, 1);
+      }
+    }
+
+    const portObj = { subscribe, unsubscribe }; // external JS API
+    const portAddr = writeJsRef(allocateJsRef(portObj));
+    const callSubsAddr = writeJsRef(allocateJsRef(callSubs));
+    const tupleAddr = writeTuple2(callSubsAddr, portAddr);
+    return tupleAddr;
+  }
+
+  function setupIncomingPort(managerId: number) {
+    function send(incomingValue: any): void {
+      const unwrappedJsonAddr = writeJsonValue(incomingValue);
+      emscriptenModule._Wrapper_sendToIncomingPort(
+        managerId,
+        unwrappedJsonAddr
+      );
+    }
+
+    const portObj = { send };
+    const jsRefId = allocateJsRef(portObj);
+    return jsRefId;
+  }
+
+  const Scheduler_rawSpawn = emscriptenModule._get_Scheduler_rawSpawn();
+  const Scheduler_spawn = emscriptenModule._get_Scheduler_spawn();
+  const Json_run = emscriptenModule._get_eval_Json_run(); // TODO: unused?
+  const Platform_sendToApp = emscriptenModule._get_Platform_sendToApp();
+  const Platform_sendToSelf = emscriptenModule._get_Platform_sendToSelf();
+  const sendToApp_revArgs = emscriptenModule._get_sendToApp_revArgs();
+
+  class Process {
+    constructor(public id: number) {}
+  }
+
+  class Task {
+    $: string;
+    value: any;
+    callback: (x: any) => any;
+    kill: null | (() => void);
+    task: Task;
+  }
+
+  const TaskCtors = [
+    'SUCCEED',
+    'FAIL',
+    'BINDING',
+    'AND_THEN',
+    'ON_ERROR',
+    'RECEIVE'
+  ];
+
+  function applyJsRef(jsRefId: number, nArgs: number, argsAddr: number) {
+    let f: ElmCurriedFunction = jsHeap[jsRefId].value;
+
+    const argsIndex = argsAddr >> 2;
+    const jsArgs = [];
+    for (let i = 0; i < nArgs; i++) {
+      const argAddr = mem32[argsIndex + i];
+      jsArgs.push(readWasmValue(argAddr));
+    }
+
+    let jsResult;
+    if (f.a === nArgs) {
+      jsResult = f.f.apply(null, jsArgs);
+    } else {
+      jsResult = f;
+      for (let i = 0; i < nArgs; i++) {
+        jsResult = jsResult(jsArgs[i]);
+      }
+    }
+
+    const resultAddr = writeWasmValue(jsResult);
+    return resultAddr;
+  }
+
+  function Wrapper_sleep(time: number) {
+    const b = new Task();
+    b.$ = 'BINDING';
+    b.kill = null;
+    b.callback = function (callback) {
+      var id = setTimeout(function () {
+        const s = new Task();
+        s.$ = 'SUCCEED';
+        s.value = elmImports._Utils_Tuple0;
+        callback(s);
+      }, time);
+
+      return function () {
+        clearTimeout(id);
+      };
+    };
+    const taskAddr = writeWasmValue(b);
+    return taskAddr;
+  }
+
+  function jsRefToWasmRecord(jsRefId: number) {
+    const obj = jsHeap[jsRefId].value;
+    return writeRecord(obj, true);
   }
 
   /* --------------------------------------------------
@@ -824,24 +1065,29 @@ function wrapWasmElmApp(
 
   -------------------------------------------------- */
 
-  const mains: any[] = [];
+  function getMains() {
+    emscriptenModule._init_globals();
+    const mains: any[] = [];
 
-  const deref = (addr: number) => mem32[addr >> 2];
-  let mainsArrayEntryAddr = emscriptenModule._getMains();
-  while (true) {
-    const gcRootAddr = deref(mainsArrayEntryAddr);
-    if (!gcRootAddr) break;
-    const mainAddr = deref(gcRootAddr);
-    if (!mainAddr) break;
-    mains.push(readWasmValue(mainAddr));
-    mainsArrayEntryAddr += 4;
+    const deref = (addr: number) => mem32[addr >> 2];
+    let mainsArrayEntryAddr = emscriptenModule._getMains();
+    while (true) {
+      const gcRootAddr = deref(mainsArrayEntryAddr);
+      if (!gcRootAddr) break;
+      const mainAddr = deref(gcRootAddr);
+      if (!mainAddr) break;
+      mains.push(readWasmValue(mainAddr));
+      mainsArrayEntryAddr += 4;
+    }
+    return mains;
   }
 
   return {
-    mains,
+    getMains,
     readWasmValue,
     writeWasmValue,
     writeJsonValue,
+    jsRefToWasmRecord,
     call,
     getJsRefArrayIndex,
     getJsRefObjectField,
@@ -853,6 +1099,22 @@ function wrapWasmElmApp(
       const words16 = mem16.slice(idx16, idx16 + len16);
       const jsString = textDecoder.decode(words16);
       return parseFloat(jsString);
-    }
+    },
+    Scheduler_rawSpawn,
+    Scheduler_spawn,
+    Json_run, // TODO: unused?
+    Platform_initializeEffects,
+    setupOutgoingPort,
+    setupIncomingPort,
+    wasmImportStepper,
+    Platform_sendToApp,
+    Platform_sendToSelf,
+    sendToApp_revArgs,
+    Wrapper_sleep,
+    Task,
+    Process,
+    managerNames,
+    applyJsRef,
+    allocateJsRef // for test only
   };
 }

@@ -64,9 +64,14 @@ static u32 fieldgroup_search(FieldGroup* fieldgroup, u32 search) {
   return -1;
 }
 
-void* Utils_access_eval(void* args[2]) {
+void* Utils_access_eval(void* args[]) {
   u32 field = (u32)(size_t)args[0];  // unboxed!
-  Record* record = (Record*)args[1];
+  Record* record = args[1];
+  if (record->header.tag == Tag_JsRef) {
+    JsRef* jsRef = args[1];
+    record = jsRefToWasmRecord(jsRef->id);
+  }
+  assert(record->header.tag == Tag_Record);
   u32 index = fieldgroup_search(record->fieldgroup, field);
 
   if (index == -1) {
@@ -77,6 +82,10 @@ void* Utils_access_eval(void* args[2]) {
 }
 
 Record* Utils_update(Record* r, u32 n_updates, u32 fields[], void* values[]) {
+  if (r->header.tag == Tag_JsRef) {
+    JsRef* jsRef = (JsRef*)r;
+    r = jsRefToWasmRecord(jsRef->id);
+  }
   Record* r_new = Utils_clone(r);
   for (u32 i = 0; i < n_updates; ++i) {
     u32 field_pos = fieldgroup_search(r_new->fieldgroup, fields[i]);
@@ -112,7 +121,18 @@ Closure Utils_append = {
 //      FUNCTION APPLICATION
 // -----------------------------------------------------------
 
-void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
+void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
+  ElmValue* v = func;
+  if (v->header.tag == Tag_JsRef) {
+    GcStackMapIndex stack_frame = GC_stack_push_frame('J', func);
+    JsRef* jsRef = func;
+    void* result = applyJsRef(jsRef->id, n_applied, applied);
+    GC_stack_pop_frame(func, result, stack_frame);
+    return result;
+  }
+  assert(v->header.tag == Tag_Closure);
+
+  Closure* c = func;
   void** args;
   do {
     if (n_applied >= c->max_values) {
@@ -147,18 +167,17 @@ void* Utils_apply(Closure* c, u16 n_applied, void* applied[]) {
 
 
     // Execute! (and let the GC know what the stack is doing)
-    GC_stack_push_frame(c->evaluator);
-    GcStackMapIndex stack_frame = GC_get_stack_frame();
+    GcStackMapIndex stack_frame = GC_stack_push_frame('C', c->evaluator);
     void* result = c->evaluator(args);
 
-    if (!result) {
-      safe_printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
-      char label[5] = "arg 0";
-      for (int i=0; i< n_applied; i++) {
-        Debug_pretty(label, args[i]);
-        label[4]++;
-      }
-    }
+    // if (!result) {
+    //   safe_printf("NULL returned from %s\n", Debug_evaluator_name(c->evaluator));
+    //   char label[5] = "arg 0";
+    //   for (int i=0; i< n_applied; i++) {
+    //     Debug_pretty(label, args[i]);
+    //     label[4]++;
+    //   }
+    // }
 
 
     GC_stack_pop_frame(c->evaluator, result, stack_frame);
@@ -232,6 +251,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
              eq_help(pa->tuple3.b, pb->tuple3.b, depth + 1, pstack) &&
              eq_help(pa->tuple3.c, pb->tuple3.c, depth + 1, pstack);
 
+    case Tag_Task:
     case Tag_Custom: {
       if (pa->custom.ctor != pb->custom.ctor) return 0;
       u32 nparams = custom_params(&pa->custom);
@@ -254,24 +274,33 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
       // Cannot get to here from working code that type checks.
       return 1;
 
-    case Tag_Closure:
-      log_error(
-          "Warning: Trying to use `(==)` on functions.\n"
-          "There is no way to know if functions are \"the same\" in the Elm sense.\n"
-          "Read more about this at "
-          "https://package.elm-lang.org/packages/elm/core/latest/Basics#== which "
-          "describes why it is this way and what the better version will look like.\n");
-      return 0;
+    case Tag_Closure: {
+      if (pa->closure.evaluator != pb->closure.evaluator) return 0;
+      u32 n_values = pa->closure.n_values;
+      for (u32 i = 0; i < n_values; ++i) {
+        if (!eq_help(pa->closure.values[i], pb->closure.values[i], depth + 1, pstack))
+          return 0;
+      }
+      return 1;
+    }
+    // log_error(
+    //     "Warning: Trying to use `(==)` on functions.\n"
+    //     "There is no way to know if functions are \"the same\" in the Elm sense.\n"
+    //     "Read more about this at "
+    //     "https://package.elm-lang.org/packages/elm/core/latest/Basics#== which "
+    //     "describes why it is this way and what the better version will look like.\n");
+    // return 0;
 
     case Tag_JsRef:
-      return pa->js_ref.index == pb->js_ref.index;
+      return pa->js_ref.id == pb->js_ref.id;
 
+    case Tag_Process:
     default:
       return 0;
   }
 }
 
-static void* eq_eval(void* args[2]) {
+void* eq_eval(void* args[]) {
   ElmValue* nil = (ElmValue*)&Nil;
   ElmValue* stack = nil;
   u32 isEqual = eq_help(args[0], args[1], 0, &stack);
@@ -292,7 +321,7 @@ Closure Utils_equal = {
 };
 
 // INEQUALITY
-static void* eval_notEqual(void* args[2]) {
+void* eval_notEqual(void* args[]) {
   void* equal = eq_eval(args);
   return equal == &False ? &True : &False;
 }
@@ -396,7 +425,7 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
   }
 }
 
-static void* compare_eval(void* args[2]) {
+void* compare_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return compare_help(x, y);
@@ -407,7 +436,7 @@ Closure Utils_compare = {
     .max_values = 2,
 };
 
-static void* lt_eval(void* args[2]) {
+void* lt_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &g_elm_core_Basics_LT) ? &True : &False;
@@ -418,7 +447,7 @@ Closure Utils_lt = {
     .max_values = 2,
 };
 
-static void* le_eval(void* args[2]) {
+void* le_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &g_elm_core_Basics_GT) ? &True : &False;
@@ -429,7 +458,7 @@ Closure Utils_le = {
     .max_values = 2,
 };
 
-static void* gt_eval(void* args[2]) {
+void* gt_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) == &g_elm_core_Basics_GT) ? &True : &False;
@@ -440,7 +469,7 @@ Closure Utils_gt = {
     .max_values = 2,
 };
 
-static void* ge_eval(void* args[2]) {
+void* ge_eval(void* args[]) {
   ElmValue* x = args[0];
   ElmValue* y = args[1];
   return (compare_help(x, y) != &g_elm_core_Basics_LT) ? &True : &False;

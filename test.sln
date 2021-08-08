@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28010.2050
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31313.79
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "test", "dist\exe\test.exe", "{41312C81-BAC6-4867-A1A8-BBAA4551FD3C}"
 	ProjectSection(DebuggerProjectSystem) = preProject
@@ -9,12 +9,13 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "test", "dist\exe\test.exe",
 		Executable = C:\Users\brian\Code\wasm\c\elm_c_wasm\dist\exe\test.exe
 		RemoteMachine = BRIAN-LENOVO
 		StartingDirectory = C:\Users\brian\Code\wasm\c\elm_c_wasm\build\exe
-		Arguments = -av
+		Arguments = -pv
 		Environment = Default
 		LaunchingEngine = 00000000-0000-0000-0000-000000000000
 		UseLegacyDebugEngines = No
 		LaunchSQLEngine = No
 		AttachLaunchAction = No
+		IORedirection = Auto
 	EndProjectSection
 EndProject
 Global

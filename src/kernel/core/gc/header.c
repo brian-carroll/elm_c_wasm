@@ -1,3 +1,4 @@
+#include "../types.h"
 #include "internals.h"
 
 /* ====================================================
@@ -38,6 +39,12 @@ size_t child_count(ElmValue* v) {
     case Tag_Closure:
       return v->closure.n_values;
 
+    case Tag_Process:
+      return (sizeof(Process) - sizeof(Custom)) / SIZE_UNIT;
+
+    case Tag_Task:
+      return (sizeof(Task) - sizeof(Custom)) / SIZE_UNIT;
+
     case Tag_JsRef:
     default:
       return 0;
@@ -75,6 +82,10 @@ bool sanity_check(void* p) {
       return (h.size >= SIZE_CLOSURE(0)) && (h.size < SIZE_CLOSURE(SANITY_MAX_CHILDREN));
     case Tag_JsRef:
       return (h.size == SIZE_JS_REF);
+    case Tag_Process:
+      return (h.size == (sizeof(Process) / SIZE_UNIT));
+    case Tag_Task:
+      return (h.size == (sizeof(Task) / SIZE_UNIT));
     default:
       return false;
   }

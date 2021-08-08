@@ -1,6 +1,6 @@
-#include "internals.h"
 #include "../core.h"
 #include "../types.h"
+#include "internals.h"
 
 // Mark a value as live and return 'true' if previously marked
 bool mark_words(GcState* state, void* p_void, size_t size) {
@@ -13,7 +13,7 @@ bool mark_words(GcState* state, void* p_void, size_t size) {
   if (size == 0) return true;
   assert(p < heap->end);
   if (p + size > heap->end) {
-    safe_printf("Marking %p - %p, past heap end at %p\n", p, p+size, heap->end);
+    safe_printf("Marking %p - %p, past heap end at %p\n", p, p + size, heap->end);
     print_state();
     print_stack_map();
     // fflush(0);
@@ -83,7 +83,7 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
     if (already_marked) continue;
 
     if (v->header.tag == Tag_JsRef) {
-      markJsRef(v->js_ref.index);
+      markJsRef(v->js_ref.id);
       continue;
     }
 
@@ -139,7 +139,7 @@ void mark(GcState* state, size_t* ignore_below) {
 
   // Mark values being used in the current call stack
   for (size_t i = 0; i < state->stack_map.index; ++i) {
-    if (stack_flags[i] == 'F') continue;
+    if (stack_flags[i] == 'F') continue;  // TODO: should we also skip the function?
     ElmValue* v = stack_values[i];
     mark_trace(state, v, ignore_below);
   }
