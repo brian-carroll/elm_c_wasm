@@ -7,8 +7,8 @@ CFLAGS=$@
 OUT_DIR="build/emscripten"
 
 extra_opt=""
-extra_opt="$extra_opt -g4"
-extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/$OUT_DIR/"
+# extra_opt="$extra_opt -g4"
+# extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/$OUT_DIR/"
 
 mkdir -p dist $OUT_DIR
 

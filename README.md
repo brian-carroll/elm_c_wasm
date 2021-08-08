@@ -39,6 +39,8 @@ Figures noted are ranges across 4 runs of Lighthouse Performance report for Desk
 The test application is elm-spa-example, but with API endpoints pointing to local .json files instead of a server.
 This eliminates most of the network variability from the measurements.
 
+The Wasm version has a lot of JS code from Emscripten
+
 ## Wasm with -O3
 
 Identical report for all 4 runs
@@ -51,6 +53,17 @@ Identical report for all 4 runs
 | Time to Interactive      | 1.0 s |
 | Total Blocking Time      | 0 ms  |
 | Cumulative Layout Shift  | 0.809 |
+
+## Wasm with -O3 & uglifyjs
+
+| overall score            | 93          |
+| ------------------------ | ----------- |
+| First Contentful Paint   | 0.5 - 0.6 s |
+| Speed Index              | 0.6 - 0.7 s |
+| Largest Contentful Paint | 1.2 s       |
+| Time to Interactive      | 0.7 s       |
+| Total Blocking Time      | 0 ms        |
+| Cumulative Layout Shift  | 0.743       |
 
 ## JS without --optimize
 
@@ -84,6 +97,8 @@ Identical report for all 4 runs
 | Time to Interactive      | 0.6 - 0.7 s |
 | Total Blocking Time      | 0 ms        |
 | Cumulative Layout Shift  | 0.743       |
+
+
 
 &nbsp;
 

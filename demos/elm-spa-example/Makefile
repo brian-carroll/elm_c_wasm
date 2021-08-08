@@ -1,5 +1,5 @@
 MAKEFLAGS := --jobs=$(shell nproc)
-CFLAGS=-O1 -Wall -DDEBUG -Wno-unused-variable
+CFLAGS=-O3 -Wall -Wno-unused-variable
 
 SUBMODULE_DIR := "repo"
 ELM_SOURCES := $(shell find $(SUBMODULE_DIR)/src -name '*.elm')
