@@ -1,3 +1,8 @@
+# ElmInt -> Number
+
+- js-array.c & json decode, platform: ElmInt value used as index
+
+
 # Remaining SPA example bugs
 
 ## Timestamps are all in 1970!
