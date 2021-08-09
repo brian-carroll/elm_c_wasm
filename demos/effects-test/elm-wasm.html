@@ -27,8 +27,11 @@
     <script src="dist/elm.js"></script>
     <script>
       function go() {
-        Elm.Main.init({
+        const app = Elm.Main.init({
           node: document.querySelector('#main')
+        });
+        app.ports.sendToJs.subscribe(value => {
+          setTimeout(() => app.ports.receiveFromJs.send(value), 0);
         });
       }
       if (Elm.onReady) {

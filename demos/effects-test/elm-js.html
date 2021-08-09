@@ -26,8 +26,11 @@
     </div>
     <script src="elm-js.js"></script>
     <script>
-      Elm.Main.init({
+      const app = Elm.Main.init({
         node: document.querySelector('#main')
+      });
+      app.ports.sendToJs.subscribe(value => {
+        setTimeout(() => app.ports.receiveFromJs.send(value), 0);
       });
     </script>
   </body>

@@ -513,8 +513,13 @@ void* eval_Platform_incomingPortOnEffects(void* args[]) {
 void Platform_sendToIncomingPort(u32 managerId, ElmValue* unwrappedJson) {
   PortConfig* config = Platform_managerConfigs->values[managerId];
   Custom* decoder = &config->converter->custom;
-  ElmValue* value = Json_runHelp(decoder, unwrappedJson);
-
+  Custom* result = Json_runHelp(decoder, unwrappedJson);
+  bool isOk = A1(&g_elm_core_Result_isOk, result) == &True;
+  if (!isOk) {
+    log_error("Failed to decode message from port");
+    return;
+  }
+  ElmValue* value = result->values[0];
   for (Cons* temp = config->incomingSubs; temp != &Nil; temp = temp->tail) {
     Closure* sub = temp->head;
     ElmValue* msg = A1(sub, value);
