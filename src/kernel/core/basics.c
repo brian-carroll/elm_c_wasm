@@ -95,7 +95,7 @@ Closure Basics_fdiv = {
 void* eval_idiv(void* args[]) {
   ElmInt* x = args[0];
   ElmInt* y = args[1];
-  i64 result = (i64)x->int_f64 / (i64)y->int_f64;
+  i64 result = (i64)x->value / (i64)y->value;
   return newElmInt((f64)result);
 }
 Closure Basics_idiv = {
@@ -155,7 +155,7 @@ Closure Basics_pow = {
  */
 void* eval_toFloat(void* args[]) {
   ElmInt* i = args[0];
-  return newElmFloat(i->int_f64);
+  return newElmFloat(i->value);
 }
 Closure Basics_toFloat = {
     .header = HEADER_CLOSURE(0),
@@ -259,7 +259,7 @@ Closure Basics_xor = {
 void* eval_remainderBy(void* args[]) {
   ElmInt* den = args[0];
   ElmInt* num = args[1];
-  return newElmInt((i64)num->int_f64 % (i64)den->int_f64);
+  return newElmInt((i64)num->value % (i64)den->value);
 }
 Closure Basics_remainderBy = {
     .header = HEADER_CLOSURE(0),
@@ -274,8 +274,8 @@ Closure Basics_remainderBy = {
 void* eval_modBy(void* args[]) {
   ElmInt* a0 = args[0];
   ElmInt* a1 = args[1];
-  i32 modulus = a0->int_f64;
-  i32 x = a1->int_f64;
+  i32 modulus = a0->value;
+  i32 x = a1->value;
 
   assert(modulus != 0);
   i32 answer = x % modulus;

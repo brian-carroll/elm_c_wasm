@@ -67,7 +67,7 @@ void print_value(void* p) {
   ElmValue* v = p;
   switch (v->header.tag) {
     case Tag_Int:
-      safe_printf("Int %d", (i32)v->elm_int.int_f64);
+      safe_printf("Int %d", (i32)v->elm_int.value);
       break;
     case Tag_Float:
       safe_printf("Float %f", v->elm_float.value);
@@ -480,7 +480,7 @@ static void Debug_prettyHelp(int indent, void* p) {
 
   switch (v->header.tag) {
     case Tag_Int:
-      safe_printf("Int %d\n", v->elm_int.int_f64);
+      safe_printf("Int %d\n", v->elm_int.value);
       break;
     case Tag_Float:
       safe_printf("Float %f\n", v->elm_float.value);

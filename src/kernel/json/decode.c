@@ -411,7 +411,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value);
 void* eval_Json_array_get(void* args[]) {
   Custom* json_array = args[0];
   ElmInt* index = args[1];
-  i32 i = index->int_f64;
+  i32 i = index->value;
   return json_array->values[i];
 }
 
@@ -533,13 +533,13 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
         len = custom_params(&value->custom);
-        too_short = index->int_f64 >= len;
+        too_short = index->value >= len;
         if (!too_short) {
-          i32 i = index->int_f64;
+          i32 i = index->value;
           index_value = value->custom.values[i];
         }
       } else if (value->header.tag == Tag_JsRef) {
-        ptrdiff_t from_js = getJsRefArrayIndex(value->js_ref.id, index->int_f64);
+        ptrdiff_t from_js = getJsRefArrayIndex(value->js_ref.id, index->value);
         if (from_js < 0) {
           too_short = true;
           len = -from_js - 1;

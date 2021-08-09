@@ -270,14 +270,14 @@ void test_Json_decodeKeyValuePairs(void* runner) {
 
 ElmInt mapArgs = {
     .header = HEADER_INT,
-    .int_f64 = 0,
+    .value = 0,
 };
 void* eval_testMapper(void* args[]) {
   ElmInt* nArgs = args[0];
   i32 total = 0;
-  for (i32 i = 0; i < nArgs->int_f64; i++) {
+  for (i32 i = 0; i < nArgs->value; i++) {
     ElmInt* arg = args[i + 1];
-    total += arg->int_f64;
+    total += arg->value;
   }
   return newElmInt(total);
 }
@@ -315,7 +315,7 @@ void test_Json_map(void* runner) {
     json[json_index + 1] = 0;
 
     testMapper.max_values = 1 + n_args;
-    mapArgs.int_f64 = n_args;
+    mapArgs.value = n_args;
 
     void* args[9];
     args[0] = &testMapper;

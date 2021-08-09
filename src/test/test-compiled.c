@@ -138,8 +138,8 @@ Closure g_elm_json_Json_Decode_OneOf = {
 void* eval_elm_core_Array_initialize(void* args[]) {
   ElmInt* len = args[0];
   Closure* fn = args[1];
-  Custom* mock_array = newCustom(CTOR_MockElmArray, len->int_f64, NULL);
-  for (size_t i = 0; i < len->int_f64; i++) {
+  Custom* mock_array = newCustom(CTOR_MockElmArray, len->value, NULL);
+  for (size_t i = 0; i < len->value; i++) {
     mock_array->values[i] = A1(fn, newElmInt(i));
   }
   return mock_array;

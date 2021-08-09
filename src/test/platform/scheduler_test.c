@@ -10,7 +10,7 @@ void* eval_task_callback(void* args[]) {
 
 void* eval_increment_task_value(void* args[]) {
   ElmInt* in = args[0];
-  return A1(&Scheduler_succeed, newElmInt(in->int_f64 + 1));
+  return A1(&Scheduler_succeed, newElmInt(in->value + 1));
 }
 Closure increment_task_value = {
     .header = HEADER_CLOSURE(0),

@@ -12,7 +12,7 @@ Custom Json_encodeNull = {
 void* eval_Json_wrap(void* args[]) {
   ElmValue* v = args[0];
   if (v->header.tag == Tag_Int) {
-    v = (ElmValue*)newElmFloat(v->elm_int.int_f64);
+    v = (ElmValue*)newElmFloat(v->elm_int.value);
   }
   Custom* wrapped = newCustom(JSON_VALUE_WRAP, 1, (void*[]){v});
   return wrapped;
@@ -122,7 +122,7 @@ void* eval_Json_encode(void* args[]) {
 
   StringBuilder sb;
   StringBuilder_init(&sb);
-  u32 indent = indentLevel->int_f64;
+  u32 indent = indentLevel->value;
   stringify(indent, 0, value, &sb);
   ElmString* str = StringBuilder_toString(&sb);
 

@@ -17,19 +17,19 @@ void* eval_stack_tail_overflow(void* args[]) {
   Cons* list = args[0];
   ElmInt* count = args[1];
   for(;;) {
-    switch ((i32)count->int_f64) {
+    switch ((i32)count->value) {
       case 3:
       case 2: {
         // two iterations: one on entry, one after the first tailcall
         JUNK_STRING();
         list = newCons(LIVE_STRING(), list);
-        count = newElmInt(count->int_f64 - 1);
+        count = newElmInt(count->value - 1);
         GC_stack_tailcall(2, list, count);
         break;
       }
       case 1: {
         // fill up the heap with junk to trigger GC
-        count = newElmInt(count->int_f64 - 1);
+        count = newElmInt(count->value - 1);
         for (;;) {
           ElmString* last_alloc = (ElmString*)list;
           ElmString* junk = JUNK_STRING();

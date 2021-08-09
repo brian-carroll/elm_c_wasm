@@ -187,11 +187,11 @@ void test_int() {
         sizeof(ElmInt),
         hex_ptr(i),
         (int)i->header.tag,
-        i->int_f64);
+        i->value);
   mu_assert("ElmInt type should be just wide enough for a header and an i32",
       sizeof(ElmInt) == sizeof(Header) + 4 + sizeof(f64));
   mu_assert("newElmInt should insert correct tag field", i->header.tag == Tag_Int);
-  mu_assert("newElmInt 123 should insert value of 123", i->int_f64 == 123);
+  mu_assert("newElmInt 123 should insert value of 123", i->value == 123);
 #if TARGET_64BIT
   mu_assert("newElmInt should insert correct size field", i->header.size == 2);
 #else

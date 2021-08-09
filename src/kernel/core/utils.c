@@ -220,7 +220,7 @@ static u32 eq_help(ElmValue* pa, ElmValue* pb, u32 depth, ElmValue** pstack) {
 
   switch (pa->header.tag) {
     case Tag_Int:
-      return pa->elm_int.int_f64 == pb->elm_int.int_f64;
+      return pa->elm_int.value == pb->elm_int.value;
 
     case Tag_Float:
       return pa->elm_float.value == pb->elm_float.value;
@@ -340,9 +340,9 @@ static void* compare_help(ElmValue* x, ElmValue* y) {
 
   switch (x->header.tag) {
     case Tag_Int:
-      if (x->elm_int.int_f64 == y->elm_int.int_f64)
+      if (x->elm_int.value == y->elm_int.value)
         return &g_elm_core_Basics_EQ;
-      else if (x->elm_int.int_f64 < y->elm_int.int_f64)
+      else if (x->elm_int.value < y->elm_int.value)
         return &g_elm_core_Basics_LT;
       else
         return &g_elm_core_Basics_GT;

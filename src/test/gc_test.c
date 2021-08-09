@@ -220,7 +220,7 @@ void* eval_infinite_loop(void* args[]) {
 
   assert(sanity_check(list));
 
-  while (count_gc_cycles < max_gc_cycles->int_f64) {
+  while (count_gc_cycles < max_gc_cycles->value) {
     list = A1(&listNonsense, list);
     assert(sanity_check(list));
     GC_stack_tailcall(2, list, max_gc_cycles);
@@ -289,15 +289,15 @@ void* eval_generateHeapPattern(void* args[]) {
   ElmInt* iterations = args[3];
 
   Cons* liveList = pNil;
-  i32 nKidsGarbage1 = SIZE_CUSTOM(garbageChunkSize1->int_f64) - SIZE_CUSTOM(0);
-  i32 nKidsGarbage2 = SIZE_CUSTOM(garbageChunkSize2->int_f64) - SIZE_CUSTOM(0);
+  i32 nKidsGarbage1 = SIZE_CUSTOM(garbageChunkSize1->value) - SIZE_CUSTOM(0);
+  i32 nKidsGarbage2 = SIZE_CUSTOM(garbageChunkSize2->value) - SIZE_CUSTOM(0);
   i32 nKidsLive =
-      SIZE_CUSTOM(liveChunkSize->int_f64) - SIZE_CUSTOM(0) - SIZE_INT - SIZE_LIST;
+      SIZE_CUSTOM(liveChunkSize->value) - SIZE_CUSTOM(0) - SIZE_INT - SIZE_LIST;
   assert(nKidsLive >= 1);
 
 tce_loop:;
   do {
-    if (iterations->int_f64 == 0) {
+    if (iterations->value == 0) {
       if (verbose) {
         safe_printf("Heap pattern generated. Calculating result\n");
         // PRINT_BITMAP();
@@ -310,9 +310,9 @@ tce_loop:;
       for (; liveList->tail != pNil; liveList = liveList->tail) {
         Custom* live = liveList->head;
         ElmInt* iter = live->values[0];
-        if (iter->int_f64 != expected) {
+        if (iter->value != expected) {
           safe_printf(
-              "Wrong value at %p: expected %d, got %d\n", iter, expected, iter->int_f64);
+              "Wrong value at %p: expected %d, got %d\n", iter, expected, iter->value);
           nErrors++;
         }
         expected++;
@@ -340,7 +340,7 @@ tce_loop:;
       }
 
       liveList = newCons(live, liveList);
-      iterations = newElmInt(iterations->int_f64 - 1);
+      iterations = newElmInt(iterations->value - 1);
 
       GC_stack_tailcall(
           5, liveChunkSize, garbageChunkSize1, garbageChunkSize2, iterations, liveList);
@@ -402,7 +402,7 @@ void minor_gc_scenario(char* test_name,
       }));
 
   ElmInt* nErrors = GC_execute(run);
-  mu_expect_equal("should complete with zero errors", nErrors->int_f64, 0);
+  mu_expect_equal("should complete with zero errors", nErrors->value, 0);
 }
 
 

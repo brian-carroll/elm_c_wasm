@@ -34,7 +34,7 @@ void* eval_createFragmentation(void* args[]) {
   Cons* list = args[0];
   ElmInt* gap = args[1];
   for (i32 i = 0;; i++) {
-    GC_allocate(false, gap->int_f64);
+    GC_allocate(false, gap->value);
     Cons* newList = newCons(newElmInt(i), list);
     if (newList < list) {
       return newList;
@@ -52,7 +52,7 @@ void* eval_buildString(void* args[]) {
   StringBuilder sb;
   StringBuilder_init(&sb);
 
-  i32 iterations = iter->int_f64;
+  i32 iterations = iter->value;
   for (int i = 0; i < iterations; i++) {
     int idx = i % (sizeof(test_sequence) - 1);
     StringBuilder_writeChar(&sb, test_sequence[idx]);

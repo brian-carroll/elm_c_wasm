@@ -42,8 +42,8 @@ void* eval_JsArray_initialize(void* args[]) {
   ElmInt* offset = args[1];
   Closure* func = args[2];
 
-  u32 len = size->int_f64;
-  i32 o = offset->int_f64;
+  u32 len = size->value;
+  i32 o = offset->value;
   Custom* result = newCustom(JSON_VALUE_ARRAY, len, NULL);
 
   for (size_t i = 0; i < len; i++) {
@@ -66,7 +66,7 @@ void* eval_JsArray_initializeFromList(void* args[]) {
   ElmInt* max = args[0];
   Cons* ls = args[1];
 
-  ptrdiff_t max_len = max->int_f64;
+  ptrdiff_t max_len = max->value;
   Custom* result = newCustom(JSON_VALUE_ARRAY, max_len, NULL);
 
   ptrdiff_t i = 0;
@@ -92,7 +92,7 @@ Closure JsArray_initializeFromList = {
 void* eval_JsArray_unsafeGet(void* args[]) {
   ElmInt* index = args[0];
   Custom* array = args[1];
-  i32 i = index->int_f64;
+  i32 i = index->value;
   return array->values[i];
 }
 Closure JsArray_unsafeGet = {
@@ -110,7 +110,7 @@ void* eval_JsArray_unsafeSet(void* args[]) {
   Custom* array = args[2];
 
   Custom* result = Utils_clone(array);
-  i32 i = index->int_f64;
+  i32 i = index->value;
   result->values[i] = value;
   return result;
 }
@@ -215,7 +215,7 @@ void* eval_JsArray_indexedMap(void* args[]) {
   ElmInt* offset = args[1];
   Custom* array = args[2];
 
-  i32 o = offset->int_f64;
+  i32 o = offset->value;
   i32 len = custom_params(array);
   Custom* result = newCustom(JSON_VALUE_ARRAY, len, NULL);
   for (i32 i = 0; i < len; i++) {
@@ -239,10 +239,10 @@ void* eval_JsArray_slice(void* args[]) {
   ElmInt* to = args[1];
   Custom* array = args[2];
 
-  i32 len = (i32)to->int_f64 - (i32)from->int_f64;
+  i32 len = (i32)to->value - (i32)from->value;
   Custom* result = newCustom(JSON_VALUE_ARRAY, len, NULL);
   i32 j = 0;
-  for (i32 i = from->int_f64; i < to->int_f64; i++) {
+  for (i32 i = from->value; i < to->value; i++) {
     result->values[j] = array->values[i];
     j++;
   }
@@ -265,7 +265,7 @@ void* eval_JsArray_appendN(void* args[]) {
 
   i32 destLen = custom_params(dest);
   i32 sourceLen = custom_params(source);
-  i32 itemsToCopy = n->int_f64 - destLen;
+  i32 itemsToCopy = n->value - destLen;
 
   if (itemsToCopy > sourceLen) {
     itemsToCopy = sourceLen;

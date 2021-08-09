@@ -115,8 +115,8 @@ void test_records() {
         "r3: addr=%zx val=%s\n", (size_t)r3, hex(r3, sizeof(Record) + 3 * sizeof(void*)));
   }
 
-  mu_assert("Record accessor should return 123 for r1", int1->int_f64 == 123);
-  mu_assert("Record accessor should return 321 for r2", int2->int_f64 == 321);
+  mu_assert("Record accessor should return 123 for r1", int1->value == 123);
+  mu_assert("Record accessor should return 321 for r2", int2->value == 321);
 
   mu_assert("Updated record r3 should have same fieldgroup as r2",
       r3->fieldgroup == r2->fieldgroup);
@@ -167,9 +167,9 @@ void test_apply(void) {
       .max_values = 3,
       .n_values = 0};
 
-  ElmInt outerScopeValue = (ElmInt){.header = HEADER_INT, .int_f64 = 1};
-  ElmInt two = (ElmInt){.header = HEADER_INT, .int_f64 = 2};
-  ElmInt three = (ElmInt){.header = HEADER_INT, .int_f64 = 3};
+  ElmInt outerScopeValue = (ElmInt){.header = HEADER_INT, .value = 1};
+  ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
+  ElmInt three = (ElmInt){.header = HEADER_INT, .value = 3};
 
   Closure* closure = A1(&user_project_closure, &outerScopeValue);
   Closure* curried = A1(closure, &two);
@@ -195,19 +195,19 @@ void test_apply(void) {
     safe_printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(&outerScopeValue),
         (int)outerScopeValue.header.tag,
-        outerScopeValue.int_f64,
+        outerScopeValue.value,
         hex(&outerScopeValue, sizeof(ElmInt)));
 
     safe_printf("two addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(&two),
         (int)two.header.tag,
-        two.int_f64,
+        two.value,
         hex(&two, sizeof(ElmInt)));
 
     safe_printf("three addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(&three),
         (int)three.header.tag,
-        three.int_f64,
+        three.value,
         hex(&three, sizeof(ElmInt)));
 
     safe_printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n",
@@ -225,12 +225,12 @@ void test_apply(void) {
     safe_printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
         hex_ptr(answer),
         (int)answer->header.tag,
-        answer->int_f64,
+        answer->value,
         hex(answer, sizeof(ElmInt)));
     safe_printf("\n");
   }
 
-  ElmInt expected_answer = (ElmInt){.header = HEADER_INT, .int_f64 = 6};
+  ElmInt expected_answer = (ElmInt){.header = HEADER_INT, .value = 6};
   mu_assert("Utils_apply: Example function call should return ElmInt 6",
       memcmp(answer, &expected_answer, sizeof(ElmInt)) == 0);
 }
@@ -249,8 +249,8 @@ void test_eq(void) {
   mu_assert("Expect: True /= False", A2(&Utils_equal, &True, &False) == &False);
   mu_assert("Expect: False /= True", A2(&Utils_equal, &False, &True) == &False);
 
-  ElmInt two = (ElmInt){.header = HEADER_INT, .int_f64 = 2};
-  ElmInt three = (ElmInt){.header = HEADER_INT, .int_f64 = 3};
+  ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
+  ElmInt three = (ElmInt){.header = HEADER_INT, .value = 3};
 
   mu_assert("Expect: 2 == 2", A2(&Utils_equal, &two, &two) == &True);
   mu_assert("Expect: 2 /= 3", A2(&Utils_equal, &two, &three) == &False);
@@ -328,7 +328,7 @@ void test_eq(void) {
   mu_assert("Expect: (3,2) /= (2,2)", A2(&Utils_equal, tuple32, tuple22) == &False);
   mu_assert("Expect: (2,3) /= (2,2)", A2(&Utils_equal, tuple23, tuple22) == &False);
 
-  ElmInt one = (ElmInt){.header = HEADER_INT, .int_f64 = 1};
+  ElmInt one = (ElmInt){.header = HEADER_INT, .value = 1};
   Tuple3* tuple123 = newTuple3(&one, &two, &three);
   Tuple3* tuple123a = newTuple3(&one, &two, &three);
   Tuple3* tuple111 = newTuple3(&one, &one, &one);
@@ -468,9 +468,9 @@ void test_compare() {
   mu_assert("Expect: 'B' > 'A'", A2(&Utils_compare, &b, &a1) == &g_elm_core_Basics_GT);
 
   if (verbose) safe_printf("\nTuple2\n");
-  ElmInt one = (ElmInt){.header = HEADER_INT, .int_f64 = 1};
-  ElmInt two = (ElmInt){.header = HEADER_INT, .int_f64 = 2};
-  ElmInt three = (ElmInt){.header = HEADER_INT, .int_f64 = 3};
+  ElmInt one = (ElmInt){.header = HEADER_INT, .value = 1};
+  ElmInt two = (ElmInt){.header = HEADER_INT, .value = 2};
+  ElmInt three = (ElmInt){.header = HEADER_INT, .value = 3};
 
   Tuple2* tuple23 = newTuple2(&two, &three);
   Tuple2* tuple23a = newTuple2(&two, &three);
