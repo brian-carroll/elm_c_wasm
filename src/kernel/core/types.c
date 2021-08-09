@@ -44,7 +44,7 @@ Tuple3* newTuple3(void* a, void* b, void* c) {
 ElmInt* newElmInt(i32 value) {
   ElmInt* p = GC_allocate(true, SIZE_INT);
   p->header = (Header)HEADER_INT;
-  p->value = value;
+  p->int_f64 = value;
   if (Debug_is_target_in_range(p, (size_t*)p + p->header.size)) {
     Debug_pretty("allocation at target address", p);
   }

@@ -18,7 +18,7 @@ void Debug_toStringHelp(int depth, void* p, StringBuilder* sb) {
 
   switch (v->header.tag) {
     case Tag_Int: {
-      stbsp_snprintf(ascii_buf, sizeof(ascii_buf), "%d", v->elm_int.value);
+      stbsp_snprintf(ascii_buf, sizeof(ascii_buf), "%lld", (i64)v->elm_int.int_f64);
       StringBuilder_copyAscii(sb, ascii_buf);
       return;
     }

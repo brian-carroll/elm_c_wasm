@@ -1,6 +1,6 @@
-# ElmInt -> Number
+# Bugs TODO
 
-- js-array.c & json decode, platform: ElmInt value used as index
+- Parts of language test demo not re-tested since the GC rewrite
 
 
 # Remaining SPA example bugs

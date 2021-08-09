@@ -1,13 +1,13 @@
 #include "../kernel/core/core.h"
 #include "test.h"
 
-static ElmInt one = {.header = HEADER_INT, .value = 1};
-static ElmInt two = {.header = HEADER_INT, .value = 2};
-static ElmInt three = {.header = HEADER_INT, .value = 3};
-static ElmInt four = {.header = HEADER_INT, .value = 4};
-static ElmInt five = {.header = HEADER_INT, .value = 5};
-static ElmInt nine = {.header = HEADER_INT, .value = 9};
-static ElmInt ten = {.header = HEADER_INT, .value = 10};
+static ElmInt one = {.header = HEADER_INT, .int_f64 = 1};
+static ElmInt two = {.header = HEADER_INT, .int_f64 = 2};
+static ElmInt three = {.header = HEADER_INT, .int_f64 = 3};
+static ElmInt four = {.header = HEADER_INT, .int_f64 = 4};
+static ElmInt five = {.header = HEADER_INT, .int_f64 = 5};
+static ElmInt nine = {.header = HEADER_INT, .int_f64 = 9};
+static ElmInt ten = {.header = HEADER_INT, .int_f64 = 10};
 
 void test_List_create() {
   Cons* l1 = List_create(3, (void*[]){&one, &two, &three});

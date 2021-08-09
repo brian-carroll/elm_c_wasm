@@ -307,8 +307,8 @@ void* eval_String_slice(void* args[]) {
   ElmString* str = args[2];
   size_t len = code_units(str);
 
-  i32 start = slice_wrap_index(argStart->value, (i32)len);
-  i32 end = slice_wrap_index(argEnd->value, (i32)len);
+  i32 start = slice_wrap_index(argStart->int_f64, (i32)len);
+  i32 end = slice_wrap_index(argEnd->int_f64, (i32)len);
   if (start > end) {
     return newElmString(0);
   }
@@ -575,7 +575,7 @@ void* String_fromNumber_eval(void* args[]) {
   int n_chars;
 
   if (box->i.header.tag == Tag_Int) {
-    n_chars = stbsp_snprintf(buf, sizeof(buf), "%ld", (i64)box->i.value);
+    n_chars = stbsp_snprintf(buf, sizeof(buf), "%ld", (i64)box->i.int_f64);
   } else {
     n_chars = stbsp_snprintf(buf, sizeof(buf), "%.16g", box->f.value);
   }

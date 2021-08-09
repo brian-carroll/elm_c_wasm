@@ -10,7 +10,7 @@ int ftest(ElmFloat* actual, f64 expected) {
 }
 
 int itest(ElmInt* actual, i32 expected) {
-  return actual->value == expected;
+  return (i32)actual->int_f64 == expected;
 }
 
 void test_number_binops() {

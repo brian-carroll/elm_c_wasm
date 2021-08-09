@@ -42,8 +42,8 @@ void* eval_JsArray_initialize(void* args[]) {
   ElmInt* offset = args[1];
   Closure* func = args[2];
 
-  u32 len = size->value;
-  i32 o = offset->value;
+  u32 len = size->int_f64;
+  i32 o = offset->int_f64;
   Custom* result = newCustom(JSON_VALUE_ARRAY, len, NULL);
 
   for (size_t i = 0; i < len; i++) {
@@ -66,7 +66,7 @@ void* eval_JsArray_initializeFromList(void* args[]) {
   ElmInt* max = args[0];
   Cons* ls = args[1];
 
-  ptrdiff_t max_len = max->value;
+  ptrdiff_t max_len = max->int_f64;
   Custom* result = newCustom(JSON_VALUE_ARRAY, max_len, NULL);
 
   ptrdiff_t i = 0;
@@ -92,7 +92,8 @@ Closure JsArray_initializeFromList = {
 void* eval_JsArray_unsafeGet(void* args[]) {
   ElmInt* index = args[0];
   Custom* array = args[1];
-  return array->values[index->value];
+  i32 i = index->int_f64;
+  return array->values[i];
 }
 Closure JsArray_unsafeGet = {
     .header = HEADER_CLOSURE(0),
@@ -109,7 +110,8 @@ void* eval_JsArray_unsafeSet(void* args[]) {
   Custom* array = args[2];
 
   Custom* result = Utils_clone(array);
-  result->values[index->value] = value;
+  i32 i = index->int_f64;
+  result->values[i] = value;
   return result;
 }
 Closure JsArray_unsafeSet = {
@@ -213,7 +215,7 @@ void* eval_JsArray_indexedMap(void* args[]) {
   ElmInt* offset = args[1];
   Custom* array = args[2];
 
-  i32 o = offset->value;
+  i32 o = offset->int_f64;
   i32 len = custom_params(array);
   Custom* result = newCustom(JSON_VALUE_ARRAY, len, NULL);
   for (i32 i = 0; i < len; i++) {
@@ -237,10 +239,10 @@ void* eval_JsArray_slice(void* args[]) {
   ElmInt* to = args[1];
   Custom* array = args[2];
 
-  i32 len = to->value - from->value;
+  i32 len = (i32)to->int_f64 - (i32)from->int_f64;
   Custom* result = newCustom(JSON_VALUE_ARRAY, len, NULL);
   i32 j = 0;
-  for (i32 i = from->value; i < to->value; i++) {
+  for (i32 i = from->int_f64; i < to->int_f64; i++) {
     result->values[j] = array->values[i];
     j++;
   }
@@ -263,7 +265,7 @@ void* eval_JsArray_appendN(void* args[]) {
 
   i32 destLen = custom_params(dest);
   i32 sourceLen = custom_params(source);
-  i32 itemsToCopy = n->value - destLen;
+  i32 itemsToCopy = n->int_f64 - destLen;
 
   if (itemsToCopy > sourceLen) {
     itemsToCopy = sourceLen;

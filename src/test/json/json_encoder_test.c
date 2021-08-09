@@ -6,7 +6,7 @@
 
 ElmInt int0 = {
     .header = HEADER_INT,
-    .value = 0,
+    .int_f64 = 0,
 };
 
 void test_Json_encode_boolean() {
@@ -233,7 +233,7 @@ void test_Json_encode_object() {
   ElmString* age = create_string("age");
   ElmInt int42 = {
       .header = HEADER_INT,
-      .value = 42,
+      .int_f64 = 42,
   };
   ElmFloat float42 = {
       .header = HEADER_FLOAT,

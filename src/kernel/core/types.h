@@ -129,7 +129,8 @@ Tuple3* newTuple3(void* a, void* b, void* c);
 
 typedef struct elm_int {
   Header header;
-  i32 value;
+  u32 padding;
+  f64 int_f64;
 } ElmInt;
 ElmInt* newElmInt(i32 value);
 

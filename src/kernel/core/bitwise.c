@@ -4,7 +4,7 @@
 void* eval_Bitwise_and(void* args[]) {
   ElmInt* a = args[0];
   ElmInt* b = args[1];
-  return newElmInt(a->value & b->value);
+  return newElmInt((i32)a->int_f64 & (i32)b->int_f64);
 }
 Closure Bitwise_and = {
   .header = HEADER_CLOSURE(0),
@@ -15,7 +15,7 @@ Closure Bitwise_and = {
 void* eval_Bitwise_or(void* args[]) {
   ElmInt* a = args[0];
   ElmInt* b = args[1];
-  return newElmInt(a->value | b->value);
+  return newElmInt((i32)a->int_f64 | (i32)b->int_f64);
 }
 Closure Bitwise_or = {
   .header = HEADER_CLOSURE(0),
@@ -26,7 +26,7 @@ Closure Bitwise_or = {
 void* eval_Bitwise_xor(void* args[]) {
   ElmInt* a = args[0];
   ElmInt* b = args[1];
-  return newElmInt(a->value ^ b->value);
+  return newElmInt((i32)a->int_f64 ^ (i32)b->int_f64);
 }
 Closure Bitwise_xor = {
   .header = HEADER_CLOSURE(0),
@@ -36,7 +36,7 @@ Closure Bitwise_xor = {
 
 void* eval_Bitwise_complement(void* args[]) {
   ElmInt* a = args[0];
-  return newElmInt(~a->value);
+  return newElmInt(~(i32)a->int_f64);
 }
 Closure Bitwise_complement = {
   .header = HEADER_CLOSURE(0),
@@ -47,7 +47,7 @@ Closure Bitwise_complement = {
 void* eval_Bitwise_shiftLeftBy(void* args[]) {
   ElmInt* offset = args[0];
   ElmInt* a = args[1];
-  return newElmInt(a->value << offset->value);
+  return newElmInt((i32)a->int_f64 << (i32)offset->int_f64);
 }
 Closure Bitwise_shiftLeftBy = {
   .header = HEADER_CLOSURE(0),
@@ -58,7 +58,7 @@ Closure Bitwise_shiftLeftBy = {
 void* eval_Bitwise_shiftRightBy(void* args[]) {
   ElmInt* offset = args[0];
   ElmInt* a = args[1];
-  return newElmInt(a->value >> offset->value);
+  return newElmInt((i32)a->int_f64 >> (i32)offset->int_f64);
 }
 Closure Bitwise_shiftRightBy = {
   .header = HEADER_CLOSURE(0),
@@ -69,8 +69,9 @@ Closure Bitwise_shiftRightBy = {
 void* eval_Bitwise_shiftRightZfBy(void* args[]) {
   ElmInt* offset = args[0];
   ElmInt* a = args[1];
-  u32 a_unsigned = a->value;
-  return newElmInt(a_unsigned >> offset->value);
+  i64 a_signed = a->int_f64;
+  u64 a_unsigned = a_signed & (u64)0xffffffff;
+  return newElmInt(a_unsigned >> (i32)offset->int_f64);
 }
 Closure Bitwise_shiftRightZfBy = {
   .header = HEADER_CLOSURE(0),
