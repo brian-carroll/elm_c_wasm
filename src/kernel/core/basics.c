@@ -104,10 +104,9 @@ Closure Basics_idiv = {
     .max_values = 2,
 };
 
-/**
- * pow
- */
-static i32 ipow(i32 base, i32 ex) { // unused :(
+#if 0
+// I was all proud of this, and now it's unused! Maybe some day...
+static i32 ipow(i32 base, i32 ex) {
   if (ex < 0) {
     if (base == 1) {
       return 1;
@@ -136,6 +135,11 @@ static i32 ipow(i32 base, i32 ex) { // unused :(
   }
   return result;
 }
+#endif
+
+/**
+ * pow
+ */
 void* eval_pow(void* args[]) {
   ElmFloat* x = args[0];
   ElmFloat* y = args[1];
