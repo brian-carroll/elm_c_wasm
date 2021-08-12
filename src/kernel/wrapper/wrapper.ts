@@ -244,9 +244,7 @@ function wrapWasmElmApp(
     const size = (header & SIZE_MASK) >>> SIZE_SHIFT;
 
     switch (tag) {
-      case Tag.Int: {
-        return mem32[index + 1];
-      }
+      case Tag.Int:
       case Tag.Float: {
         return emscriptenModule._readF64(addr + 2 * WORD);
       }
@@ -461,25 +459,14 @@ function wrapWasmElmApp(
     }
     switch (typeof elmValue) {
       case 'number': {
-        // There's no way to tell `1 : Int` from `1.0 : Float` at this low level. But `1.2` is definitely a Float.
-        // So _for now_ take a _horribly unsafe_ guess, by checking if it's a round number or not.
-        // Not cool. This is Elm! Long term, the ambiguity needs to be solved at some higher level.
-        // Maybe some lib like `JSON.Encode` so the app dev decides? Pity for it not to be automatic though!
-        const isRoundNumberSoGuessInt = elmValue === Math.round(elmValue);
-        if (isRoundNumberSoGuessInt) {
-          const addr = emscriptenModule._allocate(2);
-          const index = addr >> 2;
-          mem32[index] = encodeHeader(Tag.Int, 2);
-          mem32[index + 1] = elmValue;
-          return addr;
-        } else {
-          const addr = emscriptenModule._allocate(4);
-          const index = addr >> 2;
-          mem32[index] = encodeHeader(Tag.Float, 4);
-          mem32[index + 1] = 0;
-          emscriptenModule._writeF64(addr + 8, elmValue);
-          return addr;
-        }
+        // We can't tell Int from Float so we made them the same!
+        const addr = emscriptenModule._allocate(4);
+        const index = addr >> 2;
+        const tag = elmValue === (elmValue | 0) ? Tag.Int : Tag.Float;
+        mem32[index] = encodeHeader(tag, 4);
+        mem32[index + 1] = 0;
+        emscriptenModule._writeF64(addr + 8, elmValue);
+        return addr;
       }
 
       case 'string': {
