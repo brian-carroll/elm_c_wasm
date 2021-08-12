@@ -132,7 +132,7 @@ void stringify(u32 indent, u32 indent_current, void* p, StringBuilder* sb) {
   ElmValue* v = p;
   Tag tag = v->header.tag;
 
-  if (p == &Json_encodeNull) {
+  if (p == &Json_null) {
     StringBuilder_copyAscii(sb, "null");
   } else if (p == &True) {
     StringBuilder_copyAscii(sb, "true");

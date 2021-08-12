@@ -20,7 +20,7 @@ void test_Json_encode_boolean() {
 
 void test_Json_encode_null() {
   expect_equal("should encode null to 'null'",
-      A2(&Json_encode, &int0, WRAP(&Json_encodeNull)),
+      A2(&Json_encode, &int0, WRAP(&Json_null)),
       create_string("null"));
 }
 

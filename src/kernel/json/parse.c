@@ -47,7 +47,7 @@ void* parse_null(u16** cursor, u16* end) {
 
   if (len >= 4 && bytes64[0] == *fast_compare_null) {
     *cursor += 4;
-    return &Json_encodeNull;
+    return &Json_null;
   } else {
     return NULL;
   }

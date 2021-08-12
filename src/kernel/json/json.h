@@ -66,7 +66,8 @@ void* Json_runHelp(Custom* decoder, ElmValue* value);
 
 // Encode
 
-extern Custom Json_encodeNull;
+extern Custom Json_null; // represents literal JS `null` (unwrapped)
+extern Custom Json_encodeNull; // Json-wrapped
 extern Closure Json_wrap;
 extern Closure Json_unwrap;
 extern Closure Json_emptyArray;

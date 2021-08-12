@@ -178,7 +178,7 @@ void test_Json_decodeList(void* runner) {
   test_decode_err(runner,
       decoder,
       "[null]",
-      err(errIndex(0, errFailure("Expecting an INT", &Json_encodeNull))));
+      err(errIndex(0, errFailure("Expecting an INT", &Json_null))));
 }
 
 void test_Json_decodeArray(void* runner) {
@@ -194,7 +194,7 @@ void test_Json_decodeArray(void* runner) {
   test_decode_err(runner,
       decoder,
       "[null]",
-      err(errIndex(0, errFailure("Expecting an INT", &Json_encodeNull))));
+      err(errIndex(0, errFailure("Expecting an INT", &Json_null))));
 }
 
 void test_Json_decodeField(void* runner) {
@@ -214,7 +214,7 @@ void test_Json_decodeField(void* runner) {
   test_decode_err(runner,
       decoder,
       "{\"myField\":null}",
-      err(errField(fld, errFailure("Expecting an INT", &Json_encodeNull))));
+      err(errField(fld, errFailure("Expecting an INT", &Json_null))));
 }
 
 void test_Json_decodeIndex(void* runner) {
@@ -244,7 +244,7 @@ void test_Json_decodeIndex(void* runner) {
   test_decode_err(runner,
       decoder,
       "[{},\"hello\",null,123]",
-      err(errIndex(idx, errFailure("Expecting an INT", &Json_encodeNull))));
+      err(errIndex(idx, errFailure("Expecting an INT", &Json_null))));
 }
 
 void test_Json_decodeKeyValuePairs(void* runner) {
@@ -265,7 +265,7 @@ void test_Json_decodeKeyValuePairs(void* runner) {
   test_decode_err(runner,
       decoder,
       "{ \"a\": 1, \"b\": null, \"c\": 3 }",
-      err(errField("b", errFailure("Expecting an INT", &Json_encodeNull))));
+      err(errField("b", errFailure("Expecting an INT", &Json_null))));
 }
 
 ElmInt mapArgs = {
@@ -375,12 +375,12 @@ void test_Json_andThen(void* runner) {
   test_decode_err(runner,
       decoder,
       "{ \"dataField\": null }",
-      err(errField("dataField", errFailure("Expecting a STRING", &Json_encodeNull))));
+      err(errField("dataField", errFailure("Expecting a STRING", &Json_null))));
 
   test_decode_err(runner,
       decoder,
       "{ \"dataField\": \"foo\", \"foo\": null }",
-      err(errField("foo", errFailure("Expecting an INT", &Json_encodeNull))));
+      err(errField("foo", errFailure("Expecting an INT", &Json_null))));
 }
 
 void test_Json_oneOf(void* runner) {

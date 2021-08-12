@@ -70,7 +70,7 @@ Custom Json_decodeString = {
 
 void* eval_Json_decodeList(void* args[]) {
   void* decoder = args[0];
-  return newCustom(DECODER_LIST, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_LIST, 2, ((void*[]){&Json_null, decoder}));
 }
 Closure Json_decodeList = {
     .header = HEADER_CLOSURE(0),
@@ -80,7 +80,7 @@ Closure Json_decodeList = {
 
 void* eval_Json_decodeArray(void* args[]) {
   void* decoder = args[0];
-  return newCustom(DECODER_ARRAY, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_ARRAY, 2, ((void*[]){&Json_null, decoder}));
 }
 Closure Json_decodeArray = {
     .header = HEADER_CLOSURE(0),
@@ -90,8 +90,7 @@ Closure Json_decodeArray = {
 
 void* eval_Json_decodeNull(void* args[]) {
   void* value = args[0];
-  return newCustom(
-      DECODER_NULL, 3, ((void*[]){&Json_encodeNull, &Json_encodeNull, value}));
+  return newCustom(DECODER_NULL, 3, ((void*[]){&Json_null, &Json_null, value}));
 }
 Closure Json_decodeNull = {
     .header = HEADER_CLOSURE(0),
@@ -105,9 +104,9 @@ void* eval_Json_decodeField(void* args[]) {
   return newCustom(DECODER_FIELD,
       4,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
+          /*a*/ &Json_null,
           /*b*/ decoder,
-          /*c*/ &Json_encodeNull,
+          /*c*/ &Json_null,
           /*d*/ field,
       }));
 }
@@ -123,10 +122,10 @@ void* eval_Json_decodeIndex(void* args[]) {
   return newCustom(DECODER_INDEX,
       5,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
+          /*a*/ &Json_null,
           /*b*/ decoder,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
           /*e*/ index,
       }));
 }
@@ -138,7 +137,7 @@ Closure Json_decodeIndex = {
 
 void* eval_Json_decodeKeyValuePairs(void* args[]) {
   void* decoder = args[0];
-  return newCustom(DECODER_KEY_VALUE, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_KEY_VALUE, 2, ((void*[]){&Json_null, decoder}));
 }
 Closure Json_decodeKeyValuePairs = {
     .header = HEADER_CLOSURE(0),
@@ -152,13 +151,13 @@ void* eval_Json_andThen(void* args[]) {
   return newCustom(DECODER_AND_THEN,
       8,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
+          /*a*/ &Json_null,
           /*b*/ decoder,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
-          /*e*/ &Json_encodeNull,
-          /*f*/ &Json_encodeNull,
-          /*g*/ &Json_encodeNull,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
+          /*e*/ &Json_null,
+          /*f*/ &Json_null,
+          /*g*/ &Json_null,
           /*h*/ callback,
       }));
 }
@@ -173,12 +172,12 @@ void* eval_Json_oneOf(void* args[]) {
   return newCustom(DECODER_ONE_OF,
       7,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
-          /*b*/ &Json_encodeNull,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
-          /*e*/ &Json_encodeNull,
-          /*f*/ &Json_encodeNull,
+          /*a*/ &Json_null,
+          /*b*/ &Json_null,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
+          /*e*/ &Json_null,
+          /*f*/ &Json_null,
           /*g*/ decoders,
       }));
 }
@@ -201,11 +200,11 @@ void* eval_Json_mapMany(void* args[]) {
   return newCustom(DECODER_MAP,
       7,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
-          /*b*/ &Json_encodeNull,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
-          /*e*/ &Json_encodeNull,
+          /*a*/ &Json_null,
+          /*b*/ &Json_null,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
+          /*e*/ &Json_null,
           /*f*/ f,
           /*g*/ decoders,
       }));
@@ -466,7 +465,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return Json_expecting(&str_err_String, value);
 
     case DECODER_NULL:
-      if (&value->custom == &Json_encodeNull) {
+      if (&value->custom == &Json_null) {
         return TAIL_RESULT_OK(decoder->values[JsonField_value]);
       }
       return Json_expecting(&str_err_Null, value);

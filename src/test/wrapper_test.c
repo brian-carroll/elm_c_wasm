@@ -63,7 +63,7 @@ static void init_test_values() {
 
   int i = 0;
   /*  0 */ test_values[i++] = NULL;
-  /*  1 */ test_values[i++] = &Json_encodeNull;
+  /*  1 */ test_values[i++] = &Json_null;
   /*  2 */ test_values[i++] = newElmInt(123);
   /*  3 */ test_values[i++] = newElmFloat(3.14);
   /*  4 */ test_values[i++] = create_string("hello world");

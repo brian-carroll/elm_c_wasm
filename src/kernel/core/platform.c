@@ -556,7 +556,7 @@ Closure* Platform_incomingPort(size_t managerId, ElmString* name, Custom* decode
 // effects init
 JsRef* Platform_setupIncomingPort(size_t managerId, PortConfig* config) {
   void* succeedArgs[1];
-  succeedArgs[0] = &Json_encodeNull;
+  succeedArgs[0] = &Json_null;
   config->init = eval_Scheduler_succeed(succeedArgs);
   config->onEffects =
       newClosure(1, 4, eval_Platform_incomingPortOnEffects, (void*[]){config});

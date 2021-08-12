@@ -3,9 +3,15 @@
 #include "json.h"
 
 
-Custom Json_encodeNull = {
+Custom Json_null = {
     .header = HEADER_CUSTOM(0),
     .ctor = JSON_VALUE_NULL,
+};
+
+Custom Json_encodeNull = {
+    .header = HEADER_CUSTOM(1),
+    .ctor = JSON_VALUE_WRAP,
+    .values = {&Json_null},
 };
 
 

@@ -40,7 +40,7 @@ EMSCRIPTEN_KEEPALIVE void* getFalse() {
 }
 
 EMSCRIPTEN_KEEPALIVE void* getJsNull() {
-  return &Json_encodeNull;
+  return &Json_null;
 }
 
 EMSCRIPTEN_KEEPALIVE void* allocate(size_t size) {

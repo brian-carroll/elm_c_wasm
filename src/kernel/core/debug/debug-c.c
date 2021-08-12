@@ -473,7 +473,7 @@ static void Debug_prettyHelp(int indent, void* p) {
     safe_printf("()\n");
     return;
   }
-  if (p == &Json_encodeNull) {
+  if (p == &Json_null) {
     safe_printf("Json.null\n");
     return;
   }

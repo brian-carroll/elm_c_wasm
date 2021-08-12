@@ -79,7 +79,7 @@ static void* writeJsonValue(ElmValue* value, JsShape jsShape) {
     return Utils_clone(value);
   }
   Custom* c = &value->custom;
-  if (c == &Json_encodeNull || c == &True || c == &False) {
+  if (c == &Json_null || c == &True || c == &False) {
     return c;
   }
   if (c->ctor == JSON_VALUE_WRAP) {
@@ -114,7 +114,7 @@ void* getJsRefObjectField(u32 jsRefId, ElmString* fieldStringAddr) {
     return 0;
   }
   u32 len = custom_params(obj);
-  void* value = &Json_encodeNull;
+  void* value = &Json_null;
   u32 i;
   for (i = 0; i < len; i += 2) {
     ElmString* field = obj->values[i];
