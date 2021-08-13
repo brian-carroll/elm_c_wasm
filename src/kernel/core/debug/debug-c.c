@@ -11,6 +11,21 @@ extern char stack_flags[GC_STACK_MAP_SIZE];
 
 #ifdef DEBUG
 
+void Debug_assert_sanity(char* file, int line, char* code_text, void* value) {
+  if (!sanity_check(value)) {
+    size_t* words = (size_t*)value;
+    Header* h = (Header*)value;
+    size_t size = h->size;
+    if (size < 4) size = 4;
+    if (size > 16) size = 16;
+    safe_printf("\nASSERT_SANITY(%s) failed at %s:%d\n", code_text, file, line);
+    print_heap_range(words, words + size);
+    safe_printf("\n");
+    exit(1);
+  }
+}
+
+
 static size_t target_offsets[] = {
     // 0x9b820,
     // 0x40bd0,

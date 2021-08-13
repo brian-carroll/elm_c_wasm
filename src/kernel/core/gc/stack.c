@@ -100,7 +100,7 @@ GcStackMapIndex GC_stack_push_frame(char func_type_flag, void* func) {
 // Track when a function returns
 void GC_stack_pop_frame(void* func, void* result, GcStackMapIndex frame) {
   GcStackMap* sm = &gc_state.stack_map;
-  assert(sanity_check(result));
+  ASSERT_SANITY(result);
   assert(stack_flags[frame] == 'F');
   assert(stack_values[frame + 1] == func);
 

@@ -71,13 +71,7 @@ static void mark_trace(GcState* state, ElmValue* root, size_t* ignore_below) {
   do {
     ElmValue* v = mark_stack[--next_index];  // pop
     size_t* words = (size_t*)v;
-    // assert(sanity_check(v)); // !!
-    if (!sanity_check(v)) {
-      print_stack_map();
-      print_heap_range(words - 64, words + 16);
-      Debug_print_offset("corrupt", v);
-      exit(1);
-    }
+    ASSERT_SANITY(v);
 
     bool already_marked = mark_words(state, v, v->header.size);
     if (already_marked) continue;

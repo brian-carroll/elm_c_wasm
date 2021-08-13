@@ -13,6 +13,13 @@ extern Closure Debug_todo;
 // C runtime debugging
 //
 
+#ifndef DEBUG
+#define ASSERT_SANITY(...)
+#else
+#define ASSERT_SANITY(elmValuePtr) Debug_assert_sanity(__FILE__, __LINE__, #elmValuePtr, elmValuePtr)
+void Debug_assert_sanity(char* file, int line, char* code_text, void* value);
+#endif
+
 #if TARGET_64BIT
 #define FORMAT_HEX "%016zx"
 #define FORMAT_PTR "%16p"

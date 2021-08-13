@@ -153,19 +153,19 @@ void* eval_trashyFold(void* args[]) {
   Cons* acc = args[2];
   ElmInt* b = acc->head;
 
-  assert(sanity_check(free_var));
-  assert(sanity_check(a));
-  assert(sanity_check(acc));
-  assert(sanity_check(b));
+  ASSERT_SANITY(free_var);
+  ASSERT_SANITY(a);
+  ASSERT_SANITY(acc);
+  ASSERT_SANITY(b);
 
   ElmInt* c = A2(&Basics_add, a, free_var);
-  assert(sanity_check(c));
+  ASSERT_SANITY(c);
 
   ElmInt* d = A2(&Basics_sub, c, b);
-  assert(sanity_check(d));
+  ASSERT_SANITY(d);
 
   Cons* result = newCons(d, newCons(c, newCons(b, pNil)));
-  assert(sanity_check(result));
+  ASSERT_SANITY(result);
 
   return result;
 }
@@ -177,22 +177,22 @@ Closure trashyFold = {
 
 void* eval_listNonsense(void* args[]) {
   Cons* list = args[0];
-  assert(sanity_check(list));
+  ASSERT_SANITY(list);
 
   Cons* acc = newCons(newElmInt(64), &Nil);
-  assert(sanity_check(acc));
+  ASSERT_SANITY(acc);
 
   ElmInt* free_var = newElmInt(123);
-  assert(sanity_check(free_var));
+  ASSERT_SANITY(free_var);
 
   Closure* partial = A1(&trashyFold, free_var);
-  assert(sanity_check(partial));
+  ASSERT_SANITY(partial);
 
   Cons* folded = A3(&g_elm_core_List_foldl, partial, acc, list);
-  assert(sanity_check(folded));
+  ASSERT_SANITY(folded);
 
   Cons* reversed = A1(&g_elm_core_List_reverse, folded);
-  assert(sanity_check(reversed));
+  ASSERT_SANITY(reversed);
 
   return reversed;
 }
@@ -218,11 +218,11 @@ void* eval_infinite_loop(void* args[]) {
   Cons* list = args[0];
   ElmInt* max_gc_cycles = args[1];
 
-  assert(sanity_check(list));
+  ASSERT_SANITY(list);
 
   while (count_gc_cycles < max_gc_cycles->value) {
     list = A1(&listNonsense, list);
-    assert(sanity_check(list));
+    ASSERT_SANITY(list);
     GC_stack_tailcall(2, list, max_gc_cycles);
   }
 
