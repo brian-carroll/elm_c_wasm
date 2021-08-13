@@ -27,7 +27,7 @@ void safe_vprintf(const char* format, va_list va) {
   int count = stbsp_vsnprintf(buf, sizeof(buf), format, va);
 
   int written = WRITE_BYTES_TO_STDOUT(buf, count);
-  assert(written == count);
+  ASSERT_EQUAL(written, count);
 }
 
 void safe_printf(const char* format, ...) {

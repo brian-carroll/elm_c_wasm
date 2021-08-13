@@ -68,7 +68,7 @@ void GC_stack_push_value(void* value) {
       value);
 #endif
   sm->index++;
-  assert(sm->index < GC_STACK_MAP_SIZE);
+  ASSERT(sm->index < GC_STACK_MAP_SIZE, sm->index);
 }
 
 
@@ -101,8 +101,8 @@ GcStackMapIndex GC_stack_push_frame(char func_type_flag, void* func) {
 void GC_stack_pop_frame(void* func, void* result, GcStackMapIndex frame) {
   GcStackMap* sm = &gc_state.stack_map;
   ASSERT_SANITY(result);
-  assert(stack_flags[frame] == 'F');
-  assert(stack_values[frame + 1] == func);
+  ASSERT_EQUAL(stack_flags[frame], 'F');
+  ASSERT_EQUAL(stack_values[frame + 1], func);
 
   GcStackMapIndex parent = (size_t)stack_values[frame];
 

@@ -82,7 +82,7 @@ static void init_test_values() {
   /* 17 */ test_values[i++] = task;
   /* 18 */ test_values[i++] = proc;
   test_values_len = i;
-  assert(test_values_len < ARRAY_LEN(test_values));
+  ASSERT(test_values_len < ARRAY_LEN(test_values), test_values_len);
 }
 
 void* eval_createTuple3(void* args[]) {

@@ -183,7 +183,7 @@ void test_all() {
 int main(int argc, char** argv) {
   GC_init();
 
-  assert(NUM_SUITES == ARRAY_LEN(suites));
+  ASSERT_EQUAL(NUM_SUITES, ARRAY_LEN(suites));
 
   char options[NUM_OPTIONS + 1] = "va";
   long_options[0] = (struct option){"verbose", no_argument, NULL, 'v'};

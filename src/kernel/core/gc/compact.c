@@ -105,7 +105,8 @@ void compact(GcState* state, size_t* compact_start) {
       size_t* first_child_field = next_value - n_children;
 
       // sanity check for corrupted data
-      assert(sanity_check(v) && next_value < heap->end);
+      ASSERT_SANITY(v);
+      ASSERT(next_value < heap->end, next_value);
 
       // Copy all the non-pointer data that comes before child pointers
       while (from < first_child_field) {

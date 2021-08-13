@@ -51,7 +51,7 @@ void* eval_stack_tail_overflow(void* args[]) {
         return list;
       }
       default: {
-        assert(false);
+        ASSERT(false, count->value);
       }
     }
   }

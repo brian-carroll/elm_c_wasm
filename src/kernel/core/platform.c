@@ -330,7 +330,7 @@ void Platform_gatherEffects(
   switch (bag->ctor) {
     case MANAGER_MSG_LEAF: {
       i32 home = bag->leaf.home->value;
-      assert(home >= 0 && home < Platform_managers_size);
+      ASSERT(home >= 0 && home < Platform_managers_size, home);
       ManagerMsg* effect = Platform_toEffect(isCmd, home, taggers, bag->leaf.value);
       effectsDict->values[home] =
           Platform_insert(isCmd, effect, effectsDict->values[home]);

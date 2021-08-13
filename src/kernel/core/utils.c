@@ -71,7 +71,7 @@ void* Utils_access_eval(void* args[]) {
     JsRef* jsRef = args[1];
     record = jsRefToWasmRecord(jsRef->id);
   }
-  assert(record->header.tag == Tag_Record);
+  ASSERT_EQUAL(record->header.tag, Tag_Record);
   u32 index = fieldgroup_search(record->fieldgroup, field);
 
   if (index == -1) {
@@ -130,7 +130,7 @@ void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
     GC_stack_pop_frame(func, result, stack_frame);
     return result;
   }
-  assert(v->header.tag == Tag_Closure);
+  ASSERT(v->header.tag == Tag_Closure, v->header.tag);
 
   Closure* c = func;
   void** args;
@@ -192,7 +192,7 @@ void* Utils_apply(void* func, u16 n_applied, void* applied[]) {
     // We have more args to apply. Go around again.
     // (The function must have returned another function, since ELm type-checked it)
     c = (Closure*)result;
-    assert(c->header.tag == Tag_Closure);
+    ASSERT(c->header.tag == Tag_Closure, c->header.tag);
     n_applied = n_total - n_done;
     applied = &args[n_done];
   } while (true);

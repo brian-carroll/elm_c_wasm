@@ -277,7 +277,7 @@ void* eval_String_join(void* args[]) {
       cursor = String_copy(cursor, sep);
     }
   }
-  assert(cursor == result->words16 + len16);
+  ASSERT_EQUAL(cursor, result->words16 + len16);
 
   return result;
 }

@@ -281,7 +281,7 @@ void* eval_modBy(void* args[]) {
   i32 modulus = a0->value;
   i32 x = a1->value;
 
-  assert(modulus != 0);
+  ASSERT(modulus != 0, modulus);
   i32 answer = x % modulus;
 
   return newElmInt(((answer > 0 && modulus < 0) || (answer < 0 && modulus > 0))

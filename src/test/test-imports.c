@@ -42,7 +42,7 @@ u32 allocateJsRef(void* value) {
     id++;
   if (id == jsHeapLength) {
     jsHeapLength++;
-    assert(jsHeapLength < JS_HEAP_MAX_LENGTH);
+    ASSERT(jsHeapLength < JS_HEAP_MAX_LENGTH, jsHeapLength);
   }
   jsHeap[id] = (JsHeapEntry){
       .value = value,
@@ -203,7 +203,7 @@ void* testJsonValueRoundTrip(ElmString* jsonStringAddr) {
 
 // emulate the JS parseFloat function in C
 f64 parseFloat(u16* chars16, size_t len16) {
-  assert(len16 <= 32);
+  ASSERT(len16 <= 32, len16);
   char ascii[32];
   int i = 0;
   for (; i < len16; i++) {

@@ -198,11 +198,12 @@ void GC_collect_major() {
   GcState* state = &gc_state;
   size_t* ignore_below = state->heap.start;
 
+#ifdef DEBUG
   if (state->stack_map.index) {
     print_stack_map();
-    safe_printf("ERROR: non-empty stackmap on entering major GC\n");
-    assert(false);
+    ASSERT_EQUAL(state->stack_map.index, 0);
   }
+#endif
   PERF_TIMED_STATEMENT(mark(state, ignore_below));
   TEST_MARK_CALLBACK();
 
@@ -271,11 +272,13 @@ void* GC_execute(Closure* c) {
   ==================================================== */
 
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
-  if (gc_state.stack_map.index) {
+#ifdef DEBUG
+  GcState* state = &gc_state;
+  if (state->stack_map.index) {
     print_stack_map();
-    safe_printf("ERROR: non-empty stackmap on entering GC_init_root\n");
-    assert(false);
+    ASSERT(state->stack_map.index, 0);
   }
+#endif
 
   GC_register_root(global_permanent_ptr);
 

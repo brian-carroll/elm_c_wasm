@@ -35,7 +35,7 @@ void ErrorExit(const char* calling_func, int line_no) {
 
 
 static void* get_initial_system_memory(size_t bytes) {
-  assert(bytes % GC_SYSTEM_MEM_CHUNK == 0);
+  ASSERT(bytes % GC_SYSTEM_MEM_CHUNK == 0, bytes);
   u8* reserved =
       VirtualAlloc(NULL, GC_SYSTEM_RESERVED_BYTES, MEM_RESERVE, PAGE_READWRITE);
   if (!reserved) {
@@ -57,7 +57,7 @@ static void* get_initial_system_memory(size_t bytes) {
 }
 
 void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
-  assert(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0);
+  ASSERT(new_total_bytes % GC_SYSTEM_MEM_CHUNK == 0, new_total_bytes);
   u8* start = (u8*)heap->start;
   u8* end = (u8*)heap->system_end;
   size_t old_total_bytes = end - start;
@@ -93,8 +93,9 @@ static void* get_initial_system_memory(size_t bytes) {
   size_t aligned_addr = (initial_break + GC_BLOCK_BYTES - 1) & GC_BLOCK_MASK;
   void* aligned_break = (void*)aligned_addr;
   void* new_break = aligned_break + bytes;
-  assert(brk(new_break) != -1);
-  assert(sbrk(0) == new_break);
+
+  ASSERT(brk(new_break) != -1, -1);
+  ASSERT_EQUAL(sbrk(0), new_break);
   return aligned_break;
 }
 
@@ -103,8 +104,8 @@ void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   if (new_break == (void*)heap->system_end) {
     return;
   }
-  assert(brk(new_break) != -1);
-  assert(sbrk(0) == new_break);
+  ASSERT(brk(new_break) != -1, -1);
+  ASSERT_EQUAL(sbrk(0), new_break);
 }
 
 #endif

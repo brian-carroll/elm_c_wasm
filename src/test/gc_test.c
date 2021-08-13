@@ -106,7 +106,7 @@ void test_memcpy() {
   }
   src = from + 1;
   dest = to + 1;
-  assert((size_t)dest % sizeof(u64) == sizeof(size_t));
+  ASSERT_EQUAL((size_t)dest % sizeof(u64), sizeof(size_t));
 
   for (size = 1; size <= 6; ++size) {
     test_memcpy_reset(from, to);
@@ -128,7 +128,7 @@ void test_memcpy() {
   }
   src = from;
   dest = to;
-  assert((size_t)dest % sizeof(u64) == 0);
+  ASSERT((size_t)dest % sizeof(u64) == 0, dest);
 
   for (size = 1; size <= 6; ++size) {
     test_memcpy_reset(from, to);
@@ -237,7 +237,7 @@ void* test_execute(Closure* c) {
   //   print_stack_map();
   //   exit(1);
   // }
-  // assert(gc_state.stack_map.index == 0);
+  // ASSERT(state->stack_map.index == 0, state->stack_map.index);
   GcStackMapIndex frame = GC_stack_push_frame('C', c->evaluator);
   GC_stack_push_value(c);
 
@@ -293,7 +293,7 @@ void* eval_generateHeapPattern(void* args[]) {
   i32 nKidsGarbage2 = SIZE_CUSTOM(garbageChunkSize2->value) - SIZE_CUSTOM(0);
   i32 nKidsLive =
       SIZE_CUSTOM(liveChunkSize->value) - SIZE_CUSTOM(0) - SIZE_INT - SIZE_LIST;
-  assert(nKidsLive >= 1);
+  ASSERT(nKidsLive >= 1, nKidsLive);
 
 tce_loop:;
   do {

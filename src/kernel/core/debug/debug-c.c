@@ -11,14 +11,32 @@ extern char stack_flags[GC_STACK_MAP_SIZE];
 
 #ifdef DEBUG
 
-void Debug_assert_sanity(char* file, int line, char* code_text, void* value) {
+void Debug_assert(char* file, int line, const char* function, char* expr_text, char* print_text, bool expr, u64 print_value) {
+  if (!expr) {
+    safe_printf("\nASSERT failed in '%s' at %s:%d\n", function, file, line);
+    safe_printf("   Expected    %s\n", expr_text);
+    safe_printf("   But found   %s == 0x%llx\n\n", print_text, print_value);
+    exit(1);
+  }
+}
+
+void Debug_assert_equal(char* file, int line, const char* function, char* ltext, char* rtext, u64 lvalue, u64 rvalue) {
+  if (lvalue != rvalue) {
+    safe_printf("\nASSERT_EQUAL failed in '%s' at %s:%d\n", function, file, line);
+    safe_printf("   %s = 0x%llx\n", ltext, lvalue);
+    safe_printf("   %s = 0x%llx\n", rtext, rvalue);
+    exit(1);
+  }
+}
+
+void Debug_assert_sanity(char* file, int line, const char* function, char* code_text, void* value) {
   if (!sanity_check(value)) {
     size_t* words = (size_t*)value;
     Header* h = (Header*)value;
     size_t size = h->size;
     if (size < 4) size = 4;
     if (size > 16) size = 16;
-    safe_printf("\nASSERT_SANITY(%s) failed at %s:%d\n", code_text, file, line);
+    safe_printf("\nASSERT_SANITY(%s) failed in '%s' at %s:%d\n", code_text, function, file, line);
     print_heap_range(words, words + size);
     safe_printf("\n");
     exit(1);
@@ -332,7 +350,7 @@ void print_stack_map() {
           safe_printf("%s Wrapper args\n", eval_name);
           break;
         default:
-          assert(false);
+          ASSERT(false, flag);
       }
     } else {
       safe_printf("%2d | %c | " FORMAT_PTR " | ", i, flag, value);

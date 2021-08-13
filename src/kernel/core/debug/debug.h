@@ -14,10 +14,23 @@ extern Closure Debug_todo;
 //
 
 #ifndef DEBUG
+#define ASSERT(...)
+#define ASSERT_EQUAL(...)
 #define ASSERT_SANITY(...)
 #else
-#define ASSERT_SANITY(elmValuePtr) Debug_assert_sanity(__FILE__, __LINE__, #elmValuePtr, elmValuePtr)
-void Debug_assert_sanity(char* file, int line, char* code_text, void* value);
+
+#define ASSERT(check_expr, print_value) \
+  Debug_assert(__FILE__, __LINE__, __FUNCTION__, #check_expr, #print_value, check_expr, (u64)(print_value))
+void Debug_assert(char* file, int line, const char* function, char* expr_text, char* print_text, bool expr, u64 print_value);
+
+#define ASSERT_EQUAL(lhs, rhs) \
+  Debug_assert_equal(__FILE__, __LINE__, __FUNCTION__, #lhs, #rhs, (u64)(lhs), (u64)(rhs))
+void Debug_assert_equal(char* file, int line, const char* function, char* ltext, char* rtext, u64 lvalue, u64 rvalue);
+
+#define ASSERT_SANITY(elmValuePtr) \
+  Debug_assert_sanity(__FILE__, __LINE__, __FUNCTION__, #elmValuePtr, elmValuePtr)
+void Debug_assert_sanity(char* file, int line, const char* function, char* code_text, void* value);
+
 #endif
 
 #if TARGET_64BIT
@@ -41,7 +54,8 @@ bool Debug_is_target_in_range(void* from, void* to);
 #endif
 
 void Debug_pretty(const char* label, void* p);
-void Debug_pretty_with_location(const char* function, int line, const char* label, void* p);
+void Debug_pretty_with_location(
+    const char* function, int line, const char* label, void* p);
 #define DEBUG_PRETTY(expr) Debug_pretty_with_location(__FUNCTION__, __LINE__, #expr, expr)
 
 extern char* Debug_ctors[];

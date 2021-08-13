@@ -11,14 +11,14 @@ bool mark_words(GcState* state, void* p_void, size_t size) {
     return true;  // "already marked" (will not be GC'd, don't trace)
   }
   if (size == 0) return true;
-  assert(p < heap->end);
+  ASSERT(p < heap->end, p);
   if (p + size > heap->end) {
     safe_printf("Marking %p - %p, past heap end at %p\n", p, p + size, heap->end);
     print_state();
     print_stack_map();
     // fflush(0);
   }
-  assert(p + size <= heap->end);
+  ASSERT(p + size <= heap->end, p + size);
 
   size_t first_heap_index = (size_t)(p - heap->start);
   size_t first_bmp_index = first_heap_index / 64;
