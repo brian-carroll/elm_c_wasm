@@ -5,7 +5,6 @@
 #ifndef ELM_KERNEL_GC_INTERNALS
 #define ELM_KERNEL_GC_INTERNALS
 
-#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 

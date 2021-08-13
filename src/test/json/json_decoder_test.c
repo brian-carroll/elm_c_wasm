@@ -1,4 +1,3 @@
-#include <assert.h>
 
 #include "../../kernel/core/core.h"
 #include "../../kernel/json/json.h"

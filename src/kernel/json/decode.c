@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #ifdef __EMSCRIPTEN__

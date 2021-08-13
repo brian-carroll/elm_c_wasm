@@ -1,4 +1,3 @@
-#include <assert.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else

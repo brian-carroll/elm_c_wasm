@@ -4,7 +4,6 @@
   Emulate JavaScript functions in C, for non-Wasm platforms
 */
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>  // sscanf
 
