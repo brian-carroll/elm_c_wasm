@@ -1,3 +1,8 @@
+if (typeof performance === 'undefined') {
+  const perf = require('perf_hooks');
+  performance = perf.performance;
+}
+
 interface ElmImports {
   _List_Cons(hd: any, tl: object): object;
   _List_Nil: object;
@@ -88,6 +93,15 @@ function wrapWasmElmApp(
   kernelImports: ElmCurriedFunction[],
   managerNames: string[]
 ) {
+  let isReading = true;
+  let readTimeIndex = 0;
+  let writeTimeIndex = 0;
+  if (typeof window === 'undefined') {
+    window = global as any;
+  }
+  (window as any).readTimes = new Float64Array(1024);
+  (window as any).writeTimes = new Float64Array(1024);
+
   /* --------------------------------------------------
 
                INITIALISATION & CONSTANTS
@@ -237,6 +251,10 @@ function wrapWasmElmApp(
   }
 
   function readWasmValue(addr: number): any {
+    if (!isReading) {
+      (window as any).readTimes[readTimeIndex++] = performance.now();
+      isReading = true;
+    }
     if (!addr) return undefined;
     const index = addr >> 2;
     const header = mem32[index];
@@ -451,6 +469,10 @@ function wrapWasmElmApp(
   type Address = number;
 
   function writeWasmValue(elmValue: any): Address {
+    if (isReading) {
+      (window as any).writeTimes[writeTimeIndex++] = performance.now();
+      isReading = false;
+    }
     if (elmValue === undefined) {
       return 0;
     }
