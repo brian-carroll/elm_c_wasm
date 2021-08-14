@@ -48,10 +48,11 @@ gc-size:
 	/bin/ls -lh $(DIST)/wasm/gc.wasm
 
 clean:
+	@mkdir -p $(BUILD)/bin $(BUILD)/wasm $(BUILD)/exe
+	@mkdir -p $(DIST)/bin $(DIST)/wasm $(DIST)/exe
 	@echo 'Deleting generated files'
 	@find $(DIST) -type f ! -exec rm {} \;
 	@find $(BUILD) -type f ! -exec rm {} \;
-	@mkdir -p $(BUILD)/bin $(BUILD)/wasm $(BUILD)/exe
 	@rm -f $(KERNEL)/wrapper/wrapper.js
 
 gh-pages: CFLAGS=-Wall -O3
