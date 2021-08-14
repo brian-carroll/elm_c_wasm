@@ -94,8 +94,18 @@ static void* get_initial_system_memory(size_t bytes) {
   void* aligned_break = (void*)aligned_addr;
   void* new_break = aligned_break + bytes;
 
-  ASSERT(brk(new_break) != -1, -1);
-  ASSERT_EQUAL(sbrk(0), new_break);
+  // Note: brk works in emscripten 2.0.11 but not 2.0.27
+  // It crashes in the tests where we try to shrink the heap. Haven't investigated deeply.
+  // Maybe brk is not as well supported as mmap?
+  // If we were mainly targeting an OS rather than Wasm we would use mmap, and manage
+  // disjoint blocks of memory. But Wasm is one contiguous block and relying on that
+  // makes the GC code simpler. Might be worth doing mmap some day...
+  // Or maybe sbrk would work for shrinking if we refactor a bit.
+  if (brk(new_break) != 0) {
+    perror("brk");
+    exit(1);
+  }
+
   return aligned_break;
 }
 
@@ -104,8 +114,10 @@ void resize_system_memory(GcHeap* heap, size_t new_total_bytes) {
   if (new_break == (void*)heap->system_end) {
     return;
   }
-  ASSERT(brk(new_break) != -1, -1);
-  ASSERT_EQUAL(sbrk(0), new_break);
+  if (brk(new_break) != 0) {
+    perror("brk");
+    exit(1);
+  }
 }
 
 #endif
