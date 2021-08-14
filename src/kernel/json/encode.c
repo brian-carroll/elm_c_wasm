@@ -3,9 +3,15 @@
 #include "json.h"
 
 
-Custom Json_encodeNull = {
+Custom Json_null = {
     .header = HEADER_CUSTOM(0),
     .ctor = JSON_VALUE_NULL,
+};
+
+Custom Json_encodeNull = {
+    .header = HEADER_CUSTOM(1),
+    .ctor = JSON_VALUE_WRAP,
+    .values = {&Json_null},
 };
 
 
@@ -64,7 +70,7 @@ Closure Json_emptyObject = {
 
 
 void* eval_Json_addField(void* args[]) {
-  ElmString16* key = args[0];
+  ElmString* key = args[0];
   Custom* wrappedValue = args[1];
   Custom* old_object = args[2];
 
@@ -72,8 +78,8 @@ void* eval_Json_addField(void* args[]) {
   u32 old_size = old_object->header.size;
   u32 new_size = old_size + 2;
 
-  Custom* new_object = GC_malloc(true, new_size * SIZE_UNIT);
-  GC_memcpy(new_object, old_object, old_size * SIZE_UNIT);
+  Custom* new_object = GC_allocate(true, new_size);
+  GC_memcpy(new_object, old_object, old_size);
   new_object->header.size = new_size;
   new_object->values[old_params] = key;
   new_object->values[old_params + 1] = wrappedValue->values[0];
@@ -96,8 +102,8 @@ void* eval_Json_addEntry(void* args[]) {
   u32 old_size = old_array->header.size;
   u32 new_size = old_size + 1;
 
-  Custom* new_array = GC_malloc(true, new_size * SIZE_UNIT);
-  GC_memcpy(new_array, old_array, old_size * SIZE_UNIT);
+  Custom* new_array = GC_allocate(true, new_size);
+  GC_memcpy(new_array, old_array, old_size);
   new_array->header.size = new_size;
 
   Custom* wrappedEntry = A1(func, entry);
@@ -112,7 +118,7 @@ Closure Json_addEntry = {
 };
 
 
-size_t stringify_alloc_chunk_bytes;
+size_t stringify_alloc_chunk_words;
 
 
 void* eval_Json_encode(void* args[]) {
@@ -120,27 +126,11 @@ void* eval_Json_encode(void* args[]) {
   Custom* wrapped = args[1];
   void* value = wrapped->values[0];
 
-  stringify_alloc_chunk_bytes = 64;
-  size_t len = (stringify_alloc_chunk_bytes - sizeof(Header)) / sizeof(u16);
-  ElmString16* str = newElmString16(len);
-  StringBuilder sb = {
-    .s = str,
-    .cursor = str->words16,
-    .end = str->words16 + len,
-  };
-
-  stringify(indentLevel->value, 0, value, &sb);
-
-  // Shrink the string
-  ptrdiff_t cursor_addr = (ptrdiff_t)(sb.cursor);
-  ptrdiff_t aligned_cursor_addr = (cursor_addr + SIZE_UNIT - 1) & (-SIZE_UNIT);
-  ptrdiff_t size = (aligned_cursor_addr - (ptrdiff_t)str) / SIZE_UNIT;
-  str->header.size = (u32)size;
-
-  // Give back unused memory to the allocator
-  ptrdiff_t end_addr = (ptrdiff_t)(sb.end);
-  ptrdiff_t negative_alloc = aligned_cursor_addr - end_addr;
-  GC_malloc(false, negative_alloc);
+  StringBuilder sb;
+  StringBuilder_init(&sb);
+  u32 indent = indentLevel->value;
+  stringify(indent, 0, value, &sb);
+  ElmString* str = StringBuilder_toString(&sb);
 
   return str;
 }

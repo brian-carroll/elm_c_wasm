@@ -5,7 +5,6 @@
 
 // Pick offsets so we can easily read lower digits in either decimal or hex
 #define JSON_CTOR_OFFSET 0x2000 * 10000
-#define KERNEL_CTOR_OFFSET 0x400 * 1000
 
 enum ctor_decoder {
   DECODER_SUCCEED = KERNEL_CTOR_OFFSET,
@@ -61,13 +60,14 @@ extern Closure Json_map6;
 extern Closure Json_map7;
 extern Closure Json_map8;
 
-extern size_t Json_run_eval_index;  // Index of the JS implementation of Json_run (assigned by compiler)
 extern Closure Json_run;
 extern Closure Json_runOnString;
+void* Json_runHelp(Custom* decoder, ElmValue* value);
 
 // Encode
 
-extern Custom Json_encodeNull;
+extern Custom Json_null; // represents literal JS `null` (unwrapped)
+extern Custom Json_encodeNull; // Json-wrapped
 extern Closure Json_wrap;
 extern Closure Json_unwrap;
 extern Closure Json_emptyArray;

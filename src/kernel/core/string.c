@@ -2,15 +2,14 @@
 #include <stddef.h>
 #include <stdio.h>  // snprintf
 #include <stdlib.h>
-#include <string.h>
-
+#include "./gc/internals.h"
 #include "core.h"
 
 #define IS_LEADING_SURROGATE(word) (0xD800 <= word && word <= 0xDBFF)
 #define IS_TRAILING_SURROGATE(word) (0xDC00 <= word && word <= 0xDFFF)
 #define MAX_FLOAT_LEN 25
 
-size_t code_units(ElmString16* s) {
+size_t code_units(ElmString* s) {
   u32 size = s->header.size;
   size_t* words = (size_t*)s;
   size_t* after = words + size;
@@ -21,6 +20,52 @@ size_t code_units(ElmString16* s) {
   size_t units = last_code_unit + 1 - s->words16;
   return units;
 }
+
+
+#if 0
+void debug_print_chars(char* label, void* start, void* after) {
+  char buf[1024];
+  char* c = buf;
+  for (u16* p = (u16*)start; p < (u16*)after; p++, c++) {
+    *c = *p;
+  }
+  *c = 0;
+  safe_printf("%s: '%s'\n", label, buf);
+}
+#endif
+
+
+#define not_aligned_64(ptr) ((size_t)ptr & (sizeof(u64) - 1))
+
+static u16* copy_chars(u16* to16, u16* from16, u16* after16) {
+  while (not_aligned_64(to16) && (from16 < after16) && *from16) {
+    *to16++ = *from16++;
+  }
+
+  u64* to64 = (u64*)to16;
+  u64* from64 = (u64*)from16;
+  ptrdiff_t len64 = (after16 - from16) / 4;
+  u64* after64 = from64 + len64;
+  while (from64 < after64 && *from64) { // zero check prevents a bug in optimised build
+    *to64++ = *from64++;
+  }
+
+  to16 = (u16*)to64;
+  from16 = (u16*)from64;
+  while ((from16 < after16) && *from16) {
+    *to16++ = *from16++;
+  }
+
+  return to16;
+}
+
+#undef not_aligned_64
+
+
+u16* String_copy(u16* to, ElmString* s) {
+  return copy_chars(to, s->words16, s->words16 + code_units(s));
+}
+
 
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx) {
   for (;;) {
@@ -75,8 +120,8 @@ ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len) {
 /*
  * String.uncons
  */
-static void* eval_String_uncons(void* args[]) {
-  ElmString16* string = args[0];
+void* eval_String_uncons(void* args[]) {
+  ElmString* string = args[0];
   size_t len = code_units(string);
   if (len == 0) {
     return &g_elm_core_Maybe_Nothing;
@@ -92,12 +137,8 @@ static void* eval_String_uncons(void* args[]) {
   }
   ElmChar* c = newElmChar(codepoint);
 
-  ElmString16* s = newElmString16(len - char_units);
-  u16* words = &string->words16[char_units];
-  for (size_t i = 0; i < len - char_units; ++i) {
-    s->words16[i] = words[i];
-  }
-
+  ElmString* s = newElmString(len - char_units);
+  copy_chars(s->words16, string->words16 + char_units, string->words16 + len);
   return A1(&g_elm_core_Maybe_Just, newTuple2(c, s));
 }
 Closure String_uncons = {
@@ -109,17 +150,17 @@ Closure String_uncons = {
 /*
  * String.append
  */
-void* eval_String_append(void* args[2]) {
-  ElmString16* a = args[0];
-  ElmString16* b = args[1];
+void* eval_String_append(void* args[]) {
+  ElmString* a = args[0];
+  ElmString* b = args[1];
 
   size_t len_a = code_units(a);
   size_t len_b = code_units(b);
 
-  ElmString16* s = newElmString16(len_a + len_b);
+  ElmString* s = newElmString(len_a + len_b);
 
-  memcpy(s->words16, a->words16, len_a * sizeof(u16));
-  memcpy(&s->words16[len_a], b->words16, len_b * sizeof(u16));
+  copy_chars(s->words16, a->words16, a->words16 + len_a);
+  copy_chars(s->words16 + len_a, b->words16, b->words16 + len_b);
 
   return s;
 }
@@ -132,7 +173,7 @@ Closure String_append = {
 /*
  * String.length
  */
-static void* eval_String_length(void* args[]) {
+void* eval_String_length(void* args[]) {
   size_t len = code_units(args[0]);
   return newElmInt((i32)len);
 }
@@ -145,10 +186,10 @@ Closure String_length = {
 /*
  * String.foldr
  */
-static void* eval_String_foldr(void* args[]) {
+void* eval_String_foldr(void* args[]) {
   Closure* func = args[0];
   void* state = args[1];
-  ElmString16* string = args[2];
+  ElmString* string = args[2];
 
   size_t i = code_units(string);
   while (i--) {
@@ -171,9 +212,9 @@ Closure String_foldr = {
 /*
  * String.split
  */
-static void* eval_String_split(void* args[]) {
-  ElmString16* sep = args[0];
-  ElmString16* str = args[1];
+void* eval_String_split(void* args[]) {
+  ElmString* sep = args[0];
+  ElmString* str = args[1];
 
   size_t sep_len = code_units(sep);
   size_t str_len = code_units(str);
@@ -183,15 +224,17 @@ static void* eval_String_split(void* args[]) {
   ptrdiff_t match_idx;
   ptrdiff_t substr_idx;
   ptrdiff_t substr_len;
-  ElmString16* substr;
+  ElmString* substr;
 
   do {
     match_idx = find_reverse(sep->words16, str->words16, sep_len, str_idx);
     substr_idx = (match_idx < 0) ? 0 : (match_idx + sep_len);
     substr_len = 1 + str_idx - substr_idx;
 
-    substr = newElmString16(substr_len);
-    memcpy(substr->words16, &str->words16[substr_idx], substr_len * sizeof(u16));
+    substr = newElmString(substr_len);
+    copy_chars(substr->words16,
+        str->words16 + substr_idx,
+        str->words16 + substr_idx + substr_len);
     result = newCons(substr, result);
 
     str_idx = match_idx - 1;
@@ -208,36 +251,35 @@ Closure String_split = {
 /*
  * String.join
  */
-static void* eval_String_join(void* args[]) {
-  ElmString16* sep = args[0];
+void* eval_String_join(void* args[]) {
+  ElmString* sep = args[0];
   Cons* strs = args[1];
 
   if (strs == &Nil) {
-    return newElmString16(0);
+    return newElmString(0);
+  }
+  size_t sep_len = code_units(sep);
+  size_t len16 = 0;
+  for (Cons* cell = strs; cell != &Nil; cell = cell->tail) {
+    ElmString* s = cell->head;
+    len16 += code_units(s);
+    if (cell->tail != pNil) {
+      len16 += sep_len;
+    }
   }
 
-  ElmString16* s = strs->head;
-  u32 result_len = code_units(s);
-  Header h = HEADER_STRING(result_len);
-  ElmString16* result = GC_malloc(true, h.size * SIZE_UNIT);
-  result->header = h;
-  memcpy(result->words16, s->words16, result_len * 2);
+  ElmString* result = newElmString(len16);
 
-  u32 sep_len = code_units(sep);
-
-  for (strs = strs->tail; strs != &Nil; strs = strs->tail) {
-    u16* to = &result->words16[result_len];
-    s = strs->head;
-    u32 len = code_units(s);
-
-    result_len += sep_len + len;
-    h = (Header)HEADER_STRING(result_len);
-    GC_malloc(false, (h.size - result->header.size) * SIZE_UNIT);
-    result->header = h;
-
-    memcpy(to, sep->words16, sep_len * 2);
-    memcpy(to + sep_len, s->words16, len * 2);
+  u16* cursor = result->words16;
+  for (Cons* cell = strs; cell != &Nil; cell = cell->tail) {
+    ElmString* s = cell->head;
+    cursor = String_copy(cursor, s);
+    if (cell->tail != &Nil) {
+      cursor = String_copy(cursor, sep);
+    }
   }
+  ASSERT_EQUAL(cursor, result->words16 + len16);
+
   return result;
 }
 Closure String_join = {
@@ -260,23 +302,21 @@ static size_t slice_wrap_index(i32 n, i32 len) {
     return n;
   }
 }
-static void* eval_String_slice(void* args[]) {
+void* eval_String_slice(void* args[]) {
   ElmInt* argStart = args[0];
   ElmInt* argEnd = args[1];
-  ElmString16* str = args[2];
+  ElmString* str = args[2];
   size_t len = code_units(str);
 
   i32 start = slice_wrap_index(argStart->value, (i32)len);
   i32 end = slice_wrap_index(argEnd->value, (i32)len);
   if (start > end) {
-    return newElmString(0, NULL);
+    return newElmString(0);
   }
 
-  size_t n_words = (size_t)(end - start);
-  size_t n_bytes = n_words * 2;
-  u16* words_to_copy = &str->words16[start];
-
-  return newElmString(n_bytes, (char*)words_to_copy);
+  ElmString* result = newElmString(end - start);
+  copy_chars(result->words16, str->words16 + start, str->words16 + end);
+  return result;
 }
 Closure String_slice = {
     .header = HEADER_CLOSURE(0),
@@ -323,21 +363,21 @@ bool is_whitespace(u16 c) {
 /**
  * String.trim
  */
-static void* eval_String_trim(void* args[]) {
-  ElmString16* str = args[0];
+void* eval_String_trim(void* args[]) {
+  ElmString* str = args[0];
   size_t len = code_units(str);
-  ptrdiff_t start = 0;
-  ptrdiff_t end = len - 1;
-  while (is_whitespace(str->words16[start]) && start <= end) {
+  u16* start = str->words16;
+  u16* end = start + len - 1;
+  while (is_whitespace(*start) && start <= end) {
     start++;
   }
-  while (is_whitespace(str->words16[end]) && end > start) {
+  while (is_whitespace(*end) && end > start) {
     end--;
   }
   ptrdiff_t n_units = end + 1 - start;
-  ElmString16* result = newElmString16(n_units);
+  ElmString* result = newElmString(n_units);
   if (n_units > 0) {
-    memcpy(result->words16, &str->words16[start], n_units * 2);
+    copy_chars(result->words16, start, end + 1);
   }
   return result;
 }
@@ -350,17 +390,18 @@ Closure String_trim = {
 /**
  * String.trimLeft
  */
-static void* eval_String_trimLeft(void* args[]) {
-  ElmString16* str = args[0];
+void* eval_String_trimLeft(void* args[]) {
+  ElmString* str = args[0];
   size_t len = code_units(str);
-  ptrdiff_t start = 0;
-  while (is_whitespace(str->words16[start]) && start < len) {
+  u16* start = str->words16;
+  u16* end = start + len - 1;
+  while (is_whitespace(*start) && start <= end) {
     start++;
   }
-  ptrdiff_t n_units = len - start;
-  ElmString16* result = newElmString16(n_units);
+  ptrdiff_t n_units = end + 1 - start;
+  ElmString* result = newElmString(n_units);
   if (n_units > 0) {
-    memcpy(result->words16, &str->words16[start], n_units * 2);
+    copy_chars(result->words16, start, end + 1);
   }
   return result;
 }
@@ -373,17 +414,18 @@ Closure String_trimLeft = {
 /**
  * String.trimRight
  */
-static void* eval_String_trimRight(void* args[]) {
-  ElmString16* str = args[0];
+void* eval_String_trimRight(void* args[]) {
+  ElmString* str = args[0];
   size_t len = code_units(str);
-  ptrdiff_t end = len - 1;
-  while (is_whitespace(str->words16[end]) && end >= 0) {
+  u16* start = str->words16;
+  u16* end = start + len - 1;
+  while (is_whitespace(*end) && end >= start) {
     end--;
   }
-  ptrdiff_t n_units = end + 1;
-  ElmString16* result = newElmString16(n_units);
+  ptrdiff_t n_units = end + 1 - start;
+  ElmString* result = newElmString(n_units);
   if (n_units > 0) {
-    memcpy(result->words16, str->words16, n_units * 2);
+    copy_chars(result->words16, start, end + 1);
   }
   return result;
 }
@@ -396,9 +438,9 @@ Closure String_trimRight = {
 /*
  * String.all
  */
-static void* eval_String_all(void* args[]) {
+void* eval_String_all(void* args[]) {
   Closure* isGood = args[0];
-  ElmString16* s = args[1];
+  ElmString* s = args[1];
   size_t len = code_units(s);
   ElmChar* c = newElmChar(0);
 
@@ -425,9 +467,9 @@ Closure String_all = {
 /**
  * String.contains
  */
-static void* eval_String_contains(void* args[]) {
-  ElmString16* sub = args[0];
-  ElmString16* str = args[1];
+void* eval_String_contains(void* args[]) {
+  ElmString* sub = args[0];
+  ElmString* str = args[1];
 
   size_t lsub = code_units(sub);
   if (lsub == 0) return &True;
@@ -447,8 +489,8 @@ Closure String_contains = {
  * String.startsWith
  */
 void* eval_String_startsWith(void* args[]) {
-  ElmString16* sub = args[0];
-  ElmString16* str = args[1];
+  ElmString* sub = args[0];
+  ElmString* str = args[1];
 
   size_t lsub = code_units(sub);
   if (lsub == 0) return &True;
@@ -472,8 +514,8 @@ Closure String_startsWith = {
  * String.endsWith
  */
 void* eval_String_endsWith(void* args[]) {
-  ElmString16* sub = args[0];
-  ElmString16* str = args[1];
+  ElmString* sub = args[0];
+  ElmString* str = args[1];
 
   size_t lsub = code_units(sub);
   if (lsub == 0) return &True;
@@ -496,9 +538,9 @@ Closure String_endsWith = {
 /**
  * String.indexes
  */
-static void* eval_String_indexes(void* args[]) {
-  ElmString16* sub = args[0];
-  ElmString16* str = args[1];
+void* eval_String_indexes(void* args[]) {
+  ElmString* sub = args[0];
+  ElmString* str = args[1];
 
   size_t sub_len = code_units(sub);
   if (sub_len == 0) {
@@ -528,18 +570,18 @@ Closure String_indexes = {
 /*
  * String.fromNumber
  */
-static void* String_fromNumber_eval(void* args[1]) {
+void* String_fromNumber_eval(void* args[]) {
   Number* box = args[0];
   char buf[MAX_FLOAT_LEN];
   int n_chars;
 
   if (box->i.header.tag == Tag_Int) {
-    n_chars = snprintf(buf, sizeof(buf), "%d", box->i.value);
+    n_chars = stbsp_snprintf(buf, sizeof(buf), "%ld", (i64)box->i.value);
   } else {
-    n_chars = snprintf(buf, sizeof(buf), "%.16g", box->f.value);
+    n_chars = stbsp_snprintf(buf, sizeof(buf), "%.16g", box->f.value);
   }
 
-  ElmString16* s = newElmString16(n_chars);
+  ElmString* s = newElmString(n_chars);
   for (int i = 0; i < n_chars; i++) {
     s->words16[i] = (u16)buf[i];
   }
@@ -554,8 +596,8 @@ Closure String_fromNumber = {
 /*
  * String.toInt
  */
-static void* eval_String_toInt(void* args[]) {
-  ElmString16* str = args[0];
+void* eval_String_toInt(void* args[]) {
+  ElmString* str = args[0];
   size_t len = code_units(str);
   u16 code0 = str->words16[0];
   i32 total = 0;
@@ -583,26 +625,15 @@ Closure String_toInt = {
 /*
  * String.toFloat
  */
-static void* eval_String_toFloat(void* args[]) {
-  char ascii[MAX_FLOAT_LEN];
-  ElmString16* s = args[0];
-
+void* eval_String_toFloat(void* args[]) {
+  ElmString* s = args[0];
   size_t len = code_units(s);
-  if (len >= MAX_FLOAT_LEN) len = MAX_FLOAT_LEN - 1;
-
-  size_t i = 0;
-  for (; i < len; i++) {
-    u16 word = s->words16[i];
-    if (word > 127) break;
-    ascii[i] = word;
+  if (len >= MAX_FLOAT_LEN) {
+    len = MAX_FLOAT_LEN - 1;
   }
-  ascii[i] = 0;
-
-  f64 value;
-  int successChars = sscanf(ascii, "%lf", &value);
-
-  return (successChars > 0) ? A1(&g_elm_core_Maybe_Just, newElmFloat(value))
-                            : &g_elm_core_Maybe_Nothing;
+  f64 value = parseFloat(s->words16, len);
+  return isnan(value) ? &g_elm_core_Maybe_Nothing
+                      : A1(&g_elm_core_Maybe_Just, newElmFloat(value));
 }
 Closure String_toFloat = {
     .header = HEADER_CLOSURE(0),

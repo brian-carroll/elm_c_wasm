@@ -1,25 +1,7 @@
-# Elm &rarr; C &rarr; WebAssembly
-
-This repo is part of a project to compile Elm to WebAssembly, using C as an intermediate language.
-
-**EXPERIMENTAL! DEFINITELY NOT PRODUCTION READY!**
-
-It implements parts of Elm's [core libraries](https://package.elm-lang.org/packages/elm/core/latest/) needed for any compiled code to work, including:
-
-- Byte level implementations of all of Elm's data types
-- First-class functions (currying, higher-order functions, etc.)
-- The basic arithmetic operators (`+`,`-`,`*`,`/`)
-- Record updates and accessors
-- A working garbage collector specially designed for Elm
-
-I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler) that generates C instead of JavaScript. It's not fully debugged yet.
-
-&nbsp;
-
 # Contents
 
-- [Current Status](#current-status)
-- [Demo links](#demos)
+- [Lighthouse Benchmarks August 2021](#lighthouse-benchmarks-august-2021)
+- [Demos](#demos)
 - [Installation](#installation)
 - [The JavaScript/WebAssembly interface](#the-javascriptwebassembly-interface)
 - [C as an intermediate language](#c-as-an-intermediate-language)
@@ -32,28 +14,78 @@ I also have a [fork of the Elm compiler](https://github.com/brian-carroll/elm-co
 
 &nbsp;
 
-# Current Status
+# Lighthouse Benchmarks August 2021
 
-Here's roughly how I see the project progressing from here, as of April 2020. (Unless some big unknown bites me, which it might!)
+Figures noted are ranges across 4 runs of Lighthouse Performance report for Desktop.
 
-- [x] Implement all [Elm value types in C](./docs/data-structures.md) and prove they work using [unit tests][demo-unit-tests-core].
-- [x] Do some initial exploration of C code generation in a [fork of the Elm compiler](https://github.com/brian-carroll/elm-compiler/). Understand how it works and what's involved.
-- [x] Implement a [Garbage Collector](./docs/gc.md) in C and compile it to Wasm. Prove it works using [in-browser unit tests][demo-unit-tests-gc] and an [elm-benchmark app][demo-benchmark].
-- [x] Create a wrapper to connect a WebAssembly module to Elm's kernel JavaScript.
-  - [x] Test on a simple example app.
-- [x] Finish code generation for the full Elm AST (outputting both C and JS)
-  - [x] Test on the same [simple example app](demo-app) created for testing the wrapper
-  - [x] Test on [TODO MVC](todo-app), a slightly more complex app
-  - [ ] (**WIP**) Test on Richard Feldman's [Elm SPA example](https://github.com/rtfeldman/elm-spa-example), a much more complex app
-- [ ] Complete the kernel code for the core libraries. This is a large task!
-- [ ] Look into migrating VirtualDom diffing to Wasm, with JS just applying patches.
-- [ ] Look into further GC optimisations for VirtualDom as [suggested on Discourse](https://discourse.elm-lang.org/t/elm-core-libs-in-webassembly/4443)
+Wasm performance is already comparable to JS with `--optimize`, and we've barely started working on it so there's lots of room to speed it up.
 
-[todo-app]: https://brian-carroll.github.io/elm_c_wasm/todo-mvc/
-[demo-app]: https://brian-carroll.github.io/elm_c_wasm/code-gen/
-[demo-unit-tests-core]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/?argv=--types+--utils+--basics+--string+--list+--verbose
-[demo-unit-tests-gc]: https://brian-carroll.github.io/elm_c_wasm/unit-tests/?argv=--gc+--verbose
-[demo-benchmark]: https://brian-carroll.github.io/elm_c_wasm/benchmark/
+Until now the focus has been on making the generated code _correct_, without much serious effort to make it _fast_.
+VirtualDom diffing has not been implemented in Wasm yet, which I expect to be a big win
+Replacing Emscripten with custom code should hugely reduce code size, improving performance
+
+The test application is based on [elm-spa-example](https://github.com/rtfeldman/elm-spa-example).
+The code has been modified so that API endpoints point at local .json files instead of a server,
+in order to remove most of the network variability from the measurements.
+
+## Wasm with -O3
+
+Identical report for all 4 runs
+
+| overall score            | 91    |
+| ------------------------ | ----- |
+| First Contentful Paint   | 0.7 s |
+| Speed Index              | 0.7 s |
+| Largest Contentful Paint | 1.4 s |
+| Time to Interactive      | 1.0 s |
+| Total Blocking Time      | 0 ms  |
+| Cumulative Layout Shift  | 0.809 |
+
+## Wasm with -O3 & uglifyjs
+
+| overall score            | 93          |
+| ------------------------ | ----------- |
+| First Contentful Paint   | 0.5 - 0.6 s |
+| Speed Index              | 0.6 - 0.7 s |
+| Largest Contentful Paint | 1.2 s       |
+| Time to Interactive      | 0.7 s       |
+| Total Blocking Time      | 0 ms        |
+| Cumulative Layout Shift  | 0.743       |
+
+## JS without --optimize
+
+| overall score            | 90 - 94       |
+| ------------------------ | ------------- |
+| First Contentful Paint   | 0.9 s         |
+| Speed Index              | 0.9 - 1.0 s   |
+| Largest Contentful Paint | 1.3 - 1.4 s   |
+| Time to Interactive      | 1.1 - 1.2 s   |
+| Total Blocking Time      | 0 ms          |
+| Cumulative Layout Shift  | 0.096 - 0.743 |
+
+## JS with --optimize
+
+| overall score            | 91 - 95       |
+| ------------------------ | ------------- |
+| First Contentful Paint   | 0.9 s         |
+| Speed Index              | 0.9 - 1.0 s   |
+| Largest Contentful Paint | 1.2 - 1.3 s   |
+| Time to Interactive      | 1.2 - 1.2 s   |
+| Total Blocking Time      | 0 ms          |
+| Cumulative Layout Shift  | 0.096 - 0.743 |
+
+## JS with --optimize and uglifyjs
+
+| overall score            | 95          |
+| ------------------------ | ----------- |
+| First Contentful Paint   | 0.5 s       |
+| Speed Index              | 0.5 - 0.7 s |
+| Largest Contentful Paint | 0.7 - 0.9 s |
+| Time to Interactive      | 0.6 - 0.7 s |
+| Total Blocking Time      | 0 ms        |
+| Cumulative Layout Shift  | 0.743       |
+
+
 
 &nbsp;
 

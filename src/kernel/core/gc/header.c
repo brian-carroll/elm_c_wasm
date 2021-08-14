@@ -1,3 +1,4 @@
+#include "../types.h"
 #include "internals.h"
 
 /* ====================================================
@@ -28,13 +29,21 @@ size_t child_count(ElmValue* v) {
       return v->header.size - (sizeof(Custom) / SIZE_UNIT);
 
     case Tag_Record:
-      return v->header.size - (sizeof(Record) / SIZE_UNIT);
+      // Include FieldGroup since it could be heap-allocated
+      // Http module has no literals for some Record types so compiler emits no FieldGroups
+      return v->header.size - (sizeof(Record) / SIZE_UNIT) + 1;
 
     case Tag_FieldGroup:
       return 0;
 
     case Tag_Closure:
       return v->closure.n_values;
+
+    case Tag_Process:
+      return (sizeof(Process) - sizeof(Custom)) / SIZE_UNIT;
+
+    case Tag_Task:
+      return (sizeof(Task) - sizeof(Custom)) / SIZE_UNIT;
 
     case Tag_JsRef:
     default:
@@ -43,7 +52,7 @@ size_t child_count(ElmValue* v) {
 }
 
 
-#define SANITY_MAX_CHILDREN 32
+#define SANITY_MAX_CHILDREN 512
 
 bool sanity_check(void* p) {
   if (!p) return true;
@@ -75,6 +84,10 @@ bool sanity_check(void* p) {
       return (h.size >= SIZE_CLOSURE(0)) && (h.size < SIZE_CLOSURE(SANITY_MAX_CHILDREN));
     case Tag_JsRef:
       return (h.size == SIZE_JS_REF);
+    case Tag_Process:
+      return (h.size == (sizeof(Process) / SIZE_UNIT));
+    case Tag_Task:
+      return (h.size == (sizeof(Task) / SIZE_UNIT));
     default:
       return false;
   }

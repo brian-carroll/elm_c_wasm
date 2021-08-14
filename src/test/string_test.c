@@ -6,7 +6,7 @@
 #include "../kernel/core/core.h"
 #include "test.h"
 
-size_t code_units(ElmString16* s);
+size_t code_units(ElmString* s);
 ptrdiff_t find_reverse(u16* sub, u16* str, size_t sub_len, ptrdiff_t str_idx);
 ptrdiff_t find_forward(u16* sub, u16* str, size_t sub_len, size_t str_len);
 bool is_whitespace(u16 c);
@@ -17,39 +17,38 @@ bool is_whitespace(u16 c);
 //
 // ---------------------------------------------------------
 
-void print_elm_string(ElmString16* str) {
+void print_elm_string(ElmString* str) {
   size_t len = code_units(str);
-  printf("\"");
+  safe_printf("\"");
   for (size_t i = 0; i < len; i++) {
     u16 c = str->words16[i];
-    printf("%c", (char)c);
+    safe_printf("%c", (char)c);
   }
-  printf("\"");
+  safe_printf("\"");
 }
 
-void* expect_string(char* unit_description, char* expected_c_str, ElmString16* actual) {
-  ElmString16* expected = create_string(expected_c_str);
+void expect_string(char* unit_description, char* expected_c_str, ElmString* actual) {
+  ElmString* expected = create_string(expected_c_str);
   bool ok = A2(&Utils_equal, actual, expected) == &True;
   if (!ok) {
     if (!verbose) {
-      printf("\n%s\n", current_describe_string);
+      safe_printf("\n%s\n", current_describe_string);
     }
-    printf("\n");
-    printf("%s\n", unit_description);
-    printf("Expected %s\n", expected_c_str);
+    safe_printf("\n");
+    safe_printf("%s\n", unit_description);
+    safe_printf("Expected %s\n", expected_c_str);
     print_value_full(expected);
-    printf("\n");
-    printf("Actual ");
+    safe_printf("\n");
+    safe_printf("Actual ");
     print_elm_string(actual);
-    printf("\n");
+    safe_printf("\n");
     print_value_full(actual);
-    printf("\n");
+    safe_printf("\n");
     tests_failed++;
   } else if (verbose) {
-    printf("PASS: %s == \"%s\"\n", unit_description, expected_c_str);
+    safe_printf("PASS: %s == \"%s\"\n", unit_description, expected_c_str);
   }
   assertions_made++;
-  return NULL;
 }
 
 // ---------------------------------------------------------
@@ -60,8 +59,8 @@ void* expect_string(char* unit_description, char* expected_c_str, ElmString16* a
 
 char mu_message[1024];
 
-void* test_code_units() {
-  mu_assert("Expect code_units=0 for \"\"", code_units(newElmString16(0)) == 0);
+void test_code_units() {
+  mu_assert("Expect code_units=0 for \"\"", code_units(newElmString(0)) == 0);
   mu_assert("Expect code_units=1 for \"1\"", code_units(create_string("1")) == 1);
 
   char buf[21];
@@ -71,21 +70,20 @@ void* test_code_units() {
       buf[j] = '.';
     }
     buf[j] = 0;
-    sprintf(mu_message, "Expect code_units=%zu for \"%s\"", i, buf);
+    stbsp_sprintf(mu_message, "Expect code_units=%zu for \"%s\"", i, buf);
     mu_assert(mu_message, code_units(create_string(buf)) == i);
   }
-  return NULL;
 }
 
-void* test_find_reverse() {
+void test_find_reverse() {
   //                                01234567890123456
-  ElmString16* str = create_string("home/jill/Desktop");
-  ElmString16* sub;
+  ElmString* str = create_string("home/jill/Desktop");
+  ElmString* sub;
   size_t str_len = code_units(str);
   ptrdiff_t result;
 
   if (verbose) {
-    printf("\ntest_find_reverse\n");
+    safe_printf("\ntest_find_reverse\n");
   }
 
   sub = create_string("z");
@@ -123,19 +121,17 @@ void* test_find_reverse() {
   sub = create_string("ho");
   result = find_reverse(sub->words16, str->words16, code_units(sub), str_len - 1);
   mu_expect_equal("should find multiple chars at start (retry)", result, 0);
-
-  return NULL;
 }
 
-void* test_find_forward() {
+void test_find_forward() {
   //                                01234567890123456
-  ElmString16* str = create_string("home/jill/Desktop");
-  ElmString16* sub;
+  ElmString* str = create_string("home/jill/Desktop");
+  ElmString* sub;
   size_t str_len = code_units(str);
   ptrdiff_t result;
 
   if (verbose) {
-    printf("\ntest_find_forward\n");
+    safe_printf("\ntest_find_forward\n");
   }
 
   sub = create_string("z");
@@ -173,8 +169,6 @@ void* test_find_forward() {
   sub = create_string("op");
   result = find_forward(sub->words16, str->words16, code_units(sub), str_len);
   mu_expect_equal("should find multiple chars at end (retry)", result, 15);
-
-  return NULL;
 }
 
 u16 all_whitespace_chars[] = {
@@ -212,7 +206,7 @@ u16 all_whitespace_chars[] = {
     0x2029,
 };
 const size_t n_whitespace_chars = sizeof(all_whitespace_chars) / sizeof(u16);
-void* test_is_whitespace() {
+void test_is_whitespace() {
   u32 incorrect_results = 0;
   for (u32 code = 0; code <= 0xffff; code++) {
     u16 c = (u16)code;
@@ -226,11 +220,10 @@ void* test_is_whitespace() {
     }
     if (actual != expected) {
       incorrect_results++;
-      printf("FAIL: is_whitespace(0x%x) should be %x\n", c, expected);
+      safe_printf("FAIL: is_whitespace(0x%x) should be %x\n", c, expected);
     }
   }
   mu_assert("is_whitespace should be correct for all code units", incorrect_results == 0);
-  return NULL;
 }
 
 // ---------------------------------------------------------
@@ -239,11 +232,11 @@ void* test_is_whitespace() {
 //
 // ---------------------------------------------------------
 
-void* test_String_uncons() {
-  ElmString16* abc = create_string("abc");
-  ElmString16* bc = create_string("bc");
-  ElmString16* a_str = create_string("a");
-  ElmString16* empty = create_string("");
+void test_String_uncons() {
+  ElmString* abc = create_string("abc");
+  ElmString* bc = create_string("bc");
+  ElmString* a_str = create_string("a");
+  ElmString* empty = create_string("");
   ElmChar* a_char = newElmChar((u32)'a');
 
   expect_equal("uncons \"abc\" == Just ('a',\"bc\")",
@@ -256,23 +249,20 @@ void* test_String_uncons() {
   expect_equal("uncons \"a\" == Just ('a',\"\")",
       A1(&String_uncons, a_str),
       A1(&g_elm_core_Maybe_Just, newTuple2(a_char, empty)));
-
-  return NULL;
 }
 
-void* test_String_append() {
-  ElmString16* hello = create_string("hello");
-  ElmString16* world = create_string(" world");
-  ElmString16* empty = create_string("");
+void test_String_append() {
+  ElmString* hello = create_string("hello");
+  ElmString* world = create_string(" world");
+  ElmString* empty = create_string("");
   expect_string(
       "append \"hello\" \" world\"", "hello world", A2(&String_append, hello, world));
   expect_string("append \"hello\" \"\"", "hello", A2(&String_append, hello, empty));
   expect_string("append \"\" \"hello\"", "hello", A2(&String_append, empty, hello));
   expect_string("append \"\" \"\"", "", A2(&String_append, empty, empty));
-  return NULL;
 }
 
-void* test_String_split() {
+void test_String_split() {
   expect_equal("split \"/\" \"home/steve/Desktop\" == [\"home\",\"steve\",\"Desktop\"]",
       A2(&String_split, create_string("/"), create_string("home/steve/Desktop")),
       List_create(3,
@@ -282,9 +272,9 @@ void* test_String_split() {
               create_string("Desktop"),
           }));
 
-  ElmString16* abc = create_string("abc");
-  ElmString16* ab = create_string("ab");
-  ElmString16* empty = create_string("");
+  ElmString* abc = create_string("abc");
+  ElmString* ab = create_string("ab");
+  ElmString* empty = create_string("");
   Cons* list_ab = newCons(ab, &Nil);
 
   expect_equal("split \"abc\" \"ab\" == [\"ab\"]  # separator longer than string",
@@ -309,13 +299,11 @@ void* test_String_split() {
 
   expect_equal(
       "split \"ab\" \"\" == [\"\"]", A2(&String_split, ab, empty), newCons(empty, &Nil));
-
-  return NULL;
 }
 
-void* test_String_join() {
-  ElmString16* slash = create_string("/");
-  ElmString16* empty = create_string("");
+void test_String_join() {
+  ElmString* slash = create_string("/");
+  ElmString* empty = create_string("");
   expect_string("join \"/\" [\"home\",\"steve\",\"Desktop\"]",
       "home/steve/Desktop",
       A2(&String_join,
@@ -331,11 +319,10 @@ void* test_String_join() {
   expect_string("join \"/\" [\"\"]", "", A2(&String_join, slash, newCons(empty, &Nil)));
   expect_string("join \"\" [\"\"]", "", A2(&String_join, empty, newCons(empty, &Nil)));
   expect_string("join \"\" []", "", A2(&String_join, empty, &Nil));
-  return NULL;
 }
 
-void* test_String_slice() {
-  ElmString16* abc = create_string("abc");
+void test_String_slice() {
+  ElmString* abc = create_string("abc");
 
   expect_string(
       "slice 1 2 \"abc\"", "b", A3(&String_slice, newElmInt(1), newElmInt(2), abc));
@@ -363,11 +350,9 @@ void* test_String_slice() {
   expect_string("slice -100 100 \"\"",
       "",
       A3(&String_slice, newElmInt(-100), newElmInt(100), create_string("")));
-
-  return NULL;
 }
 
-void* test_String_indexes() {
+void test_String_indexes() {
   expect_equal("indexes \"/\" \"home/steve/Desktop\" == [4,10]",
       A2(&String_indexes, create_string("/"), create_string("home/steve/Desktop")),
       List_create(2,
@@ -376,9 +361,9 @@ void* test_String_indexes() {
               newElmInt(10),
           }));
 
-  ElmString16* abc = create_string("abc");
-  ElmString16* ab = create_string("ab");
-  ElmString16* empty = create_string("");
+  ElmString* abc = create_string("abc");
+  ElmString* ab = create_string("ab");
+  ElmString* empty = create_string("");
 
   expect_equal("indexes \"abc\" \"ab\" == []  # substring longer than string",
       A2(&String_indexes, abc, ab),
@@ -393,51 +378,59 @@ void* test_String_indexes() {
       newCons(newElmInt(0), &Nil));
 
   expect_equal("indexes \"ab\" \"\" == []", A2(&String_indexes, ab, empty), &Nil);
-
-  return NULL;
 }
 
-void* test_String_trim() {
+void test_String_trim() {
   expect_string("trim \" \\n a \\t \\r\\n\"",
       "a",
       A1(&String_trim, create_string(" \n a \t \r\n")));
 
   expect_string("trim \"\"", "", A1(&String_trim, create_string("")));
 
-  ElmString16* allWhitespaceChars = newElmString16(n_whitespace_chars);
+  ElmString* allWhitespaceChars = newElmString(n_whitespace_chars);
   for (size_t i = 0; i < n_whitespace_chars; i++) {
     allWhitespaceChars->words16[i] = all_whitespace_chars[i];
   }
   expect_string("trim allWhitespaceChars", "", A1(&String_trim, allWhitespaceChars));
-
-  return NULL;
 }
 
-void* test_String_trimLeft() {
-  expect_string("trim \" \\n a \\t \\r\\n\"",
+void test_String_trimLeft() {
+  expect_string("trimLeft \" \\n a \\t \\r\\n\"",
       "a \t \r\n",
       A1(&String_trimLeft, create_string(" \n a \t \r\n")));
 
+  expect_string("trimLeft \"a \\t \\r\\n\"",
+      "a \t \r\n",
+      A1(&String_trimLeft, create_string("a \t \r\n")));
+
+  expect_string("trimLeft \" \\n a\"",
+      "a",
+      A1(&String_trimLeft, create_string(" \n a")));
+
   expect_string(
-      "trim \" \\n \\t \\r\\n\"", "", A1(&String_trimLeft, create_string(" \n \t \r\n")));
+      "trimLeft \" \\n \\t \\r\\n\"", "", A1(&String_trimLeft, create_string(" \n \t \r\n")));
 
-  expect_string("trim \"\"", "", A1(&String_trimLeft, create_string("")));
-
-  return NULL;
+  expect_string("trimLeft \"\"", "", A1(&String_trimLeft, create_string("")));
 }
 
-void* test_String_trimRight() {
-  expect_string("trim \" \\n a \\t \\r\\n\"",
+void test_String_trimRight() {
+  expect_string("trimRight \" \\n a \\t \\r\\n\"",
       " \n a",
       A1(&String_trimRight, create_string(" \n a \t \r\n")));
 
-  expect_string("trim \" \\n \\t \\r\\n\"",
+  expect_string("trimRight \" \\n a\"",
+      " \n a",
+      A1(&String_trimRight, create_string(" \n a")));
+
+  expect_string("trimRight \"a \\t \\r\\n\"",
+      "a",
+      A1(&String_trimRight, create_string("a \t \r\n")));
+
+  expect_string("trimRight \" \\n \\t \\r\\n\"",
       "",
       A1(&String_trimRight, create_string(" \n \t \r\n")));
 
-  expect_string("trim \"\"", "", A1(&String_trimRight, create_string("")));
-
-  return NULL;
+  expect_string("trimRight \"\"", "", A1(&String_trimRight, create_string("")));
 }
 
 void* eval_isX(void* args[]) {
@@ -450,7 +443,7 @@ Closure isX = {
     .max_values = 1,
 };
 
-void* test_String_all() {
+void test_String_all() {
   expect_equal("all ((==) 'X') \"XXXXX\" == True",
       A2(&String_all, &isX, create_string("XXXXX")),
       &True);
@@ -461,14 +454,12 @@ void* test_String_all() {
 
   expect_equal(
       "all ((==) 'X') \"\" == True", A2(&String_all, &isX, create_string("")), &True);
-
-  return NULL;
 }
 
-void* test_String_contains() {
-  ElmString16* abc = create_string("abc");
-  ElmString16* ab = create_string("ab");
-  ElmString16* empty = create_string("");
+void test_String_contains() {
+  ElmString* abc = create_string("abc");
+  ElmString* ab = create_string("ab");
+  ElmString* empty = create_string("");
 
   expect_equal("contains \"ab\" \"abc\" == True", A2(&String_contains, ab, abc), &True);
 
@@ -480,15 +471,13 @@ void* test_String_contains() {
   expect_equal("contains \"\" \"abc\" == True", A2(&String_contains, empty, abc), &True);
 
   expect_equal("contains \"\" \"\" == True", A2(&String_contains, empty, empty), &True);
-
-  return NULL;
 }
 
-void* test_String_startsWith() {
-  ElmString16* abc = create_string("abc");
-  ElmString16* ab = create_string("ab");
-  ElmString16* bc = create_string("bc");
-  ElmString16* empty = create_string("");
+void test_String_startsWith() {
+  ElmString* abc = create_string("abc");
+  ElmString* ab = create_string("ab");
+  ElmString* bc = create_string("bc");
+  ElmString* empty = create_string("");
 
   expect_equal(
       "startsWith \"ab\" \"abc\" == True", A2(&String_startsWith, ab, abc), &True);
@@ -507,15 +496,13 @@ void* test_String_startsWith() {
 
   expect_equal(
       "startsWith \"\" \"\" == True", A2(&String_startsWith, empty, empty), &True);
-
-  return NULL;
 }
 
-void* test_String_endsWith() {
-  ElmString16* abc = create_string("abc");
-  ElmString16* ab = create_string("ab");
-  ElmString16* bc = create_string("bc");
-  ElmString16* empty = create_string("");
+void test_String_endsWith() {
+  ElmString* abc = create_string("abc");
+  ElmString* ab = create_string("ab");
+  ElmString* bc = create_string("bc");
+  ElmString* empty = create_string("");
 
   expect_equal("endsWith \"ab\" \"abc\" == False", A2(&String_endsWith, ab, abc), &False);
 
@@ -529,30 +516,30 @@ void* test_String_endsWith() {
   expect_equal("endsWith \"\" \"abc\" == True", A2(&String_endsWith, empty, abc), &True);
 
   expect_equal("endsWith \"\" \"\" == True", A2(&String_endsWith, empty, empty), &True);
-
-  return NULL;
 }
 
-void* test_String_fromNumber() {
-  expect_string("fromNumber 0",
-      "0",
-      A1(&String_fromNumber, newElmInt(0)));
+void test_String_fromNumber() {
   expect_string("fromNumber 2147483647",
       "2147483647",
       A1(&String_fromNumber, newElmInt(2147483647)));
   expect_string("fromNumber -2147483648",
       "-2147483648",
       A1(&String_fromNumber, newElmInt(-2147483648)));
+  expect_string("fromNumber -2147483647",
+      "-2147483647",
+      A1(&String_fromNumber, newElmInt(-2147483647)));
+  expect_string("fromNumber -1",
+      "-1",
+      A1(&String_fromNumber, newElmInt(-1)));
   expect_string("fromNumber -3.141592653589793",
       "-3.141592653589793",
       A1(&String_fromNumber, newElmFloat(-3.141592653589793)));
   expect_string("fromNumber -3141592653589793",
       "-3141592653589793",
       A1(&String_fromNumber, newElmFloat(-3141592653589793)));
-  return NULL;
 }
 
-void* test_String_toInt() {
+void test_String_toInt() {
   expect_equal("toInt \"2147483647\" == Just 2147483647",
       A1(&String_toInt, create_string("2147483647")),
       A1(&g_elm_core_Maybe_Just, newElmInt(2147483647)));
@@ -584,8 +571,6 @@ void* test_String_toInt() {
   expect_equal("toInt \"\" == Nothing",
       A1(&String_toInt, create_string("")),
       &g_elm_core_Maybe_Nothing);
-
-  return NULL;
 }
 
 // ---------------------------------------------------------
@@ -594,13 +579,13 @@ void* test_String_toInt() {
 //
 // ---------------------------------------------------------
 
-char* string_test() {
+void string_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("String\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("String\n");
+    safe_printf("------\n");
   }
 
   mu_run_test(test_code_units);
@@ -623,6 +608,4 @@ char* string_test() {
   describe("test_String_indexes", &test_String_indexes);
   describe("test_String_fromNumber", &test_String_fromNumber);
   describe("test_String_toInt", &test_String_toInt);
-
-  return NULL;
 }

@@ -33,42 +33,26 @@
         <tbody>
           <tr>
             <td>
-              <a href="todo-mvc/">
-                TODO MVC example
-              </a>
+              <a href="elm-spa-example-wasm/"> Elm SPA example (Wasm)</a>
             </td>
             <td>
-              Evan Czaplicki's TODO MVC example, implemented in WebAssembly
-              <br />
-              Pure Elm code is in WebAssembly, and effectful Kernel code uses
-              standard library JavaScript implementations
+              Richard Feldman's elm-spa-example, implemented in WebAssembly,
+              using my forked compiler and libraries
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <a href="elm-spa-example-js/"> Elm SPA example (JS)</a>
+            </td>
+            <td>
+              Richard Feldman's elm-spa-example, implemented in JavaScript,
+              using the official compiler and libraries (for comparison)
             </td>
           </tr>
 
           <tr>
             <td>
-              <a href="code-gen/">
-                Simple Elm app
-              </a>
-            </td>
-            <td>
-              An extremely basic Elm app implemented in WebAssembly
-              <br />
-              Simple enough for me to "compile" to C by hand, and <i>just</i>
-              complex enough to exercise the main parts of the Elm architecture.
-              <br />
-              Pure Elm code is in WebAssembly, and effectful Kernel code uses
-              standard library JavaScript implementations
-            </td>
-          </tr>
-
-          <tr>
-            <td>
-              <a
-                href="unit-tests/?argv=--verbose+--all+--gc=skip"
-              >
-                Kernel unit tests
-              </a>
+              <a href="unit-tests/?argv=--all+--verbose"> Kernel unit tests </a>
               <br />
               <br />
               (<a
@@ -77,77 +61,8 @@
               >)
             </td>
             <td>
-              Unit tests on C implementations of some of Elm's kernel code
-              <ul>
-                <li>
-                  Implementations of Elm's data structures in C
-                  <ul>
-                    <li>
-                      Int, Float, Char, String, Tuple, List, custom types,
-                      records, first-class functions
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  Some utility functions from the core library
-                  <ul>
-                    <li>
-                      record accessors, record updates, function application,
-                      equality, comparison
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  Arithmetic operators from the
-                  <a
-                    href="https://package.elm-lang.org/packages/elm/core/latest/Basics"
-                    ><code>Basics</code></a
-                  >
-                  core module
-                </li>
-                <li>
-                  <a
-                    href="https://package.elm-lang.org/packages/elm/core/latest/String#append"
-                    ><code>String.append</code></a
-                  >
-                </li>
-              </ul>
-            </td>
-          </tr>
-
-          <!----------------------------------->
-
-          <tr>
-            <td>
-              <a href="unit-tests/?argv=--gc+--verbose"
-                >GC unit tests</a
-              >
-              <br />
-              <br />
-              (<a
-                href="https://github.com/brian-carroll/elm_c_wasm/tree/master/src/test/gc_test.c"
-                >source code</a
-              >)
-            </td>
-            <td>
-              Unit tests on an experimental Garbage Collector for Elm in C/Wasm
-              <ul>
-                <li>
-                  Mark-sweep compacting collector<br />
-                  See section 3.4 of
-                  <a href="http://gchandbook.org/"
-                    >"The Garbage Collection Handbook"</a
-                  >
-                  by Jones, Hosking, and Moss
-                </li>
-                <li>
-                  Designed to take advantage of Elm's immutable data and
-                  controlled effects
-                </li>
-                <li>
-                  Currently fits in 6kB .wasm file, though not complete yet!
-                </li>
-              </ul>
+              Unit tests for Wasm implementations of Elm's core libraries, and
+              the Garbage Collector.
             </td>
           </tr>
         </tbody>

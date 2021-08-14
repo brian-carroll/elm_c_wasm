@@ -36,10 +36,9 @@ tests =
                 , test "compare 'f' 'f'" <| \() -> Expect.equal EQ (compare 'f' 'f')
                 , test "compare (1, 2, 3) (0, 1, 2)" <| \() -> Expect.equal GT (compare ( 1, 2, 3 ) ( 0, 1, 2 ))
                 , test "compare ['a'] ['b']" <| \() -> Expect.equal LT (compare [ 'a' ] [ 'b' ])
-
-                -- , test "array equality" <| \() -> Expect.equal (Array.fromList [ 1, 1, 1, 1 ]) (Array.repeat 4 1)
-                -- , test "set equality" <| \() -> Expect.equal (Set.fromList [ 1, 2 ]) (Set.fromList [ 2, 1 ])
-                -- , test "dict equality" <| \() -> Expect.equal (Dict.fromList [ ( 1, 1 ), ( 2, 2 ) ]) (Dict.fromList [ ( 2, 2 ), ( 1, 1 ) ])
+                , test "array equality" <| \() -> Expect.equal (Array.fromList [ 1, 1, 1, 1 ]) (Array.repeat 4 1)
+                , test "set equality" <| \() -> Expect.equal (Set.fromList [ 1, 2 ]) (Set.fromList [ 2, 1 ])
+                , test "dict equality" <| \() -> Expect.equal (Dict.fromList [ ( 1, 1 ), ( 2, 2 ) ]) (Dict.fromList [ ( 2, 2 ), ( 1, 1 ) ])
                 , test "char equality" <| \() -> Expect.notEqual '0' '饑'
                 ]
 
@@ -151,22 +150,22 @@ tests =
                 , test "False || True" <| \() -> Expect.equal True (False || True)
                 , test "True || False" <| \() -> Expect.equal True (True || False)
                 , test "True || True" <| \() -> Expect.equal True (True || True)
-
-                -- , test "xor False False" <| \() -> Expect.equal False (xor False False)
-                -- , test "xor False True" <| \() -> Expect.equal True (xor False True)
-                -- , test "xor True False" <| \() -> Expect.equal True (xor True False)
-                -- , test "xor True True" <| \() -> Expect.equal False (xor True True)
+                , test "xor False False" <| \() -> Expect.equal False (xor False False)
+                , test "xor False True" <| \() -> Expect.equal True (xor False True)
+                , test "xor True False" <| \() -> Expect.equal True (xor True False)
+                , test "xor True True" <| \() -> Expect.equal False (xor True True)
                 , test "not True" <| \() -> Expect.equal False (not True)
                 , test "not False" <| \() -> Expect.equal True (not False)
                 ]
 
         conversionTests =
             describe "Conversion Tests"
-                -- [ test "round 0.6" <| \() -> Expect.equal 1 (round 0.6)
-                -- , test "round 0.4" <| \() -> Expect.equal 0 (round 0.4)
-                -- , test "round 0.5" <| \() -> Expect.equal 1 (round 0.5)
+                [ test "round 0.6" <| \() -> Expect.equal 1 (round 0.6)
+                , test "round 0.4" <| \() -> Expect.equal 0 (round 0.4)
+                , test "round 0.5" <| \() -> Expect.equal 1 (round 0.5)
+
                 -- , test "truncate -2367.9267" <| \() -> Expect.equal -2367 (truncate -2367.9267)
-                [ test "floor -2367.9267" <| \() -> Expect.equal -2368 (floor -2367.9267)
+                , test "floor -2367.9267" <| \() -> Expect.equal -2368 (floor -2367.9267)
                 , test "ceiling 37.2" <| \() -> Expect.equal 38 (ceiling 37.2)
                 , test "toFloat 25" <| \() -> Expect.equal 25 (toFloat 25)
                 ]

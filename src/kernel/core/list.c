@@ -8,7 +8,7 @@
 void* List_create(size_t len, void* values[]) {
   Cons* head = &Nil;
   for (size_t i = 0; i < len; ++i) {
-    Cons* next = GC_malloc(true, sizeof(Cons));
+    Cons* next = GC_allocate(true, SIZE_LIST);
     *next = (Cons){
         .header = HEADER_LIST,
         .head = values[len - 1 - i],
@@ -21,7 +21,7 @@ void* List_create(size_t len, void* values[]) {
 
 // cons
 
-static void* eval_List_cons(void* args[]) {
+void* eval_List_cons(void* args[]) {
   return newCons(args[0], args[1]);
 }
 Closure List_cons = {
@@ -56,33 +56,19 @@ Closure List_append = {
 
 // map2
 
-static void* eval_List_map2(void* args[]) {
+void* eval_List_map2(void* args[]) {
   Closure* f = args[0];
   Cons* xs = args[1];
   Cons* ys = args[2];
 
-  Custom* growingArray = GC_malloc(true, sizeof(Custom));
-  growingArray->header = (Header)HEADER_CUSTOM(0);
-
-  ptrdiff_t i = 0;
-  const size_t CHUNK = 8;
-  for (; xs != &Nil && ys != &Nil; i += 2, xs = xs->tail, ys = ys->tail) {
-    if (i % CHUNK == 0) {
-      GC_malloc(false, CHUNK * sizeof(void*));
-      growingArray->header.size += CHUNK;
-    }
-    growingArray->values[i] = xs->head;
-    growingArray->values[i + 1] = ys->head;
+  Cons* tmp = newCons(NULL, pNil);
+  Cons* end = tmp;
+  for (; xs != pNil && ys != pNil; xs = xs->tail, ys = ys->tail) {
+    Cons* next = newCons(A2(f, xs->head, ys->head), pNil);
+    end->tail = next;
+    end = next;
   }
-
-  Cons* head = &Nil;
-  for (i -= 2; i >= 0; i -= 2) {
-    void* y = growingArray->values[i + 1];
-    void* x_ = growingArray->values[i];
-    void* result = A2(f, x_, y);
-    head = newCons(result, head);
-  }
-  return head;
+  return tmp->tail;
 }
 Closure List_map2 = {
     .header = HEADER_CLOSURE(0),

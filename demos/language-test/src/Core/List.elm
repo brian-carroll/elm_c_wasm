@@ -13,7 +13,7 @@ tests =
         [ testListOfN 0
         , testListOfN 1
         , testListOfN 2
-        , testListOfN 1000 -- need to implement GC heap resizing
+        , testListOfN 1000
         ]
 
 

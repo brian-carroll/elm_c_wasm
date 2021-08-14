@@ -1,0 +1,37 @@
+<html>
+  <head>
+    <style>
+      body {
+        background-color: #222;
+        color: navajowhite;
+      }
+      .effects-test button {
+        padding: 10px;
+        margin: 20px;
+        font-size: 16px;
+      }
+      .effects-test {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      ul {
+        list-style: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="elm-container">
+      <div id="main"></div>
+    </div>
+    <script src="elm-js.js"></script>
+    <script>
+      const app = Elm.Main.init({
+        node: document.querySelector('#main')
+      });
+      app.ports.sendToJs.subscribe(value => {
+        setTimeout(() => app.ports.receiveFromJs.send(value), 0);
+      });
+    </script>
+  </body>
+</html>

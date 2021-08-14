@@ -15,7 +15,18 @@ extern Closure VirtualDom_text;
 // extern Closure VirtualDom_style;
 // extern Closure VirtualDom_property;
 
-bool is_html_tag(char* c_tag, ElmString16* elm_tag) {
+// Custom string printer
+// Not using puts because it adds '\n'
+// Not using our safe printf because it's buffered differently from putchar,
+//   so when you mix both, and then pipe stdout to a file, it gets mangled
+void put_str(char* str) {
+  for (int i = 0; str[i]; i++) {
+    putchar(str[i]);
+  }
+}
+
+
+bool is_html_tag(char* c_tag, ElmString* elm_tag) {
   size_t c_len = strlen(c_tag);
   size_t elm_len = code_units(elm_tag);
   if (c_len != elm_len) return false;
@@ -28,24 +39,24 @@ bool is_html_tag(char* c_tag, ElmString16* elm_tag) {
 
 void print_virtual_dom_help(int indent, Closure* vdom) {
   if (vdom->evaluator == VirtualDom_text.evaluator) {
-    ElmString16* text = vdom->values[0];
+    ElmString* text = vdom->values[0];
     u32 len = code_units(text);
     for (u32 i = 0; i < len; ++i) {
       u16 w = text->words16[i];
       if (w <= 0xff) putchar(w);
     }
   } else {
-    ElmString16* tag = vdom->values[0];
+    ElmString* tag = vdom->values[0];
     // Cons* facts = vdom->values[1];
     Cons* children = vdom->values[2];
 
     bool newline = false;
 
     if (is_html_tag("h2", tag)) {
-      printf("\n## ");
+      put_str("\n## ");
       newline = true;
     } else if (is_html_tag("h3", tag)) {
-      printf("### ");
+      put_str("### ");
       newline = true;
     } else if (is_html_tag("ul", tag)) {
       indent += 2;
@@ -53,7 +64,7 @@ void print_virtual_dom_help(int indent, Closure* vdom) {
       for (int i = 0; i < indent; ++i) {
         putchar(' ');
       }
-      printf("- ");
+      put_str("- ");
       newline = true;
     } else if (is_html_tag("br", tag)) {
       newline = true;

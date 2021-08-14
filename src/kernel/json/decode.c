@@ -1,11 +1,9 @@
-#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
 #define EMSCRIPTEN_KEEPALIVE
-#include <stdio.h>
 #endif
 
 #include "../core/core.h"
@@ -30,7 +28,7 @@ enum JsonFields {
   /*h*/ JsonField_callback,
 };
 
-static void* eval_Json_succeed(void* args[]) {
+void* eval_Json_succeed(void* args[]) {
   return newCustom(DECODER_SUCCEED, 1, args);
 }
 Closure Json_succeed = {
@@ -39,7 +37,7 @@ Closure Json_succeed = {
     .evaluator = &eval_Json_succeed,
 };
 
-static void* eval_Json_fail(void* args[]) {
+void* eval_Json_fail(void* args[]) {
   return newCustom(DECODER_FAIL, 1, args);
 }
 Closure Json_fail = {
@@ -69,9 +67,9 @@ Custom Json_decodeString = {
     .ctor = DECODER_STRING,
 };
 
-static void* eval_Json_decodeList(void* args[]) {
+void* eval_Json_decodeList(void* args[]) {
   void* decoder = args[0];
-  return newCustom(DECODER_LIST, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_LIST, 2, ((void*[]){&Json_null, decoder}));
 }
 Closure Json_decodeList = {
     .header = HEADER_CLOSURE(0),
@@ -79,9 +77,9 @@ Closure Json_decodeList = {
     .evaluator = &eval_Json_decodeList,
 };
 
-static void* eval_Json_decodeArray(void* args[]) {
+void* eval_Json_decodeArray(void* args[]) {
   void* decoder = args[0];
-  return newCustom(DECODER_ARRAY, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_ARRAY, 2, ((void*[]){&Json_null, decoder}));
 }
 Closure Json_decodeArray = {
     .header = HEADER_CLOSURE(0),
@@ -89,10 +87,9 @@ Closure Json_decodeArray = {
     .evaluator = &eval_Json_decodeArray,
 };
 
-static void* eval_Json_decodeNull(void* args[]) {
+void* eval_Json_decodeNull(void* args[]) {
   void* value = args[0];
-  return newCustom(
-      DECODER_NULL, 3, ((void*[]){&Json_encodeNull, &Json_encodeNull, value}));
+  return newCustom(DECODER_NULL, 3, ((void*[]){&Json_null, &Json_null, value}));
 }
 Closure Json_decodeNull = {
     .header = HEADER_CLOSURE(0),
@@ -100,15 +97,15 @@ Closure Json_decodeNull = {
     .evaluator = &eval_Json_decodeNull,
 };
 
-static void* eval_Json_decodeField(void* args[]) {
+void* eval_Json_decodeField(void* args[]) {
   void* field = args[0];
   void* decoder = args[1];
   return newCustom(DECODER_FIELD,
       4,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
+          /*a*/ &Json_null,
           /*b*/ decoder,
-          /*c*/ &Json_encodeNull,
+          /*c*/ &Json_null,
           /*d*/ field,
       }));
 }
@@ -118,16 +115,16 @@ Closure Json_decodeField = {
     .evaluator = &eval_Json_decodeField,
 };
 
-static void* eval_Json_decodeIndex(void* args[]) {
+void* eval_Json_decodeIndex(void* args[]) {
   void* index = args[0];
   void* decoder = args[1];
   return newCustom(DECODER_INDEX,
       5,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
+          /*a*/ &Json_null,
           /*b*/ decoder,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
           /*e*/ index,
       }));
 }
@@ -137,9 +134,9 @@ Closure Json_decodeIndex = {
     .evaluator = &eval_Json_decodeIndex,
 };
 
-static void* eval_Json_decodeKeyValuePairs(void* args[]) {
+void* eval_Json_decodeKeyValuePairs(void* args[]) {
   void* decoder = args[0];
-  return newCustom(DECODER_KEY_VALUE, 2, ((void*[]){&Json_encodeNull, decoder}));
+  return newCustom(DECODER_KEY_VALUE, 2, ((void*[]){&Json_null, decoder}));
 }
 Closure Json_decodeKeyValuePairs = {
     .header = HEADER_CLOSURE(0),
@@ -147,19 +144,19 @@ Closure Json_decodeKeyValuePairs = {
     .evaluator = &eval_Json_decodeKeyValuePairs,
 };
 
-static void* eval_Json_andThen(void* args[]) {
+void* eval_Json_andThen(void* args[]) {
   void* callback = args[0];
   void* decoder = args[1];
   return newCustom(DECODER_AND_THEN,
       8,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
+          /*a*/ &Json_null,
           /*b*/ decoder,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
-          /*e*/ &Json_encodeNull,
-          /*f*/ &Json_encodeNull,
-          /*g*/ &Json_encodeNull,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
+          /*e*/ &Json_null,
+          /*f*/ &Json_null,
+          /*g*/ &Json_null,
           /*h*/ callback,
       }));
 }
@@ -169,17 +166,17 @@ Closure Json_andThen = {
     .evaluator = &eval_Json_andThen,
 };
 
-static void* eval_Json_oneOf(void* args[]) {
+void* eval_Json_oneOf(void* args[]) {
   void* decoders = args[0];
   return newCustom(DECODER_ONE_OF,
       7,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
-          /*b*/ &Json_encodeNull,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
-          /*e*/ &Json_encodeNull,
-          /*f*/ &Json_encodeNull,
+          /*a*/ &Json_null,
+          /*b*/ &Json_null,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
+          /*e*/ &Json_null,
+          /*f*/ &Json_null,
           /*g*/ decoders,
       }));
 }
@@ -195,18 +192,18 @@ Closure Json_oneOf = {
 //
 // ----------------------------------------------------
 
-static void* eval_Json_mapMany(void* args[]) {
+void* eval_Json_mapMany(void* args[]) {
   size_t n_decoders = (size_t)args[0];
   Closure* f = args[1];
   Custom* decoders = newCustom(JSON_VALUE_ARRAY, (u32)n_decoders, &args[2]);
   return newCustom(DECODER_MAP,
       7,
       ((void*[]){
-          /*a*/ &Json_encodeNull,
-          /*b*/ &Json_encodeNull,
-          /*c*/ &Json_encodeNull,
-          /*d*/ &Json_encodeNull,
-          /*e*/ &Json_encodeNull,
+          /*a*/ &Json_null,
+          /*b*/ &Json_null,
+          /*c*/ &Json_null,
+          /*d*/ &Json_null,
+          /*e*/ &Json_null,
           /*f*/ f,
           /*g*/ decoders,
       }));
@@ -274,28 +271,28 @@ Closure Json_map8 = {
 //
 // ----------------------------------------------------
 
-ElmString16 str_err_expecting = {
+ElmString str_err_expecting = {
     .words16 = {'E', 'x', 'p', 'e', 'c', 't', 'i', 'n', 'g', ' '},
     .header = HEADER_STRING(10),
 };
 
-ElmString16 str_err_Bool = {
+ElmString str_err_Bool = {
     .header = HEADER_STRING(6), .words16 = {'a', ' ', 'B', 'O', 'O', 'L'}};
-ElmString16 str_err_Int = {
+ElmString str_err_Int = {
     .header = HEADER_STRING(6), .words16 = {'a', 'n', ' ', 'I', 'N', 'T'}};
-ElmString16 str_err_Float = {
+ElmString str_err_Float = {
     .header = HEADER_STRING(7), .words16 = {'a', ' ', 'F', 'L', 'O', 'A', 'T'}};
-ElmString16 str_err_String = {
+ElmString str_err_String = {
     .header = HEADER_STRING(8), .words16 = {'a', ' ', 'S', 'T', 'R', 'I', 'N', 'G'}};
-ElmString16 str_err_Null = {.header = HEADER_STRING(4), .words16 = {'n', 'u', 'l', 'l'}};
-ElmString16 str_err_List = {
+ElmString str_err_Null = {.header = HEADER_STRING(4), .words16 = {'n', 'u', 'l', 'l'}};
+ElmString str_err_List = {
     .header = HEADER_STRING(6), .words16 = {'a', ' ', 'L', 'I', 'S', 'T'}};
-ElmString16 str_err_Array = {
+ElmString str_err_Array = {
     .header = HEADER_STRING(8), .words16 = {'a', 'n', ' ', 'A', 'R', 'R', 'A', 'Y'}};
-ElmString16 str_err_Object = {
+ElmString str_err_Object = {
     .header = HEADER_STRING(9), .words16 = {'a', 'n', ' ', 'O', 'B', 'J', 'E', 'C', 'T'}};
-ElmString16 str_err_backtick = {.header = HEADER_STRING(1), .words16 = {'`'}};
-ElmString16 str_err_Field = {
+ElmString str_err_backtick = {.header = HEADER_STRING(1), .words16 = {'`'}};
+ElmString str_err_Field = {
     .header = HEADER_STRING(30),
     .words16 =
         {
@@ -331,7 +328,7 @@ ElmString16 str_err_Field = {
             '`',
         },
 };
-ElmString16 str_err_Index = {
+ElmString str_err_Index = {
     .header = HEADER_STRING(27),
     .words16 =
         {
@@ -364,15 +361,15 @@ ElmString16 str_err_Index = {
             ' ',
         },
 };
-ElmString16 str_err_Index_but_only_see = {
+ElmString str_err_Index_but_only_see = {
     .header = HEADER_STRING(14),
     .words16 = {' ', 'b', 'u', 't', ' ', 'o', 'n', 'l', 'y', ' ', 's', 'e', 'e', ' '},
 };
-ElmString16 str_err_Index_entries = {
+ElmString str_err_Index_entries = {
     .header = HEADER_STRING(8),
     .words16 = {' ', 'e', 'n', 't', 'r', 'i', 'e', 's'},
 };
-ElmString16 str_invalid_json = {
+ElmString str_invalid_json = {
     .header = HEADER_STRING(23),
     .words16 =
         {
@@ -402,8 +399,8 @@ ElmString16 str_invalid_json = {
         },
 };
 
-void* Json_expecting(ElmString16* type, void* value) {
-  ElmString16* s = eval_String_append((void*[]){&str_err_expecting, type});
+void* Json_expecting(ElmString* type, void* value) {
+  ElmString* s = eval_String_append((void*[]){&str_err_expecting, type});
   return TAIL_RESULT_ERR(A2(&g_elm_json_Json_Decode_Failure, s, WRAP(value)));
 }
 
@@ -411,8 +408,9 @@ void* Json_runHelp(Custom* decoder, ElmValue* value);
 
 void* eval_Json_array_get(void* args[]) {
   Custom* json_array = args[0];
-  ElmInt* i = args[1];
-  return json_array->values[i->value];
+  ElmInt* index = args[1];
+  i32 i = index->value;
+  return json_array->values[i];
 }
 
 Custom* Json_runArrayDecoder(Custom* decoder, Custom* value, bool as_list) {
@@ -466,7 +464,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       return Json_expecting(&str_err_String, value);
 
     case DECODER_NULL:
-      if (&value->custom == &Json_encodeNull) {
+      if (&value->custom == &Json_null) {
         return TAIL_RESULT_OK(decoder->values[JsonField_value]);
       }
       return Json_expecting(&str_err_Null, value);
@@ -476,7 +474,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_LIST:
       if (value->header.tag == Tag_JsRef) {
-        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+        value = (ElmValue*)getJsRefValue(value->js_ref.id);
       }
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
         return Json_runArrayDecoder(
@@ -486,7 +484,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_ARRAY: {
       if (value->header.tag == Tag_JsRef) {
-        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+        value = (ElmValue*)getJsRefValue(value->js_ref.id);
       }
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_ARRAY) {
         return Json_runArrayDecoder(
@@ -496,7 +494,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
     }
 
     case DECODER_FIELD: {
-      ElmString16* field = decoder->values[JsonField_field];
+      ElmString* field = decoder->values[JsonField_field];
       void* field_value = NULL;
 
       if (value->header.tag == Tag_Custom && value->custom.ctor == JSON_VALUE_OBJECT) {
@@ -509,7 +507,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
           }
         }
       } else if (value->header.tag == Tag_JsRef) {
-        field_value = (void*)getJsRefObjectField(value->js_ref.index, (size_t)field);
+        field_value = getJsRefObjectField(value->js_ref.id, field);
       }
 
       if (field_value != NULL) {
@@ -519,7 +517,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
                    : TAIL_RESULT_ERR(
                          A2(&g_elm_json_Json_Decode_Field, field, result->values[0]));
       } else {
-        ElmString16* msg = A2(
+        ElmString* msg = A2(
             &String_append, &str_err_Field, A2(&String_append, field, &str_err_backtick));
         return Json_expecting(msg, value);
       }
@@ -535,10 +533,11 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
         len = custom_params(&value->custom);
         too_short = index->value >= len;
         if (!too_short) {
-          index_value = value->custom.values[index->value];
+          i32 i = index->value;
+          index_value = value->custom.values[i];
         }
       } else if (value->header.tag == Tag_JsRef) {
-        ptrdiff_t from_js = getJsRefArrayIndex(value->js_ref.index, index->value);
+        ptrdiff_t from_js = getJsRefArrayIndex(value->js_ref.id, index->value);
         if (from_js < 0) {
           too_short = true;
           len = -from_js - 1;
@@ -548,7 +547,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       }
 
       if (too_short) {
-        ElmString16* msg = A2(&String_append,
+        ElmString* msg = A2(&String_append,
             &str_err_Index,
             A2(&String_append,
                 A1(&String_fromNumber, index),
@@ -573,7 +572,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
 
     case DECODER_KEY_VALUE: {
       if (value->header.tag == Tag_JsRef) {
-        value = (ElmValue*)getJsRefValue(value->js_ref.index);
+        value = (ElmValue*)getJsRefValue(value->js_ref.id);
       }
       if (value->header.tag != Tag_Custom || value->custom.ctor != JSON_VALUE_OBJECT) {
         return Json_expecting(&str_err_Object, value);
@@ -582,7 +581,7 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
       u32 n_params = custom_params(object);
       Cons* keyValuePairs = &Nil;
       for (i32 i = n_params - 2; i >= 0; i -= 2) {
-        ElmString16* key = object->values[i];
+        ElmString* key = object->values[i];
         Custom* result =
             Json_runHelp(decoder->values[JsonField_decoder], object->values[i + 1]);
         if (RESULT_IS_OK(result) == &False) {
@@ -640,14 +639,14 @@ void* Json_runHelp(Custom* decoder, ElmValue* value) {
     }
 
     default:
-      assert(0);
+      log_error("Unknown decoder constructor %d\n", decoder->ctor);
   }
   return NULL;
 }
 
-static void* eval_runOnString(void* args[]) {
+void* eval_runOnString(void* args[]) {
   Custom* decoder = args[0];
-  ElmString16* string = args[1];
+  ElmString* string = args[1];
 
   ElmValue* json = parse_json(string);
   if (json == NULL) {
@@ -662,7 +661,7 @@ Closure Json_runOnString = {
     .evaluator = &eval_runOnString,
 };
 
-static void* eval_Json_run(void* args[]) {
+void* eval_Json_run(void* args[]) {
   Custom* decoder = args[0];
   Custom* wrapped = args[1];
   void* unwrapped = wrapped->values[0];
@@ -674,7 +673,6 @@ Closure Json_run = {
     .evaluator = &eval_Json_run,
 };
 
-size_t EMSCRIPTEN_KEEPALIVE get_eval_Json_run() {
-  void* ptr = &eval_Json_run;
-  return (size_t)ptr;
+void* EMSCRIPTEN_KEEPALIVE get_eval_Json_run() {
+  return &eval_Json_run;
 }

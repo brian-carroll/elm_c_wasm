@@ -12,16 +12,44 @@ mergeInto(LibraryManager.library, {
   },
 
   markJsRef: function (jsRefId) {
-    // The C main can do a GC, but wasmWrapper is not ready at that point
+    // The C main function can do a GC while wasmWrapper is still undefined
     wasmWrapper && wasmWrapper.markJsRef(jsRefId);
   },
 
   sweepJsRefs: function (isFullGc) {
-    // The C main can do a GC, but wasmWrapper is not ready at that point
+    // The C main function can do a GC while wasmWrapper is still undefined
     wasmWrapper && wasmWrapper.sweepJsRefs(isFullGc);
   },
 
   VirtualDom_applyPatches: function (patchesStartAddr) {
     VirtualDom_applyPatches(patchesStartAddr);
+  },
+
+  parseFloat: function (addr, len16) {
+    return wasmWrapper && wasmWrapper.parseFloat(addr, len16);
+  },
+
+  jsStepper: function (viewMetadataAddr) {
+    wasmWrapper.wasmImportStepper(viewMetadataAddr);
+  },
+
+  applyJsRef: function (jsRefId, nArgs, argsAddr) {
+    return wasmWrapper.applyJsRef(jsRefId, nArgs, argsAddr);
+  },
+
+  jsRefToWasmRecord: function(jsRefId) {
+    return wasmWrapper.jsRefToWasmRecord(jsRefId);
+  },
+
+  Wrapper_setupOutgoingPort: function () {
+    return wasmWrapper.setupOutgoingPort();
+  },
+
+  Wrapper_setupIncomingPort: function (managerId) {
+    return wasmWrapper.setupIncomingPort(managerId);
+  },
+
+  Wrapper_sleep: function (time) {
+    return wasmWrapper.Wrapper_sleep(time);
   }
 });

@@ -1,8 +1,7 @@
 // Parse JSON values from a UTF-16 string
 // https://ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 
-#include <stdio.h>  // sscanf
-
+#include <math.h>  // isnan
 #include "../core/core.h"
 #include "json.h"
 
@@ -24,13 +23,13 @@ void* parse_bool(u16** cursor, u16* end) {
 
   const u16 chars_true[4] = {'t', 'r', 'u', 'e'};
   const u16 chars_fals[4] = {'f', 'a', 'l', 's'};
-  const u64 fast_compare_true = *(u64*)chars_true;
-  const u64 fast_compare_false = *(u64*)chars_fals;
+  const u64* fast_compare_true = (u64*)chars_true;
+  const u64* fast_compare_false = (u64*)chars_fals;
 
-  if (len >= 4 && bytes64[0] == fast_compare_true) {
+  if (len >= 4 && bytes64[0] == *fast_compare_true) {
     *cursor += 4;
     return &True;
-  } else if (len >= 5 && bytes64[0] == fast_compare_false && chars[4] == 'e') {
+  } else if (len >= 5 && bytes64[0] == *fast_compare_false && chars[4] == 'e') {
     *cursor += 5;
     return &False;
   } else {
@@ -44,11 +43,11 @@ void* parse_null(u16** cursor, u16* end) {
   u64* bytes64 = (u64*)chars;
 
   const u16 chars_null[4] = {'n', 'u', 'l', 'l'};
-  const u64 fast_compare_null = *(u64*)chars_null;
+  const u64* fast_compare_null = (u64*)chars_null;
 
-  if (len >= 4 && bytes64[0] == fast_compare_null) {
+  if (len >= 4 && bytes64[0] == *fast_compare_null) {
     *cursor += 4;
-    return &Json_encodeNull;
+    return &Json_null;
   } else {
     return NULL;
   }
@@ -58,27 +57,22 @@ void* parse_number(u16** cursor, u16* end) {
   u16* chars = *cursor;
 
   size_t max = end - chars;
-  if (max > 31) max = 31;
-
-  char digits[32];
-  size_t d = 0;
-  for (size_t i = 0; i < max; i++) {
-    u16 c = chars[i];
-    if ((c >= '0' && c <= '9') || c == '-' || c == '+' || c == 'e' || c == 'E' ||
-        c == '.') {
-      digits[d++] = (char)c;
-    } else {
-      break;
-    }
+  if (max > 31) {
+    max = 31;
   }
-  if (d == 0) return NULL;
-  digits[d] = '\0';
+  u32 len16 = 0;
+  for (; len16 < max; len16++) {
+    u16 c = chars[len16];
+    bool isValid = (c >= '0' && c <= '9') || c == '-' || c == '+' || c == 'e' ||
+                   c == 'E' || c == '.';
+    if (!isValid) break;
+  }
+  if (len16 == 0) return NULL;
 
-  f64 f;
-  int success = sscanf(digits, "%lg", &f);
-  if (!success) return NULL;
+  f64 f = parseFloat(chars, len16);
+  if (isnan(f)) return NULL;
 
-  *cursor += d;
+  *cursor += len16;
   return newElmFloat(f);
 }
 
@@ -90,22 +84,25 @@ void* parse_string(u16** cursor, u16* end) {
   if (*from != '"') return NULL;
   from++;
 
-  size_t alloc_chunk_bytes = 4 * SIZE_UNIT;  // Grow the output string in chunks this big
-  ElmString16* str = newElmString16(alloc_chunk_bytes / 2);
-  u16* str_end = GC_malloc(false, 0);
+  u16* endquote = from;
+  for (;;) {
+    if (endquote >= end) {
+      return NULL;
+    } else if (*endquote == '"') {
+      break;
+    } else if (*endquote == '\\') {
+      endquote += 2;
+    } else {
+      endquote++;
+    }
+  }
+
+  size_t max_len = endquote - from;
+  ElmString* str = newElmString(max_len);
 
   for (to = str->words16;; to++, from++) {
     if (from >= end) return NULL;
     if (*from == '"') break;
-
-    if (to >= str_end) {
-      // Grow output string as needed, taking advantage of GC 'bump allocation'
-      GC_malloc(false, alloc_chunk_bytes);
-      str->header.size += alloc_chunk_bytes / SIZE_UNIT;
-      str_end = GC_malloc(false, 0);
-      if (alloc_chunk_bytes < 1024) alloc_chunk_bytes *= 2;
-    }
-
     if (*from == '\\') {
       from++;
       if (from >= end) return NULL;
@@ -163,7 +160,9 @@ void* parse_string(u16** cursor, u16* end) {
   // normalise the string length, chopping off any over-allocated space
   size_t truncated_str_end_addr = ((size_t)to + SIZE_UNIT - 1) & (-SIZE_UNIT);
   size_t final_size = (truncated_str_end_addr - (size_t)str) / SIZE_UNIT;
+  size_t reclaim = str->header.size - final_size;
   str->header.size = (u32)final_size;
+  GC_allocate(false, reclaim);
   for (; to < (u16*)truncated_str_end_addr; to++) {
     *to = 0;
   }
@@ -247,7 +246,7 @@ void* parse_object(u16** cursor, u16* end) {
   size_t n_pairs = 0;
   for (;;) {
     // field
-    ElmString16* field = parse_string(&c, end);
+    ElmString* field = parse_string(&c, end);
     if (c >= end || field == NULL) return NULL;
 
     // colon
@@ -315,7 +314,7 @@ void* parse_recurse(u16** cursor, u16* end) {
   }
 }
 
-void* parse_json(ElmString16* json) {
+void* parse_json(ElmString* json) {
   u16* cursor = json->words16;
   u16* end = json->words16 + code_units(json);
   skip_whitespace(&cursor, end);

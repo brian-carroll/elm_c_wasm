@@ -1,49 +1,52 @@
 #ifndef __EMSCRIPTEN__
 
 /*
-  Non-Wasm target => JS imports don't exist
-  Need equivalent C implementations instead
-  C-only version makes it easier to use C debug tools
+  Emulate JavaScript functions in C, for non-Wasm platforms
 */
 
-#include <assert.h>
 #include <stddef.h>
-#include <stdio.h>
+#include <stdio.h>  // sscanf
 
 #include "../kernel/core/core.h"
 #include "../kernel/json/json-internal.h"
 #include "../kernel/json/json.h"
 #include "test.h"
 
-enum JsShape {
+typedef enum js_shape {
   NOT_CIRCULAR,
   MAYBE_CIRCULAR,
-};
+} JsShape;
 
-struct jsHeapEntry {
+typedef enum js_heap_gen {
+  GEN_CONST,
+  GEN_OLD,
+  GEN_NEW,
+} JsHeapGen;
+
+typedef struct js_heap_entry {
   void* value;
   bool isMarked;
-  bool isOldGen;
-};
+  JsHeapGen generation;
+} JsHeapEntry;
 
 static int unusedJsHeapSlot;
 
 #define JS_HEAP_MAX_LENGTH 100
-static u32 jsHeapLength = 0;
-static struct jsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
+u32 jsHeapLength = 0;
+static JsHeapEntry jsHeap[JS_HEAP_MAX_LENGTH];
 
-static u32 allocateJsRef(void* value) {
+u32 allocateJsRef(void* value) {
   u32 id = 0;
   while (id < jsHeapLength && jsHeap[id].value != &unusedJsHeapSlot)
     id++;
   if (id == jsHeapLength) {
     jsHeapLength++;
-    assert(jsHeapLength < JS_HEAP_MAX_LENGTH);
+    ASSERT(jsHeapLength < JS_HEAP_MAX_LENGTH, jsHeapLength);
   }
-  jsHeap[id] = (struct jsHeapEntry){
+  jsHeap[id] = (JsHeapEntry){
       .value = value,
       .isMarked = false,
-      .isOldGen = false,
+      .generation = GEN_NEW,
   };
   return id;
 }
@@ -53,46 +56,46 @@ void markJsRef(u32 id) {
 }
 
 void sweepJsRefs(bool isFullGc) {
-  u32 lastMarked = 0;
+  i32 lastUsedSlot = -1;
   for (u32 index = 0; index < jsHeapLength; index++) {
-    struct jsHeapEntry* slot = &jsHeap[index];
-    if (slot->isMarked || (!isFullGc && slot->isOldGen)) {
-      lastMarked = index;
-      if (isFullGc) {
-        slot->isOldGen = true;
-      }
-    } else {
+    JsHeapEntry* slot = &jsHeap[index];
+    bool shouldKeep = slot->isMarked || (!isFullGc && slot->generation != GEN_NEW);
+    if (!shouldKeep) {
       slot->value = &unusedJsHeapSlot;
-      slot->isOldGen = false;
+    } else {
+      if (isFullGc && slot->generation == GEN_NEW) {
+        slot->generation = GEN_OLD;
+      }
+      lastUsedSlot = index;
     }
     slot->isMarked = false;
   }
-  jsHeapLength = lastMarked + 1;
+  jsHeapLength = lastUsedSlot + 1;
 }
 
-static size_t writeJsonValue(ElmValue* value, enum JsShape jsShape) {
+static void* writeJsonValue(ElmValue* value, JsShape jsShape) {
   if (value->header.tag != Tag_Custom) {
-    return (size_t)Utils_clone(value);
+    return Utils_clone(value);
   }
   Custom* c = &value->custom;
-  if (c == &Json_encodeNull || c == &True || c == &False) {
-    return (size_t)c;
+  if (c == &Json_null || c == &True || c == &False) {
+    return c;
   }
   if (c->ctor == JSON_VALUE_WRAP) {
     void* unwrapped = (void*)writeJsonValue(c->values[0], jsShape);
-    Custom* wrapped = GC_malloc(true, sizeof(Custom) + sizeof(void*));
+    Custom* wrapped = GC_allocate(true, SIZE_CUSTOM(1));
     wrapped->header = (Header)HEADER_CUSTOM(1);
     wrapped->ctor = JSON_VALUE_WRAP;
     wrapped->values[0] = unwrapped;
-    return (size_t)wrapped;
+    return wrapped;
   }
   if (jsShape == MAYBE_CIRCULAR) {
-    JsRef* jsRef = GC_malloc(true, sizeof(JsRef));
+    JsRef* jsRef = GC_allocate(true, SIZE_JS_REF);
     jsRef->header = (Header)HEADER_JS_REF;
-    jsRef->index = allocateJsRef(value);
-    return (size_t)jsRef;
+    jsRef->id = allocateJsRef(value);
+    return jsRef;
   }
-  return (size_t)Utils_clone(value);
+  return Utils_clone(value);
 }
 
 ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
@@ -101,20 +104,20 @@ ptrdiff_t getJsRefArrayIndex(u32 jsRefId, u32 index) {
   u32 len = custom_params(array);
   if (index >= len) return -((ptrdiff_t)len + 1);
   ElmValue* value = array->values[index];
-  return writeJsonValue(value, MAYBE_CIRCULAR);
+  return (ptrdiff_t)writeJsonValue(value, MAYBE_CIRCULAR);
 }
 
-ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
+void* getJsRefObjectField(u32 jsRefId, ElmString* fieldStringAddr) {
   Custom* obj = jsHeap[jsRefId].value;
   if (obj->header.tag != Tag_Custom || obj->ctor != JSON_VALUE_OBJECT) {
     return 0;
   }
   u32 len = custom_params(obj);
-  void* value = &Json_encodeNull;
+  void* value = &Json_null;
   u32 i;
   for (i = 0; i < len; i += 2) {
-    ElmString16* field = obj->values[i];
-    if (Utils_apply(&Utils_equal, 2, (void*[]){field, (void*)fieldStringAddr}) == &True) {
+    ElmString* field = obj->values[i];
+    if (Utils_apply(&Utils_equal, 2, (void*[]){field, fieldStringAddr}) == &True) {
       value = obj->values[i + 1];
       break;
     }
@@ -124,12 +127,33 @@ ptrdiff_t getJsRefObjectField(u32 jsRefId, size_t fieldStringAddr) {
   return writeJsonValue(value, MAYBE_CIRCULAR);
 }
 
-ptrdiff_t getJsRefValue(u32 jsRefId) {
+void* getJsRefValue(u32 jsRefId) {
   return writeJsonValue(jsHeap[jsRefId].value, NOT_CIRCULAR);
 }
 
 void VirtualDom_applyPatches(size_t patchesStartAddr) {
   printf("fake C version of VirtualDom_applyPatches: 0x%zx\n", patchesStartAddr);
+}
+
+void* applyJsRef(u32 jsRefId, u32 nArgs, void* args[]) {
+  Closure* c = jsHeap[jsRefId].value;
+  return Utils_apply(c, nArgs, args);
+}
+
+Record* jsRefToWasmRecord(u32 jsRefId) {
+  return jsHeap[jsRefId].value;
+}
+
+Tuple2* Wrapper_setupOutgoingPort() {
+  return NULL;
+}
+
+u32 Wrapper_setupIncomingPort(u32 managerId) {
+  return 0;
+}
+
+Task* Wrapper_sleep(f64 time) {
+  return NULL;
 }
 
 
@@ -138,11 +162,11 @@ void VirtualDom_applyPatches(size_t patchesStartAddr) {
 // Circular values must be outside the GC-managed heap
 // ---------------------------------------------------
 
-static ElmString16 str_a = {
+static ElmString str_a = {
     .header = HEADER_STRING(1),
     .words16 = {'a'},
 };
-static ElmString16 str_b = {
+static ElmString str_b = {
     .header = HEADER_STRING(1),
     .words16 = {'b'},
 };
@@ -168,16 +192,42 @@ static Custom array_circular = {
         },
 };
 
-size_t testCircularJsValue(bool isArray) {
+void* testCircularJsValue(bool isArray) {
   void* value = isArray ? &array_circular : &object_circular;
   void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
   return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
 };
 
-size_t testJsonValueRoundTrip(size_t jsonStringAddr) {
-  void* value = parse_json((ElmString16*)jsonStringAddr);
+void* testJsonValueRoundTrip(ElmString* jsonStringAddr) {
+  void* value = parse_json((ElmString*)jsonStringAddr);
   void* json_wrapped = Utils_apply(&Json_wrap, 1, (void*[]){value});
   return writeJsonValue(json_wrapped, MAYBE_CIRCULAR);
+}
+
+// emulate the JS parseFloat function in C
+f64 parseFloat(u16* chars16, size_t len16) {
+  ASSERT(len16 <= 32, len16);
+  char ascii[32];
+  int i = 0;
+  for (; i < len16; i++) {
+    ascii[i] = chars16[i];
+  }
+  ascii[i] = '\0';
+  f64 f;
+  int successCount = sscanf(ascii, "%lg", &f);
+
+#ifdef _MSC_VER
+  f64 not_a_number = nan(NULL);
+#else
+  f64 not_a_number = 0.0 / 0.0;
+#endif
+
+  return successCount ? f : not_a_number;
+}
+
+
+void jsStepper(void* viewMetadata) {
+  return;
 }
 
 #endif

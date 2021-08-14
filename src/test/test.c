@@ -1,7 +1,8 @@
 #include "test.h"
 
 #ifdef _WIN32
-#include "wingetopt.c"
+#include <windows.h>
+#include "../lib/wingetopt/wingetopt.c"
 #else
 #include <getopt.h>
 #include <unistd.h>
@@ -12,32 +13,56 @@
 #include <string.h>
 
 #include "../kernel/core/core.h"
-#include "gc_test.h"
+#include "../lib/stb/stb_sprintf.h"
 
 #include "basics_test.c"
 #include "char_test.c"
 #include "debug_test.c"
 #include "gc_test.c"
-#include "json/json_decoder_test.c"
-#include "json/json_encoder_test.c"
-#include "json/json_parser_test.c"
 #include "json_test.c"
 #include "list_test.c"
+#include "platform_test.c"
 #include "string_test.c"
 #include "test-compiled.c"
 #include "test-imports.c"
 #include "types_test.c"
 #include "utils_test.c"
-#include "virtual-dom-test.c"
 
-char* types_test();
-char* utils_test();
-char* basics_test();
-char* string_test();
-char* char_test();
-char* list_test();
-char* json_test();
-char* virtual_dom_test();
+#ifdef __EMSCRIPTEN__
+#include "wrapper_test.c"
+#else
+void wrapper_test() {
+  tests_run--;
+}
+void* eval_createTuple3(void* args[]) {
+  return NULL;
+}
+#endif
+
+struct test_suite {
+  char* name;
+  char shortName;
+  bool enable;
+  void (*run)();
+};
+
+#define NUM_SUITES 11
+#define NUM_OPTIONS (NUM_SUITES + 2)
+
+struct test_suite suites[] = {
+    {.name = "types", .shortName = 't', .run = types_test},
+    {.name = "utils", .shortName = 'u', .run = utils_test},
+    {.name = "basics", .shortName = 'b', .run = basics_test},
+    {.name = "string", .shortName = 's', .run = string_test},
+    {.name = "char", .shortName = 'c', .run = char_test},
+    {.name = "list", .shortName = 'l', .run = list_test},
+    {.name = "debug", .shortName = 'd', .run = debug_test},
+    {.name = "json", .shortName = 'j', .run = json_test},
+    {.name = "wrapper", .shortName = 'w', .run = wrapper_test},
+    {.name = "platform", .shortName = 'p', .run = platform_test},
+    {.name = "gc", .shortName = 'g', .run = gc_test},
+};
+struct option long_options[NUM_OPTIONS + 1];
 
 int verbose = false;
 int tests_run = 0;
@@ -57,48 +82,47 @@ int assertions_made = 0;
 char* current_describe_string;
 void* test_heap_ptr;
 
-void describe(char* description, void* (*test)()) {
+void describe(char* description, void (*test)()) {
   tests_run++;
   current_describe_string = description;
-  test_heap_ptr = GC_malloc(false, 0);
+  test_heap_ptr = GC_allocate(false, 0);
   if (verbose) {
-    printf("\n%s\n", description);
+    safe_printf("\n%s\n", description);
   }
   test();
 }
 
-void describe_arg(char* description, void* (*test)(void* arg), void* arg) {
+void describe_arg(char* description, void (*test)(void* arg), void* arg) {
   tests_run++;
   current_describe_string = description;
-  test_heap_ptr = GC_malloc(false, 0);
+  test_heap_ptr = GC_allocate(false, 0);
   if (verbose) {
-    printf("\n%s\n", description);
+    safe_printf("\n%s\n", description);
   }
   test(arg);
 }
 
-void* expect_equal(char* expect_description, void* left, void* right) {
+void expect_equal(char* expect_description, void* left, void* right) {
   bool ok = A2(&Utils_equal, left, right) == &True;
   if (!ok) {
     if (!verbose) {
-      printf("\n%s\n", current_describe_string);
+      safe_printf("\n%s\n", current_describe_string);
     }
-    print_heap_range(test_heap_ptr, GC_malloc(false, 0));
-    printf("FAIL: %s\n", expect_description);
+    print_heap_range(test_heap_ptr, GC_allocate(false, 0));
+    safe_printf("FAIL: %s\n", expect_description);
     Debug_pretty("Left", left);
     Debug_pretty("Right", right);
-    printf("\n");
+    safe_printf("\n");
     tests_failed++;
   } else if (verbose) {
-    printf("PASS: %s\n", expect_description);
+    safe_printf("PASS: %s\n", expect_description);
   }
   assertions_made++;
-  return NULL;
 }
 
-ElmString16* create_string(char* c_string) {
-  size_t len = (size_t)strlen(c_string);
-  ElmString16* s = newElmString16(len);
+ElmString* create_string(char* c_string) {
+  size_t len = strlen(c_string);
+  ElmString* s = newElmString(len);
   for (size_t i = 0; i < len; i++) {
     s->words16[i] = (u16)c_string[i];
   }
@@ -107,7 +131,7 @@ ElmString16* create_string(char* c_string) {
 
 // Debug function, with pre-allocated memory for strings
 // Avoiding use of malloc in test code in case it screws up GC
-// A single printf may require many separate hex strings
+// A single safe_printf may require many separate hex strings
 #define TEST_MAX_HEXES_PER_PRINTF 16
 char hex_strings[TEST_MAX_HEXES_PER_PRINTF][9 * 1024 / 4];
 char* hex(void* addr, int size) {
@@ -118,7 +142,7 @@ char* hex(void* addr, int size) {
   u32 i, c = 0;
   for (i = 0; i < size; c += 9, i += 4) {
     // Print in actual byte order (little endian)
-    sprintf(hex_strings[rotate] + c,
+    stbsp_sprintf(hex_strings[rotate] + c,
         "%02x%02x%02x%02x|",
         *((u8*)addr + i),
         *((u8*)addr + i + 1),
@@ -137,153 +161,105 @@ char* hex_ptr(void* ptr) {
   return hex(&ptr, sizeof(void*));
 }
 
-char* test_all(bool types,
-    bool utils,
-    bool basics,
-    bool string,
-    bool chr,
-    bool list,
-    bool debug,
-    bool json,
-    bool vdom,
-    bool gc) {
+void test_all() {
   if (verbose) {
-    printf("Selected tests: ");
-    if (types) printf("types ");
-    if (utils) printf("utils ");
-    if (basics) printf("basics ");
-    if (string) printf("string ");
-    if (chr) printf("char ");
-    if (list) printf("list ");
-    if (debug) printf("debug ");
-    if (json) printf("json ");
-    if (vdom) printf("vdom ");
-    if (gc) printf("gc ");
-    printf("\n\n");
+    safe_printf("Selected tests: ");
+    for (int i = 0; i < ARRAY_LEN(suites); i++) {
+      struct test_suite* suite = suites + i;
+      if (suite->enable) {
+        safe_printf("%s ", suite->name);
+      }
+    }
+    safe_printf("\n\n");
   }
-  if (types) mu_run_test(types_test);
-  if (utils) mu_run_test(utils_test);
-  if (basics) mu_run_test(basics_test);
-  if (string) mu_run_test(string_test);
-  if (chr) mu_run_test(char_test);
-  if (list) mu_run_test(list_test);
-  if (debug) mu_run_test(list_test);
-  if (json) mu_run_test(json_test);
-  if (vdom) mu_run_test(virtual_dom_test);
-  if (gc) mu_run_test(gc_test);
-
-  return NULL;
+  for (int i = 0; i < ARRAY_LEN(suites); i++) {
+    struct test_suite* suite = suites + i;
+    if (suite->enable) {
+      suite->run();
+    }
+  }
 }
 
 int main(int argc, char** argv) {
   GC_init();
 
-  static struct option long_options[] = {
-      {"verbose", no_argument, NULL, 'v'},
-      {"all", no_argument, NULL, 'a'},
-      {"types", optional_argument, NULL, 't'},
-      {"utils", optional_argument, NULL, 'u'},
-      {"basics", optional_argument, NULL, 'b'},
-      {"string", optional_argument, NULL, 's'},
-      {"char", optional_argument, NULL, 'c'},
-      {"list", optional_argument, NULL, 'l'},
-      {"debug", optional_argument, NULL, 'd'},
-      {"json", optional_argument, NULL, 'j'},
-      {"vdom", optional_argument, NULL, 'V'},
-      {"gc", optional_argument, NULL, 'g'},
-      {NULL, 0, NULL, 0},
-  };
+  ASSERT_EQUAL(NUM_SUITES, ARRAY_LEN(suites));
 
-  // By default in Bash shell, just do what's specified
-  bool types = false;
-  bool basics = false;
-  bool string = false;
-  bool chr = false;
-  bool utils = false;
-  bool list = false;
-  bool debug = false;
-  bool json = false;
-  bool vdom = false;
-  bool gc = false;
+  char options[NUM_OPTIONS + 1] = "va";
+  long_options[0] = (struct option){"verbose", no_argument, NULL, 'v'};
+  long_options[1] = (struct option){"all", no_argument, NULL, 'a'};
 
-  char options[] = "vatubscldjgV";
+  for (int i = 0; i < ARRAY_LEN(suites); i++) {
+    struct test_suite* suite = suites + i;
+    options[2 + i] = suite->shortName;
+    long_options[2 + i] =
+        (struct option){suite->name, no_argument, NULL, suite->shortName};
+  }
+
+  options[NUM_OPTIONS] = '\0';
+  long_options[NUM_OPTIONS] = (struct option){NULL, 0, NULL, 0};
 
   int opt;
-  while ((opt = getopt_long(argc, argv, options, long_options, NULL)) != -1) {
-    switch (opt) {
-      case 'v':
-        verbose = true;
-        break;
-      case 'a':
-        types = true;
-        utils = true;
-        basics = true;
-        string = true;
-        chr = true;
-        list = true;
-        json = true;
-        vdom = true;
-        gc = true;
-        break;
-      case 't':
-        types = !optarg;
-        break;
-      case 'u':
-        utils = !optarg;
-        break;
-      case 'b':
-        basics = !optarg;
-        break;
-      case 's':
-        string = !optarg;
-        break;
-      case 'c':
-        chr = !optarg;
-        break;
-      case 'l':
-        list = !optarg;
-        break;
-      case 'd':
-        debug = !optarg;
-        break;
-      case 'j':
-        json = !optarg;
-        break;
-      case 'V':
-        vdom = !optarg;
-        break;
-      case 'g':
-        gc = !optarg;
-        break;
-      default:
-        fprintf(stderr, "Usage: %s [-%s]\n", argv[0], options);
+  int option_index = 0;
+  while ((opt = getopt_long(argc, argv, options, long_options, &option_index)) != -1) {
+    if (opt == 'v') {
+      verbose = true;
+    } else if (opt == 'a') {
+      for (int i = 0; i < ARRAY_LEN(suites); i++) {
+        struct test_suite* suite = suites + i;
+        suite->enable = true;
+      }
+    } else if (opt == '?') {
+        safe_printf("Cannot parse command line\n");
+        for (int a = 0; a < argc; a++) {
+          safe_printf("%s ", argv[a]);
+        }
+        safe_printf("\nUsage: %s [-%s]\n", argv[0], options);
         exit(EXIT_FAILURE);
+    } else {
+      for (int i = 0; i < ARRAY_LEN(suites); i++) {
+        struct test_suite* suite = suites + i;
+        if (suite->shortName == opt) {
+          suite->enable = true;
+          break;
+        }
+      }
     }
   }
 
 #ifdef __EMSCRIPTEN__
-  printf("\n");
-  printf("WebAssembly Tests\n");
-  printf("=================\n");
+  safe_printf("\n");
+  safe_printf("WebAssembly Tests\n");
+  safe_printf("=================\n");
 #else
-  printf("\n");
-  printf("Native Binary Tests\n");
-  printf("===================\n");
+  safe_printf("\n");
+  safe_printf("Native Binary Tests\n");
+  safe_printf("===================\n");
+#endif
+  safe_printf("argument list: ");
+  for (int i = 1; i < argc; i++) {
+    safe_printf("'%s' ", argv[i]);
+  }
+  safe_printf("\n");
+
+#ifndef TEST
+  safe_printf("TEST macro not defined\n");
+  exit(EXIT_FAILURE);
 #endif
 
-  test_all(types, utils, basics, string, chr, list, debug, json, vdom, gc);
+  test_all();
   int exit_code;
 
   if (tests_failed) {
-    printf("FAILED %d tests\n", tests_failed);
+    safe_printf("FAILED %d tests\n", tests_failed);
     exit_code = EXIT_FAILURE;
   } else {
-    printf("\nALL TESTS PASSED\n");
+    safe_printf("\nALL TESTS PASSED\n");
     exit_code = EXIT_SUCCESS;
   }
-  printf("Tests run: %d\n", tests_run);
-  printf("Assertions made: %d\n", assertions_made);
-  printf("\n");
+  safe_printf("Tests run: %d\n", tests_run);
+  safe_printf("Assertions made: %d\n", assertions_made);
+  safe_printf("\n");
 
   exit(exit_code);
 }

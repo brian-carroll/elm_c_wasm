@@ -1,23 +1,18 @@
 #include "core.h"
 
-#include <assert.h>
 #include <math.h>
-#include <stdio.h>
 
 /**
  * negate
  * Elm version of Basics_negate ends up being self-referential!
  * Have to break the cycle using a kernel version
  */
-static void* eval_negate(void* args[]) {
-  Number* x = args[0];
-  if (x->f.header.tag == Tag_Float) {
-    f64 val = x->f.value;
-    return newElmFloat(-val);
-  } else {
-    i32 val = x->i.value;
-    return newElmInt(-val);
-  }
+void* eval_negate(void* args[]) {
+  ElmFloat* x = args[0];
+  ElmFloat* result = GC_allocate(true, SIZE_FLOAT);
+  result->header = x->header;
+  result->value = -x->value;
+  return result;
 }
 Closure Basics_negate = {
     .header = HEADER_CLOSURE(0),
@@ -28,23 +23,13 @@ Closure Basics_negate = {
 /**
  * add
  */
-static void* eval_add(void* args[2]) {
-  Number* pa = args[0];
-  Number* pb = args[1];
-  Tag ta = pa->f.header.tag;
-  Tag tb = pb->f.header.tag;
-  // Compiler can generate Number literals so we can't rely on both being the same type!
-  if (ta == Tag_Float) {
-    if (tb == Tag_Float)
-      return newElmFloat(pa->f.value + pb->f.value);
-    else
-      return newElmFloat(pa->f.value + (f64)pb->i.value);
-  } else {
-    if (tb == Tag_Float)
-      return newElmFloat((f64)pa->i.value + pb->f.value);
-    else
-      return newElmInt(pa->i.value + pb->i.value);
-  }
+void* eval_add(void* args[]) {
+  ElmFloat* x = args[0];
+  ElmFloat* y = args[1];
+  ElmFloat* result = GC_allocate(true, SIZE_FLOAT);
+  result->header = x->header;
+  result->value = x->value + y->value;
+  return result;
 }
 Closure Basics_add = {
     .header = HEADER_CLOSURE(0),
@@ -55,23 +40,13 @@ Closure Basics_add = {
 /**
  * sub
  */
-static void* eval_sub(void* args[2]) {
-  Number* pa = args[0];
-  Number* pb = args[1];
-  Tag ta = pa->f.header.tag;
-  Tag tb = pb->f.header.tag;
-  // Compiler can generate Number literals so we can't rely on both being the same type!
-  if (ta == Tag_Float) {
-    if (tb == Tag_Float)
-      return newElmFloat(pa->f.value - pb->f.value);
-    else
-      return newElmFloat(pa->f.value - (f64)pb->i.value);
-  } else {
-    if (tb == Tag_Float)
-      return newElmFloat((f64)pa->i.value - pb->f.value);
-    else
-      return newElmInt(pa->i.value - pb->i.value);
-  }
+void* eval_sub(void* args[]) {
+  ElmFloat* x = args[0];
+  ElmFloat* y = args[1];
+  ElmFloat* result = GC_allocate(true, SIZE_FLOAT);
+  result->header = x->header;
+  result->value = x->value - y->value;
+  return result;
 }
 Closure Basics_sub = {
     .header = HEADER_CLOSURE(0),
@@ -82,22 +57,13 @@ Closure Basics_sub = {
 /**
  * mul
  */
-static void* eval_mul(void* args[2]) {
-  Number* pa = args[0];
-  Number* pb = args[1];
-  Tag ta = pa->f.header.tag;
-  Tag tb = pb->f.header.tag;
-  if (ta == Tag_Float) {
-    if (tb == Tag_Float)
-      return newElmFloat(pa->f.value * pb->f.value);
-    else
-      return newElmFloat(pa->f.value * (f64)pb->i.value);
-  } else {
-    if (tb == Tag_Float)
-      return newElmFloat((f64)pa->i.value * pb->f.value);
-    else
-      return newElmInt(pa->i.value * pb->i.value);
-  }
+void* eval_mul(void* args[]) {
+  ElmFloat* x = args[0];
+  ElmFloat* y = args[1];
+  ElmFloat* result = GC_allocate(true, SIZE_FLOAT);
+  result->header = x->header;
+  result->value = x->value * y->value;
+  return result;
 }
 Closure Basics_mul = {
     .header = HEADER_CLOSURE(0),
@@ -108,24 +74,13 @@ Closure Basics_mul = {
 /**
  * fdiv
  */
-static void* eval_fdiv(void* args[2]) {
-  Number* pa = args[0];
-  Number* pb = args[1];
-  Tag ta = pa->f.header.tag;
-  Tag tb = pb->f.header.tag;
-  // Compiler generates round Number literals as Int, so we may need to implicitly convert like JS does
-  // Core library tests fail without this
-  if (ta == Tag_Float) {
-    if (tb == Tag_Float)
-      return newElmFloat(pa->f.value / pb->f.value);
-    else
-      return newElmFloat(pa->f.value / (f64)pb->i.value);
-  } else {
-    if (tb == Tag_Float)
-      return newElmFloat((f64)pa->i.value / pb->f.value);
-    else
-      return newElmFloat((f64)pa->i.value / (f64)pb->i.value);
-  }
+void* eval_fdiv(void* args[]) {
+  ElmFloat* x = args[0];
+  ElmFloat* y = args[1];
+  ElmFloat* result = GC_allocate(true, SIZE_FLOAT);
+  result->header = x->header;
+  result->value = x->value / y->value;
+  return result;
 }
 Closure Basics_fdiv = {
     .header = HEADER_CLOSURE(0),
@@ -136,11 +91,11 @@ Closure Basics_fdiv = {
 /**
  * idiv
  */
-static void* eval_idiv(void* args[2]) {
-  ElmInt* ia = args[0];
-  ElmInt* ib = args[1];
-  i32 result = ia->value / ib->value;
-  return newElmInt(result);
+void* eval_idiv(void* args[]) {
+  ElmInt* x = args[0];
+  ElmInt* y = args[1];
+  i64 result = (i64)x->value / (i64)y->value;
+  return newElmInt((f64)result);
 }
 Closure Basics_idiv = {
     .header = HEADER_CLOSURE(0),
@@ -148,9 +103,8 @@ Closure Basics_idiv = {
     .max_values = 2,
 };
 
-/**
- * pow
- */
+#if 0
+// I was all proud of this, and now it's unused! Maybe some day...
 static i32 ipow(i32 base, i32 ex) {
   if (ex < 0) {
     if (base == 1) {
@@ -180,20 +134,18 @@ static i32 ipow(i32 base, i32 ex) {
   }
   return result;
 }
-static void* eval_pow(void* args[2]) {
-  Number* pa = args[0];
-  Number* pb = args[1];
-  if (pa->f.header.tag == Tag_Float) {
-    f64 fa = pa->f.value;
-    f64 fb = pb->f.value;
-    f64 f = pow(fa, fb);
-    return newElmFloat(f);
-  } else {
-    i32 ia = pa->i.value;
-    i32 ib = pb->i.value;
-    i32 i = ipow(ia, ib);
-    return newElmInt(i);
-  }
+#endif
+
+/**
+ * pow
+ */
+void* eval_pow(void* args[]) {
+  ElmFloat* x = args[0];
+  ElmFloat* y = args[1];
+  ElmFloat* result = GC_allocate(true, SIZE_FLOAT);
+  result->header = x->header;
+  result->value = pow(x->value, y->value);
+  return result;
 }
 Closure Basics_pow = {
     .header = HEADER_CLOSURE(0),
@@ -204,10 +156,9 @@ Closure Basics_pow = {
 /*
  * toFloat
  */
-static void* eval_toFloat(void* args[]) {
+void* eval_toFloat(void* args[]) {
   ElmInt* i = args[0];
-  if (i->header.tag == Tag_Float) return i;
-  return newElmFloat((f64)i->value);
+  return newElmFloat(i->value);
 }
 Closure Basics_toFloat = {
     .header = HEADER_CLOSURE(0),
@@ -218,11 +169,10 @@ Closure Basics_toFloat = {
 /*
  * round
  */
-static void* eval_round(void* args[]) {
+void* eval_round(void* args[]) {
   ElmFloat* f = args[0];
-  if (f->header.tag == Tag_Int) return f;
   f64 result = round(f->value);
-  return newElmInt((i32)result);
+  return newElmInt(result);
 }
 Closure Basics_round = {
     .header = HEADER_CLOSURE(0),
@@ -233,11 +183,10 @@ Closure Basics_round = {
 /*
  * floor
  */
-static void* eval_floor(void* args[]) {
+void* eval_floor(void* args[]) {
   ElmFloat* f = args[0];
-  if (f->header.tag == Tag_Int) return f;
   f64 result = floor(f->value);
-  return newElmInt((i32)result);
+  return newElmInt(result);
 }
 Closure Basics_floor = {
     .header = HEADER_CLOSURE(0),
@@ -248,11 +197,10 @@ Closure Basics_floor = {
 /*
  * ceiling
  */
-static void* eval_ceiling(void* args[]) {
+void* eval_ceiling(void* args[]) {
   ElmFloat* f = args[0];
-  if (f->header.tag == Tag_Int) return f;
   f64 result = ceil(f->value);
-  return newElmInt((i32)result);
+  return newElmInt(result);
 }
 Closure Basics_ceiling = {
     .header = HEADER_CLOSURE(0),
@@ -263,7 +211,7 @@ Closure Basics_ceiling = {
 /**
  * not
  */
-static void* eval_not(void* args[2]) {
+void* eval_not(void* args[]) {
   return (args[0] == &False) ? &True : &False;
 }
 Closure Basics_not = {
@@ -275,7 +223,7 @@ Closure Basics_not = {
 /**
  * and
  */
-static void* eval_and(void* args[2]) {
+void* eval_and(void* args[]) {
   return (args[0] == &True && args[1] == &True) ? &True : &False;
 }
 Closure Basics_and = {
@@ -287,7 +235,7 @@ Closure Basics_and = {
 /**
  * or
  */
-static void* eval_or(void* args[2]) {
+void* eval_or(void* args[]) {
   return (args[0] == &True || args[1] == &True) ? &True : &False;
 }
 Closure Basics_or = {
@@ -299,7 +247,7 @@ Closure Basics_or = {
 /**
  * xor
  */
-static void* eval_xor(void* args[2]) {
+void* eval_xor(void* args[]) {
   return (args[0] != args[1]) ? &True : &False;
 }
 Closure Basics_xor = {
@@ -311,10 +259,10 @@ Closure Basics_xor = {
 /**
  * modBy
  */
-static void* eval_remainderBy(void* args[]) {
+void* eval_remainderBy(void* args[]) {
   ElmInt* den = args[0];
   ElmInt* num = args[1];
-  return newElmInt(num->value % den->value);
+  return newElmInt((i64)num->value % (i64)den->value);
 }
 Closure Basics_remainderBy = {
     .header = HEADER_CLOSURE(0),
@@ -326,18 +274,18 @@ Closure Basics_remainderBy = {
  * modBy
  * https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/divmodnote-letter.pdf
  */
-static void* eval_modBy(void* args[]) {
+void* eval_modBy(void* args[]) {
   ElmInt* a0 = args[0];
   ElmInt* a1 = args[1];
   i32 modulus = a0->value;
   i32 x = a1->value;
 
-  assert(modulus != 0);
+  ASSERT(modulus != 0, modulus);
   i32 answer = x % modulus;
 
   return newElmInt(((answer > 0 && modulus < 0) || (answer < 0 && modulus > 0))
-                         ? answer + modulus
-                         : answer);
+                       ? answer + modulus
+                       : answer);
 }
 Closure Basics_modBy = {
     .header = HEADER_CLOSURE(0),
@@ -348,11 +296,10 @@ Closure Basics_modBy = {
 /**
  * log
  */
-static void* eval_log(void* args[]) {
-  Number* x = args[0];
-  // Type uncertainty due to Number literals generated as Int
-  f64 value = x->f.header.tag == Tag_Float ? x->f.value : (f64)x->i.value;
-  return newElmFloat(log(value));
+void* eval_log(void* args[]) {
+  ElmFloat* x = args[0];
+  // Type uncertainty due to Number literals generated as Int. Resolved by int-as-float
+  return newElmFloat(log(x->value));
 }
 Closure Basics_log = {
     .header = HEADER_CLOSURE(0),
@@ -363,7 +310,7 @@ Closure Basics_log = {
 /**
  * identity
  */
-static void* eval_identity(void* args[]) {
+void* eval_identity(void* args[]) {
   return args[0];
 }
 Closure Basics_identity = {

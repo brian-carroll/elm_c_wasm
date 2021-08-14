@@ -5,9 +5,6 @@ ELM_SOURCES := $(shell find $(SUBMODULE_DIR)/src -name '*.elm')
 KERNELC := $(shell find ../../src/kernel -name '*.c')
 KERNELH := $(shell find ../../src/kernel -name '*.h')
 
-# I know, I know, sorry...
-ELM_TO_C := $(HOME)/Code/wasm/compiler/.stack-work/install/x86_64-linux/lts-13.28/8.6.5/bin/elm
-
 .PHONY: all clean
 
 all: dist/elm.wasm dist/elm.js dist/style.css
@@ -17,7 +14,7 @@ clean:
 
 build/elm/elm.c: $(ELM_SOURCES)
 	@mkdir -p build/elm
-	cd $(SUBMODULE_DIR); $(ELM_TO_C) make src/Main.elm --output ../build/elm/elm.c
+	cd $(SUBMODULE_DIR); elm make src/Main.elm --output ../build/elm/elm.c
 
 build/elm/elm.js: build/elm/elm.c
 	@:

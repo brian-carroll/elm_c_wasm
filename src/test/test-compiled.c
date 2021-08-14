@@ -24,35 +24,34 @@ Closure g_elm_core_List_reverse = {
     .evaluator = &eval_List_reverse,
 };
 
+
 Closure g_elm_core_List_foldl;
-void * eval_elm_core_List_foldl(void * args[]) {
-    void * x_func = args[0];
-    void * x_acc = args[1];
-    void * x_list = args[2];
-    u32 gc_stack_frame = GC_get_stack_frame();
-    Closure* gc_resume = newClosure(3, 3, eval_elm_core_List_foldl, args);
-    tce_loop:
-    ;
-    void * case0;
-    do {
-        if (x_list == &Nil) {
-            case0 = x_acc;
-            break;
-        } else {
-            void * x_x = ((Tuple3 * )(x_list))->a;
-            void * x_xs = ((Tuple3 * )(x_list))->b;
-            void * tmp1 = A2(x_func, x_x, x_acc);
-            assert(sanity_check(tmp1));
-            x_list = x_xs;
-            x_acc = tmp1;
-            x_func = x_func;
-            gc_resume = GC_stack_tailcall(gc_stack_frame, gc_resume, 3, ((void * []){ x_func, x_acc, x_list }));
-            goto tce_loop;
-            case0 = NULL;
-            break;
-        };
-    } while (0);
-    return case0;
+void* eval_elm_core_List_foldl(void* args[]) {
+  void* x_func = args[0];
+  void* x_acc = args[1];
+  void* x_list = args[2];
+tce_loop:;
+  void* case0;
+  do {
+    if (x_list == &Nil) {
+      case0 = x_acc;
+      break;
+    } else {
+      void* x_x = ((Tuple3*)(x_list))->a;
+      void* x_xs = ((Tuple3*)(x_list))->b;
+      void* tmp1 = A2(x_func, x_x, x_acc);
+      void* tmp2 = x_xs;
+      x_acc = tmp1;
+      x_list = tmp2;
+      ASSERT_SANITY(x_acc);
+      ASSERT_SANITY(x_list);
+      GC_stack_tailcall(3, x_func, x_acc, x_list);
+      goto tce_loop;
+      case0 = NULL;
+      break;
+    };
+  } while (0);
+  return case0;
 }
 Closure g_elm_core_List_foldl = {
     .header = HEADER_CLOSURE(0),
@@ -151,42 +150,33 @@ Closure g_elm_core_Array_initialize = {
     .evaluator = &eval_elm_core_Array_initialize,
 };
 
-FieldGroup* Wrapper_appFieldGroups[] = {NULL};
+enum field {
+  FIELD_init,
+  FIELD_subscriptions,
+  FIELD_update,
+  FIELD_view,
+};
+
+FieldGroup fg_init_subscriptions_update_view = {
+    .header = HEADER_FIELDGROUP(4),
+    .size = 4,
+    .fields =
+        {
+            FIELD_init,
+            FIELD_subscriptions,
+            FIELD_update,
+            FIELD_view,
+        },
+};
+
+FieldGroup* Wrapper_appFieldGroups[] = {&fg_init_subscriptions_update_view, NULL};
 void** Wrapper_mainsArray[] = {NULL};
 
-#ifndef GC_TEST_H
-void* eval_fib(void* args[]) { return NULL; }
-void* eval_trashyFold(void* args[]) { return NULL; }
-void* eval_listNonsense(void* args[]) { return NULL; }
-void* eval_infinite_loop(void* args[]) { return NULL; }
-#endif
-
-char unknown_function_address[FORMAT_PTR_LEN];
-char * Debug_evaluator_name(void * p) {
-  if (p == eval_fib) {
-    return "fib          ";
-  } else if (p == Utils_le.evaluator) {
-    return "Utils_le     ";
-  } else if (p == Basics_sub.evaluator) {
-    return "Basics_sub   ";
-  } else if (p == Basics_add.evaluator) {
-    return "Basics_add   ";
-  } else if (p == g_elm_core_List_foldl.evaluator) {
-    return "List.foldl   ";
-  } else if (p == g_elm_core_List_reverse.evaluator) {
-    return "List.reverse ";
-  } else if (p == eval_trashyFold) {
-    return "trashyFold   ";
-  } else if (p == eval_listNonsense) {
-    return "listNonsense ";
-  } else if (p == eval_infinite_loop) {
-    return "infinite_loop";
-  } else {
-    snprintf(unknown_function_address, FORMAT_PTR_LEN, FORMAT_PTR, p);
-    return unknown_function_address;
-  }
-}
-
+// char Debug_evaluator_name_buf[1024];
+// char* Debug_evaluator_name(void* p) {
+//   stbsp_sprintf(Debug_evaluator_name_buf, "%p", p);
+//   return Debug_evaluator_name_buf;
+// }
 
 #define TEST_CTOR(x) #x,
 char* Debug_ctors[NUM_TEST_CTORS] = {
@@ -194,13 +184,16 @@ char* Debug_ctors[NUM_TEST_CTORS] = {
 };
 #undef TEST_CTOR
 
-char* Debug_fields[1] = {NULL};
+char* Debug_fields[4] = {
+    "FIELD_init",
+    "FIELD_subscriptions",
+    "FIELD_update",
+    "FIELD_view",
+};
+int Debug_fields_size = 4;
 char* Debug_jsValues[1] = {NULL};
-int Debug_fields_size = 0;
 int Debug_jsValues_size = 0;
 int Debug_ctors_size = NUM_TEST_CTORS;
-
-size_t Json_run_eval_index = 123;
 
 Custom g_elm_core_Basics_LT = {
     .header = HEADER_CUSTOM(0),
@@ -214,3 +207,4 @@ Custom g_elm_core_Basics_GT = {
     .header = HEADER_CUSTOM(0),
     .ctor = CTOR_GT,
 };
+

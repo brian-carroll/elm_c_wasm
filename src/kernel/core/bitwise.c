@@ -1,10 +1,10 @@
 #include "core.h"
 
 
-static void* eval_Bitwise_and(void* args[]) {
+void* eval_Bitwise_and(void* args[]) {
   ElmInt* a = args[0];
   ElmInt* b = args[1];
-  return newElmInt(a->value & b->value);
+  return newElmInt((i32)a->value & (i32)b->value);
 }
 Closure Bitwise_and = {
   .header = HEADER_CLOSURE(0),
@@ -12,10 +12,10 @@ Closure Bitwise_and = {
   .max_values = 2,
 };
 
-static void* eval_Bitwise_or(void* args[]) {
+void* eval_Bitwise_or(void* args[]) {
   ElmInt* a = args[0];
   ElmInt* b = args[1];
-  return newElmInt(a->value | b->value);
+  return newElmInt((i32)a->value | (i32)b->value);
 }
 Closure Bitwise_or = {
   .header = HEADER_CLOSURE(0),
@@ -23,10 +23,10 @@ Closure Bitwise_or = {
   .max_values = 2,
 };
 
-static void* eval_Bitwise_xor(void* args[]) {
+void* eval_Bitwise_xor(void* args[]) {
   ElmInt* a = args[0];
   ElmInt* b = args[1];
-  return newElmInt(a->value ^ b->value);
+  return newElmInt((i32)a->value ^ (i32)b->value);
 }
 Closure Bitwise_xor = {
   .header = HEADER_CLOSURE(0),
@@ -34,9 +34,9 @@ Closure Bitwise_xor = {
   .max_values = 2,
 };
 
-static void* eval_Bitwise_complement(void* args[]) {
+void* eval_Bitwise_complement(void* args[]) {
   ElmInt* a = args[0];
-  return newElmInt(~a->value);
+  return newElmInt(~(i32)a->value);
 }
 Closure Bitwise_complement = {
   .header = HEADER_CLOSURE(0),
@@ -44,10 +44,10 @@ Closure Bitwise_complement = {
   .max_values = 1,
 };
 
-static void* eval_Bitwise_shiftLeftBy(void* args[]) {
+void* eval_Bitwise_shiftLeftBy(void* args[]) {
   ElmInt* offset = args[0];
   ElmInt* a = args[1];
-  return newElmInt(a->value << offset->value);
+  return newElmInt((i32)a->value << (i32)offset->value);
 }
 Closure Bitwise_shiftLeftBy = {
   .header = HEADER_CLOSURE(0),
@@ -55,10 +55,10 @@ Closure Bitwise_shiftLeftBy = {
   .max_values = 2,
 };
 
-static void* eval_Bitwise_shiftRightBy(void* args[]) {
+void* eval_Bitwise_shiftRightBy(void* args[]) {
   ElmInt* offset = args[0];
   ElmInt* a = args[1];
-  return newElmInt(a->value >> offset->value);
+  return newElmInt((i32)a->value >> (i32)offset->value);
 }
 Closure Bitwise_shiftRightBy = {
   .header = HEADER_CLOSURE(0),
@@ -66,11 +66,12 @@ Closure Bitwise_shiftRightBy = {
   .max_values = 2,
 };
 
-static void* eval_Bitwise_shiftRightZfBy(void* args[]) {
+void* eval_Bitwise_shiftRightZfBy(void* args[]) {
   ElmInt* offset = args[0];
   ElmInt* a = args[1];
-  u32 a_unsigned = a->value;
-  return newElmInt(a_unsigned >> offset->value);
+  i64 a_signed = a->value;
+  u64 a_unsigned = a_signed & (u64)0xffffffff;
+  return newElmInt(a_unsigned >> (i32)offset->value);
 }
 Closure Bitwise_shiftRightZfBy = {
   .header = HEADER_CLOSURE(0),

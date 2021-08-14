@@ -2,14 +2,12 @@
 #define TEST_H
 
 #define __USE_MINGW_ANSI_STDIO 1
-#include <stdio.h>
 #include <stdbool.h>
-#include <assert.h>
 
 #include "../kernel/core/types.h"
 
 #define TEST_CTOR(x) x,
-enum {
+enum ctor {
 #include "./test-ctors.inc"
 NUM_TEST_CTORS
 };
@@ -28,8 +26,15 @@ enum {
   TEST_JS_ARRAY_CIRCULAR,
 };
 
-extern size_t testCircularJsValue(bool isArray);
-extern size_t testJsonValueRoundTrip(size_t jsonStringAddr);
+extern void* testCircularJsValue(bool isArray);
+extern void* testJsonValueRoundTrip(ElmString* jsonStringAddr);
+
+#ifdef __EMSCRIPTEN__
+extern void* testElmValueRoundTrip(void* addr);
+extern void* testWriteJsValueToWasm(u32 index);
+extern void* testCallWasmFuncWithJsArgs(Closure* closureAddr);
+extern JsRef* testWriteJsCallbackToWasm();
+#endif
 
 // ---------------------------------------------------------
 //
@@ -44,9 +49,9 @@ extern size_t testJsonValueRoundTrip(size_t jsonStringAddr);
     assertions_made++;               \
     if (!(test)) {                   \
       tests_failed++;                \
-      printf("FAIL: %s\n", message); \
+      safe_printf("FAIL: %s\n", message); \
     } else if (verbose) {            \
-      printf("PASS: %s\n", message); \
+      safe_printf("PASS: %s\n", message); \
     }                                \
   } while (0)
 
@@ -55,12 +60,12 @@ extern size_t testJsonValueRoundTrip(size_t jsonStringAddr);
     assertions_made++;                                   \
     if (expr1 != expr2) {                                \
       tests_failed++;                                    \
-      printf("FAIL: %s\n  LHS : 0x%zx\n  RHS : 0x%zx\n", \
+      safe_printf("FAIL: %s\n  LHS : 0x%zx\n  RHS : 0x%zx\n", \
           message,                                       \
           (size_t)(expr1),                               \
           (size_t)(expr2));                              \
     } else if (verbose) {                                \
-      printf("PASS: %s\n", message);                     \
+      safe_printf("PASS: %s\n", message);                     \
     }                                                    \
   } while (0)
 
@@ -78,9 +83,9 @@ char* hex_ptr(void* ptr);
 extern char* current_describe_string;
 extern void* test_heap_ptr;
 
-void describe(char* description, void* (*test)());
-void describe_arg(char* description, void* (*test)(void* arg), void* arg);
-void* expect_equal(char* expect_description, void* left, void* right);
-ElmString16* create_string(char* c_string);
+void describe(char* description, void (*test)());
+void describe_arg(char* description, void (*test)(void* arg), void* arg);
+void expect_equal(char* expect_description, void* left, void* right);
+ElmString* create_string(char* c_string);
 
 #endif

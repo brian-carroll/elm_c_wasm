@@ -7,7 +7,9 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node ./dist/wasm/test.js --all"
+    "test": "node ./dist/wasm/test.js --all",
+    "start": "node ./scripts/watch-build.js",
+    "wasm":  "node ./scripts/watch-build.js bash -ic make wasm"
   },
   "repository": {
     "type": "git",

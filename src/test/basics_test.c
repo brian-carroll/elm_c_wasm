@@ -10,14 +10,14 @@ int ftest(ElmFloat* actual, f64 expected) {
 }
 
 int itest(ElmInt* actual, i32 expected) {
-  return actual->value == expected;
+  return (i32)actual->value == expected;
 }
 
-char* test_number_binops() {
+void test_number_binops() {
   if (verbose) {
-    printf("\n");
-    printf("## Numerical binary operators\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## Numerical binary operators\n");
+    safe_printf("\n");
   }
 
   ElmInt* i1 = newElmInt(1);
@@ -108,15 +108,13 @@ char* test_number_binops() {
   mu_assert("remainderBy 3 -8 == -2", itest(A2(&Basics_remainderBy, i3, im8), -2));
   mu_assert("remainderBy -3 -8 == -2", itest(A2(&Basics_remainderBy, im3, im8), -2));
   mu_assert("remainderBy -3 8 == 2", itest(A2(&Basics_remainderBy, im3, i8), 2));
-
-  return NULL;
 }
 
-char* test_number_unops() {
+void test_number_unops() {
   if (verbose) {
-    printf("\n");
-    printf("## Numerical unary operators\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## Numerical unary operators\n");
+    safe_printf("\n");
   }
   // Basics.negate
   mu_assert("-(3.14) == -3.14", ftest(A1(&Basics_negate, newElmFloat(3.14)), -3.14));
@@ -138,15 +136,13 @@ char* test_number_unops() {
 
   // Basics_log
   mu_assert("log 2.71828 == 1.0", ftest(A1(&Basics_log, newElmFloat(2.71828)), 1.0));
-
-  return NULL;
 }
 
-char* test_logical_ops() {
+void test_logical_ops() {
   if (verbose) {
-    printf("\n");
-    printf("## Logical operators\n");
-    printf("\n");
+    safe_printf("\n");
+    safe_printf("## Logical operators\n");
+    safe_printf("\n");
   }
 
   // not
@@ -164,21 +160,18 @@ char* test_logical_ops() {
   mu_assert("False || True == True", A2(&Basics_or, &False, &True) == &True);
   mu_assert("True || False == True", A2(&Basics_or, &True, &False) == &True);
   mu_assert("True || True == True", A2(&Basics_or, &True, &True) == &True);
-
-  return NULL;
 }
 
-char* basics_test() {
+void basics_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("Basics\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("Basics\n");
+    safe_printf("------\n");
   }
 
   mu_run_test(test_number_binops);
   mu_run_test(test_number_unops);
   mu_run_test(test_logical_ops);
-  return NULL;
 }

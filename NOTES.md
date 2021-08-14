@@ -1,3 +1,547 @@
+# Bugs TODO
+
+- Parts of language test demo not re-tested since the GC rewrite
+
+
+# Remaining SPA example bugs
+
+## Timestamps are all in 1970!
+
+Timestamp issue could be fixed with i64 but we still have issues.
+Can't believe I'm thinking this, but we could use f64 for `ElmInt`, making it identical to `ElmFloat`.
+
+Arguments for f64
+- It's the only practical way to eliminate actual data corruption, which is not really negotiable!
+  - JS number is ambiguous when coming from JS kernel code, and getting type info from the compiler is disproportionately hard.
+  - Round number literals are emitted as Int, but can be used as Float. Happens before code gen.
+- It would actually enable some optimisations!
+  - Get rid of all type tag checks, since we don't care.
+  - Make it easier to eliminate Utils_apply from arithmetic expressions. Much bigger difference than i32/f64 ops!
+  - Make it easier to merge arithmetic expressions together and maybe without boxing intermediate values
+- Fixes the `Time` module
+
+Compromise: i64 with asserts?
+- Compile out the asserts in prod build
+- If app devs find an assert, they can rewrite to ensure Float and put a `round` on the Elm side... not great!
+
+Answering the question of where exactly in your program this can happen is not trivial.
+
+
+## Compiler changes
+
+- prepend "converter" to port name? do we care? yeah we do in the C code
+- make a JsRef for the converter function (already doing this for the port)
+- init C code
+  - use `_Platform_outgoingPort(name, converterJsRef)`
+  - instead of `_Platform_leaf(name)` and `_Platform_createManager`
+- emit JS converter function instead of JS port init, converter$author$project$Api$onStoreChange
+- include converter name in the js kernel function array (it's already there)
+- manager enum
+- port name string
+- change JsRef index to id
+
+- Add Process to the list of C-only kernels
+
+- generate leaf with elmInt instead of unboxed
+
+
+# Eagerly evaluated JS calls
+
+- Now that the scheduler is inside Wasm, the idea of lazily evaluating JS calls doesn't work anymore. That only worked because we were returning all Cmd and Sub to JS.
+- But when Wasm effect manager calls out to JS, it may need to do some computation with the result so it has to have the right type, can't always be a Closure
+- This is what breaks Browser.Event subscription.
+- Need to do kernelFunctions differently
+
+- Approach 1
+
+  - Compiler output for JS values touched by Elm code
+    - In C output, generate a JsRef literal instead of a Closure literal
+    - In JS wrapper, prepopulate the jsHeap (marking the values as permanent)
+  - Utils_apply can take either Closure or JsRef as its function arg. Check tag on the way in. Change type to `void*`, throw error for bad tags.
+    - When you call a JsRef, Utils_apply calls an imported function to deal with it
+    - This is very similar to evalJsThunk and probably replaces it
+  - We can't know the arity of a JS function, so Utils_apply just always calls out to JS. JS can return another JsRef if it wants, no big deal.
+    - JsRef calls have no Wasm functionality for partial application. They don't need a .values field.
+    - In practice it seems rare to do fancy calls with these anyway.
+
+- Approach 2:
+  - Make a Closure that calls evalJsThunk
+  - All JsRefs are just pre-applied to that Closure
+  - Closure still does all of the closurey stuff
+  - BUT I don't know what arity to use! This can't really work
+    - unless it becomes very like approach 1. Make special case for this JS evaluator thing... but isn't this the same thing, what is the benefit here?
+
+Decision: approach 1 seems better
+
+TODO
+
+- [x] Modify Utils_apply
+- [x] Implement applyJsRef in the wrapper
+- [x] Use a unit test to get it up and running
+- [x] Change wrapper code to prepopulate the jsHeap with kernel functions
+- [x] Wrapper uses array instead of record, for predictable JsRef indices
+- [x] Compiler emits array instead of record, for predictable JsRef indices
+- [x] Update compiler to output JsRef literals
+- [x] Clean up leftover unused things
+  - NEVER_EVALUATE, 0xffff, evalJsThunk, evalKernelThunk
+  - debug code for JS Closure evaluators
+  - JS_Json_run
+  - enum is a bit pointless?
+- [x] deal with initialisation order
+  - all JS kernel values
+  - wrapper
+  - Wasm globals
+  - Elm object
+- [x] Don't clear the stack map: allow arbitrarily nested JS/Wasm calls
+  - GC_execute, GC_init_root, test_execute
+  - Check stack is empty before major GC and GC_init_root
+  - Deal with popping the last frame
+- [x] Wrapper needs to push a frame before it starts writing args or anything else
+  - [x] export a stackframe allocation function from Wasm
+  - [x] wrapper `call` & `wasmCallback`
+  - [x] debug & cleanup
+
+
+# Reducing encoding/decoding in the Elm Architecture
+
+## TODO: C code for platform/scheduler
+
+- [x] move postRun to before all the custom kernels
+- [x] generate managers in C, not JS
+- [x] create JS versions of all the Platform & Scheduler functions that can be called from other JS code
+  - Browser.js functions depend on Task.perform
+  - Triggers JS code gen of Platform.elm
+  - But Platform.js kernel functions are undefined in JS
+- [x] Process hashmap implementation to avoid encode/decode
+
+## TODO: Compiler support for platform/scheduler
+
+- [x] Pass managerNames in JsWrapper
+- [!] Initialise compiler JS code gen with all of these functions AND figure out their dependencies!
+  - some issues with this, not sure what's going on
+- [x] Inject manager into JS state
+- [x] generate JS `_Platform_leaf` calls
+
+## Ensure JS generated code can access Platform and Scheduler, possibly via Elm code
+
+Everything that is imported in core libs needs a JS version
+AND the compiler needs to know that it's already been emitted!
+
+- JS kernel imports of Platform
+  - [x] `__Platform_export` (`_VirtualDom_init` & code gen)
+  - [x] `__Platform_initialize`
+  - [x] `__Platform_preload`
+  - [x] `__Platform_sendToSelf` (Http.js v2)
+- JS kernel imports of Scheduler
+  - [x] `__Scheduler_andThen`
+  - [x] `__Scheduler_binding`
+  - [x] `__Scheduler_fail`
+  - [-] `__Scheduler_rawSend` (only imported to Platform => no JS needed)
+  - [x] `__Scheduler_rawSpawn`
+  - [x] `__Scheduler_receive`
+  - [-] `__Scheduler_send` (only imported to Platform => no JS needed)
+  - [x] `__Scheduler_spawn`
+  - [x] `__Scheduler_succeed`
+- Elm imports of Platform
+  - [x] Elm.Kernel.Platform.batch
+  - [x] Elm.Kernel.Platform.map
+  - [x] Elm.Kernel.Platform.sendToApp
+  - [x] Elm.Kernel.Platform.sendToSelf
+  - [x] Elm.Kernel.Platform.worker
+- Elm imports of Scheduler
+  - [x] Elm.Kernel.Scheduler.andThen
+  - [x] Elm.Kernel.Scheduler.fail
+  - [x] Elm.Kernel.Scheduler.kill
+  - [x] Elm.Kernel.Scheduler.onError
+  - [x] Elm.Kernel.Scheduler.spawn
+  - [x] Elm.Kernel.Scheduler.succeed
+- Indirect imports
+  - [x] `_Platform_leaf` (all module-specific cmd & sub)
+
+## notes on Closure caching
+
+Tried using a cache to reduce encoding and decoding but we end up with cache invalidation issues
+
+- I tried removing everything from cache on first usage but that includes the TEA functions themselves
+- optimisations for the TEA functions
+  - we know our wrapped versions can't be copied, so we can skip full equality check for this
+- The same Closures get added loads of times and only removed about 1/4 of the time
+  - can do an equality check every time we add, to avoid infinite growth, but deep equality is expensive
+- Things like Cmd.map being done in JS is craziness and the cache doesn't solve it
+
+## Customize Platform/Scheduler modules
+
+Need a different, less generic way, that knows about TEA and is specific to it
+Can we just do cacheing on Cmd and Sub callbacks? Can we actually just understand the structure of those and figure out which ones are the actual callbacks?
+Also understand that each Sub has one active callback and Cmd is once-off
+
+Basically we are implementing some of the Platform module, since that's what it's for!
+We can have Wasm exported functions for init, update, subscriptions and view
+Things like `_Platform_initialize` and `_Platform_dispatchEffects` should be implemented in JS but also with some exported Wasm helpers
+
+Browser.application does some messing around with init, applying the extra args.
+It leaves update and subs alone. They get straight to Platform_initialize.
+view gets wrapped in to make a stepper
+
+## compiler support for Platform & Scheduler
+
+review code gen for managers & platform leaf
+some literal-like mechanism for manager 'home' enum
+
+## debug & testing for Platform & Scheduler
+
+### app
+
+Start with an app whose init cmd is just `Task.succeed 123` or something
+Then move on to more complex Task chains
+
+### Scheduler code testing
+
+- create tasks of every constructor and step them
+- create some chains that receive fx
+- step it and see the queue working
+
+### Platform code testing
+
+- copy compiled code from a test app to isolate platform.c code without JS
+- test config & instantiation process for Task effect manager
+- push a Cmd through the full pipe sendToApp -> enqueueEffects -> gatherEffects -> dispatchEffects
+
+## Relative perf
+
+- Updates and stuff take no time compared to view, and our view takes twice as long as JS.
+- Our slowest update is CompletedFeedLoad (loads of JSON arriving and lots of encode/decode nonsense) but it's still only 5ms
+- Our worst view cycle is 36ms vs JS 14ms
+
+**Vdom dominates performance** so all this other stuff is less important!
+But I wanna. It's better.
+
+## TODO
+
+- Go back to enums rather than const, to keep GCC and MSVC happy
+  - Get rid of -1 in wrapper.ts evalKernelThunk
+  - put back the Json_run_eval_index, figure out a way to do the fields
+    - can I have some cleaner mechanism for getting compiler enum values into kernel code?
+    - something to do with #include order?
+- perf profiling in release mode in SPA example
+  - Compare Wasm vs JS
+- pop the last frame in the stack in GC_execute, rather than forcibly clearing it.
+- Get rid of extra `size` in FieldGroup (utils and wrapper)
+- Build
+  - Try debugging in VS Code on Windows
+  - collect platform stuff together?
+  - define out `assert`
+- virtual DOM
+  - Integrate VDOM allocator into the GC
+  - Make a test app and render stuff
+  - Do benchmarks
+- logging improvements
+  - use flags and log levels and stuff
+- modulo cons
+- experiment with varargs for Closures, measure perf. Closure max_values is the arity to pass in Utils_apply.
+  - No compiler changes needed, everything uses A1, A2, A3
+- Make Tag_Zero invalid (breaks Json tests apparently)
+
+# SPA profiling analysis
+
+On loading the elm-spa-example, these are the Wasm functions called
+
+| function                                    | comment          |
+| ------------------------------------------- | ---------------- |
+| eval_elm_core_Task_map_lambda1              | WTF              |
+| eval_author_project_Api_application_lambda1 | app init         |
+| eval_elm_http_Http_expectJson_lambda1       |                  |
+| eval_author_project_Main_GotHomeMsg         | Task.map         |
+| eval_elm_core_Basics_composeL               | WTF! Http.toTask |
+| eval_author_project_Main_subscriptions      |                  |
+| eval_author_project_Main_update             |                  |
+| eval_author_project_Main_view               |                  |
+
+We're wasting a lot of time decoding and re-encoding Wasm Closures
+Need to change the implementation of wasmCallback to cache Closures & free vars.
+A lot of functions probably only get called once, apart from GC roots. But we can't really distinguish those!
+Maybe it's OK for that cache to just grow as big as it needs to and remember things forever. Maybe a program doesn't have that many values passed back and forth. Then you just make sure you don't add the same thing over and over.
+Or maybe we can find a good invalidation strategy.
+
+# Allocator 50x speedup!!
+
+## Original fine-grained version
+
+`bitmap_find_space` loops over `bitmap_find`, which accurately finds the next _single_ available slot.
+Every iteration of the loop checks both the index in the bitmap and the bit.
+
+| Total(rel)   | Average(rel) | Average(abs) | Hits     | Function         | Line | Code                                                                                     |
+| ------------ | ------------ | ------------ | -------- | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
+| **6.241749** | 0.001366     | 0.023588     | **4570** | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
+| 3.323972     | 0.474853     | 8.200714     | 7        | GC_allocate      | 25   | GC_collect_minor()                                                                       |
+| 3.318471     | 0.474067     | 8.187143     | 7        | GC_collect_minor | 158  | mark(state, ignore_below)                                                                |
+| 1.175738     | 1.175738     | 20.305000    | 1        | GC_collect_major | 193  | compact(state, ignore_below)                                                             |
+| 0.295020     | 0.295020     | 5.095000     | 1        | GC_collect_major | 190  | mark(state, ignore_below)                                                                |
+| 0.003764     | 0.000538     | 0.009286     | 7        | GC_allocate      | 36   | alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch) |
+| 0.003474     | 0.000496     | 0.008571     | 7        | GC_collect_minor | 175  | sweepJsRefs(false)                                                                       |
+| 0.002606     | 0.002606     | 0.045000     | 1        | GC_collect_major | 199  | bitmap_reset(&state->heap)                                                               |
+| 0.000000     | 0.000000     | 0.000000     | 1        | GC_collect_major | 201  | sweepJsRefs(true)                                                                        |
+
+## Coarse space finder
+
+`bitmap_find_space` works in chunks of 64 slots. No part of this code is looking for a single slot.
+We want decent-size spaces anyway. Allocating in tiny gaps is a waste of time. Notice that we have much fewer "Hits" in this version.
+We do end up doing one more minor GC but without increasing total GC time.
+There is some waste at the beginning and end of the space. Mostly don't care. Will try something to recover it and see if it slows much.
+
+| Total(rel)   | Average(rel) | Average(abs) | Hits     | Function         | Line | Code                                                                                     |
+| ------------ | ------------ | ------------ | -------- | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
+| 3.391488     | 0.423936     | 6.026250     | 8        | GC_allocate      | 25   | GC_collect_minor()                                                                       |
+| 3.381991     | 0.422749     | 6.009375     | 8        | GC_collect_minor | 158  | mark(state, ignore_below)                                                                |
+| **0.776293** | 0.776293     | 11.035000    | 1        | GC_collect_major | 193  | compact(state, ignore_below)                                                             |
+| 0.186775     | 0.186775     | 2.655000     | 1        | GC_collect_major | 190  | mark(state, ignore_below)                                                                |
+| **0.117130** | 0.000067     | 0.000951     | **1750** | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
+| 0.008090     | 0.001011     | 0.014375     | 8        | GC_collect_minor | 175  | sweepJsRefs(false)                                                                       |
+| 0.004924     | 0.000616     | 0.008750     | 8        | GC_allocate      | 36   | alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch) |
+| 0.001759     | 0.001759     | 0.025000     | 1        | GC_collect_major | 199  | bitmap_reset(&state->heap)                                                               |
+| 0.000000     | 0.000000     | 0.000000     | 1        | GC_collect_major | 201  | sweepJsRefs(true)                                                                        |
+
+bitmap_find_space was the top item on the list, now it's down in the noise! Holy crap.
+
+## Coarse/fine searching in compactor
+
+| Total(rel)   | Average(rel) | Average(abs) | Hits | Function         | Line | Code                                                                                     |
+| ------------ | ------------ | ------------ | ---- | ---------------- | ---- | ---------------------------------------------------------------------------------------- |
+| 3.433424     | 0.429178     | 4.738125     | 8    | GC_allocate      | 25   | GC_collect_minor()                                                                       |
+| 3.426630     | 0.428329     | 4.728750     | 8    | GC_collect_minor | 158  | mark(state, ignore_below)                                                                |
+| **0.244565** | 0.244565     | 2.700000     | 1    | GC_collect_major | 193  | compact(state, ignore_below)                                                             |
+| 0.228261     | 0.228261     | 2.520000     | 1    | GC_collect_major | 190  | mark(state, ignore_below)                                                                |
+| 0.121377     | 0.000069     | 0.000766     | 1750 | GC_allocate      | 23   | alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)    |
+| 0.004982     | 0.000623     | 0.006875     | 8    | GC_collect_minor | 175  | sweepJsRefs(false)                                                                       |
+| 0.004076     | 0.000510     | 0.005625     | 8    | GC_allocate      | 36   | alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch) |
+| 0.001812     | 0.001812     | 0.020000     | 1    | GC_collect_major | 199  | bitmap_reset(&state->heap)                                                               |
+| 0.000453     | 0.000453     | 0.005000     | 1    | GC_collect_major | 201  | sweepJsRefs(true)                                                                        |
+
+## 64 bit chunks
+
+```
+Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
+ 3.896034      0.487004        4.543750         8   GC_collect_minor   158  mark(state, ignore_below)
+ 0.268489      0.268489        2.505000         1   GC_collect_major   190  mark(state, ignore_below)
+ 0.257771      0.257771        2.405000         1   GC_collect_major   193  compact(state, ignore_below)
+ *0.153269*    0.000088        0.000817      1750        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+ 0.005895      0.000737        0.006875         8   GC_collect_minor   175  sweepJsRefs(false)
+ 0.004287      0.000536        0.005000         8        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+ 0.002680      0.002680        0.025000         1   GC_collect_major   199  bitmap_reset(&state->heap)
+ 0.000000      0.000000        0.000000         1   GC_collect_major   201  sweepJsRefs(true)
+```
+
+## reclaiming up to 8 bits
+
+```
+Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
+ 2.642755      0.440459        4.635833         6   GC_collect_minor   158  mark(state, ignore_below)
+ 0.334917      0.334917        3.525000         1   GC_collect_major   193  compact(state, ignore_below)
+ 0.305463      0.305463        3.215000         1   GC_collect_major   190  mark(state, ignore_below)
+ *0.080760*    0.000089        0.000938       906        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+ 0.008551      0.008551        0.090000         1        GC_allocate    41  grow_heap(heap, alloc_words)
+ 0.008076      0.001346        0.014167         6        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+ 0.004276      0.000713        0.007500         6   GC_collect_minor   175  sweepJsRefs(false)
+ 0.004276      0.004276        0.045000         1   GC_collect_major   199  bitmap_reset(&state->heap)
+ 0.000475      0.000475        0.005000         1   GC_collect_major   201  sweepJsRefs(true)
+```
+
+## reclaiming all
+
+```
+Total(rel)  Average(rel)   Average(abs)      Hits   Function          Line  Code
+ 3.021702      0.503617        8.934167         6   GC_collect_minor   158  mark(state, ignore_below)
+ 0.327790      0.327790        5.815000         1   GC_collect_major   193  compact(state, ignore_below)
+ 0.296223      0.296223        5.255000         1   GC_collect_major   190  mark(state, ignore_below)
+ *0.088782*    0.000098        0.001744       903        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+ 0.005073      0.005073        0.090000         1        GC_allocate    41  grow_heap(heap, alloc_words)
+ 0.005073      0.005073        0.090000         1   GC_collect_major   199  bitmap_reset(&state->heap)
+ 0.004791      0.000799        0.014167         6   GC_collect_minor   175  sweepJsRefs(false)
+ 0.004510      0.000752        0.013333         6        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+ 0.000000      0.000000        0.000000         1   GC_collect_major   201  sweepJsRefs(true)
+```
+
+## OPTIMISATIONS ON -O3
+
+```
+   Total(ms)   Average(ms)  Hits   Function          Line  Code
+   8.515000    1.419167        6   GC_collect_minor   158  mark(state, ignore_below)
+   0.860000    0.000949      906        GC_allocate    23  alloc = bitmap_find_space(heap, end_of_alloc_patch, alloc_words, &end_of_alloc_patch)
+   0.665000    0.665000        1   GC_collect_major   190  mark(state, ignore_below)
+   0.590000    0.590000        1   GC_collect_major   193  compact(state, ignore_below)
+   0.045000    0.007500        6   GC_collect_minor   175  sweepJsRefs(false)
+   0.025000    0.004167        6        GC_allocate    36  alloc = bitmap_find_space(heap, state->end_of_old_gen, alloc_words, &end_of_alloc_patch)
+   0.020000    0.020000        1        GC_allocate    41  grow_heap(heap, alloc_words)
+   0.010000    0.010000        1   GC_collect_major   199  bitmap_reset(&state->heap)
+   0.005000    0.005000        1   GC_collect_major   201  sweepJsRefs(true)
+```
+
+## GC size analysis
+
+2020-05-01: mark-sweep with dynamic resizing and compactor
+
+Bytes of wasm, compiling demo/language-test with -Oz, DEBUG undefined
+223445: full build
+223047: brk and sbrk commented out
+174378: All GC functions stubbed out in #define
+215315: All GC functions stubbed, GC_allocate replaced with a one-liner conditional (7.9 kB less than full build)
+215550: All public GC functions replaced with single statement (7.7 kB less than full build)
+
+**GC code size < 8kB**
+
+sscanf is 30kB! Only using it for floats. Could write something.
+
+## debug ideas
+
+Casey Muratori made a huge debug system to visualise things. He went further with it than I would have even thought about. What ideas can I use from that?
+
+- Do something with **FILE** and **LINE** on allocations and function applications, to see who allocated what
+
+  - Build something into the data constructors (newElmInt and friends)
+  - Can have different number of args in DEBUG by defining macros
+  - I have a codemod script already, could put it there for now at least!
+  - could record this stuff in global vars. But at the allocation site we don't know where the allocated address will be.
+  - GC_stack_push_value is a good place to write the actual debug record
+
+- Have a way of visualising fragmentation
+
+  - print out the bitmap in rows of some kind of ASCII art?
+    ```
+    ***---**------*-----***---*--
+    --*-----******---**----***---
+    ----*--*------***-****----***
+    ```
+  - If it's different between snapshot and current, use a different character?
+    ```
+    ***##-**####--*####-***##-*--
+    ##*###--******###**###-***##-
+    ###-*##*#####-***-****##--***
+    ```
+  - Yeah this actually looks really useful!
+    - Here I drew \* for old marked and # for new marked
+    - There are 4 possibilities, so use 4 characters
+    ```
+    X-xXXXXxx-
+    xX--x-x_-_
+    -X__Xxx__-
+    _x--XXx___
+    ```
+
+- massive test data
+
+  - allocate a whole other heap area for debug data
+  - take test snapshots of the entire heap, to compare things over time
+  - store function & line number in an array the size of the heap
+  - Quadruple the memory usage. It's still only a few MB or tens of MB, not hundreds!
+    - actual heap
+    - previous heap
+    - actual heap line numbers
+    - snapshot line numbers
+
+- Dump debug data to file(s)! That sort of gets around the memory allocation issues I think
+  - Store as binary files and make some binary utils for pretty-printing if I want
+  - Log out loads of files at the same time to keep things separate?
+  - Or maybe I want just one big text file... I dunno
+
+What sort of issues do I want to find?
+
+- Fragmentation
+- Data corruption
+  - sweeping something I shouldn't have swept
+  - Maybe take a heap snapshot before sweeping, and track who allocated it?
+
+# Non-moving GC
+
+Getting tired of this replay GC, it's so damn confusing, I've been fighting it for literally years now.
+
+Try mark/sweep with an allocator.
+Simplest allocator is "next fit", just scroll up through the bitmap to find enough space. It's a bit fragmenty but we can do some compaction too.
+
+Do a compaction at the end (or beginning) of `execute`
+
+- only if it did a GC?
+  Use some heuristics?
+- Count number of wrap-arounds?
+- Count number of patches skipped because too small?
+
+Consequences of out-of-order heap for compaction
+
+- when I move an upward-pointing pointer, I don't know what to set it to!
+- well that's not true, it's deterministic from the mark bits
+- might need to do "offset calculation" pass before "move" pass
+  - already doing this!
+
+## bonus
+
+recursion modulo cons, and maybe other tricks!
+
+## TODO
+
+- GC_malloc does a check to see if next_alloc > end
+- if so
+  - do mark cycle
+  - if nursery is > 75% full after marking
+    - get more system memory
+    - redo heap layout (what happens to the mark bits?!)
+    - allocate
+  - else
+    - sweep (write zeros)
+    - set next_alloc to lowest garbage address
+
+What's the check when reusing swept space?
+
+- look at how many words we need
+- find the next gap in the bitmap that has enough space
+
+  - use an algo that happens to be trivial in the "top-of-heap" case?
+  - or have some mode-switch to optimise that case?
+
+- should we have a high-water-mark?
+  - highest address allocated
+  - if it's below next_alloc then we can just use next_alloc without bitmap check
+  - meh probably not worth it, certainly to start!
+
+Find space
+
+```c
+size_t target_space = 3;
+
+for (int attempts = 0; attempts < 2; ++attempts) {
+  size_t bm_word = state->alloc_idx;
+  size_t bm_mask = state->alloc_mask;
+  size_t* found = state->next_alloc; // next heap slot after allocated space
+
+  size_t max_word = state->heap.offsets - state->heap.bitmap;
+  size_t words_found = 0;
+
+  while (found < heap->end) {
+    size_t is_live = heap->bitmap[bm_word] & bm_mask;
+    if (is_live) {
+      words_found = 0;
+    } else {
+      words_found++;
+      if (words_found == target_space) {
+        break;
+      }
+    }
+    found++;
+    bitmap_next(&bm_word, &bm_mask);
+  }
+
+  if (words_found == target_space) {
+    state->alloc_idx = bm_word;
+    state->alloc_mask = bm_mask;
+    state->alloc_next = found;
+    return (found - target_space);
+  }
+
+  collect(); // will change state, grow heap, etc.
+}
+
+assert(false);
+return NULL;
+```
+
 # Multi-region heap / arbitrary layout
 
 - It's a lot nicer than expanding when running on the OS
@@ -28,10 +572,10 @@
   - finding next live/dead patch needs an outer loop over regions
   - main loop needs to keep track of two regions, `from` and `to`
 
-
 # Linear memory layout
 
 ## Non-Wasm platforms
+
 - Linux
   - just use old-school brk, sbrk
   - or give mmap a requested starting address at system_end
@@ -59,10 +603,11 @@
 - patches
   - never alive when we're moving the vdom
 - page metadata
+
   - doesn't change, just copy to new address
 
-
 - per-bucket copying
+
   - for each bucket
     - if it's patches, skip
     - if it's facts, blindly copy N words
@@ -76,7 +621,6 @@
   - copy node tree
     - start at root node
     - traverse the tree
-
 
 # Virtual DOM
 
@@ -103,9 +647,10 @@ struct bucket_array {
 
 ```
 
-
 ### SOA for VDOM?
+
 Might not be the best.
+
 - SOA is optimal for cases where you only operate on one or two fields at a time
 - But for vdom diff, typically both vdom's match, in which case we end up comparing all fields anyway.
 - SOA gives savings in the case of mismatching tags for example. Avoids loading other fields of the old vdom node.
@@ -115,8 +660,8 @@ Might not be the best.
   - Could actually return an `Int` to the app, with an index in it!
 
 ### group nodes/facts by type?
-OK but we don't really have any operations that get better.
 
+OK but we don't really have any operations that get better.
 
 ### Interface to elm/browser
 
@@ -398,7 +943,7 @@ typedef struct {
 
 ```
 
-"custom" nodes exist in the source but not used anywhere in Elm core
+"custom" nodes are used in the Markdown package, which is used in elm-spa-example
 
 text nodes
 
@@ -599,17 +1144,21 @@ typedef struct {
 ```
 
 ## Non-TEA crazy edge cases
+
 App devs can do crazy things that nonetheless have to work in the language semantics.
 
 ### Creating Vdom nodes from the update function
+
 In case someone calls `div` from `update`, we have to make sure that the Vdom functions are using the main heap allocator during that time.
 Need to structure it to be swappable.
 Vdom constructors need to have an extra `if` even for normal use, which is unfortunate.
 
 ### Passing Vdom nodes into update via event handlers
+
 When someone gives us a Closure for event handling, we need to trace it for Vdom nodes and copy them to the main heap if we see them.
 
 ## Managing pointers from main heap to vdom
+
 - Maintain some buckets in the vdom region for this kind of thing
 - During main GC compaction, check if pointer is in vdom area. If so, copy it to a new bucket.
   - This can only really be done on a major GC. In a minor GC we can't drop a bucket.
@@ -617,7 +1166,6 @@ When someone gives us a Closure for event handling, we need to trace it for Vdom
   - We don't want refs from both vdom and heap! Lifetime too complex.
   - When diffing event handlers, just make copies into this vdom heap bucket. The copy's lifetime is determined by the GC
   - Internal vdom links will be within the vdom area with that lifetime
-
 
 # Memory management with regions
 
@@ -636,27 +1184,33 @@ When someone gives us a Closure for event handling, we need to trace it for Vdom
   - if there's some free buckets at the bottom of vdom, take them now and request more memory later
   - get more memory and move the whole vdom area up
 
-
 =======
+=======
+
 # Build system
 
 ## Port to Windows
+
 - So I can do debugging more easily
   - gdb is awful and VS Code on WSL is not good.
 - GC will need Windows heap allocation https://docs.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate
 
 Steps
+
 1. Rewrite "GC Full" handling
-  - Needed for Microsoft compiler compatibility since my custom exception thing uses non-standard GNU-C "statement expression".
-  - use standard longjmp instead of basically rolling my own version of that.
-    - Emscripten says that longjmp and C++ exceptions are v expensive. But my thing is the same so also slow!
-    - This is really the cost imposed by Wasm for not being able to examine stack or registers.
-  - redo string growing for Debug.toString and Json.encode
-    - need to update the size every time, can't capture the exception value anymore
-  - check everywhere with `GC_malloc(false, x)` for similar size update stuff
-  - Get rid of CAN_THROW
+
+- Needed for Microsoft compiler compatibility since my custom exception thing uses non-standard GNU-C "statement expression".
+- use standard longjmp instead of basically rolling my own version of that.
+  - Emscripten says that longjmp and C++ exceptions are v expensive. But my thing is the same so also slow!
+  - This is really the cost imposed by Wasm for not being able to examine stack or registers.
+- redo string growing for Debug.toString and Json.encode
+  - need to update the size every time, can't capture the exception value anymore
+- check everywhere with `GC_malloc(false, x)` for similar size update stuff
+- Get rid of CAN_THROW
+
 2. Get compiler to work with new "GC full" stuff
 3. Get GC working on Windows
+
 ```c
 #include <heapapi.h>
 size_t heap_init_bytes = GC_INITIAL_HEAP_MB * 1024 * 1024;
@@ -664,8 +1218,8 @@ HANDLE hHeap = HeapCreate(0, heap_init_bytes, heap_init_bytes);
 void* heap = HeapAlloc(hHeap, 0, heap_init_bytes);
 ```
 
-
 ## Speed up
+
 - "Unity build"
   - Have a core.c that includes all the other core .c files in one translation unit
   - Move all the header file stuff into core.h
@@ -673,18 +1227,17 @@ void* heap = HeapAlloc(hHeap, 0, heap_init_bytes);
   - .pch files for things like types.h
 
 ## Lib paths
+
 - remove the need for code mods
 
-
-
 # Replay rewrite
-
 
 ## Notes after stack map v3, before v4!
 
 Things are a lot better, but not there yet. Gradually learning what I really need!
 This keeps getting closer to a normal stack structure and needs to go a bit further.
 Currently:
+
 - I have a value stack that I push all allocations to. This is good.
 - Plus a separate call stack to track what function I'm currently in, "for debug only"...
 - Also Kernel code is now forced to admit to any tricks like dynamically growing arrays/strings/etc.
@@ -704,7 +1257,6 @@ Currently:
     - But the door is open to refactor eval functions to use varargs, and to inline saturated function calls.
 - I do want stack frames to keep everything together
   - Keep the flags array idea. Introduce a "start of frame" flag and put the eval function pointer there.
-
 
 ## Notes after stack map v2, before v3!
 
@@ -728,13 +1280,12 @@ I don't really need to track which parts are from which functions but it would b
 Maybe separate call and value stacks
 
 What to do with tailcalls?
-  - At the top of the loop, inside it, do NEW_CLOSURE(stuff)
-  - Assign the arguments from the Closure, not from args
-  - On replay this will be a fake replayed allocation with the right stuff in it
-  - Boom, that's it
-  - There's no situation where you actually want to return the full Closure. It's always a local.
 
-
+- At the top of the loop, inside it, do NEW_CLOSURE(stuff)
+- Assign the arguments from the Closure, not from args
+- On replay this will be a fake replayed allocation with the right stuff in it
+- Boom, that's it
+- There's no situation where you actually want to return the full Closure. It's always a local.
 
 ## Notes before building stack map v2
 
@@ -763,7 +1314,9 @@ Closure* entry;
 ```
 
 - run mode
+
   - evalClosure
+
     - live_section_index = 0
     - replay_section_index = -1
     - initialise live_sections[0]
@@ -790,6 +1343,7 @@ Closure* entry;
       - but no real need for buckets, just unmap the current thing and request twice as much
 
 - GC
+
   - mark the entry point
   - loop over the live sections
     - within each section, iterate using header sizes
@@ -800,13 +1354,14 @@ Closure* entry;
   - update stackmap & entry with relocated pointers
 
 - replay mode
+
   - refactor so evalClosure is in the GC module rather than passing control back
   - set replay mode
     - need two stackmap indices, replay and real. When replay gets to real, exit replay mode.
   - Utils_apply
     - call GC_stack_push_frame
     - if NULL, continue
-    - if not, 
+    - if not,
   - GC_stack_push_frame
     - check if replay mode, if not return NULL
     - assert that the section is one pointer wide (hmm unless we are merging live sections after compression)
@@ -828,10 +1383,10 @@ Closure* entry;
       - could get that ref using an outer TCE wrapper, or with a GC function call before the `while`
       - allocating unneccessary closure at start? could test address just below args array to see if it's a Closure pointing at this eval fn. hackology. Will go wrong, don't.
 
-
 # Other GC improvements
 
 ## Heap regions
+
 - would enable all sorts of fancier GC stuff: the vdom region, dynamically growing improved stackmap
 - allocation
   - when we overspill the current region, bump next_alloc up to next region
@@ -846,7 +1401,9 @@ Closure* entry;
   - each region looks roughly like what our current heap struct is. Maybe that's the region header.
 
 # Enable modulo cons mutation
+
 - special region
+
   - not compacted, can support limited local mutation with the freshest values
   - instead of compact, use a depth-first copy (it's a bit like a mark and compact in one)
   - need somewhere to copy into - the newest non-nursery region needs to have room, or if not, we create a new region
@@ -858,6 +1415,7 @@ Closure* entry;
     - Probably can, if you grow the copying space indefinitely until the call ends
 
 - stack-based mutation?
+
   - can it work?
   - nope! Too much stuff. We're going the wrong way down the list so of course you get old-to-new pointers
 
@@ -868,8 +1426,8 @@ Closure* entry;
   - at the end, create a list of that length and fill it from the bucket array
     - content will be in reverse order from the cons cells (but then modulo-cons has weird heap shape too)
 
-
 # Prevent stack overflow in mark algo for deep structures
+
 - Reuse offset area for a "work list" as the GC Handbook calls it
 - As you visit each node, mark it, and mark its children
 - Move to first child, putting the other children in the worklist
@@ -880,13 +1438,12 @@ Closure* entry;
   - So when tracing these partially-traced things, only put their children in the worklist if they are below the cursor
   - If not below cursor, we'll get to them later - we'll find them in the bitmap!
 
-
 # Recording/streaming issues
+
 - switching windows
 - I'm mumbling
 - slow build time
 - doing too hard a task
-
 
 # Generate Wasm encoder for Msg
 

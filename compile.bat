@@ -1,17 +1,15 @@
 @REM https://docs.microsoft.com/en-us/cpp/build/reference/compiler-options-listed-by-category?view=msvc-150
 
-if exist dist\exe (
-  del /Q dist\exe\*
-) else (
+if not exist dist\exe (
   mkdir dist\exe
 )
 
 set build_dir="build\exe"
 
-if exist %build_dir% (
-  del /Q %build_dir%\*
-) else (
+if not exist %build_dir% (
   mkdir %build_dir%
 )
 
-CL /Z7 /Od /Fe"dist\exe\test" /Fo%build_dir%\ src\test\test.c src\kernel\core\core.c src\kernel\elm-test\elm-test.c src\kernel\json\json.c src\kernel\wrapper\wrapper.c /link /DEBUG:FULL
+@REM set debug="/DDEBUG"
+
+CL /Z7 /Od /Fe"dist\exe\test" /VERBOSE %debug% /DTEST /Fo%build_dir%\ src\test\test.c src\kernel\core\core.c src\kernel\elm-test\elm-test.c src\kernel\json\json.c src\kernel\wrapper\wrapper.c /link /DEBUG:FULL

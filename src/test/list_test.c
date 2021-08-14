@@ -9,7 +9,7 @@ static ElmInt five = {.header = HEADER_INT, .value = 5};
 static ElmInt nine = {.header = HEADER_INT, .value = 9};
 static ElmInt ten = {.header = HEADER_INT, .value = 10};
 
-void* test_List_create() {
+void test_List_create() {
   Cons* l1 = List_create(3, (void*[]){&one, &two, &three});
   Cons* l2 = newCons(&one, newCons(&two, newCons(&three, &Nil)));
 
@@ -17,11 +17,9 @@ void* test_List_create() {
 
   Cons* n = List_create(0, NULL);
   expect_equal("List_create should return Nil when called with no values", n, &Nil);
-
-  return NULL;
 }
 
-void* test_List_append() {
+void test_List_append() {
   Cons* l1 = List_create(3, (void*[]){&one, &two, &three});
   Cons* l2 = List_create(2, (void*[]){&four, &five});
 
@@ -32,11 +30,9 @@ void* test_List_append() {
   expect_equal("[1,2,3] ++ [] == [1,2,3]", A2(&List_append, l1, &Nil), l1);
   expect_equal("[] ++ [4,5] == [4,5]", A2(&List_append, &Nil, l2), l2);
   expect_equal("[] ++ [] == []", A2(&List_append, &Nil, &Nil), &Nil);
-
-  return NULL;
 }
 
-void* test_List_map2() {
+void test_List_map2() {
   Cons* l1 = List_create(3, (void*[]){&one, &two, &three});
   Cons* l2 = List_create(2, (void*[]){&four, &five});
 
@@ -55,22 +51,18 @@ void* test_List_map2() {
   expect_equal("map2 (*) [1,2,3] [] == []", A3(&List_map2, &Basics_mul, l1, &Nil), &Nil);
 
   expect_equal("map2 (*) [] [1,2,3] == []", A3(&List_map2, &Basics_mul, &Nil, l1), &Nil);
-
-  return NULL;
 }
 
-char* list_test() {
+void list_test() {
   if (verbose) {
-    printf("\n\n\n");
-    printf("####################################################\n");
-    printf("\n");
-    printf("List\n");
-    printf("------\n");
+    safe_printf("\n\n\n");
+    safe_printf("####################################################\n");
+    safe_printf("\n");
+    safe_printf("List\n");
+    safe_printf("------\n");
   }
 
   describe("test_List_create", test_List_create);
   describe("test_List_append", test_List_append);
   describe("test_List_map2", test_List_map2);
-
-  return NULL;
 }

@@ -1,14 +1,14 @@
 /*
     Garbage collector for Elm
     -------------------------
-    A mark-compact collector, based on the Compressor algorithm.
+    A mark-sweep collector with compaction based on the Compressor algorithm [1]
 
     Notable features:
     ================
-    - Compression uses only a single pass over the heap
-
     - Uses a bitmap of live/dead bits instead of marking the values themselves.
         => Many operations involve only a few localised memory accesses
+
+    - Compression uses only a single pass over the heap.
 
     - Calculates 'forwarding addresses' of moved pointers on the fly
         - New location has the same number of live bytes below it as the old one did
@@ -18,51 +18,33 @@
     - Designed for both 32 and 64-bit platforms.
         Uses the size_t data type everywhere (32 or 64 bits as per platform)
 
-    - Takes advantage of immutable-only data
-        - Can do partial compression, starting at any point and only looking
-        at values _above_ it, ignoring everything below.
-        - Enabled by the fact that immutable values can only reference older
-        values (lower addresses).
-        - Offers flexibility to do quick partial collections.
-
-    - Takes advantage of pure functions
-        - A novel stack map idea: "replay" for pure functions
-        - Wasm does not allow access to registers (which it models as a stack machine)
-        - Therefore we can't find or modify pointers stored in registers. So how can
-            we move things around safely?
-        - Elm functions are pure. So we can abort execution, move values around,
-            then "replay" the same function call with the same values, but at
-            the new locations, and resume execution where we left off.
-        - On this second "replay" run, no registers can possibly hold pointers
-            to the old locations.
-        - Now, on "replay", every call our top-level function makes can be replaced
-            with the return value we remember from the first time.
-        - This means replay is fast, and doesn't regenerate the same garbage again.
-            It quickly gets us back to the same execution state we were in before GC.
-        - This only works with pure functions, but in Elm that's most of the program.
-        - The `apply` operator has some hooks into the GC. The GC puts some extra
-            marker values into the heap to track pushes and pops of the call stack.
-
-
     References
-        - "The Garbage Collection Handbook" by Jones, Hosking, and Moss (section 3.4)
-        - Kermany and Petrank, 2006
-        - Abuaiadh et al, 2004
+        [1] "The Garbage Collection Handbook" by Jones, Hosking, and Moss (section 3.4)
+        [2] Kermany and Petrank, 2006
+        [3] Abuaiadh et al, 2004
 */
-#ifdef DEBUG
-#include <stdio.h>
-#endif
-#include "internals.h"
-#include "../core.h"
 
+#include "../core.h"  // debug
 #include "allocate.c"
+#include "bitmap.c"
 #include "compact.c"
 #include "header.c"
+#include "heap.c"
+#include "internals.h"
 #include "mark.c"
 #include "stack.c"
-#include "state.c"
 
-jmp_buf gcLongJumpBuf;
+#ifdef TEST
+
+void (*gc_test_mark_callback)();
+#define TEST_MARK_CALLBACK() \
+  if (gc_test_mark_callback) gc_test_mark_callback()
+
+#else
+#define TEST_MARK_CALLBACK()
+#endif
+
+GcState gc_state;
 
 /* ====================================================
 
@@ -70,11 +52,40 @@ jmp_buf gcLongJumpBuf;
 
    ==================================================== */
 
+extern Queue Scheduler_queue;
+Cons coreRoots = {
+    .header = HEADER_LIST,
+    .head = &Scheduler_queue.front,
+    .tail = &Nil,
+};
+
+void reset_state(GcState* state) {
+  void* start = state->heap.start;
+  state->next_alloc = start;
+  state->end_of_alloc_patch = state->heap.end;
+  state->end_of_old_gen = start;
+  state->n_marked_words = 0;
+  state->roots = &coreRoots;
+  stack_reset();
+}
+
+#if PERF_TIMER_ENABLED
+void perf_get_baseline() {
+  for (int i = 0; i < 3000000; i++) {
+  }
+}
+#endif
+
 // Call exactly once on program startup
 int GC_init() {
   GcState* state = &gc_state;  // local reference for debugger to see
   int err = init_heap(&state->heap);
   reset_state(state);
+
+#if PERF_TIMER_ENABLED
+  PERF_TIMED_STATEMENT(perf_get_baseline());
+#endif
+
   return err;
 }
 
@@ -86,29 +97,56 @@ int GC_init() {
 ==================================================== */
 
 /*
-  Roots should be registered by Kernel modules once on program startup.
-
-  Usage:
-    ElmValue* my_mutable_heap_pointer;
-
-    void My_init() {
-        GC_register_root(&my_mutable_heap_pointer);
-    }
-
-  Once the mutable pointer is registered, the Kernel module
-  can point it at any heap value it wants to keep alive.
-  It can later update the pointer to point at a different
-  ElmValue on the heap, as the program executes.
-  Whenever the GC does a collection, it checks this pointer
-  and preserves whatever heap value it is currently
-  pointing to. If it moves the value, it will update the
-  pointer to reference the new location.
+  Register a GC root. We use the same code for two kinds of root:
+  - Global vars that require Elm code to run to initialise them
+    - Could be registered at compile time, but we do it at run time
+  - Mutable state in Kernel code that points to heap values
+    - Easier to do at run time. Hard for the compiler to know about.
+    - We're not actually using this yet since most kernel code is in JS
+    - Using a list instead of a C array supports this case.
 */
 void GC_register_root(void** ptr_to_mutable_ptr) {
   GcState* state = &gc_state;
   state->roots = newCons(ptr_to_mutable_ptr, state->roots);
+  GC_stack_pop_value();
 }
 
+
+/* ====================================================
+
+                SWEEP
+
+   ==================================================== */
+
+#if GC_DO_SWEEP
+
+void sweep_space(size_t* start_of_space, size_t* end_of_space) {
+  size_t* w = start_of_space;
+  if (!TARGET_64BIT && ((size_t)w & 7) && (w < end_of_space)) {
+    *w++ = 0;
+  }
+  u64* p = (u64*)w;
+  for (; p < (u64*)(end_of_space - 1); p++) {
+    *p = 0;
+  }
+  for (w = (size_t*)p; w < end_of_space; w++) {
+    *w = 0;
+  }
+}
+
+// Sweep up the garbage by writing zeros to all the unused spaces in the heap
+// This is not actually necessary, it's just nice for debug
+void sweep(GcHeap* heap, size_t* start) {
+  size_t* end_of_space = start;
+  size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
+  for (;;) {
+    size_t* start_of_space = bitmap_find_space(heap, end_of_space, 1, &end_of_space);
+    if (!start_of_space) break;
+    sweep_space(start_of_space, end_of_space);
+  }
+}
+
+#endif
 
 /* ====================================================
 
@@ -116,41 +154,109 @@ void GC_register_root(void** ptr_to_mutable_ptr) {
 
    ==================================================== */
 
-static void collect(GcState* state, size_t* ignore_below) {
-  mark(state, ignore_below);
-  compact(state, ignore_below);
-  stack_prepare_for_replay();
-  bool is_full_gc = ignore_below <= gc_state.heap.start;
-  sweepJsRefs(is_full_gc);
+/**
+ * Minor collection
+ * Can be used during execution. Does not move any live pointers.
+ */
+void GC_collect_minor() {
+  GcState* state = &gc_state;
+  size_t* ignore_below = state->end_of_old_gen;
+
+  // safe_printf("\nStarting minor GC from %p\n", ignore_below);
+
+  PERF_TIMED_STATEMENT(mark(state, ignore_below));
+  TEST_MARK_CALLBACK();
+
+#if GC_DO_SWEEP
+  PERF_TIMED_STATEMENT(sweep(&state->heap, ignore_below));
+#endif
+
+#if 0
+    size_t new_gen_size = state->heap.end - ignore_below;
+    size_t used = state->n_marked_words;
+    f32 percent_marked = (100.0 * used) / (f32)new_gen_size;
+    char marked[20];
+    char available[20];
+    format_mem_size(marked, sizeof(marked), used);
+    format_mem_size(available, sizeof(available), new_gen_size);
+    safe_printf("Minor GC marked %f%% (%s / %s)\n", percent_marked, marked, available);
+#endif
+
+  PERF_TIMED_STATEMENT(sweepJsRefs(false));
+
+#if PERF_TIMER_ENABLED
+  perf_print();
+#endif
 }
 
-void GC_collect_full() {
-  collect(&gc_state, gc_state.heap.start);
-}
 
-void GC_collect_nursery() {
-  collect(&gc_state, gc_state.nursery);
+/**
+ * Major collection
+ * Not to be used during execution. Moves pointers by compaction.
+ */
+void GC_collect_major() {
+  GcState* state = &gc_state;
+  size_t* ignore_below = state->heap.start;
+
+#ifdef DEBUG
+  if (state->stack_map.index) {
+    print_stack_map();
+    ASSERT_EQUAL(state->stack_map.index, 0);
+  }
+#endif
+  PERF_TIMED_STATEMENT(mark(state, ignore_below));
+  TEST_MARK_CALLBACK();
+
+  PERF_TIMED_STATEMENT(compact(state, ignore_below));
+
+#if GC_DO_SWEEP
+  PERF_TIMED_STATEMENT(sweep_space(state->end_of_old_gen, state->heap.end));
+#endif
+
+  PERF_TIMED_STATEMENT(bitmap_reset(&state->heap));
+
+  PERF_TIMED_STATEMENT(sweepJsRefs(true));
+
+  size_t used = state->next_alloc - state->heap.start;
+  size_t available = state->heap.end - state->heap.start;
+  // safe_printf("Major GC: %zd kB used, %zd kb available\n",
+  // used * SIZE_UNIT / 1024,
+  // available * SIZE_UNIT / 1024);
+
+  if (used * 2 > available) {
+    PERF_TIMED_STATEMENT(grow_heap(&state->heap, 0));
+  }
+
+#if PERF_TIMER_ENABLED
+  perf_print();
+#endif
 }
 
 
 /* ====================================================
 
                 PROGRAM ENTRY POINT
-  
+
     Execute a function in the context of the GC
 
    ==================================================== */
 
 void* GC_execute(Closure* c) {
-  stack_clear();
-  stack_enter(c);
+  // TODO: remove this redundant stack frame! JS wrapper has already created one.
+  GcStackMapIndex frame = GC_stack_push_frame('C', c->evaluator);
+  GC_stack_push_value(c);
 
-  // long jump creates an implicit loop
-  int out_of_memory = setjmp(gcLongJumpBuf);
-  if (out_of_memory) {
-    GC_collect_full();
+  void* result = Utils_apply(c, 0, NULL);
+
+  GC_stack_pop_frame(c->evaluator, result, frame);
+
+#if 0
+  if (is_major_gc_needed()) {
+    GC_collect_major();
+    result = forwarding_address(&gc_state.heap, result);
   }
-  return Utils_apply(stack_values[1], 0, NULL);
+#endif
+  return result;
 }
 
 
@@ -166,15 +272,18 @@ void* GC_execute(Closure* c) {
   ==================================================== */
 
 void GC_init_root(void** global_permanent_ptr, void* (*init_func)()) {
+#ifdef DEBUG
+  GcState* state = &gc_state;
+  if (state->stack_map.index) {
+    print_stack_map();
+    ASSERT(state->stack_map.index, 0);
+  }
+#endif
+
   GC_register_root(global_permanent_ptr);
 
-  stack_clear();
-  stack_enter(NULL);
-
-  // long jump creates an implicit loop
-  int out_of_memory = setjmp(gcLongJumpBuf);
-  if (out_of_memory) {
-    GC_collect_full();
-  }
+  GcStackMapIndex frame = GC_stack_push_frame('I', init_func);
   *global_permanent_ptr = init_func();
+  GC_stack_pop_frame(init_func, NULL, frame);
+  GC_stack_pop_value();
 }
