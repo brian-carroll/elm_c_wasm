@@ -16,7 +16,7 @@ import Json.Decode.Pipeline as Pipeline exposing (optional, required)
 import Json.Encode as Encode
 import Url exposing (Url)
 import Username exposing (Username)
-
+import WebAssembly
 
 
 -- CRED
@@ -147,14 +147,15 @@ application viewerDecoder config =
             in
             config.init maybeViewer url navKey
     in
-    Browser.application
-        { init = init
-        , onUrlChange = config.onUrlChange
-        , onUrlRequest = config.onUrlRequest
-        , subscriptions = config.subscriptions
-        , update = config.update
-        , view = config.view
-        }
+    Browser.application <|
+        WebAssembly.intercept
+            { init = init
+            , onUrlChange = config.onUrlChange
+            , onUrlRequest = config.onUrlRequest
+            , subscriptions = config.subscriptions
+            , update = config.update
+            , view = config.view
+            }
 
 
 storageDecoder : Decoder (Cred -> viewer) -> Decoder viewer
