@@ -61,7 +61,7 @@ struct vdom_node {
 
 struct vdom_fact {
   size_t ctor;
-  ElmString16* key;
+  ElmString* key;
   void* value;
 };
 

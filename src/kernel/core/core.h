@@ -116,6 +116,7 @@ void GC_stack_pop_frame(void* func, void* result, GcStackMapIndex push);
 void* GC_stack_pop_value();
 void GC_stack_tailcall(int count, ...);
 GcStackMapIndex GC_stack_push_frame(char func_type_flag, void* func);
+void* GC_get_memory_from_system(size_t bytes);
 
 // =========================================
 

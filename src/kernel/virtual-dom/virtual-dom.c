@@ -4,6 +4,9 @@
 
 
 struct vdom_state vdom_state;
+void* GC_get_memory_from_system(size_t bytes) {
+  return NULL; // TODO
+}
 
 
 /* ==============================================================================
@@ -66,7 +69,7 @@ static void start_new_bucket(size_t** top, size_t** bottom, bool is_patch_bucket
 
   for (; page->meta.live_flags & bit; bit >>= 1, i -= VDOM_BUCKET_WORDS)
     ;
-  assert(bit);  // TODO, allocate new page
+  ASSERT(bit, bit);  // TODO, allocate new page
   size_t* found = &page->words[i];
   page->meta.live_flags |= bit;
   if (is_patch_bucket) {
@@ -158,7 +161,7 @@ static void* allocate_patch(size_t words) {
 ============================================================================== */
 
 static void* eval_VirtualDom_text(void* args[]) {
-  ElmString16* string = args[0];
+  ElmString* string = args[0];
   struct vdom_node* node = allocate_node(2);
   node->ctor = VDOM_NODE_TEXT;
   node->n_extras = 1;
@@ -192,7 +195,7 @@ static size_t prepend_list_or_start_new_bucket(Cons* list) {
 
 
 static void* eval_VirtualDom_node(void* args[]) {
-  ElmString16* tag = args[0];
+  ElmString* tag = args[0];
   Cons* factList = args[1];
   Cons* kidList = args[2];
 
@@ -222,7 +225,10 @@ static void* eval_VirtualDom_node(void* args[]) {
 
     return node;
   }
-  assert(false);
+#ifdef DEBUG
+  safe_printf("vdom node allocation failed\n");
+  exit(1);
+#endif
 }
 Closure VirtualDom_node = {
     .header = HEADER_CLOSURE(0),
@@ -268,10 +274,10 @@ Implementation:
 
 */
 void* eval_VirtualDom_style(void* args[]) {
-  ElmString16* key = args[0];
-  ElmString16* value = args[1];
-  assert(key->header.tag == Tag_String);
-  assert(value->header.tag == Tag_String);
+  ElmString* key = args[0];
+  ElmString* value = args[1];
+  ASSERT_EQUAL(key->header.tag, Tag_String);
+  ASSERT_EQUAL(value->header.tag, Tag_String);
   struct vdom_fact* fact = allocate_fact();
   *fact = (struct vdom_fact){
       .ctor = VDOM_FACT_STYLE,
@@ -287,10 +293,10 @@ Closure VirtualDom_style = {
 };
 
 void* eval_VirtualDom_attribute(void* args[]) {
-  ElmString16* key = args[0];
-  ElmString16* value = args[1];
-  assert(key->header.tag == Tag_String);
-  assert(value->header.tag == Tag_String);
+  ElmString* key = args[0];
+  ElmString* value = args[1];
+  ASSERT_EQUAL(key->header.tag, Tag_String);
+  ASSERT_EQUAL(value->header.tag, Tag_String);
   struct vdom_fact* fact = allocate_fact();
   *fact = (struct vdom_fact){
       .ctor = VDOM_FACT_ATTR,
@@ -335,7 +341,7 @@ static struct vdom_patch* create_patch_from_array(u8 ctor, u32 nValues, void* va
 }
 
 
-static bool strings_match(ElmString16* x, ElmString16* y) {
+static bool strings_match(ElmString* x, ElmString* y) {
   if (x == y) return true;
 
   GcHeap* heap = &gc_state.heap;
@@ -391,7 +397,7 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
 
     if (newFact->ctor == VDOM_FACT_ATTR_NS) {
       Tuple2* pair = newFact->value;
-      ElmString16* namespace = pair->a;
+      ElmString* namespace = pair->a;
       void* value = pair->b;
       create_patch(VDOM_PATCH_SET_ATTR_NS, 3, namespace, newFact->key, value);
     } else {
@@ -434,7 +440,7 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
     }
     if (oldFact->ctor == VDOM_FACT_ATTR_NS) {
       Tuple2* pair = oldFact->value;
-      ElmString16* namespace = pair->a;
+      ElmString* namespace = pair->a;
       create_patch(VDOM_PATCH_REMOVE_ATTR_NS, 2, oldFact->key, namespace);
     } else {
       u8 ctor;
@@ -455,7 +461,7 @@ static void diffFacts(struct vdom_node* oldNode, struct vdom_node* newNode) {
           ctor = 0;
           break;
       }
-      assert(ctor);
+      ASSERT(ctor, ctor);
       create_patch(ctor, 1, oldFact->key);
     }
   }
@@ -470,7 +476,6 @@ static void diffChildren(struct vdom_node* old, struct vdom_node* new) {
   struct vdom_node** oldChildren = (struct vdom_node**)old->values + old->n_extras + old->n_facts;
   struct vdom_node** newChildren = (struct vdom_node**)new->values + new->n_extras + new->n_facts;
   struct vdom_patch* push = allocate_patch(1);
-  struct vdom_patch* pop = NULL;
 
   if (nNew > nOld) {
     create_patch_from_array(VDOM_PATCH_APPEND, nNew - nOld, (void**)newChildren);
@@ -491,7 +496,7 @@ static void diffChildren(struct vdom_node* old, struct vdom_node* new) {
     if (afterChild != beforeChild) {
       push->ctor = VDOM_PATCH_PUSH;
       push->number = nMin - 1 - i; // DOM child index
-      pop = create_patch(VDOM_PATCH_POP, 0);
+      create_patch(VDOM_PATCH_POP, 0);
       push = allocate_patch(1);
     }
   }
@@ -508,8 +513,8 @@ static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
   }
   switch (new->ctor) {
     case VDOM_NODE: {
-      ElmString16* currTag = old->values[0];
-      ElmString16* nextTag = new->values[0];
+      ElmString* currTag = old->values[0];
+      ElmString* nextTag = new->values[0];
       if (!strings_match(currTag, nextTag)) {
         create_patch(VDOM_PATCH_REDRAW, 1, new);
         return;
@@ -519,8 +524,8 @@ static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
       return;
     }
     case VDOM_NODE_TEXT: {
-      ElmString16* currText = old->values[0];
-      ElmString16* nextText = new->values[0];
+      ElmString* currText = old->values[0];
+      ElmString* nextText = new->values[0];
       if (!strings_match(currText, nextText)) {
         create_patch(VDOM_PATCH_REDRAW, 1, new);
       }
@@ -532,7 +537,7 @@ static void diffNodes(struct vdom_node* old, struct vdom_node* new) {
     case VDOM_NODE_TAGGER:
     case VDOM_NODE_THUNK:
     default:
-      assert(false);
+      ASSERT(false, new->ctor);
       break;
   }
 }
