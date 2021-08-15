@@ -9,7 +9,7 @@
   "scripts": {
     "test": "node ./dist/wasm/test.js --all",
     "start": "node ./scripts/watch-build.js",
-    "wasm":  "node ./scripts/watch-build.js bash -ic make wasm"
+    "wasm": "node ./scripts/watch-build.js bash -ic make wasm"
   },
   "repository": {
     "type": "git",
@@ -25,7 +25,9 @@
     "url": "https://github.com/brian-carroll/elm_c_wasm/issues"
   },
   "homepage": "https://github.com/brian-carroll/elm_c_wasm#readme",
-  "dependencies": {},
+  "dependencies": {
+    "@types/node": "^16.6.1"
+  },
   "devDependencies": {
     "http-server": "^0.12.1",
     "jasmine": "^3.5.0",
