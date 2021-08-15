@@ -1,3 +1,0 @@
-[submodule "demos/elm-spa-example/repo"]
-	path = demos/elm-spa-example/repo
-	url = git@github.com:brian-carroll/elm-spa-example.git
