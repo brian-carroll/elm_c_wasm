@@ -1,4 +1,6 @@
 #include "../gc/internals.h"
+#include "../../json/json.h"
+#include <stdlib.h>
 
 // =======================================================================
 //
@@ -16,7 +18,7 @@ void Debug_assert(char* file, int line, const char* function, char* expr_text, c
     safe_printf("\nASSERT failed in '%s' at %s:%d\n", function, file, line);
     safe_printf("   Expected    %s\n", expr_text);
     safe_printf("   But found   %s == 0x%llx\n\n", print_text, print_value);
-    exit(1);
+    abort();
   }
 }
 
@@ -25,7 +27,7 @@ void Debug_assert_equal(char* file, int line, const char* function, char* ltext,
     safe_printf("\nASSERT_EQUAL failed in '%s' at %s:%d\n", function, file, line);
     safe_printf("   %s = 0x%llx\n", ltext, lvalue);
     safe_printf("   %s = 0x%llx\n", rtext, rvalue);
-    exit(1);
+    abort();
   }
 }
 
@@ -39,7 +41,7 @@ void Debug_assert_sanity(char* file, int line, const char* function, char* code_
     safe_printf("\nASSERT_SANITY(%s) failed in '%s' at %s:%d\n", code_text, function, file, line);
     print_heap_range(words, words + size);
     safe_printf("\n");
-    exit(1);
+    abort();
   }
 }
 
