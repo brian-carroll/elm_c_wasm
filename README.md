@@ -18,7 +18,8 @@
 
 Figures noted are ranges across 4 runs of Lighthouse Performance report for Desktop.
 
-Wasm performance is already comparable to JS with `--optimize`, and we've barely started working on it so there's lots of room to speed it up.
+Wasm performance is already comparable to JS with `--optimize` and minification.
+It is twice as fast as JS without the combination of `--optimize` and minification.
 
 Until now the focus has been on making the generated code _correct_, without much serious effort to make it _fast_.
 VirtualDom diffing has not been implemented in Wasm yet, which I expect to be a big win

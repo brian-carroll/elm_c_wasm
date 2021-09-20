@@ -1,6 +1,50 @@
-# Bugs TODO
+# TODO
 
+- major gc!!
 - Parts of language test demo not re-tested since the GC rewrite
+
+# Perf flame graph analyis
+
+## Wasm
+
+- app initialisation
+  - `receiveInstantiatedSource` 12.82ms
+  - Emscripten stuff + getMains: ~6ms
+  - `_Platform_initialize` 6.57ms (starts at time 452ms)
+- HTTP responses
+  - tags xhr callback 1.31
+  - articles xhr callback 5.42
+- Render articles
+  - updateIfNeeded (vdom render) 8.41
+  - `_VirtualDom_diff` 0.23
+  - `_VirtualDom_applyPatches` 1.31
+- Last Render
+  - updateIfNeeded (vdom render) 5.18
+  - `_VirtualDom_diff` 0.34
+  - `_VirtualDom_applyPatches` 0.16
+
+## JS
+
+- app initialisation
+  - `_Platform_initialize` 5.64ms (starts at 422ms)
+- HTTP responses
+  - tags xhr callback 0.86
+  - articles xhr callback 5.13
+- Render articles
+  - updateIfNeeded (vdom render) 4.04
+  - `_VirtualDom_diff` 0.11
+  - `_VirtualDom_applyPatches` 1.02
+- Last Render
+  - updateIfNeeded (vdom render) 2.14
+  - `_VirtualDom_diff` 0.34
+  - `_VirtualDom_applyPatches` 0.23
+
+## analysis
+
+- Wasm takes twice as long to initialise
+- Wasm vdom takes more than twice as long, and is dominated by readWasmValue. It triggers a (browser) minor GC both times.
+  - Those `readWasmValue`s wouldn't happen if Vdom impl was in Wasm and only patches got sent to JS
+- Vdom diff is crazy fast in JS already
 
 
 # Remaining SPA example bugs
@@ -11,6 +55,7 @@ Timestamp issue could be fixed with i64 but we still have issues.
 Can't believe I'm thinking this, but we could use f64 for `ElmInt`, making it identical to `ElmFloat`.
 
 Arguments for f64
+
 - It's the only practical way to eliminate actual data corruption, which is not really negotiable!
   - JS number is ambiguous when coming from JS kernel code, and getting type info from the compiler is disproportionately hard.
   - Round number literals are emitted as Int, but can be used as Float. Happens before code gen.
@@ -21,11 +66,11 @@ Arguments for f64
 - Fixes the `Time` module
 
 Compromise: i64 with asserts?
+
 - Compile out the asserts in prod build
 - If app devs find an assert, they can rewrite to ensure Float and put a `round` on the Elm side... not great!
 
 Answering the question of where exactly in your program this can happen is not trivial.
-
 
 ## Compiler changes
 
@@ -43,7 +88,6 @@ Answering the question of where exactly in your program this can happen is not t
 - Add Process to the list of C-only kernels
 
 - generate leaf with elmInt instead of unboxed
-
 
 # Eagerly evaluated JS calls
 
@@ -100,7 +144,6 @@ TODO
   - [x] export a stackframe allocation function from Wasm
   - [x] wrapper `call` & `wasmCallback`
   - [x] debug & cleanup
-
 
 # Reducing encoding/decoding in the Elm Architecture
 
@@ -1593,9 +1636,9 @@ The first two are straightforward enough
 ```js
 var _VirtualDom_on = F2(function (key, handler) {
   return {
-    $: 'a__1_EVENT',
+    $: "a__1_EVENT",
     __key: key,
-    __value: handler
+    __value: handler,
   };
 });
 ```
@@ -2149,7 +2192,9 @@ function wrap_VirtualDom_node(one, two, three) {
   return _VirtualDom_node(one)(two, three);
 }
 wrap_VirtualDom_node.a = 3;
-const index_VirtualDom_node = kernelFns.findIndex(f => f === _VirtualDom_node);
+const index_VirtualDom_node = kernelFns.findIndex(
+  (f) => f === _VirtualDom_node
+);
 if (index_VirtualDom_node !== -1) {
   kernelFns[index_VirtualDom_node] = wrap_VirtualDom_node;
 }
