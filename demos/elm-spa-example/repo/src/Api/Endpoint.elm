@@ -53,7 +53,7 @@ url : List String -> List QueryParameter -> Endpoint
 url paths queryParams =
     -- NOTE: Url.Builder takes care of percent-encoding special URL characters.
     -- See https://package.elm-lang.org/packages/elm/url/latest/Url#percentEncode
-    Url.Builder.crossOrigin "https://conduit.productionready.io"
+    Url.Builder.crossOrigin "https://realworld-temp-api.herokuapp.com/api"
         ("api" :: paths)
         queryParams
         |> Endpoint
