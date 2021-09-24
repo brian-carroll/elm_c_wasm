@@ -20,6 +20,7 @@ tests : Test
 tests =
     describe "Elm Standard Library Tests" <|
         []
+            -- Weird syntax is for easy commenting-out of each line
             ++ [ Array.tests ]
             ++ [ Dict.tests ]
             ++ [ Set.tests ]
@@ -33,15 +34,3 @@ tests =
             ++ [ String.tests ]
             ++ [ Maybe.tests ]
             ++ [ Tuple.tests ]
-
-
-{-| mostly just broken because of GC!
-Tests use structures with thousands of elements
--}
-notWorkingYet : List Test
-notWorkingYet =
-    []
-        ++ [ Array.tests ]
-        ++ [ Dict.tests ]
-        ++ [ Set.tests ]
-        ++ [ List.tests ]

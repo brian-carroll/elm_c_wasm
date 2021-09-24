@@ -8,8 +8,11 @@ OUT_DIR="dist"
 
 extra_opt=""
 
-extra_opt="$extra_opt -g4"
-extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/dist/"
+if [[ "$CFLAGS" == *"-DDEBUG"* ]]
+then
+  extra_opt="$extra_opt -g4"
+  extra_opt="$extra_opt --source-map-base http://localhost:8080/demos/$(basename $(pwd))/dist/"
+fi
 
 mkdir -p $OUT_DIR
 
