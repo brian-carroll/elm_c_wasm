@@ -78,7 +78,6 @@ extern JsRef* testWriteJsCallbackToWasm();
 extern int tests_run, tests_failed, assertions_made, verbose;
 
 char* hex(void* addr, int size);
-char* hex_ptr(void* ptr);
 
 extern char* current_describe_string;
 extern void* test_heap_ptr;

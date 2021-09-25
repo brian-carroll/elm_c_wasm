@@ -192,41 +192,42 @@ void test_apply(void) {
         "        curried 3\n"
         "\n");
 
-    safe_printf("outerScopeValue addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(&outerScopeValue),
-        (int)outerScopeValue.header.tag,
-        outerScopeValue.value,
+    safe_printf("outerScopeValue addr=%p ctor=%d value=%d, hex=%s\n",
+        &outerScopeValue,
+        (i64)outerScopeValue.header.tag,
+        (i64)outerScopeValue.value,
         hex(&outerScopeValue, sizeof(ElmInt)));
 
-    safe_printf("two addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(&two),
-        (int)two.header.tag,
-        two.value,
+    safe_printf("two addr=%p ctor=%d value=%d, hex=%s\n",
+        &two,
+        (i64)two.header.tag,
+        (i64)two.value,
         hex(&two, sizeof(ElmInt)));
 
-    safe_printf("three addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(&three),
-        (int)three.header.tag,
-        three.value,
+    safe_printf("three addr=%p ctor=%d value=%d, hex=%s\n",
+        &three,
+        (i64)three.header.tag,
+        (i64)three.value,
         hex(&three, sizeof(ElmInt)));
 
-    safe_printf("closure addr=%s n_values=%d max_values=%d, hex=%s\n",
-        hex_ptr(closure),
-        (int)closure->n_values,
-        (int)closure->max_values,
+    safe_printf("closure addr=%p n_values=%d max_values=%d, hex=%s\n",
+        closure,
+        (i64)closure->n_values,
+        (i64)closure->max_values,
         hex(closure, sizeof(Closure) + closure->n_values * sizeof(void*)));
 
-    safe_printf("curried addr=%s n_values=%d max_values=%d, hex=%s\n",
-        hex_ptr(curried),
-        (int)curried->n_values,
-        (int)curried->max_values,
+    safe_printf("curried addr=%p n_values=%d max_values=%d, hex=%s\n",
+        curried,
+        (i64)curried->n_values,
+        (i64)curried->max_values,
         hex(curried, sizeof(Closure) + curried->n_values * sizeof(void*)));
 
-    safe_printf("answer addr=%s ctor=%d value=%d, hex=%s\n",
-        hex_ptr(answer),
-        (int)answer->header.tag,
-        answer->value,
+    safe_printf("answer addr=%p ctor=%d value=%d, hex=%s\n",
+        answer,
+        (i64)answer->header.tag,
+        (i64)answer->value,
         hex(answer, sizeof(ElmInt)));
+
     safe_printf("\n");
   }
 

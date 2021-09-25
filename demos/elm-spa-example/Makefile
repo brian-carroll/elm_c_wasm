@@ -15,7 +15,7 @@ all: dist/elm.wasm dist/elm.js
 clean:
 	rm -rf build/* dist/* repo/elm-stuff/*
 
-release: CFLAGS = -Wall -Wno-unused-variable -O3 -DPERF_TIMER_ENABLED=1
+release: CFLAGS = -Wall -Wno-unused-variable -O3 # -DPERF_TIMER_ENABLED=1
 release: dist/elm.wasm dist/elm.js
 	@:
 

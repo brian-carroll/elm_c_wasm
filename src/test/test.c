@@ -153,14 +153,6 @@ char* hex(void* addr, int size) {
   return hex_strings[rotate];
 }
 
-// Print a memory address held in a pointer
-//   Addresses are printed in little-endian format
-//   => Easier to see what pointers are pointing to it
-//   => Harder to subtract in your head if you're interested in sizes & memory layout
-char* hex_ptr(void* ptr) {
-  return hex(&ptr, sizeof(void*));
-}
-
 void test_all() {
   if (verbose) {
     safe_printf("Selected tests: ");

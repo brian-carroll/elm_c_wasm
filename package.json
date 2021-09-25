@@ -26,7 +26,8 @@
   },
   "homepage": "https://github.com/brian-carroll/elm_c_wasm#readme",
   "dependencies": {
-    "@types/node": "^16.6.1"
+    "@types/node": "^16.6.1",
+    "uglify-js": "^3.14.2"
   },
   "devDependencies": {
     "http-server": "^0.12.1",

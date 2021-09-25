@@ -37,17 +37,17 @@ void test_elm_constants() {
   if (verbose) {
     safe_printf("\n");
     safe_printf("## test_elm_constants\n");
-    safe_printf("Unit size=%zd addr=%s hex=%s\n",
+    safe_printf("Unit size=%zd addr=%p hex=%s\n",
         sizeof(Unit),
-        hex_ptr(&Unit),
+        &Unit,
         hex(&Unit, sizeof(Unit)));
-    safe_printf("True size=%zd addr=%s hex=%s\n",
+    safe_printf("True size=%zd addr=%p hex=%s\n",
         sizeof(True),
-        hex_ptr(&True),
+        &True,
         hex(&True, sizeof(True)));
-    safe_printf("False size=%zd addr=%s hex=%s\n",
+    safe_printf("False size=%zd addr=%p hex=%s\n",
         sizeof(False),
-        hex_ptr(&False),
+        &False,
         hex(&False, sizeof(False)));
   }
 
@@ -91,9 +91,9 @@ void test_header_layout() {
 void test_nil() {
   if (verbose) {
     safe_printf("\n## test_nil\n");
-    safe_printf("Nil sizeof=%zd addr=%s tag=%d, hex=%s\n",
+    safe_printf("Nil sizeof=%zd addr=%p tag=%d, hex=%s\n",
         sizeof(Nil),
-        hex_ptr(&Nil),
+        &Nil,
         (int)Nil.header.tag,
         hex(&Nil, sizeof(Nil)));
   }
@@ -106,12 +106,12 @@ void test_cons() {
   if (verbose) safe_printf("\n## test_cons\n");
   Cons* c = newCons(&Unit, &Nil);  // [()]
   if (verbose)
-    safe_printf("Cons size=%zd addr=%s header.size=%d head=%s tail=%s, hex=%s\n",
+    safe_printf("Cons size=%zd addr=%p header.size=%d head=%s tail=%s, hex=%s\n",
         sizeof(Cons),
-        hex_ptr(c),
+        c,
         (int)c->header.size,
-        hex_ptr(c->head),
-        hex_ptr(c->tail),
+        c->head,
+        c->tail,
         hex(c, sizeof(Cons)));
 
 #if TARGET_64BIT
@@ -183,9 +183,9 @@ void test_int() {
   ElmInt* i = newElmInt(123);
 
   if (verbose)
-    safe_printf("ElmInt size=%zd addr=%s tag=%d value=%d\n",
+    safe_printf("ElmInt size=%zd addr=%p tag=%d value=%d\n",
         sizeof(ElmInt),
-        hex_ptr(i),
+        i,
         (int)i->header.tag,
         i->value);
   mu_assert("ElmInt type should be just wide enough for a header and an i32",
@@ -203,9 +203,9 @@ void test_float() {
   if (verbose) safe_printf("\n## test_float\n");
   ElmFloat* f = newElmFloat(123.456789);
   if (verbose)
-    safe_printf("Float size=%zd addr=%s tag=%d value=%f\n",
+    safe_printf("Float size=%zd addr=%p tag=%d value=%f\n",
         sizeof(ElmFloat),
-        hex_ptr(f),
+        f,
         (int)f->header.tag,
         f->value);
 
@@ -228,9 +228,9 @@ void test_char() {
   if (verbose) safe_printf("\n## test_char\n");
   ElmChar* ch = newElmChar('A');
   if (verbose)
-    safe_printf("Char size=%zd addr=%s tag=%d value=%c\n",
+    safe_printf("Char size=%zd addr=%p tag=%d value=%c\n",
         sizeof(ElmChar),
-        hex_ptr(ch),
+        ch,
         (int)ch->header.tag,
         ch->value);
 
@@ -290,8 +290,8 @@ void test_record() {
   if (verbose) {
     safe_printf("\n");
     safe_printf("## test_record\n");
-    safe_printf("FieldGroup with 2 values: addr=%s, hex=%s\n",
-        hex_ptr(fg),
+    safe_printf("FieldGroup with 2 values: addr=%p, hex=%s\n",
+        fg,
         hex(fg, sizeof(FieldGroup) + 2 * sizeof(u32)));
     safe_printf("Record with 2 values: tag=%d, size=%d, hex=%s\n",
         r->header.tag,

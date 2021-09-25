@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #else
@@ -60,7 +61,7 @@ void log_error(char* fmt, ...) {
   safe_vprintf(fmt, args);
   va_end(args);
   // emscripten_run_script("debugger;");
-  exit(EXIT_FAILURE);
+  exit(1);
 }
 #else
 void log_error(char* fmt, ...) {
@@ -68,7 +69,7 @@ void log_error(char* fmt, ...) {
   va_start(args, fmt);
   safe_vprintf(fmt, args);
   va_end(args);
-  exit(EXIT_FAILURE);
+  exit(1);
 }
 #endif
 

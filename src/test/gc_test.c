@@ -72,8 +72,8 @@ void test_heap_layout() {
 
 #define TEST_MEMCPY_BUF_SIZE 10
 
-void test_memcpy_reset(size_t* from, size_t* to) {
-  for (int i = 0; i < TEST_MEMCPY_BUF_SIZE; ++i) {
+void test_memcpy_reset(size_t* from, size_t* to, size_t len) {
+  for (int i = 0; i < len; ++i) {
     to[i] = 0;
     from[i] = i + 1;
   }
@@ -88,8 +88,8 @@ void test_memcpy() {
   gc_test_reset();
 
   // Ensure buffers are 64-bit aligned by declaring them as u64
-  u64 from64[TEST_MEMCPY_BUF_SIZE / 2];
-  u64 to64[TEST_MEMCPY_BUF_SIZE / 2];
+  u64 from64[TEST_MEMCPY_BUF_SIZE];
+  u64 to64[TEST_MEMCPY_BUF_SIZE];
 
   // Now cast to word-sized values
   size_t* from = (size_t*)from64;
@@ -109,7 +109,7 @@ void test_memcpy() {
   ASSERT_EQUAL((size_t)dest % sizeof(u64), sizeof(size_t));
 
   for (size = 1; size <= 6; ++size) {
-    test_memcpy_reset(from, to);
+    test_memcpy_reset(from, to, TEST_MEMCPY_BUF_SIZE * sizeof(to64[0]) / sizeof(to[0]));
     GC_memcpy(dest, src, size);
     int mismatches = 0;
     for (int i = 0; i < size; ++i) {
@@ -131,7 +131,7 @@ void test_memcpy() {
   ASSERT((size_t)dest % sizeof(u64) == 0, dest);
 
   for (size = 1; size <= 6; ++size) {
-    test_memcpy_reset(from, to);
+    test_memcpy_reset(from, to, TEST_MEMCPY_BUF_SIZE * sizeof(to64[0]) / sizeof(to[0]));
     GC_memcpy(dest, src, size);
     int mismatches = 0;
     for (int i = 0; i < size; ++i) {

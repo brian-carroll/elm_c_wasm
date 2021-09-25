@@ -35,7 +35,7 @@ check-wasm: $(DIST)/wasm/test.js
 wasm: $(DIST)/wasm/test.js
 	@:
 
-wasm-release: CFLAGS = -Wall -O3 -DTEST -DPERF_TIMER_ENABLED=1
+wasm-release: CFLAGS = -Wall -O3 -DTEST # -DPERF_TIMER_ENABLED=1
 wasm-release: wasm
 	@:
 

@@ -86,11 +86,14 @@ function A9(fun, a, b, c, d, e, f, g, h, i) {
 
 var elmImports = {_List_Cons: _List_Cons, _List_Nil: _List_Nil, _Utils_Tuple0: _Utils_Tuple0, _Utils_Tuple2: _Utils_Tuple2, _Utils_Tuple3: _Utils_Tuple3, _Utils_chr: _Utils_chr, F2: F2, F3: F3, F4: F4, F5: F5, F6: F6, F7: F7, F8: F8, F9: F9};
 
+const arguments = typeof process !== 'undefined'
+  ? process.argv.slice(2)
+  : [new URL(window.location).searchParams.get('argv') || '-av'];
+
+console.log({ arguments })
 
 Module = {
-  arguments: typeof process !== 'undefined'
-    ? process.argv.slice(2)
-    : [new URL(window.location).searchParams.get('argv')],
+  arguments,
   postRun: [],
   onRuntimeInitialized: function () {
     const generatedAppTypes = {
@@ -102,11 +105,21 @@ Module = {
     const managerNames = ['Task'];
     wasmWrapper = wrapWasmElmApp(Module, elmImports, generatedAppTypes, kernelImports, managerNames);
   },
-  print: function (text) {
-    if (arguments.length > 1)
-      text = Array.prototype.slice.call(arguments).join(' ');
-    console.log(text);
-  },
+  print: (function() {
+    var element;
+    if (typeof document !== 'undefined') {
+      element = document.getElementById('output');
+      if (element) element.value = ''; // clear browser cache
+    }
+    return function (text) {
+      if (arguments.length > 1)
+        text = Array.prototype.slice.call(arguments).join(' ');
+      console.log(text);
+      if (element) {
+        element.textContent += text + '\n';
+      }
+    }
+  })(),
   printErr: function (text) {
     if (arguments.length > 1)
       text = Array.prototype.slice.call(arguments).join(' ');

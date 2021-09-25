@@ -11,7 +11,7 @@ const withIncludePaths = orig.replace(find, replace);
 const withPrintVdom = withIncludePaths.replace(
   "GC_collect_major();",
   `GC_collect_major();
-    perf_print();
+    //perf_print();
     print_virtual_dom(gptr_author_project_Main_main);`
 );
 
