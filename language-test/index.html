@@ -1,0 +1,56 @@
+<html>
+  <head>
+    <style>
+      body {
+        background-color: #222;
+        color: navajowhite;
+      }
+      h2 {
+        color: blanchedalmond;
+      }
+      .view {
+        min-height: 100%;
+        margin: 20px;
+        font-size: 16px;
+      }
+      .view button {
+        padding: 10px;
+        margin: 20px;
+        font-size: 16px;
+      }
+      .effects-test {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      ul {
+        list-style: none;
+      }
+      .test-fail-list h3 {
+        color: indianred;
+      }
+      .test-fail-list {
+        color: #edd;
+        font-size: 1.1em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="elm-container">
+      <div id="main"></div>
+    </div>
+    <script src="dist/elm.js"></script>
+    <script>
+      function go() {
+        Elm.Main.init({
+          node: document.querySelector('#main')
+        });
+      }
+      if (Elm.onReady) {
+        Elm.onReady(go);  // Wait for Wasm async compilation
+      } else {
+        go();
+      }
+    </script>
+  </body>
+</html>
